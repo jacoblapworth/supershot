@@ -18,6 +18,9 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var teamAID: Team.ID
   var teamBID: Team.ID
   var periodDurationSeconds: Int
+  var currentPeriod = 1
+  var elapsedSeconds = 0
+  var hasTimerStartedCurrentPeriod = false
 }
 
 @Table
@@ -44,7 +47,7 @@ nonisolated func uuid() -> UUID {
 }
 
 extension DependencyValues {
-  mutating func bootstrapDatabase() throws {
+  nonisolated mutating func bootstrapDatabase() throws {
     var configuration = Configuration()
     configuration.prepareDatabase { db in
       db.add(function: $uuid)
@@ -129,9 +132,33 @@ extension DependencyValues {
       .execute(db)
     }
 
+    migrator.registerMigration("Add resumable game progress") { db in
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "currentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 1
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "hasTimerStartedCurrentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
+
     try migrator.migrate(database)
     defaultDatabase = database
   }
 }
 
-private let logger = Logger(subsystem: "Netscore", category: "Database")
+nonisolated private let logger = Logger(subsystem: "Netscore", category: "Database")

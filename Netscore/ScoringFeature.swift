@@ -53,22 +53,24 @@ struct ScoringFeature {
   }
 
   enum Action {
+    case closeButtonTapped
     case confirmationDialog(PresentationAction<ConfirmationDialogAction>)
     case delegate(Delegate)
     case finishGameButtonTapped
-    case finishGameResponse(Result<SummaryFeature.State, any Error>)
+    case finishGameResponse(Result<Game.ID, any Error>)
     case goalButtonTapped(Team.ID)
     case goalResponse(Result<ScoreSnapshot, any Error>)
     case nextQuarterButtonTapped
     case pauseTimerButtonTapped
     case resumeTimerButtonTapped
+    case sceneBecameInactive
     case startTimerButtonTapped
     case timerTick
     case undoButtonTapped
     case undoResponse(Result<ScoreSnapshot, any Error>)
 
     enum Delegate {
-      case gameFinished(SummaryFeature.State)
+      case gameFinished(Game.ID)
     }
   }
 
@@ -83,11 +85,20 @@ struct ScoringFeature {
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
+  @Dependency(\.dismiss) var dismiss
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case .closeButtonTapped:
+        state.isTimerRunning = false
+        return .concatenate(
+          .cancel(id: CancelID.timer),
+          saveProgressEffect(state: state),
+          .run { _ in await dismiss() }
+        )
+
       case .confirmationDialog(.dismiss):
         state.pendingPausedGoalTeamID = nil
         return .none
@@ -109,8 +120,8 @@ struct ScoringFeature {
           finishGameEffect(state: state)
         )
 
-      case let .finishGameResponse(.success(summary)):
-        return .send(.delegate(.gameFinished(summary)))
+      case let .finishGameResponse(.success(gameID)):
+        return .send(.delegate(.gameFinished(gameID)))
 
       case .finishGameResponse(.failure):
         return .none
@@ -137,23 +148,43 @@ struct ScoringFeature {
         state.hasTimerStartedThisPeriod = false
         state.isTimerRunning = false
         state.period += 1
-        return .cancel(id: CancelID.timer)
+        return .merge(
+          .cancel(id: CancelID.timer),
+          saveProgressEffect(state: state)
+        )
 
       case .pauseTimerButtonTapped:
         state.isTimerRunning = false
-        return .cancel(id: CancelID.timer)
+        return .merge(
+          .cancel(id: CancelID.timer),
+          saveProgressEffect(state: state)
+        )
 
       case .resumeTimerButtonTapped:
         guard !state.isTimerRunning, !state.isPeriodComplete else { return .none }
         state.hasTimerStartedThisPeriod = true
         state.isTimerRunning = true
-        return timerEffect()
+        return .merge(
+          saveProgressEffect(state: state),
+          timerEffect()
+        )
+
+      case .sceneBecameInactive:
+        guard state.isTimerRunning else { return .none }
+        state.isTimerRunning = false
+        return .merge(
+          .cancel(id: CancelID.timer),
+          saveProgressEffect(state: state)
+        )
 
       case .startTimerButtonTapped:
         guard !state.isTimerRunning, state.elapsedSeconds == 0 else { return .none }
         state.hasTimerStartedThisPeriod = true
         state.isTimerRunning = true
-        return timerEffect()
+        return .merge(
+          saveProgressEffect(state: state),
+          timerEffect()
+        )
 
       case .timerTick:
         guard state.isTimerRunning else { return .none }
@@ -161,9 +192,12 @@ struct ScoringFeature {
         guard state.elapsedSeconds < state.periodDurationSeconds else {
           state.elapsedSeconds = state.periodDurationSeconds
           state.isTimerRunning = false
-          return .cancel(id: CancelID.timer)
+          return .merge(
+            .cancel(id: CancelID.timer),
+            saveProgressEffect(state: state)
+          )
         }
-        return .none
+        return saveProgressEffect(state: state)
 
       case .undoButtonTapped:
         guard state.canUndo else { return .none }
@@ -189,24 +223,22 @@ struct ScoringFeature {
   private func finishGameEffect(state: State) -> Effect<Action> {
     let endedAt = now
     let gameID = state.gameID
-    let summary = SummaryFeature.State(
-      endedAt: endedAt,
-      startedAt: state.startedAt,
-      teamAName: state.teamA.name,
-      teamAScore: state.teamAScore,
-      teamBName: state.teamB.name,
-      teamBScore: state.teamBScore
-    )
+    let currentPeriod = state.period
+    let elapsedSeconds = state.elapsedSeconds
+    let hasTimerStartedCurrentPeriod = state.hasTimerStartedThisPeriod
 
     return .run { send in
       let result = await Result {
         try await database.write { db in
           try Game.find(gameID).update {
+            $0.currentPeriod = currentPeriod
+            $0.elapsedSeconds = elapsedSeconds
             $0.endedAt = #bind(endedAt)
+            $0.hasTimerStartedCurrentPeriod = hasTimerStartedCurrentPeriod
           }
           .execute(db)
         }
-        return summary
+        return gameID
       }
       await send(.finishGameResponse(result))
     }
@@ -254,6 +286,24 @@ struct ScoringFeature {
       }
     }
     .cancellable(id: CancelID.timer, cancelInFlight: true)
+  }
+
+  private func saveProgressEffect(state: State) -> Effect<Action> {
+    let currentPeriod = state.period
+    let elapsedSeconds = state.elapsedSeconds
+    let gameID = state.gameID
+    let hasTimerStartedCurrentPeriod = state.hasTimerStartedThisPeriod
+
+    return .run { _ in
+      try? await database.write { db in
+        try Game.find(gameID).update {
+          $0.currentPeriod = currentPeriod
+          $0.elapsedSeconds = elapsedSeconds
+          $0.hasTimerStartedCurrentPeriod = hasTimerStartedCurrentPeriod
+        }
+        .execute(db)
+      }
+    }
   }
 
   private func undoGoalEffect(state: State) -> Effect<Action> {

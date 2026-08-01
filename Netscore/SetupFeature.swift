@@ -95,7 +95,10 @@ struct SetupFeature {
       endedAt: nil,
       teamAID: teamAID,
       teamBID: teamBID,
-      periodDurationSeconds: periodDurationSeconds
+      periodDurationSeconds: periodDurationSeconds,
+      currentPeriod: 1,
+      elapsedSeconds: 0,
+      hasTimerStartedCurrentPeriod: false
     )
 
     return .run { send in

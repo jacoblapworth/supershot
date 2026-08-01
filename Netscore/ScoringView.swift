@@ -2,32 +2,41 @@ import ComposableArchitecture
 import SwiftUI
 
 struct ScoringView: View {
+  @Environment(\.scenePhase) private var scenePhase
   @Bindable var store: StoreOf<ScoringFeature>
 
   var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(spacing: 20) {
-          scoreboard
-          timerPanel
-          gameControls
-        }
-        .padding()
+    ScrollView {
+      VStack(spacing: 20) {
+        scoreboard
+        timerPanel
+        gameControls
       }
-      .navigationTitle("Quarter \(store.period)")
-      .toolbar {
-        ToolbarItem {
-          Button {
-            store.send(.undoButtonTapped)
-          } label: {
-            Image(systemName: "arrow.uturn.backward")
-          }
-          .disabled(!store.canUndo)
-          .accessibilityLabel("Undo last goal")
+      .padding()
+    }
+    .navigationTitle("Quarter \(store.period)")
+    .navigationBarBackButtonHidden()
+    .toolbar {
+      ToolbarItem(placement: .topBarLeading) {
+        Button {
+          store.send(.closeButtonTapped)
+        } label: {
+          Label("Games", systemImage: "chevron.left")
         }
+      }
+
+      ToolbarItem(placement: .primaryAction) {
+        Button {
+          store.send(.undoButtonTapped)
+        } label: {
+          Image(systemName: "arrow.uturn.backward")
+        }
+        .disabled(!store.canUndo)
+        .accessibilityLabel("Undo last goal")
       }
     }
     .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
+    .onChange(of: scenePhase, scenePhaseChanged)
   }
 
   private var gameControls: some View {
@@ -121,6 +130,14 @@ struct ScoringView: View {
     let minutes = seconds / 60
     let seconds = seconds % 60
     return "\(minutes):\(String(format: "%02d", seconds))"
+  }
+
+  private func scenePhaseChanged(
+    _ oldValue: ScenePhase,
+    _ newValue: ScenePhase
+  ) {
+    guard newValue != .active else { return }
+    store.send(.sceneBecameInactive)
   }
 }
 
