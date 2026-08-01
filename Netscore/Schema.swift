@@ -6,40 +6,51 @@
 //
 
 import Foundation
+import Dependencies
 import OSLog
 import SQLiteData
-import SwiftUI
 
 @Table
-nonisolated struct Game: Hashable, Identifiable {
-  var id: UUID
-  var date: Date
-  
+nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
+  let id: UUID
+  var startedAt: Date
+  var endedAt: Date?
   var teamAID: Team.ID
   var teamBID: Team.ID
-  
-//  var periods: [Period]
-//  var goals: [Goal]
+  var periodDurationSeconds: Int
 }
 
 @Table
-struct Team: Identifiable {
-  var id: UUID
+nonisolated struct Team: Equatable, Hashable, Identifiable, Sendable {
+  let id: UUID
   var name: String
 }
 
 @Table
-struct Goal: Identifiable {
-  var id: UUID
+nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
+  let id: UUID
   var gameID: Game.ID
   var teamID: Team.ID
-  var points: Int = 1
-  var date: Date
+  var period: Int
+  var elapsedSeconds: Int
+  var points: Int
+  var createdAt: Date
+}
+
+@DatabaseFunction
+nonisolated func uuid() -> UUID {
+  @Dependency(\.uuid) var uuid
+  return uuid()
 }
 
 extension DependencyValues {
   mutating func bootstrapDatabase() throws {
-    let database = try SQLiteData.defaultDatabase()
+    var configuration = Configuration()
+    configuration.prepareDatabase { db in
+      db.add(function: $uuid)
+    }
+
+    let database = try SQLiteData.defaultDatabase(configuration: configuration)
     logger.debug(
       """
       App database:
@@ -47,22 +58,12 @@ extension DependencyValues {
       """
     )
     var migrator = DatabaseMigrator()
-    
+
 #if DEBUG
     migrator.eraseDatabaseOnSchemaChange = true
 #endif
-    
+
     migrator.registerMigration("Create initial tables") { db in
-      try #sql("""
-        CREATE TABLE "games"(
-          "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
-          "title" TEXT NOT NULL,
-          "teamAID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
-          "teamBID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE
-        ) STRICT
-        """)
-      .execute(db)
-      
       try #sql("""
         CREATE TABLE "teams"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
@@ -70,19 +71,33 @@ extension DependencyValues {
         ) STRICT
         """)
       .execute(db)
-      
+
+      try #sql("""
+        CREATE TABLE "games"(
+          "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
+          "startedAt" TEXT NOT NULL,
+          "endedAt" TEXT,
+          "teamAID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
+          "teamBID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
+          "periodDurationSeconds" INTEGER NOT NULL
+        ) STRICT
+        """)
+      .execute(db)
+
       try #sql("""
         CREATE TABLE "goals"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
           "gameID" TEXT NOT NULL REFERENCES "games"("id") ON DELETE CASCADE,
           "teamID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
-          "date" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT CURRENT_TIMESTAMP,
-          "points" INTEGER NOT NULL DEFAULT (1)
+          "period" INTEGER NOT NULL,
+          "elapsedSeconds" INTEGER NOT NULL,
+          "points" INTEGER NOT NULL,
+          "createdAt" TEXT NOT NULL
         ) STRICT
         """)
       .execute(db)
     }
-    
+
     migrator.registerMigration("Create foreign key indexes") { db in
       try #sql(
         """
@@ -102,6 +117,13 @@ extension DependencyValues {
         """
         CREATE INDEX IF NOT EXISTS "idx_goals_gameID"
         ON "goals"("gameID")
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        CREATE INDEX IF NOT EXISTS "idx_goals_gameID_createdAt"
+        ON "goals"("gameID", "createdAt")
         """
       )
       .execute(db)

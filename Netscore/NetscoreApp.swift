@@ -1,21 +1,21 @@
 import SwiftUI
 import SQLiteData
+import ComposableArchitecture
 
 @main struct NetscoreApp: App {
-  
-  static let model = AppModel()
-  
   init() {
-//    if !isTesting {
-      try! prepareDependencies {
-        try $0.bootstrapDatabase()
-      }
-//    }
+    try! prepareDependencies {
+      try $0.bootstrapDatabase()
+    }
   }
-  
+
   var body: some Scene {
     WindowGroup {
-      AppView()
+      AppView(
+        store: Store(initialState: AppFeature.State()) {
+          AppFeature()
+        }
+      )
     }
   }
 }
