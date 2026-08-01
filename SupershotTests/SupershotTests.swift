@@ -9,7 +9,7 @@ import OrderedCollections
 import SQLiteData
 import Testing
 
-@testable import Netscore
+@testable import Supershot
 
 @MainActor
 @Suite(
@@ -18,7 +18,7 @@ import Testing
     try $0.bootstrapDatabase()
   }
 )
-struct NetscoreTests {
+struct SupershotTests {
   @Test
   func setupValidationRequiresDifferentTeamNames() async {
     var state = SetupFeature.State()
