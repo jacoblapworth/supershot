@@ -6,6 +6,15 @@
 	objectVersion = 90;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
+		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
+		12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60A301E25CB00094D7C /* DependenciesMacros */; };
+		12A4C610301E295200094D7C /* SQLiteData in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60F301E295200094D7C /* SQLiteData */; };
+		12A4C612301E295800094D7C /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C611301E295800094D7C /* ComposableArchitecture */; };
+		12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C613301E296700094D7C /* SwiftUINavigation */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Netscore.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Netscore.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -22,6 +31,12 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				12715897300D144600B14CCB /* Sharing in Frameworks */,
+				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
+				12A4C612301E295800094D7C /* ComposableArchitecture in Frameworks */,
+				12A4C610301E295200094D7C /* SQLiteData in Frameworks */,
+				12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */,
+				12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -31,6 +46,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* Netscore */,
+				12A4C60E301E295200094D7C /* Frameworks */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +57,13 @@
 				000000000000000000000120 /* Netscore.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		12A4C60E301E295200094D7C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -60,6 +83,15 @@
 				000000000000000000000010 /* Netscore */,
 			);
 			name = Netscore;
+			packageProductDependencies = (
+				12715896300D144600B14CCB /* Sharing */,
+				12A4C608301E25CB00094D7C /* Dependencies */,
+				12A4C60A301E25CB00094D7C /* DependenciesMacros */,
+				12A4C60C301E25CB00094D7C /* DependenciesTestSupport */,
+				12A4C60F301E295200094D7C /* SQLiteData */,
+				12A4C611301E295800094D7C /* ComposableArchitecture */,
+				12A4C613301E296700094D7C /* SwiftUINavigation */,
+			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Netscore.app */;
 			productType = "com.apple.product-type.application";
@@ -79,7 +111,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 000000000000000010000000 /* Build configuration list for PBXProject "netscore" */;
+			buildConfigurationList = 000000000000000010000000 /* Build configuration list for PBXProject "Netscore" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -88,6 +120,13 @@
 			);
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
+				12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */,
+				12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */,
+				12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */,
+				12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */,
+			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
 			projectDirPath = "";
@@ -115,7 +154,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		000000000000000011000000 /* Debug configuration for PBXProject "netscore" */ = {
+		000000000000000011000000 /* Debug configuration for PBXProject "Netscore" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -185,7 +224,7 @@
 			};
 			name = Debug;
 		};
-		000000000000000012000000 /* Release configuration for PBXProject "netscore" */ = {
+		000000000000000012000000 /* Release configuration for PBXProject "Netscore" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -324,11 +363,11 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		000000000000000010000000 /* Build configuration list for PBXProject "netscore" */ = {
+		000000000000000010000000 /* Build configuration list for PBXProject "Netscore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				000000000000000011000000 /* Debug configuration for PBXProject "netscore" */,
-				000000000000000012000000 /* Release configuration for PBXProject "netscore" */,
+				000000000000000011000000 /* Debug configuration for PBXProject "Netscore" */,
+				000000000000000012000000 /* Release configuration for PBXProject "Netscore" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -341,6 +380,93 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.26.1;
+			};
+			traits = (
+			);
+		};
+		12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-navigation";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.3;
+			};
+		};
+		12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-sharing";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.9.1;
+			};
+			traits = (
+			);
+		};
+		12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/sqlite-data";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.8.2;
+			};
+			traits = (
+			);
+		};
+		12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-dependencies";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.14.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		12715896300D144600B14CCB /* Sharing */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */;
+			productName = Sharing;
+		};
+		12A4C608301E25CB00094D7C /* Dependencies */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = Dependencies;
+		};
+		12A4C60A301E25CB00094D7C /* DependenciesMacros */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = DependenciesMacros;
+		};
+		12A4C60C301E25CB00094D7C /* DependenciesTestSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
+			productName = DependenciesTestSupport;
+		};
+		12A4C60F301E295200094D7C /* SQLiteData */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */;
+			productName = SQLiteData;
+		};
+		12A4C611301E295800094D7C /* ComposableArchitecture */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
+			productName = ComposableArchitecture;
+		};
+		12A4C613301E296700094D7C /* SwiftUINavigation */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */;
+			productName = SwiftUINavigation;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 000000000000000000000000 /* Project object */;
 }
