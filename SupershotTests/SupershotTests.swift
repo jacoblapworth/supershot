@@ -5,6 +5,7 @@ import CustomDump
 import Dependencies
 import DependenciesTestSupport
 import Foundation
+import GRDB
 import OrderedCollections
 import SQLiteData
 import Testing
@@ -309,6 +310,284 @@ struct SupershotTests {
   }
 
   @Test
+  func runningTimerMigrationLeavesExistingProgressPaused() throws {
+    let database = try DatabaseQueue()
+    try database.write { db in
+      try db.execute(
+        sql: """
+          CREATE TABLE "games"(
+            "id" TEXT PRIMARY KEY NOT NULL,
+            "elapsedSeconds" INTEGER NOT NULL
+          ) STRICT
+          """
+      )
+      try db.execute(
+        sql: "INSERT INTO \"games\" (\"id\", \"elapsedSeconds\") VALUES (?, ?)",
+        arguments: [UUID(3).uuidString, 42]
+      )
+
+      try migrateAddRunningTimerEndDate(db)
+
+      let row = try Row.fetchOne(
+        db,
+        sql: "SELECT \"elapsedSeconds\", \"timerEndsAt\" FROM \"games\""
+      )
+      expectNoDifference(row?["elapsedSeconds"] as Int?, 42)
+      expectNoDifference(row?["timerEndsAt"] as String?, nil)
+    }
+  }
+
+  @Test
+  func timerMathUsesCeilingAndClampsInvalidValues() {
+    let now = Date(timeIntervalSince1970: 1_000)
+
+    expectNoDifference(
+      GameTimerMath.elapsedSeconds(
+        durationSeconds: 900,
+        persistedElapsedSeconds: 0,
+        timerEndsAt: now.addingTimeInterval(0.001),
+        now: now
+      ),
+      899
+    )
+    expectNoDifference(
+      GameTimerMath.elapsedSeconds(
+        durationSeconds: 900,
+        persistedElapsedSeconds: 0,
+        timerEndsAt: now,
+        now: now
+      ),
+      900
+    )
+    expectNoDifference(
+      GameTimerMath.elapsedSeconds(
+        durationSeconds: 900,
+        persistedElapsedSeconds: 0,
+        timerEndsAt: now.addingTimeInterval(10_000),
+        now: now
+      ),
+      0
+    )
+    expectNoDifference(
+      GameTimerMath.elapsedSeconds(
+        durationSeconds: 900,
+        persistedElapsedSeconds: 1_000,
+        timerEndsAt: nil,
+        now: now
+      ),
+      900
+    )
+    expectNoDifference(
+      GameTimerMath.elapsedSeconds(
+        durationSeconds: 900,
+        persistedElapsedSeconds: -20,
+        timerEndsAt: nil,
+        now: now
+      ),
+      0
+    )
+    expectNoDifference(
+      GameTimerMath.endDate(
+        durationSeconds: 900,
+        elapsedSeconds: 125,
+        now: now
+      ),
+      Date(timeIntervalSince1970: 1_775)
+    )
+  }
+
+  @Test
+  func timerClientPersistsStartPauseResumeAndIgnoresStaleActions() async throws {
+    let seedStore = Self.makeScoringStore()
+    let database = seedStore.dependencies.defaultDatabase
+    let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_000))
+    let events = LockIsolated<[TimerSystemEvent]>([])
+    let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
+
+    try await withDependencies {
+      $0.date = DateGenerator { currentDate.value }
+      $0.defaultDatabase = database
+    } operation: {
+      let started = try await client.startOrResume(UUID(3), 1, true)
+      expectNoDifference(started.snapshot.game.elapsedSeconds, 0)
+      expectNoDifference(
+        started.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_900)
+      )
+      expectNoDifference(
+        events.value,
+        [
+          .activity(Date(timeIntervalSince1970: 1_900)),
+          .alarm(Date(timeIntervalSince1970: 1_900), requestsAuthorization: true),
+        ]
+      )
+
+      events.setValue([])
+      _ = try await client.startOrResume(UUID(3), 1, false)
+      expectNoDifference(
+        events.value,
+        [.activity(Date(timeIntervalSince1970: 1_900))]
+      )
+
+      events.setValue([])
+      let stalePause = try await client.pause(UUID(3), 2)
+      expectNoDifference(
+        stalePause.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_900)
+      )
+      expectNoDifference(
+        events.value,
+        [.activity(Date(timeIntervalSince1970: 1_900))]
+      )
+
+      currentDate.setValue(Date(timeIntervalSince1970: 1_500))
+      let relaunched = try await client.reconcile(UUID(3))
+      expectNoDifference(relaunched.game.elapsedSeconds, 500)
+      let relaunchedState = ScoringFeature.State(snapshot: relaunched)
+      expectNoDifference(relaunchedState.elapsedSeconds, 500)
+      expectNoDifference(relaunchedState.isTimerRunning, true)
+
+      events.setValue([])
+      let paused = try await client.pause(UUID(3), 1)
+      expectNoDifference(paused.game.elapsedSeconds, 500)
+      expectNoDifference(paused.game.timerEndsAt, nil)
+      expectNoDifference(events.value, [.cancelAlarm, .activity(nil)])
+
+      events.setValue([])
+      let resumed = try await client.startOrResume(UUID(3), 1, false)
+      expectNoDifference(
+        resumed.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_900)
+      )
+      expectNoDifference(
+        events.value,
+        [
+          .activity(Date(timeIntervalSince1970: 1_900)),
+          .alarm(Date(timeIntervalSince1970: 1_900), requestsAuthorization: false),
+        ]
+      )
+    }
+  }
+
+  @Test
+  func timerClientReconcilesQuarterAndBreakAcrossLargeTimeJumps() async throws {
+    var state = Self.scoringState()
+    state.firstBreakDurationSeconds = 120
+    state.hasTimerStartedThisPeriod = true
+    state.isTimerRunning = true
+    state.timerEndsAt = Date(timeIntervalSince1970: 1_050)
+    let seedStore = Self.makeScoringStore(state: state)
+    let database = seedStore.dependencies.defaultDatabase
+    let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_100))
+    let client = GameTimerClient.live(system: .noop)
+
+    try await withDependencies {
+      $0.date = DateGenerator { currentDate.value }
+      $0.defaultDatabase = database
+    } operation: {
+      let duringBreak = try await client.reconcile(UUID(3))
+      expectNoDifference(duringBreak.game.isInBreak, true)
+      expectNoDifference(duringBreak.game.isAwaitingCentrePassConfirmation, true)
+      expectNoDifference(duringBreak.game.elapsedSeconds, 50)
+      expectNoDifference(
+        duringBreak.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_170)
+      )
+
+      currentDate.setValue(Date(timeIntervalSince1970: 1_300))
+      let afterBreak = try await client.reconcile(UUID(3))
+      expectNoDifference(afterBreak.game.isInBreak, true)
+      expectNoDifference(afterBreak.game.elapsedSeconds, 120)
+      expectNoDifference(afterBreak.game.timerEndsAt, nil)
+    }
+  }
+
+  @Test
+  func unavailableSystemPresentationsDoNotRollBackTimer() async throws {
+    let seedStore = Self.makeScoringStore()
+    let database = seedStore.dependencies.defaultDatabase
+    let events = LockIsolated<[TimerSystemEvent]>([])
+    let client = GameTimerClient.live(
+      system: Self.timerSystemClient(events: events, alarmUnavailable: true)
+    )
+
+    let update = try await withDependencies {
+      $0.date.now = Date(timeIntervalSince1970: 1_000)
+      $0.defaultDatabase = database
+    } operation: {
+      try await client.startOrResume(UUID(3), 1, true)
+    }
+
+    expectNoDifference(update.alarmAuthorizationDenied, true)
+    expectNoDifference(
+      update.snapshot.game.timerEndsAt,
+      Date(timeIntervalSince1970: 1_900)
+    )
+    let storedGame = try await database.read { db in
+      try Game.find(UUID(3)).fetchOne(db)
+    }
+    expectNoDifference(
+      storedGame?.timerEndsAt,
+      Date(timeIntervalSince1970: 1_900)
+    )
+  }
+
+  @Test
+  func alarmUnavailableExplanationAppearsOnlyOncePerScoringSession() async {
+    let clock = TestClock()
+    let events = LockIsolated<[TimerSystemEvent]>([])
+    let gameTimer = GameTimerClient.live(
+      system: Self.timerSystemClient(events: events, alarmUnavailable: true)
+    )
+    let store = Self.makeScoringStore(clock: clock, gameTimer: gameTimer)
+
+    await store.send(.startTimerButtonTapped) {
+      $0.hasTimerStartedThisPeriod = true
+      $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.alert = .alarmUnavailable
+      $0.hasShownAlarmUnavailableAlert = true
+    }
+    await store.send(.alert(.presented(.dismissButtonTapped))) {
+      $0.alert = nil
+    }
+
+    await store.send(.pauseTimerButtonTapped) {
+      $0.isTimerRunning = false
+      $0.timerEndsAt = nil
+    }
+    await store.receive {
+      guard case .timerPauseResponse(.success) = $0 else { return false }
+      return true
+    }
+
+    await store.send(.resumeTimerButtonTapped) {
+      $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
+    }
+    expectNoDifference(store.state.alert, nil)
+
+    await store.send(.pauseTimerButtonTapped) {
+      $0.isTimerRunning = false
+      $0.timerEndsAt = nil
+    }
+    await store.receive {
+      guard case .timerPauseResponse(.success) = $0 else { return false }
+      return true
+    }
+    await store.finish()
+  }
+
+  @Test
   func timerStartsPausesAndResumes() async throws {
     let clock = TestClock()
     let store = Self.makeScoringStore(clock: clock)
@@ -316,6 +595,11 @@ struct SupershotTests {
     await store.send(.startTimerButtonTapped) {
       $0.hasTimerStartedThisPeriod = true
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
     }
 
     await clock.advance(by: .seconds(1))
@@ -328,10 +612,20 @@ struct SupershotTests {
 
     await store.send(.pauseTimerButtonTapped) {
       $0.isTimerRunning = false
+      $0.timerEndsAt = nil
+    }
+    await store.receive {
+      guard case .timerPauseResponse(.success) = $0 else { return false }
+      return true
     }
 
     await store.send(.resumeTimerButtonTapped) {
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
     }
 
     await clock.advance(by: .seconds(1))
@@ -344,7 +638,13 @@ struct SupershotTests {
 
     await store.send(.pauseTimerButtonTapped) {
       $0.isTimerRunning = false
+      $0.timerEndsAt = nil
     }
+    await store.receive {
+      guard case .timerPauseResponse(.success) = $0 else { return false }
+      return true
+    }
+    await store.finish()
   }
 
   @Test
@@ -357,6 +657,11 @@ struct SupershotTests {
     await store.send(.resumeTimerButtonTapped) {
       $0.hasTimerStartedThisPeriod = true
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_001)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
     }
 
     await clock.advance(by: .seconds(1))
@@ -365,9 +670,16 @@ struct SupershotTests {
       return true
     } assert: {
       $0.elapsedSeconds = $0.periodDurationSeconds
-      $0.isShowingLastCentrePassBanner = true
       $0.isTimerRunning = false
+      $0.timerEndsAt = nil
     }
+    await store.receive {
+      guard case .timerReconcileResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.isShowingLastCentrePassBanner = true
+    }
+    await store.finish()
   }
 
   @Test
@@ -401,6 +713,7 @@ struct SupershotTests {
     expectNoDifference(game?.currentPeriod, 2)
     expectNoDifference(game?.elapsedSeconds, 0)
     expectNoDifference(game?.isAwaitingCentrePassConfirmation, false)
+    await store.finish()
   }
 
   @Test
@@ -433,6 +746,7 @@ struct SupershotTests {
     }
     expectNoDifference(game?.centrePassTeamID, UUID(2))
     expectNoDifference(game?.currentPeriod, 2)
+    await store.finish()
   }
 
   @Test
@@ -450,6 +764,7 @@ struct SupershotTests {
     expectNoDifference(store.state.elapsedSeconds, 42)
     expectNoDifference(store.state.centrePassTeamID, UUID(1))
     expectNoDifference(store.state.canMoveToNextQuarter, false)
+    await store.finish()
   }
 
   @Test
@@ -473,6 +788,7 @@ struct SupershotTests {
       $0.elapsedSeconds = 0
       $0.isShowingLastCentrePassBanner = true
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_002)
     }
     await store.send(.lastCentrePassNotTakenButtonTapped) {
       $0.isTransitioningPeriod = true
@@ -500,6 +816,11 @@ struct SupershotTests {
     } assert: {
       $0.elapsedSeconds = 2
       $0.isTimerRunning = false
+      $0.timerEndsAt = nil
+    }
+    await store.receive {
+      guard case .timerReconcileResponse(.success) = $0 else { return false }
+      return true
     }
 
     expectNoDifference(store.state.canContinueToNextQuarter, true)
@@ -523,6 +844,7 @@ struct SupershotTests {
     }
     expectNoDifference(game?.currentPeriod, 2)
     expectNoDifference(game?.isInBreak, false)
+    await store.finish()
   }
 
   @Test
@@ -558,6 +880,7 @@ struct SupershotTests {
     }
 
     expectNoDifference(store.state.isShowingOriginalTeamOrder, true)
+    await store.finish()
   }
 
   @Test
@@ -584,6 +907,7 @@ struct SupershotTests {
       $0.isTransitioningPeriod = false
       $0.period = 2
     }
+    await store.finish()
   }
 
   @Test
@@ -600,6 +924,11 @@ struct SupershotTests {
     await store.send(.resumeTimerButtonTapped) {
       $0.hasTimerStartedThisPeriod = true
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_001)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
     }
     await clock.advance(by: .seconds(1))
     await store.receive {
@@ -608,10 +937,16 @@ struct SupershotTests {
     } assert: {
       $0.elapsedSeconds = $0.periodDurationSeconds
       $0.isTimerRunning = false
+      $0.timerEndsAt = nil
+    }
+    await store.receive {
+      guard case .timerReconcileResponse(.success) = $0 else { return false }
+      return true
     }
 
     expectNoDifference(store.state.clockPhase, .quarter)
     expectNoDifference(store.state.canFinishGame, true)
+    await store.finish()
   }
 
   @Test
@@ -640,13 +975,46 @@ struct SupershotTests {
   }
 
   @Test
-  func backgroundingPausesAndPersistsGameProgress() async throws {
+  func runningGoalUsesAuthoritativeEndDateForTimestamp() async throws {
+    var state = Self.scoringState()
+    state.elapsedSeconds = 123
+    state.hasTimerStartedThisPeriod = true
+    state.isTimerRunning = true
+    state.timerEndsAt = Date(timeIntervalSince1970: 1_200)
+    let store = Self.makeScoringStore(state: state)
+
+    await store.send(.goalButtonTapped(UUID(1))) {
+      $0.elapsedSeconds = 700
+    }
+    await store.receive {
+      guard case .goalResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.canUndo = true
+      $0.centrePassTeamID = UUID(2)
+      $0.teamAScore = 1
+    }
+
+    let goal = try await store.dependencies.defaultDatabase.read { db in
+      try Goal.fetchOne(db)
+    }
+    expectNoDifference(goal?.elapsedSeconds, 700)
+    await store.finish()
+  }
+
+  @Test
+  func backgroundingLeavesAuthoritativeTimerRunning() async throws {
     let clock = TestClock()
     let store = Self.makeScoringStore(clock: clock)
 
     await store.send(.startTimerButtonTapped) {
       $0.hasTimerStartedThisPeriod = true
       $0.isTimerRunning = true
+      $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    }
+    await store.receive {
+      guard case .timerStartResponse(.success) = $0 else { return false }
+      return true
     }
 
     await clock.advance(by: .seconds(1))
@@ -657,42 +1025,55 @@ struct SupershotTests {
       $0.elapsedSeconds = 1
     }
 
-    await store.send(.sceneBecameInactive) {
-      $0.isTimerRunning = false
+    await store.send(.sceneBecameInactive)
+    await clock.advance(by: .seconds(119))
+    await store.send(.sceneBecameActive)
+    await store.receive {
+      guard case .timerReconcileResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = 120
     }
+    await clock.advance(by: .seconds(1))
+    await store.receive {
+      guard case .timerTick = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = 121
+    }
+    await store.send(.sceneBecameInactive)
     await store.finish()
 
     let snapshot = try await store.dependencies.defaultDatabase.read { db in
       try GameSnapshot.fetch(db, gameID: UUID(3))
     }
-    let resumedState = ScoringFeature.State(snapshot: snapshot)
-
     expectNoDifference(snapshot.game.currentPeriod, 1)
-    expectNoDifference(snapshot.game.elapsedSeconds, 1)
+    expectNoDifference(snapshot.game.elapsedSeconds, 0)
     expectNoDifference(snapshot.game.hasTimerStartedCurrentPeriod, true)
     expectNoDifference(snapshot.game.centrePassTeamID, UUID(1))
-    expectNoDifference(resumedState.centrePassTeamID, UUID(1))
-    expectNoDifference(resumedState.elapsedSeconds, 1)
-    expectNoDifference(resumedState.hasTimerStartedThisPeriod, true)
-    expectNoDifference(resumedState.isTimerRunning, false)
+    expectNoDifference(
+      snapshot.game.timerEndsAt,
+      Date(timeIntervalSince1970: 1_900)
+    )
+    expectNoDifference(store.state.elapsedSeconds, 121)
+    expectNoDifference(store.state.isTimerRunning, true)
   }
 
   @Test
-  func leavingScoringPausesPersistsAndDismisses() async throws {
+  func leavingScoringKeepsTimerRunningAndDismisses() async throws {
     let didDismiss = LockIsolated(false)
     var state = Self.scoringState()
     state.elapsedSeconds = 123
     state.hasTimerStartedThisPeriod = true
     state.isTimerRunning = true
     state.period = 2
+    state.timerEndsAt = Date(timeIntervalSince1970: 1_777)
     let store = Self.makeScoringStore(
       state: state,
       dismiss: DismissEffect { didDismiss.setValue(true) }
     )
 
-    await store.send(.closeButtonTapped) {
-      $0.isTimerRunning = false
-    }
+    await store.send(.closeButtonTapped)
     await store.finish()
 
     let game = try await store.dependencies.defaultDatabase.read { db in
@@ -703,6 +1084,7 @@ struct SupershotTests {
     expectNoDifference(game?.elapsedSeconds, 123)
     expectNoDifference(game?.hasTimerStartedCurrentPeriod, true)
     expectNoDifference(game?.centrePassTeamID, UUID(1))
+    expectNoDifference(game?.timerEndsAt, Date(timeIntervalSince1970: 1_777))
   }
 
   @Test
@@ -735,6 +1117,7 @@ struct SupershotTests {
     expectNoDifference(goals.first?.teamID, UUID(1))
     expectNoDifference(goals.first?.period, 1)
     expectNoDifference(goals.first?.elapsedSeconds, 0)
+    await store.finish()
   }
 
   @Test
@@ -776,6 +1159,7 @@ struct SupershotTests {
     }
     expectNoDifference(goals.count, 1)
     expectNoDifference(goals.first?.teamID, UUID(1))
+    await store.finish()
   }
 
   @Test
@@ -806,6 +1190,7 @@ struct SupershotTests {
       $0.centrePassTeamID = UUID(1)
       $0.teamAScore = 1
     }
+    await store.finish()
   }
 
   @Test
@@ -1333,16 +1718,95 @@ struct SupershotTests {
     expectNoDifference(detail.gameID, UUID(3))
   }
 
+  @Test
+  func gameDeepLinkReconcilesAndRestoresRunningScoringRoute() async {
+    var scoring = Self.scoringState()
+    scoring.hasTimerStartedThisPeriod = true
+    scoring.isTimerRunning = true
+    scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+    let seedStore = Self.makeScoringStore(state: scoring)
+    let database = seedStore.dependencies.defaultDatabase
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    } withDependencies: {
+      $0.date.now = Date(timeIntervalSince1970: 1_100)
+      $0.defaultDatabase = database
+      $0.gameTimer = .live(system: .noop)
+    }
+    store.exhaustivity = .off(showSkippedAssertions: false)
+
+    await store.send(
+      .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
+    )
+    await store.receive {
+      guard case .resumeGameResponse(UUID(3), .success) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(store.state.path.count, 1)
+    guard case let .scoring(restored) = store.state.path[0] else {
+      Issue.record("Expected the running scoring route")
+      return
+    }
+    expectNoDifference(restored.elapsedSeconds, 100)
+    expectNoDifference(restored.isTimerRunning, true)
+    expectNoDifference(
+      restored.timerEndsAt,
+      Date(timeIntervalSince1970: 1_900)
+    )
+  }
+
+  private nonisolated static func timerSystemClient(
+    events: LockIsolated<[TimerSystemEvent]>,
+    alarmUnavailable: Bool = false
+  ) -> GameTimerSystemClient {
+    GameTimerSystemClient(
+      cancelAlarm: { _ in
+        events.withValue { $0.append(.cancelAlarm) }
+      },
+      endActivity: { _ in
+        events.withValue { $0.append(.endActivity) }
+      },
+      scheduleAlarm: { snapshot, requestsAuthorization in
+        events.withValue {
+          $0.append(
+            .alarm(
+              snapshot.game.timerEndsAt,
+              requestsAuthorization: requestsAuthorization
+            )
+          )
+        }
+        return alarmUnavailable
+      },
+      updateActivity: { snapshot, _ in
+        events.withValue {
+          $0.append(.activity(snapshot.game.timerEndsAt))
+        }
+      }
+    )
+  }
+
   private static func makeScoringStore(
     state: ScoringFeature.State = scoringState(),
     date: Date = Date(timeIntervalSince1970: 1_000),
     clock: TestClock<Duration>? = nil,
-    dismiss: DismissEffect? = nil
+    dismiss: DismissEffect? = nil,
+    gameTimer: GameTimerClient? = nil
   ) -> TestStoreOf<ScoringFeature> {
-    TestStore(initialState: state) {
+    let clockStart = clock?.now
+    return TestStore(initialState: state) {
       ScoringFeature()
     } withDependencies: {
-      $0.date.now = date
+      if let clock, let clockStart {
+        $0.date = DateGenerator {
+          let components = clockStart.duration(to: clock.now).components
+          let seconds = Double(components.seconds)
+            + Double(components.attoseconds) / 1_000_000_000_000_000_000
+          return date.addingTimeInterval(seconds)
+        }
+      } else {
+        $0.date.now = date
+      }
       $0.uuid = .incrementing
       try! $0.bootstrapDatabase()
       try! Self.clearDatabase($0.defaultDatabase)
@@ -1369,7 +1833,8 @@ struct SupershotTests {
             isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
             currentPeriod: state.period,
             elapsedSeconds: state.elapsedSeconds,
-            hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod
+            hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod,
+            timerEndsAt: state.timerEndsAt
           )
         }
         .execute(db)
@@ -1379,6 +1844,9 @@ struct SupershotTests {
       }
       if let dismiss {
         $0.dismiss = dismiss
+      }
+      if let gameTimer {
+        $0.gameTimer = gameTimer
       }
     }
   }
@@ -1430,4 +1898,11 @@ struct SupershotTests {
     )
     return state
   }
+}
+
+private nonisolated enum TimerSystemEvent: Equatable, Sendable {
+  case activity(Date?)
+  case alarm(Date?, requestsAuthorization: Bool)
+  case cancelAlarm
+  case endActivity
 }

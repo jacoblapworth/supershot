@@ -22,6 +22,7 @@ struct AppFeature {
 
   enum Action {
     case alert(PresentationAction<Alert>)
+    case deepLinkOpened(URL)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
     case path(StackActionOf<AppPath>)
@@ -32,13 +33,28 @@ struct AppFeature {
     case dismissButtonTapped
   }
 
-  @Dependency(\.defaultDatabase) var database
+  @Dependency(\.gameTimer) var gameTimer
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
       case .alert:
         return .none
+
+      case let .deepLinkOpened(url):
+        guard let gameID = gameID(from: url) else { return .none }
+        for (id, destination) in zip(state.path.ids, state.path) {
+          guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
+            continue
+          }
+          state.path.pop(to: id)
+          return .send(
+            .path(.element(id: id, action: .scoring(.sceneBecameActive)))
+          )
+        }
+        state.alert = nil
+        state.loadingGameID = gameID
+        return resumeGameEffect(gameID: gameID)
 
       case let .gameRowTapped(game):
         guard !game.isCompleted else {
@@ -101,12 +117,15 @@ struct AppFeature {
   private func resumeGameEffect(gameID: Game.ID) -> Effect<Action> {
     .run { send in
       let result = await Result {
-        try await database.read { db in
-          try GameSnapshot.fetch(db, gameID: gameID)
-        }
+        try await gameTimer.reconcile(gameID)
       }
       await send(.resumeGameResponse(gameID, result))
     }
+  }
+
+  private func gameID(from url: URL) -> Game.ID? {
+    guard url.scheme == "supershot", url.host == "game" else { return nil }
+    return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 }
 
@@ -152,6 +171,7 @@ extension ScoringFeature.State {
       halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
       hasTimerStartedThisPeriod: snapshot.game.hasTimerStartedCurrentPeriod,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
+      isTimerRunning: snapshot.game.timerEndsAt != nil,
       period: period,
       periodDurationSeconds: snapshot.game.periodDurationSeconds,
       secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
@@ -167,7 +187,8 @@ extension ScoringFeature.State {
         colorHex: snapshot.teamB.colorHex,
         name: snapshot.teamB.name
       ),
-      teamBScore: snapshot.teamBScore
+      teamBScore: snapshot.teamBScore,
+      timerEndsAt: snapshot.game.timerEndsAt
     )
   }
 }

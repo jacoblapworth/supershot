@@ -46,7 +46,12 @@ struct ScoringView: View {
         .accessibilityLabel("Undo last goal")
       }
     }
+    .alert($store.scope(state: \.alert, action: \.alert))
     .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
+    .task {
+      guard scenePhase == .active else { return }
+      store.send(.sceneBecameActive)
+    }
     .onChange(of: scenePhase, scenePhaseChanged)
   }
 
@@ -256,8 +261,7 @@ struct ScoringView: View {
     _ oldValue: ScenePhase,
     _ newValue: ScenePhase
   ) {
-    guard newValue != .active else { return }
-    store.send(.sceneBecameInactive)
+    store.send(newValue == .active ? .sceneBecameActive : .sceneBecameInactive)
   }
 }
 

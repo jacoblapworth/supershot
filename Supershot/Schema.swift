@@ -27,6 +27,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var currentPeriod = 1
   var elapsedSeconds = 0
   var hasTimerStartedCurrentPeriod = false
+  var timerEndsAt: Date? = nil
 
   func breakDuration(after period: Int) -> Int {
     switch period {
@@ -341,9 +342,23 @@ extension DependencyValues {
       .execute(db)
     }
 
+    migrator.registerMigration("Add running timer end date") { db in
+      try migrateAddRunningTimerEndDate(db)
+    }
+
     try migrator.migrate(database)
     defaultDatabase = database
   }
+}
+
+nonisolated func migrateAddRunningTimerEndDate(_ db: Database) throws {
+  try #sql(
+    """
+    ALTER TABLE "games"
+    ADD COLUMN "timerEndsAt" TEXT
+    """
+  )
+  .execute(db)
 }
 
 nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")

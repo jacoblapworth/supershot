@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
 		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
 		12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60A301E25CB00094D7C /* DependenciesMacros */; };
@@ -18,6 +19,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		12C000023020000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 12C000073020000000000001;
+			remoteInfo = SupershotWidgets;
+		};
 		12B0000E301F000000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 000000000000000000000000 /* Project object */;
@@ -30,11 +38,32 @@
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Supershot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Supershot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		12B00003301F000000000001 /* SupershotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SupershotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		12C000033020000000000001 /* SupershotWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SupershotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 000000000000000100000000 /* Supershot */;
+		};
+		12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 12C000073020000000000001 /* SupershotWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		000000000000000000000010 /* Supershot */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */,
+			);
 			path = Supershot;
 			sourceTree = "<group>";
 		};
@@ -43,7 +72,34 @@
 			path = SupershotTests;
 			sourceTree = "<group>";
 		};
+		12C000043020000000000001 /* SupershotShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SupershotShared;
+			sourceTree = "<group>";
+		};
+		12C000053020000000000001 /* SupershotWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */,
+			);
+			path = SupershotWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		12C0000A3020000000000001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
@@ -64,6 +120,13 @@
 				12B00002301F000000000001 /* CustomDump in Frameworks */,
 			);
 		};
+		12C000063020000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -71,6 +134,8 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000010 /* Supershot */,
+				12C000043020000000000001 /* SupershotShared */,
+				12C000053020000000000001 /* SupershotWidgets */,
 				12B00004301F000000000001 /* SupershotTests */,
 				12A4C60E301E295200094D7C /* Frameworks */,
 				000000000000000000000020 /* Products */,
@@ -81,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* Supershot.app */,
+				12C000033020000000000001 /* SupershotWidgets.appex */,
 				12B00003301F000000000001 /* SupershotTests.xctest */,
 			);
 			name = Products;
@@ -103,11 +169,16 @@
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
 				000000000000000140000000 /* Resources */,
+				12C0000A3020000000000001 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
+			dependencies = (
+				12C0000B3020000000000001 /* PBXTargetDependency */,
+			);
 			fileSystemSynchronizedGroups = (
 				000000000000000000000010 /* Supershot */,
+				12C000043020000000000001 /* SupershotShared */,
 			);
 			name = Supershot;
 			packageProductDependencies = (
@@ -147,6 +218,27 @@
 			productReference = 12B00003301F000000000001 /* SupershotTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		12C000073020000000000001 /* SupershotWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 12C0000E3020000000000001 /* Build configuration list for PBXNativeTarget "SupershotWidgets" */;
+			buildPhases = (
+				12C000093020000000000001 /* Sources */,
+				12C000063020000000000001 /* Frameworks */,
+				12C000083020000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				12C000053020000000000001 /* SupershotWidgets */,
+				12C000043020000000000001 /* SupershotShared */,
+			);
+			name = SupershotWidgets;
+			packageProductDependencies = (
+			);
+			productName = SupershotWidgets;
+			productReference = 12C000033020000000000001 /* SupershotWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -163,6 +255,9 @@
 					12B00006301F000000000001 = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 000000000000000100000000;
+					};
+					12C000073020000000000001 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -189,6 +284,7 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* Supershot */,
+				12C000073020000000000001 /* SupershotWidgets */,
 				12B00006301F000000000001 /* SupershotTests */,
 			);
 		};
@@ -205,6 +301,13 @@
 			files = (
 			);
 		};
+		12C000083020000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -218,6 +321,13 @@
 			files = (
 			);
 		};
+		12C000093020000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -225,6 +335,14 @@
 			isa = PBXTargetDependency;
 			target = 000000000000000100000000 /* Supershot */;
 			targetProxy = 12B0000E301F000000000001 /* PBXContainerItemProxy */;
+		};
+		12C0000B3020000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilters = (
+				ios,
+			);
+			target = 12C000073020000000000001 /* SupershotWidgets */;
+			targetProxy = 12C000023020000000000001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -372,6 +490,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -413,6 +532,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -497,6 +617,70 @@
 			};
 			name = Release;
 		};
+		12C0000C3020000000000001 /* Debug configuration for PBXNativeTarget "SupershotWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 82882Y54S7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SupershotWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nz.lapworth.Supershot.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "WIDGET_EXTENSION $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		12C0000D3020000000000001 /* Release configuration for PBXNativeTarget "SupershotWidgets" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 82882Y54S7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SupershotWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = nz.lapworth.Supershot.Widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "WIDGET_EXTENSION $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -521,6 +705,14 @@
 			buildConfigurations = (
 				12B00010301F000000000001 /* Debug configuration for PBXNativeTarget "SupershotTests" */,
 				12B00011301F000000000001 /* Release configuration for PBXNativeTarget "SupershotTests" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		12C0000E3020000000000001 /* Build configuration list for PBXNativeTarget "SupershotWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12C0000C3020000000000001 /* Debug configuration for PBXNativeTarget "SupershotWidgets" */,
+				12C0000D3020000000000001 /* Release configuration for PBXNativeTarget "SupershotWidgets" */,
 			);
 			defaultConfigurationName = Release;
 		};

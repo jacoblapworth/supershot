@@ -27,6 +27,7 @@ struct AppView: View {
       }
     }
     .alert($store.scope(state: \.alert, action: \.alert))
+    .onOpenURL { store.send(.deepLinkOpened($0)) }
   }
 }
 
