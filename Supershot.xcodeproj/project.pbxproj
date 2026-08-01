@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilters = (ios, ); settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
 		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
 		12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60A301E25CB00094D7C /* DependenciesMacros */; };
@@ -16,16 +15,10 @@
 		12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C613301E296700094D7C /* SwiftUINavigation */; };
 		12B00001301F000000000001 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60C301E25CB00094D7C /* DependenciesTestSupport */; };
 		12B00002301F000000000001 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = 12B0000D301F000000000001 /* CustomDump */; };
+		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		12C000023020000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 000000000000000000000000 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 12C000073020000000000001;
-			remoteInfo = SupershotWidgets;
-		};
 		12B0000E301F000000000001 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 000000000000000000000000 /* Project object */;
@@ -33,7 +26,26 @@
 			remoteGlobalIDString = 000000000000000100000000;
 			remoteInfo = Netscore;
 		};
+		12C000023020000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 12C000073020000000000001;
+			remoteInfo = SupershotWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		12C0000A3020000000000001 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Supershot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Supershot.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -87,20 +99,6 @@
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
-/* Begin PBXCopyFilesBuildPhase section */
-		12C0000A3020000000000001 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -122,10 +120,8 @@
 		};
 		12C000063020000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -229,12 +225,10 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
-				12C000053020000000000001 /* SupershotWidgets */,
 				12C000043020000000000001 /* SupershotShared */,
+				12C000053020000000000001 /* SupershotWidgets */,
 			);
 			name = SupershotWidgets;
-			packageProductDependencies = (
-			);
 			productName = SupershotWidgets;
 			productReference = 12C000033020000000000001 /* SupershotWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -303,10 +297,8 @@
 		};
 		12C000083020000000000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
@@ -323,10 +315,8 @@
 		};
 		12C000093020000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
 			files = (
 			);
-			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
@@ -338,9 +328,7 @@
 		};
 		12C0000B3020000000000001 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				ios,
-			);
+			platformFilter = ios;
 			target = 12C000073020000000000001 /* SupershotWidgets */;
 			targetProxy = 12C000023020000000000001 /* PBXContainerItemProxy */;
 		};

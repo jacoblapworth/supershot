@@ -1,82 +1,6 @@
-import ComposableArchitecture
-import Dependencies
-import SQLiteData
 import SwiftUI
 
-struct AppView: View {
-  @Fetch(GamesRequest(), animation: .default)
-  private var response = GamesRequest.Value()
-  @Bindable var store: StoreOf<AppFeature>
-
-  var body: some View {
-    NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-      GamesHomeView(
-        games: response.games,
-        loadingGameID: store.loadingGameID,
-        gameTapped: { store.send(.gameRowTapped($0)) },
-        newGameTapped: { store.send(.newGameButtonTapped) }
-      )
-    } destination: { pathStore in
-      switch pathStore.case {
-      case .gameDetail(let gameDetailStore):
-        GameDetailView(store: gameDetailStore)
-      case .scoring(let scoringStore):
-        ScoringView(store: scoringStore)
-      case .setup(let setupStore):
-        SetupView(store: setupStore)
-      }
-    }
-    .alert($store.scope(state: \.alert, action: \.alert))
-    .onOpenURL { store.send(.deepLinkOpened($0)) }
-  }
-}
-
-private struct GamesHomeView: View {
-  var games: [GameListItem]
-  var loadingGameID: Game.ID?
-  var gameTapped: (GameListItem) -> Void
-  var newGameTapped: () -> Void
-
-  var body: some View {
-    List {
-      if games.isEmpty {
-        ContentUnavailableView {
-          Label("No games yet", systemImage: "sportscourt")
-        } description: {
-          Text("Start a game to keep score and build your history.")
-        } actions: {
-          Button("Start game", action: newGameTapped)
-            .buttonStyle(.borderedProminent)
-        }
-        .listRowBackground(Color.clear)
-      } else {
-        ForEach(games) { game in
-          Button {
-            gameTapped(game)
-          } label: {
-            GameRow(
-              game: game,
-              isLoading: loadingGameID == game.id
-            )
-          }
-          .buttonStyle(.plain)
-          .disabled(loadingGameID != nil)
-        }
-      }
-    }
-    .navigationTitle("Games")
-    .toolbar {
-      ToolbarItem(placement: .primaryAction) {
-        Button(action: newGameTapped) {
-          Label("New game", systemImage: "plus")
-        }
-        .disabled(loadingGameID != nil)
-      }
-    }
-  }
-}
-
-private struct GameRow: View {
+struct GameRow: View {
   var game: GameListItem
   var isLoading: Bool
 
@@ -169,14 +93,17 @@ private struct TeamScore: View {
   }
 }
 
-#Preview("Games") {
-  let _ = prepareDependencies {
-    try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
-  }
-  AppView(
-    store: Store(initialState: AppFeature.State()) {
-      AppFeature()
-    }
-  )
+#Preview("In-progress game") {
+  GameRow(game: .previewInProgress, isLoading: false)
+    .padding()
+}
+
+#Preview("Completed game row") {
+  GameRow(game: .previewCompleted, isLoading: false)
+    .padding()
+}
+
+#Preview("Loading game row") {
+  GameRow(game: .previewInProgress, isLoading: true)
+    .padding()
 }
