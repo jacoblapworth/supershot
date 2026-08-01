@@ -7,37 +7,66 @@ enum AppPath {
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
   case setup(SetupFeature)
+  case teamDetail(TeamDetailFeature)
 }
 
 extension AppPath.State: Equatable {}
 
 @Reducer
 struct AppFeature {
+  enum Tab: Equatable, Hashable, Sendable {
+    case games
+    case teams
+  }
+
   @ObservableState
   struct State: Equatable {
+    @Presents var alarmOnboarding: AlarmOnboardingFeature.State?
     @Presents var alert: AlertState<Alert>?
+    var deletingGameID: Game.ID?
+    var hasCheckedAlarmAuthorization = false
     var loadingGameID: Game.ID?
+    var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
+    var selectedTab = Tab.games
+    var teamsPath = StackState<AppPath.State>()
   }
 
   enum Action {
+    case alarmOnboarding(PresentationAction<AlarmOnboardingFeature.Action>)
     case alert(PresentationAction<Alert>)
     case deepLinkOpened(URL)
+    case deleteGameButtonTapped(Game.ID)
+    case deleteGameResponse(Game.ID, Result<Void, any Error>)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
     case path(StackActionOf<AppPath>)
     case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
+    case selectedTabChanged(Tab)
+    case task
+    case teamGameRowTapped(GameListItem)
+    case teamRowTapped(TeamListItem)
+    case teamsPath(StackActionOf<AppPath>)
   }
 
   enum Alert: Equatable {
     case dismissButtonTapped
   }
 
+  @Dependency(\.alarmAuthorization) var alarmAuthorization
+  @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case .alarmOnboarding(.presented(.delegate(.completed))):
+        state.alarmOnboarding = nil
+        return .none
+
+      case .alarmOnboarding:
+        return .none
+
       case .alert:
         return .none
 
@@ -47,16 +76,49 @@ struct AppFeature {
           guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
             continue
           }
+          state.selectedTab = .games
           state.path.pop(to: id)
           return .send(
             .path(.element(id: id, action: .scoring(.sceneBecameActive)))
           )
         }
+        for (id, destination) in zip(state.teamsPath.ids, state.teamsPath) {
+          guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
+            continue
+          }
+          state.selectedTab = .teams
+          state.teamsPath.pop(to: id)
+          return .send(
+            .teamsPath(.element(id: id, action: .scoring(.sceneBecameActive)))
+          )
+        }
         state.alert = nil
         state.loadingGameID = gameID
+        state.loadingGameTab = .games
+        state.selectedTab = .games
         return resumeGameEffect(gameID: gameID)
 
+      case let .deleteGameButtonTapped(gameID):
+        guard state.deletingGameID == nil, state.loadingGameID == nil else {
+          return .none
+        }
+        state.alert = nil
+        state.deletingGameID = gameID
+        return deleteGameEffect(gameID: gameID)
+
+      case let .deleteGameResponse(gameID, .success):
+        guard state.deletingGameID == gameID else { return .none }
+        state.deletingGameID = nil
+        return .none
+
+      case let .deleteGameResponse(gameID, .failure):
+        guard state.deletingGameID == gameID else { return .none }
+        state.deletingGameID = nil
+        state.alert = .gameDeletionFailed
+        return .none
+
       case let .gameRowTapped(game):
+        guard state.deletingGameID == nil else { return .none }
         guard !game.isCompleted else {
           state.path.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -66,6 +128,7 @@ struct AppFeature {
 
         state.alert = nil
         state.loadingGameID = game.id
+        state.loadingGameTab = .games
         return resumeGameEffect(gameID: game.id)
 
       case .newGameButtonTapped:
@@ -84,32 +147,110 @@ struct AppFeature {
         state.path.append(.scoring(scoring))
         return .none
 
+      case let .path(.element(id: id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))):
+        guard case let .gameDetail(gameDetail) = state.path[id: id] else {
+          return .none
+        }
+        let gameID = gameDetail.gameID
+        state.path.pop(from: id)
+        return .send(.deleteGameButtonTapped(gameID))
+
       case .path:
         return .none
 
       case let .resumeGameResponse(gameID, .success(snapshot)):
         guard state.loadingGameID == gameID else { return .none }
+        let tab = state.loadingGameTab ?? .games
         state.loadingGameID = nil
+        state.loadingGameTab = nil
 
         guard snapshot.game.endedAt == nil else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: gameID))
+          append(
+            .gameDetail(GameDetailFeature.State(gameID: gameID)),
+            to: tab,
+            state: &state
           )
           return .none
         }
 
-        state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
+        append(.scoring(ScoringFeature.State(snapshot: snapshot)), to: tab, state: &state)
         return .none
 
       case let .resumeGameResponse(gameID, .failure):
         guard state.loadingGameID == gameID else { return .none }
         state.loadingGameID = nil
+        state.loadingGameTab = nil
         state.alert = .gameUnavailable
+        return .none
+
+      case let .selectedTabChanged(tab):
+        state.selectedTab = tab
+        return .none
+
+      case .task:
+        guard !state.hasCheckedAlarmAuthorization else { return .none }
+        state.hasCheckedAlarmAuthorization = true
+        if alarmAuthorization.status() == .notDetermined {
+          state.alarmOnboarding = AlarmOnboardingFeature.State()
+        }
+        return .none
+
+      case let .teamGameRowTapped(game):
+        guard state.deletingGameID == nil else { return .none }
+        guard !game.isCompleted else {
+          state.teamsPath.append(
+            .gameDetail(GameDetailFeature.State(gameID: game.id))
+          )
+          return .none
+        }
+
+        state.alert = nil
+        state.loadingGameID = game.id
+        state.loadingGameTab = .teams
+        return resumeGameEffect(gameID: game.id)
+
+      case let .teamRowTapped(team):
+        state.teamsPath.append(
+          .teamDetail(TeamDetailFeature.State(teamID: team.id))
+        )
+        return .none
+
+      case let .teamsPath(
+        .element(id: id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))
+      ):
+        guard case let .gameDetail(gameDetail) = state.teamsPath[id: id] else {
+          return .none
+        }
+        let gameID = gameDetail.gameID
+        state.teamsPath.pop(from: id)
+        return .send(.deleteGameButtonTapped(gameID))
+
+      case let .teamsPath(
+        .element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))
+      ):
+        state.teamsPath.pop(from: id)
+        state.teamsPath.append(
+          .gameDetail(GameDetailFeature.State(gameID: gameID))
+        )
+        return .none
+
+      case let .teamsPath(
+        .element(id: _, action: .teamDetail(.delegate(.gameRowTapped(game))))
+      ):
+        return .send(.teamGameRowTapped(game))
+
+      case .teamsPath:
         return .none
       }
     }
     .forEach(\.path, action: \.path) {
       AppPath.body
+    }
+    .forEach(\.teamsPath, action: \.teamsPath) {
+      AppPath.body
+    }
+    .ifLet(\.$alarmOnboarding, action: \.alarmOnboarding) {
+      AlarmOnboardingFeature()
     }
     .ifLet(\.$alert, action: \.alert)
   }
@@ -120,6 +261,31 @@ struct AppFeature {
         try await gameTimer.reconcile(gameID)
       }
       await send(.resumeGameResponse(gameID, result))
+    }
+  }
+
+  private func append(
+    _ destination: AppPath.State,
+    to tab: Tab,
+    state: inout State
+  ) {
+    switch tab {
+    case .games:
+      state.path.append(destination)
+    case .teams:
+      state.teamsPath.append(destination)
+    }
+  }
+
+  private func deleteGameEffect(gameID: Game.ID) -> Effect<Action> {
+    .run { send in
+      await gameTimer.endPresentation(gameID)
+      let result = await Result {
+        try await database.write { db in
+          try Game.find(gameID).delete().execute(db)
+        }
+      }
+      await send(.deleteGameResponse(gameID, result))
     }
   }
 
@@ -139,6 +305,18 @@ extension AlertState where Action == AppFeature.Alert {
       }
     } message: {
       TextState("This unfinished game could not be opened.")
+    }
+  }
+
+  static var gameDeletionFailed: Self {
+    Self {
+      TextState("Couldn’t delete game")
+    } actions: {
+      ButtonState(role: .cancel, action: .dismissButtonTapped) {
+        TextState("OK")
+      }
+    } message: {
+      TextState("Try again.")
     }
   }
 }

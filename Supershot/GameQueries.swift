@@ -30,6 +30,13 @@ nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   }
 }
 
+nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
+  let colorHex: String
+  let gameCount: Int
+  let id: Team.ID
+  let name: String
+}
+
 nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let clockSecondsRemaining: Int
   let id: Goal.ID
@@ -164,6 +171,58 @@ nonisolated struct GamesRequest: FetchKeyRequest {
         )
       }
     )
+  }
+}
+
+nonisolated struct TeamsRequest: FetchKeyRequest {
+  struct Value: Equatable, Sendable {
+    var teams: [TeamListItem] = []
+  }
+
+  func fetch(_ db: Database) throws -> Value {
+    let games = try Game.fetchAll(db)
+    let teams = try Team
+      .order { ($0.normalizedName, $0.id) }
+      .fetchAll(db)
+    let gameCounts = games.reduce(into: [Team.ID: Int]()) { counts, game in
+      for teamID in Set([game.teamAID, game.teamBID]) {
+        counts[teamID, default: 0] += 1
+      }
+    }
+
+    return Value(
+      teams: teams.map { team in
+        TeamListItem(
+          colorHex: team.colorHex,
+          gameCount: gameCounts[team.id, default: 0],
+          id: team.id,
+          name: team.name
+        )
+      }
+    )
+  }
+}
+
+nonisolated struct TeamDetailRequest: FetchKeyRequest {
+  struct Value: Equatable, Sendable {
+    var games: [GameListItem] = []
+    var team: Team?
+  }
+
+  let teamID: Team.ID
+
+  func fetch(_ db: Database) throws -> Value {
+    guard let team = try Team.find(teamID).fetchOne(db) else {
+      return Value()
+    }
+    let gameIDs = Set(
+      try Game.fetchAll(db)
+        .filter { $0.teamAID == teamID || $0.teamBID == teamID }
+        .map(\.id)
+    )
+    let games = try GamesRequest().fetch(db).games
+      .filter { gameIDs.contains($0.id) }
+    return Value(games: games, team: team)
   }
 }
 

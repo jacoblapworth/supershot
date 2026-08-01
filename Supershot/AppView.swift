@@ -5,14 +5,49 @@ import SwiftUI
 
 struct AppView: View {
   @Fetch(GamesRequest(), animation: .default)
-  private var response = GamesRequest.Value()
+  private var gamesResponse = GamesRequest.Value()
+  @Fetch(TeamsRequest(), animation: .default)
+  private var teamsResponse = TeamsRequest.Value()
   @Bindable var store: StoreOf<AppFeature>
 
   var body: some View {
+    Group {
+      if !store.hasCheckedAlarmAuthorization {
+        ProgressView()
+          .controlSize(.large)
+          .accessibilityLabel("Preparing Supershot")
+      } else if let onboardingStore = store.scope(
+        state: \.alarmOnboarding,
+        action: \.alarmOnboarding.presented
+      ) {
+        AlarmOnboardingView(store: onboardingStore)
+      } else {
+        tabs
+      }
+    }
+    .alert($store.scope(state: \.alert, action: \.alert))
+    .task { store.send(.task) }
+    .onOpenURL { store.send(.deepLinkOpened($0)) }
+  }
+
+  private var tabs: some View {
+    TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
+      Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
+        gamesNavigation
+      }
+      Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
+        teamsNavigation
+      }
+    }
+  }
+
+  private var gamesNavigation: some View {
     NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
       GamesHomeView(
-        games: response.games,
-        loadingGameID: store.loadingGameID,
+        deletingGameID: store.deletingGameID,
+        games: gamesResponse.games,
+        loadingGameID: store.loadingGameTab == .games ? store.loadingGameID : nil,
+        deleteGameTapped: { store.send(.deleteGameButtonTapped($0)) },
         gameTapped: { store.send(.gameRowTapped($0)) },
         newGameTapped: { store.send(.newGameButtonTapped) }
       )
@@ -22,12 +57,44 @@ struct AppView: View {
         GameDetailView(store: gameDetailStore)
       case .scoring(let scoringStore):
         ScoringView(store: scoringStore)
+          .toolbarVisibility(.hidden, for: .tabBar)
       case .setup(let setupStore):
         SetupView(store: setupStore)
+          .toolbarVisibility(.hidden, for: .tabBar)
+      case .teamDetail(let teamDetailStore):
+        TeamDetailView(
+          store: teamDetailStore,
+          deletingGameID: store.deletingGameID,
+          loadingGameID: store.loadingGameTab == .games ? store.loadingGameID : nil
+        )
       }
     }
-    .alert($store.scope(state: \.alert, action: \.alert))
-    .onOpenURL { store.send(.deepLinkOpened($0)) }
+  }
+
+  private var teamsNavigation: some View {
+    NavigationStack(path: $store.scope(state: \.teamsPath, action: \.teamsPath)) {
+      TeamsHomeView(
+        teamTapped: { store.send(.teamRowTapped($0)) },
+        teams: teamsResponse.teams
+      )
+    } destination: { pathStore in
+      switch pathStore.case {
+      case .gameDetail(let gameDetailStore):
+        GameDetailView(store: gameDetailStore)
+      case .scoring(let scoringStore):
+        ScoringView(store: scoringStore)
+          .toolbarVisibility(.hidden, for: .tabBar)
+      case .setup(let setupStore):
+        SetupView(store: setupStore)
+          .toolbarVisibility(.hidden, for: .tabBar)
+      case .teamDetail(let teamDetailStore):
+        TeamDetailView(
+          store: teamDetailStore,
+          deletingGameID: store.deletingGameID,
+          loadingGameID: store.loadingGameTab == .teams ? store.loadingGameID : nil
+        )
+      }
+    }
   }
 }
 

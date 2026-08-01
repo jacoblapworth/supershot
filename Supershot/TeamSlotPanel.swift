@@ -89,37 +89,11 @@ struct TeamSlotPanel: View {
       Text(store.mode == .creating ? "Create team" : "Edit team")
         .font(.headline)
 
-      TextField("Team name", text: $store.editor.name)
-        .textFieldStyle(.roundedBorder)
-
-      VStack(alignment: .leading, spacing: 10) {
-        Text("Team color")
-          .font(.subheadline.weight(.semibold))
-
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 42))], spacing: 12) {
-          ForEach(TeamColorPalette.options) { option in
-            Button {
-              store.send(.paletteColorButtonTapped(option.hex))
-            } label: {
-              Circle()
-                .fill(Color(teamHex: option.hex))
-                .frame(width: 34, height: 34)
-                .overlay {
-                  if store.editor.colorHex == option.hex {
-                    Image(systemName: "checkmark")
-                      .font(.caption.bold())
-                      .foregroundStyle(.white)
-                  }
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(option.name)
-            .accessibilityAddTraits(store.editor.colorHex == option.hex ? .isSelected : [])
-          }
-        }
-
-        TeamCustomColorPicker(colorHex: $store.editor.colorHex)
-      }
+      TeamEditorFields(
+        colorHex: $store.editor.colorHex,
+        name: $store.editor.name,
+        paletteColorTapped: { store.send(.paletteColorButtonTapped($0)) }
+      )
 
       if store.selection?.existingID != nil, store.mode == .editing {
         Label(
@@ -150,30 +124,6 @@ struct TeamSlotPanel: View {
     let query = Team.normalizeName(store.searchText)
     guard !query.isEmpty else { return teams }
     return teams.filter { $0.normalizedName.contains(query) }
-  }
-}
-
-private struct TeamCustomColorPicker: View {
-  @Binding var colorHex: String
-  @Environment(\.self) private var environment
-  @State private var color: Color
-
-  init(colorHex: Binding<String>) {
-    self._colorHex = colorHex
-    self._color = State(initialValue: Color(teamHex: colorHex.wrappedValue))
-  }
-
-  var body: some View {
-    ColorPicker("Custom color", selection: $color, supportsOpacity: false)
-      .onChange(of: color) { _, newValue in
-        let resolved = newValue.resolve(in: environment)
-        colorHex = String(
-          format: "#%02X%02X%02X",
-          Int((Double(resolved.red) * 255).rounded()),
-          Int((Double(resolved.green) * 255).rounded()),
-          Int((Double(resolved.blue) * 255).rounded())
-        )
-      }
   }
 }
 

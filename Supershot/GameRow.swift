@@ -6,12 +6,34 @@ struct GameRow: View {
 
   var body: some View {
     VStack(spacing: 14) {
+
+
+      HStack(alignment: .center, spacing: 12) {
+        TeamScore(
+          alignment: .leading,
+          colorHex: game.teamAColorHex,
+          name: game.teamAName,
+          score: game.teamAScore
+        )
+
+//        Text("–")
+//          .font(.title2.bold())
+//          .foregroundStyle(.secondary)
+
+        TeamScore(
+          alignment: .trailing,
+          colorHex: game.teamBColorHex,
+          name: game.teamBName,
+          score: game.teamBScore
+        )
+      }
+      
       HStack(spacing: 8) {
         Text(game.startedAt.formatted(date: .abbreviated, time: .shortened))
           .foregroundStyle(.secondary)
-
+        
         Spacer(minLength: 8)
-
+        
         if isLoading {
           ProgressView()
             .controlSize(.small)
@@ -24,31 +46,6 @@ struct GameRow: View {
         }
       }
       .font(.caption.weight(.semibold))
-
-      HStack(alignment: .center, spacing: 12) {
-        TeamScore(
-          alignment: .leading,
-          colorHex: game.teamAColorHex,
-          name: game.teamAName,
-          score: game.teamAScore
-        )
-
-        Text("–")
-          .font(.title2.bold())
-          .foregroundStyle(.secondary)
-
-        TeamScore(
-          alignment: .trailing,
-          colorHex: game.teamBColorHex,
-          name: game.teamBName,
-          score: game.teamBScore
-        )
-      }
-
-      Text(game.timingSummary)
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.vertical, 8)
     .contentShape(Rectangle())
@@ -81,9 +78,10 @@ private struct TeamScore: View {
         .font(.headline)
         .lineLimit(3)
         .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+        .foregroundStyle(.secondary)
 
       Text("\(score)")
-        .font(.system(.title, design: .rounded, weight: .bold))
+        .font(.system(.largeTitle, design: .rounded, weight: .bold))
         .monospacedDigit()
     }
     .frame(

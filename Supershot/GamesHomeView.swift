@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct GamesHomeView: View {
+  var deletingGameID: Game.ID?
   var games: [GameListItem]
   var loadingGameID: Game.ID?
+  var deleteGameTapped: (Game.ID) -> Void
   var gameTapped: (GameListItem) -> Void
   var newGameTapped: () -> Void
 
@@ -14,8 +16,9 @@ struct GamesHomeView: View {
         } description: {
           Text("Start a game to keep score and build your history.")
         } actions: {
-          Button("Start game", action: newGameTapped)
+          Button("New game", action: newGameTapped)
             .buttonStyle(.borderedProminent)
+            .controlSize(.large)
         }
         .listRowBackground(Color.clear)
       } else {
@@ -29,7 +32,12 @@ struct GamesHomeView: View {
             )
           }
           .buttonStyle(.plain)
-          .disabled(loadingGameID != nil)
+          .disabled(loadingGameID != nil || deletingGameID != nil)
+          .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button("Delete", systemImage: "trash", role: .destructive) {
+              deleteGameTapped(game.id)
+            }
+          }
         }
       }
     }
@@ -39,7 +47,7 @@ struct GamesHomeView: View {
         Button(action: newGameTapped) {
           Label("New game", systemImage: "plus")
         }
-        .disabled(loadingGameID != nil)
+        .disabled(loadingGameID != nil || deletingGameID != nil)
       }
     }
   }
@@ -48,8 +56,10 @@ struct GamesHomeView: View {
 #Preview("Empty games") {
   NavigationStack {
     GamesHomeView(
+      deletingGameID: nil,
       games: [],
       loadingGameID: nil,
+      deleteGameTapped: { _ in },
       gameTapped: { _ in },
       newGameTapped: {}
     )
@@ -59,8 +69,10 @@ struct GamesHomeView: View {
 #Preview("Game history") {
   NavigationStack {
     GamesHomeView(
+      deletingGameID: nil,
       games: .previewGames,
       loadingGameID: nil,
+      deleteGameTapped: { _ in },
       gameTapped: { _ in },
       newGameTapped: {}
     )
@@ -70,8 +82,10 @@ struct GamesHomeView: View {
 #Preview("Loading game") {
   NavigationStack {
     GamesHomeView(
+      deletingGameID: nil,
       games: .previewGames,
       loadingGameID: GameListItem.previewInProgress.id,
+      deleteGameTapped: { _ in },
       gameTapped: { _ in },
       newGameTapped: {}
     )

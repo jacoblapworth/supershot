@@ -30,6 +30,17 @@ struct GameDetailView: View {
       }
     }
     .navigationTitle("Game")
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Menu {
+          Button("Delete game", systemImage: "trash", role: .destructive) {
+            store.send(.deleteButtonTapped)
+          }
+        } label: {
+          Label("Game actions", systemImage: "ellipsis")
+        }
+      }
+    }
   }
 }
 

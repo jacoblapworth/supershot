@@ -21,6 +21,242 @@ import Testing
 )
 struct SupershotTests {
   @Test
+  func alarmOnboardingAppearsWhenAuthorizationIsNotDetermined() async {
+    let statusChecks = LockIsolated(0)
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    } withDependencies: {
+      $0.alarmAuthorization = AlarmAuthorizationClient(
+        request: { .notDetermined },
+        status: {
+          statusChecks.withValue { $0 += 1 }
+          return .notDetermined
+        }
+      )
+    }
+
+    await store.send(.task) {
+      $0.alarmOnboarding = AlarmOnboardingFeature.State()
+      $0.hasCheckedAlarmAuthorization = true
+    }
+    await store.send(.task)
+
+    expectNoDifference(statusChecks.value, 1)
+  }
+
+  @Test
+  func alarmOnboardingIsSkippedWhenAuthorizationIsResolved() async {
+    for expectedStatus in [AlarmAuthorizationStatus.authorized, .denied] {
+      let store = TestStore(initialState: AppFeature.State()) {
+        AppFeature()
+      } withDependencies: {
+        $0.alarmAuthorization = AlarmAuthorizationClient(
+          request: { expectedStatus },
+          status: { expectedStatus }
+        )
+      }
+
+      await store.send(.task) {
+        $0.hasCheckedAlarmAuthorization = true
+      }
+      expectNoDifference(store.state.alarmOnboarding, nil)
+    }
+  }
+
+  @Test
+  func alarmOnboardingCompletesAfterAuthorizationIsResolved() async {
+    for expectedStatus in [AlarmAuthorizationStatus.authorized, .denied] {
+      let requests = LockIsolated(0)
+      let store = TestStore(initialState: AlarmOnboardingFeature.State()) {
+        AlarmOnboardingFeature()
+      } withDependencies: {
+        $0.alarmAuthorization = AlarmAuthorizationClient(
+          request: {
+            requests.withValue { $0 += 1 }
+            return expectedStatus
+          },
+          status: { expectedStatus }
+        )
+      }
+
+      await store.send(.allowAlarmsButtonTapped) {
+        $0.isRequesting = true
+      }
+      await store.receive {
+        guard case let .authorizationResponse(.success(status)) = $0 else {
+          return false
+        }
+        return status == expectedStatus
+      } assert: {
+        $0.isRequesting = false
+      }
+      await store.receive {
+        guard case .delegate(.completed) = $0 else { return false }
+        return true
+      }
+
+      expectNoDifference(requests.value, 1)
+    }
+  }
+
+  @Test
+  func alarmOnboardingCanBeSkippedWithoutRequestingAuthorization() async {
+    let requests = LockIsolated(0)
+    let store = TestStore(initialState: AlarmOnboardingFeature.State()) {
+      AlarmOnboardingFeature()
+    } withDependencies: {
+      $0.alarmAuthorization = AlarmAuthorizationClient(
+        request: {
+          requests.withValue { $0 += 1 }
+          return .authorized
+        },
+        status: { .notDetermined }
+      )
+    }
+
+    await store.send(.notNowButtonTapped)
+    await store.receive {
+      guard case .delegate(.completed) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(requests.value, 0)
+  }
+
+  @Test
+  func completingAlarmOnboardingRevealsGames() async {
+    var state = AppFeature.State()
+    state.alarmOnboarding = AlarmOnboardingFeature.State()
+    state.hasCheckedAlarmAuthorization = true
+
+    let store = TestStore(initialState: state) {
+      AppFeature()
+    }
+
+    await store.send(.alarmOnboarding(.presented(.notNowButtonTapped)))
+    await store.receive {
+      guard case .alarmOnboarding(.presented(.delegate(.completed))) = $0 else {
+        return false
+      }
+      return true
+    } assert: {
+      $0.alarmOnboarding = nil
+    }
+  }
+
+  @Test
+  func alarmOnboardingRequestFailureCanBeRetried() async {
+    let attempts = LockIsolated(0)
+    let store = TestStore(initialState: AlarmOnboardingFeature.State()) {
+      AlarmOnboardingFeature()
+    } withDependencies: {
+      $0.alarmAuthorization = AlarmAuthorizationClient(
+        request: {
+          let attempt = attempts.withValue {
+            $0 += 1
+            return $0
+          }
+          guard attempt > 1 else { throw AlarmAuthorizationTestError.failed }
+          return .authorized
+        },
+        status: { .notDetermined }
+      )
+    }
+
+    await store.send(.allowAlarmsButtonTapped) {
+      $0.isRequesting = true
+    }
+    await store.receive {
+      guard case .authorizationResponse(.failure) = $0 else { return false }
+      return true
+    } assert: {
+      $0.errorMessage = "Supershot couldn’t request alarm access. Try again."
+      $0.isRequesting = false
+    }
+
+    await store.send(.allowAlarmsButtonTapped) {
+      $0.errorMessage = nil
+      $0.isRequesting = true
+    }
+    await store.receive {
+      guard case .authorizationResponse(.success(.authorized)) = $0 else {
+        return false
+      }
+      return true
+    } assert: {
+      $0.isRequesting = false
+    }
+    await store.receive {
+      guard case .delegate(.completed) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(attempts.value, 2)
+  }
+
+  @Test
+  func deletingGameRemovesGoalsRetainsTeamsAndEndsPresentation() async throws {
+    let seedStore = Self.makeScoringStore()
+    let database = seedStore.dependencies.defaultDatabase
+    let events = LockIsolated<[TimerSystemEvent]>([])
+    try await database.write { db in
+      try Goal.insert {
+        Goal(
+          id: UUID(4),
+          gameID: UUID(3),
+          teamID: UUID(1),
+          period: 1,
+          elapsedSeconds: 10,
+          points: 1,
+          createdAt: Date(timeIntervalSince1970: 1_000)
+        )
+      }
+      .execute(db)
+    }
+
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    } withDependencies: {
+      $0.defaultDatabase = database
+      $0.gameTimer = .live(system: Self.timerSystemClient(events: events))
+    }
+
+    await store.send(.deleteGameButtonTapped(UUID(3))) {
+      $0.deletingGameID = UUID(3)
+    }
+    await store.receive {
+      guard case let .deleteGameResponse(gameID, .success) = $0 else {
+        return false
+      }
+      return gameID == UUID(3)
+    } assert: {
+      $0.deletingGameID = nil
+    }
+
+    let values = try await database.read { db in
+      (
+        try Game.find(UUID(3)).fetchOne(db),
+        try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
+        try Team.fetchAll(db)
+      )
+    }
+    expectNoDifference(values.0, nil)
+    expectNoDifference(values.1, [])
+    expectNoDifference(values.2.count, 2)
+    expectNoDifference(events.value, [.cancelAlarm, .endActivity])
+  }
+
+  @Test
+  func detailDeleteButtonDelegatesDeletion() async {
+    let store = TestStore(initialState: GameDetailFeature.State(gameID: UUID(3))) {
+      GameDetailFeature()
+    }
+
+    await store.send(.deleteButtonTapped)
+    await store.receive(.delegate(.deleteGameButtonTapped))
+  }
+
+  @Test
   func setupValidationRequiresDifferentTeamNames() async {
     let state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
 
@@ -972,6 +1208,7 @@ struct SupershotTests {
     }
     expectNoDifference(goal?.teamID, UUID(2))
     expectNoDifference(goal?.period, 2)
+    await store.finish()
   }
 
   @Test
@@ -1391,6 +1628,272 @@ struct SupershotTests {
   }
 
   @Test
+  func teamsListIsAlphabeticalWithGameCounts() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    try await database.write { db in
+      try db.seed {
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Team(id: UUID(-3), name: "Aces", colorHex: "#34C759")
+        Game(
+          id: UUID(-1),
+          startedAt: Date(timeIntervalSince1970: 1_000),
+          endedAt: nil,
+          teamAID: UUID(-1),
+          teamBID: UUID(-2),
+          periodDurationSeconds: 900
+        )
+        Game(
+          id: UUID(-2),
+          startedAt: Date(timeIntervalSince1970: 2_000),
+          endedAt: Date(timeIntervalSince1970: 3_000),
+          teamAID: UUID(-3),
+          teamBID: UUID(-1),
+          periodDurationSeconds: 900
+        )
+      }
+    }
+
+    let value = try await database.read { db in
+      try TeamsRequest().fetch(db)
+    }
+
+    expectNoDifference(
+      value.teams,
+      [
+        TeamListItem(
+          colorHex: "#34C759",
+          gameCount: 1,
+          id: UUID(-3),
+          name: "Aces"
+        ),
+        TeamListItem(
+          colorHex: TeamColorPalette.blue,
+          gameCount: 2,
+          id: UUID(-1),
+          name: "Ravens"
+        ),
+        TeamListItem(
+          colorHex: TeamColorPalette.red,
+          gameCount: 1,
+          id: UUID(-2),
+          name: "Swifts"
+        ),
+      ]
+    )
+  }
+
+  @Test
+  func teamDetailShowsOnlyTheTeamsGamesNewestFirst() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    let olderDate = Date(timeIntervalSince1970: 1_000)
+    let newerDate = Date(timeIntervalSince1970: 2_000)
+    try await database.write { db in
+      try db.seed {
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Team(id: UUID(-3), name: "Aces", colorHex: "#34C759")
+        Game(
+          id: UUID(-1),
+          startedAt: olderDate,
+          endedAt: Date(timeIntervalSince1970: 1_500),
+          teamAID: UUID(-1),
+          teamBID: UUID(-2),
+          periodDurationSeconds: 900
+        )
+        Game(
+          id: UUID(-2),
+          startedAt: newerDate,
+          endedAt: nil,
+          teamAID: UUID(-3),
+          teamBID: UUID(-1),
+          periodDurationSeconds: 600
+        )
+        Game(
+          id: UUID(-3),
+          startedAt: Date(timeIntervalSince1970: 3_000),
+          endedAt: nil,
+          teamAID: UUID(-2),
+          teamBID: UUID(-3),
+          periodDurationSeconds: 900
+        )
+        Goal(
+          id: UUID(-1),
+          gameID: UUID(-1),
+          teamID: UUID(-1),
+          period: 1,
+          elapsedSeconds: 10,
+          points: 2,
+          createdAt: olderDate
+        )
+        Goal(
+          id: UUID(-2),
+          gameID: UUID(-2),
+          teamID: UUID(-3),
+          period: 1,
+          elapsedSeconds: 20,
+          points: 1,
+          createdAt: newerDate
+        )
+      }
+    }
+
+    let value = try await database.read { db in
+      try TeamDetailRequest(teamID: UUID(-1)).fetch(db)
+    }
+
+    expectNoDifference(
+      value,
+      TeamDetailRequest.Value(
+        games: [
+          GameListItem(
+            endedAt: nil,
+            id: UUID(-2),
+            periodDurationSeconds: 600,
+            startedAt: newerDate,
+            teamAColorHex: "#34C759",
+            teamAName: "Aces",
+            teamAScore: 1,
+            teamBColorHex: TeamColorPalette.blue,
+            teamBName: "Ravens",
+            teamBScore: 0
+          ),
+          GameListItem(
+            endedAt: Date(timeIntervalSince1970: 1_500),
+            id: UUID(-1),
+            startedAt: olderDate,
+            teamAColorHex: TeamColorPalette.blue,
+            teamAName: "Ravens",
+            teamAScore: 2,
+            teamBColorHex: TeamColorPalette.red,
+            teamBName: "Swifts",
+            teamBScore: 0
+          ),
+        ],
+        team: Team(
+          id: UUID(-1),
+          name: "Ravens",
+          colorHex: TeamColorPalette.blue
+        )
+      )
+    )
+  }
+
+  @Test
+  func teamEditorTrimsAndPersistsNameAndColor() async throws {
+    let team = Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+    let store = TestStore(initialState: TeamEditorFeature.State(team: team)) {
+      TeamEditorFeature()
+    } withDependencies: {
+      try! $0.bootstrapDatabase()
+      try! Self.clearDatabase($0.defaultDatabase)
+      try! $0.defaultDatabase.write { db in
+        try Team.insert { team }.execute(db)
+      }
+    }
+
+    await store.send(.binding(.set(\.name, "  Falcons  "))) {
+      $0.name = "  Falcons  "
+    }
+    await store.send(.paletteColorButtonTapped("#34c759")) {
+      $0.colorHex = "#34C759"
+    }
+    await store.send(.saveButtonTapped) {
+      $0.errorMessage = nil
+      $0.isSaving = true
+      $0.name = "Falcons"
+    }
+    await store.receive {
+      guard case .saveResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.isSaving = false
+    }
+    await store.receive {
+      guard case .delegate(.saved) = $0 else { return false }
+      return true
+    }
+
+    let savedTeam = try await store.dependencies.defaultDatabase.read { db in
+      try Team.find(team.id).fetchOne(db)
+    }
+    expectNoDifference(
+      savedTeam,
+      Team(id: team.id, name: "Falcons", colorHex: "#34C759")
+    )
+  }
+
+  @Test
+  func teamEditorRejectsDuplicateNormalizedName() async throws {
+    let ravens = Team(id: UUID(-1), name: "Ravens")
+    let swifts = Team(id: UUID(-2), name: "Swifts")
+    let store = TestStore(initialState: TeamEditorFeature.State(team: ravens)) {
+      TeamEditorFeature()
+    } withDependencies: {
+      try! $0.bootstrapDatabase()
+      try! Self.clearDatabase($0.defaultDatabase)
+      try! $0.defaultDatabase.write { db in
+        try Team.insert {
+          ravens
+          swifts
+        }
+        .execute(db)
+      }
+    }
+
+    await store.send(.binding(.set(\.name, "  SWIFTS "))) {
+      $0.name = "  SWIFTS "
+    }
+    await store.send(.saveButtonTapped) {
+      $0.errorMessage = nil
+      $0.isSaving = true
+      $0.name = "SWIFTS"
+    }
+    await store.receive {
+      guard case .saveResponse(.failure) = $0 else { return false }
+      return true
+    } assert: {
+      $0.errorMessage = "Team names must be unique."
+      $0.isSaving = false
+    }
+
+    let savedTeam = try await store.dependencies.defaultDatabase.read { db in
+      try Team.find(ravens.id).fetchOne(db)
+    }
+    expectNoDifference(savedTeam, ravens)
+  }
+
+  @Test
+  func teamEditorReportsWhenTeamWasDeleted() async {
+    let team = Team(id: UUID(-1), name: "Ravens")
+    let store = TestStore(initialState: TeamEditorFeature.State(team: team)) {
+      TeamEditorFeature()
+    } withDependencies: {
+      try! $0.bootstrapDatabase()
+      try! Self.clearDatabase($0.defaultDatabase)
+    }
+
+    await store.send(.binding(.set(\.name, "Falcons"))) {
+      $0.name = "Falcons"
+    }
+    await store.send(.saveButtonTapped) {
+      $0.errorMessage = nil
+      $0.isSaving = true
+    }
+    await store.receive {
+      guard case .saveResponse(.failure) = $0 else { return false }
+      return true
+    } assert: {
+      $0.errorMessage = "This team is no longer available."
+      $0.isSaving = false
+    }
+  }
+
+  @Test
   func resumableProgressFieldsHaveSafeDefaults() async throws {
     @Dependency(\.defaultDatabase) var database
     try Self.clearDatabase(database)
@@ -1756,6 +2259,144 @@ struct SupershotTests {
     )
   }
 
+  @Test
+  func tabsRetainIndependentNavigationHistories() async {
+    var state = AppFeature.State()
+    state.path.append(.setup(SetupFeature.State()))
+    state.teamsPath.append(
+      .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
+    )
+    let store = TestStore(initialState: state) {
+      AppFeature()
+    }
+
+    await store.send(.selectedTabChanged(.teams)) {
+      $0.selectedTab = .teams
+    }
+
+    expectNoDifference(store.state.path.count, 1)
+    expectNoDifference(store.state.teamsPath.count, 1)
+  }
+
+  @Test
+  func completedTeamGameOpensDetailInTeamsStack() async {
+    let game = GameListItem(
+      endedAt: Date(timeIntervalSince1970: 2_000),
+      id: UUID(3),
+      startedAt: Date(timeIntervalSince1970: 1_000),
+      teamAName: "Ravens",
+      teamAScore: 12,
+      teamBName: "Swifts",
+      teamBScore: 10
+    )
+    var state = AppFeature.State()
+    state.selectedTab = .teams
+    state.teamsPath.append(
+      .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
+    )
+    let store = TestStore(initialState: state) {
+      AppFeature()
+    }
+
+    await store.send(.teamGameRowTapped(game)) {
+      $0.teamsPath.append(
+        .gameDetail(GameDetailFeature.State(gameID: game.id))
+      )
+    }
+
+    expectNoDifference(store.state.path.count, 0)
+    expectNoDifference(store.state.teamsPath.count, 2)
+  }
+
+  @Test
+  func unfinishedTeamGameResumesAndFinishesInTeamsStack() async {
+    let seedStore = Self.makeScoringStore()
+    let database = seedStore.dependencies.defaultDatabase
+    let game = GameListItem(
+      endedAt: nil,
+      id: UUID(3),
+      startedAt: Date(timeIntervalSince1970: 500),
+      teamAName: "Ravens",
+      teamAScore: 0,
+      teamBName: "Swifts",
+      teamBScore: 0
+    )
+    var state = AppFeature.State()
+    state.selectedTab = .teams
+    state.teamsPath.append(
+      .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
+    )
+    let store = TestStore(initialState: state) {
+      AppFeature()
+    } withDependencies: {
+      $0.date.now = Date(timeIntervalSince1970: 1_100)
+      $0.defaultDatabase = database
+      $0.gameTimer = .live(system: .noop)
+    }
+    store.exhaustivity = .off(showSkippedAssertions: false)
+
+    await store.send(.teamGameRowTapped(game)) {
+      $0.loadingGameID = game.id
+      $0.loadingGameTab = .teams
+    }
+    await store.receive {
+      guard case .resumeGameResponse(game.id, .success) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(store.state.loadingGameID, nil)
+    expectNoDifference(store.state.loadingGameTab, nil)
+    expectNoDifference(store.state.path.count, 0)
+    expectNoDifference(store.state.teamsPath.count, 2)
+    guard case let .scoring(scoring) = store.state.teamsPath[1] else {
+      Issue.record("Expected scoring to resume in the Teams stack")
+      return
+    }
+    expectNoDifference(scoring.gameID, game.id)
+
+    let scoringID = store.state.teamsPath.ids[1]
+    await store.send(
+      .teamsPath(
+        .element(
+          id: scoringID,
+          action: .scoring(.delegate(.gameFinished(game.id)))
+        )
+      )
+    )
+
+    expectNoDifference(store.state.path.count, 0)
+    expectNoDifference(store.state.teamsPath.count, 2)
+    guard case let .gameDetail(detail) = store.state.teamsPath[1] else {
+      Issue.record("Expected scoring to finish in the Teams stack")
+      return
+    }
+    expectNoDifference(detail.gameID, game.id)
+  }
+
+  @Test
+  func gameDeepLinkSelectsTeamsForAnExistingTeamsScoringRoute() async {
+    let scoring = Self.scoringState()
+    let seedStore = Self.makeScoringStore(state: scoring)
+    var state = AppFeature.State()
+    state.teamsPath.append(.scoring(scoring))
+    let store = TestStore(initialState: state) {
+      AppFeature()
+    } withDependencies: {
+      $0.defaultDatabase = seedStore.dependencies.defaultDatabase
+      $0.gameTimer = .live(system: .noop)
+    }
+    store.exhaustivity = .off(showSkippedAssertions: false)
+
+    await store.send(
+      .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
+    ) {
+      $0.selectedTab = .teams
+    }
+
+    expectNoDifference(store.state.path.count, 0)
+    expectNoDifference(store.state.teamsPath.count, 1)
+  }
+
   private nonisolated static func timerSystemClient(
     events: LockIsolated<[TimerSystemEvent]>,
     alarmUnavailable: Bool = false
@@ -1905,4 +2546,8 @@ private nonisolated enum TimerSystemEvent: Equatable, Sendable {
   case alarm(Date?, requestsAuthorization: Bool)
   case cancelAlarm
   case endActivity
+}
+
+private nonisolated enum AlarmAuthorizationTestError: Error {
+  case failed
 }
