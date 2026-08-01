@@ -17,6 +17,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var endedAt: Date?
   var teamAID: Team.ID
   var teamBID: Team.ID
+  var centrePassTeamID: Team.ID?
   var periodDurationSeconds: Int
   var currentPeriod = 1
   var elapsedSeconds = 0
@@ -151,6 +152,25 @@ extension DependencyValues {
         """
         ALTER TABLE "games"
         ADD COLUMN "hasTimerStartedCurrentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
+
+    migrator.registerMigration("Add centre pass tracking") { db in
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE CASCADE
+        """
+      )
+      .execute(db)
+
+      try #sql(
+        """
+        UPDATE "games"
+        SET "centrePassTeamID" = "teamAID"
+        WHERE "centrePassTeamID" IS NULL
         """
       )
       .execute(db)

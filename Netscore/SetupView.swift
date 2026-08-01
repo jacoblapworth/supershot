@@ -11,6 +11,16 @@ struct SetupView: View {
         TextField("Team B", text: $store.teamBName)
       }
 
+      Section("First centre pass") {
+        Picker("First centre pass", selection: $store.firstCentrePass) {
+          Text(store.trimmedTeamAName.isEmpty ? "Team A" : store.trimmedTeamAName)
+            .tag(SetupFeature.TeamSide?.some(.teamA))
+          Text(store.trimmedTeamBName.isEmpty ? "Team B" : store.trimmedTeamBName)
+            .tag(SetupFeature.TeamSide?.some(.teamB))
+        }
+        .pickerStyle(.segmented)
+      }
+
       if let errorMessage = store.errorMessage {
         Section {
           Label(errorMessage, systemImage: "exclamationmark.triangle")

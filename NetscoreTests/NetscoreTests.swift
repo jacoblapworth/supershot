@@ -35,8 +35,24 @@ struct NetscoreTests {
   }
 
   @Test
+  func setupValidationRequiresFirstCentrePass() async {
+    var state = SetupFeature.State()
+    state.teamAName = "Ravens"
+    state.teamBName = "Swifts"
+
+    let store = TestStore(initialState: state) {
+      SetupFeature()
+    }
+
+    await store.send(.startGameButtonTapped) {
+      $0.errorMessage = "Choose the team taking the first centre pass."
+    }
+  }
+
+  @Test
   func startGameCreatesTeamsAndGame() async throws {
     var state = SetupFeature.State()
+    state.firstCentrePass = .teamB
     state.teamAName = "Ravens"
     state.teamBName = "Swifts"
 
@@ -77,6 +93,8 @@ struct NetscoreTests {
     expectNoDifference(teams.map { $0.name }, ["Ravens", "Swifts"])
     expectNoDifference(games.count, 1)
     expectNoDifference(games.first?.startedAt, startedAt)
+    expectNoDifference(games.first?.centrePassTeamID, scoringState?.teamB.id)
+    expectNoDifference(scoringState?.centrePassTeamID, scoringState?.teamB.id)
     expectNoDifference(scoringState?.teamA.name, "Ravens")
     expectNoDifference(scoringState?.teamB.name, "Swifts")
   }
@@ -150,10 +168,79 @@ struct NetscoreTests {
     let store = Self.makeScoringStore(state: state)
 
     await store.send(.nextQuarterButtonTapped) {
+      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    }
+    await store.send(
+      .confirmationDialog(.presented(.lastCentrePassNotTakenButtonTapped))
+    ) {
+      $0.confirmationDialog = nil
+    }
+    await store.receive {
+      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
       $0.elapsedSeconds = 0
       $0.hasTimerStartedThisPeriod = false
       $0.period = 2
     }
+
+    let game = try await store.dependencies.defaultDatabase.read { db in
+      try Game.find(UUID(3)).fetchOne(db)
+    }
+    expectNoDifference(game?.centrePassTeamID, UUID(1))
+    expectNoDifference(game?.currentPeriod, 2)
+    expectNoDifference(game?.elapsedSeconds, 0)
+  }
+
+  @Test
+  func takenLastCentrePassSwitchesTeamForNextQuarter() async throws {
+    var state = Self.scoringState()
+    state.elapsedSeconds = 42
+    state.hasTimerStartedThisPeriod = true
+    let store = Self.makeScoringStore(state: state)
+
+    await store.send(.nextQuarterButtonTapped) {
+      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    }
+    await store.send(
+      .confirmationDialog(.presented(.lastCentrePassTakenButtonTapped))
+    ) {
+      $0.confirmationDialog = nil
+    }
+    await store.receive {
+      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.centrePassTeamID = UUID(2)
+      $0.elapsedSeconds = 0
+      $0.hasTimerStartedThisPeriod = false
+      $0.period = 2
+    }
+
+    let game = try await store.dependencies.defaultDatabase.read { db in
+      try Game.find(UUID(3)).fetchOne(db)
+    }
+    expectNoDifference(game?.centrePassTeamID, UUID(2))
+    expectNoDifference(game?.currentPeriod, 2)
+  }
+
+  @Test
+  func cancellingLastCentrePassQuestionKeepsQuarter() async throws {
+    var state = Self.scoringState()
+    state.elapsedSeconds = 42
+    state.hasTimerStartedThisPeriod = true
+    let store = Self.makeScoringStore(state: state)
+
+    await store.send(.nextQuarterButtonTapped) {
+      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    }
+    await store.send(.confirmationDialog(.dismiss)) {
+      $0.confirmationDialog = nil
+    }
+
+    expectNoDifference(store.state.period, 1)
+    expectNoDifference(store.state.elapsedSeconds, 42)
+    expectNoDifference(store.state.centrePassTeamID, UUID(1))
   }
 
   @Test
@@ -194,6 +281,8 @@ struct NetscoreTests {
     expectNoDifference(snapshot.game.currentPeriod, 1)
     expectNoDifference(snapshot.game.elapsedSeconds, 1)
     expectNoDifference(snapshot.game.hasTimerStartedCurrentPeriod, true)
+    expectNoDifference(snapshot.game.centrePassTeamID, UUID(1))
+    expectNoDifference(resumedState.centrePassTeamID, UUID(1))
     expectNoDifference(resumedState.elapsedSeconds, 1)
     expectNoDifference(resumedState.hasTimerStartedThisPeriod, true)
     expectNoDifference(resumedState.isTimerRunning, false)
@@ -224,6 +313,7 @@ struct NetscoreTests {
     expectNoDifference(game?.currentPeriod, 2)
     expectNoDifference(game?.elapsedSeconds, 123)
     expectNoDifference(game?.hasTimerStartedCurrentPeriod, true)
+    expectNoDifference(game?.centrePassTeamID, UUID(1))
   }
 
   @Test
@@ -245,6 +335,7 @@ struct NetscoreTests {
       return true
     } assert: {
       $0.canUndo = true
+      $0.centrePassTeamID = UUID(2)
       $0.teamAScore = 1
     }
 
@@ -269,6 +360,7 @@ struct NetscoreTests {
       return true
     } assert: {
       $0.canUndo = true
+      $0.centrePassTeamID = UUID(2)
       $0.teamAScore = 1
     }
 
@@ -277,6 +369,7 @@ struct NetscoreTests {
       guard case .goalResponse(.success) = $0 else { return false }
       return true
     } assert: {
+      $0.centrePassTeamID = UUID(1)
       $0.teamBScore = 1
     }
 
@@ -285,6 +378,7 @@ struct NetscoreTests {
       guard case .undoResponse(.success) = $0 else { return false }
       return true
     } assert: {
+      $0.centrePassTeamID = UUID(2)
       $0.teamBScore = 0
     }
 
@@ -293,6 +387,110 @@ struct NetscoreTests {
     }
     expectNoDifference(goals.count, 1)
     expectNoDifference(goals.first?.teamID, UUID(1))
+  }
+
+  @Test
+  func centrePassCorrectionPersistsAndControlsNextGoal() async throws {
+    var state = Self.scoringState()
+    state.isTimerRunning = true
+    let store = Self.makeScoringStore(state: state)
+
+    await store.send(.centrePassTeamButtonTapped(UUID(2)))
+    await store.receive {
+      guard case let .centrePassTeamResponse(.success(teamID)) = $0 else { return false }
+      return teamID == UUID(2)
+    } assert: {
+      $0.centrePassTeamID = UUID(2)
+    }
+
+    let snapshot = try await store.dependencies.defaultDatabase.read { db in
+      try GameSnapshot.fetch(db, gameID: UUID(3))
+    }
+    expectNoDifference(ScoringFeature.State(snapshot: snapshot).centrePassTeamID, UUID(2))
+
+    await store.send(.goalButtonTapped(UUID(1)))
+    await store.receive {
+      guard case .goalResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.canUndo = true
+      $0.centrePassTeamID = UUID(1)
+      $0.teamAScore = 1
+    }
+  }
+
+  @Test
+  func failedGoalWriteLeavesScoreAndCentrePassUnchanged() async throws {
+    var state = Self.scoringState()
+    state.isTimerRunning = true
+    let store = Self.makeScoringStore(state: state)
+    try await store.dependencies.defaultDatabase.write { db in
+      try Game.find(UUID(3)).delete().execute(db)
+    }
+
+    await store.send(.goalButtonTapped(UUID(1)))
+    await store.receive {
+      guard case .goalResponse(.failure) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(store.state.centrePassTeamID, UUID(1))
+    expectNoDifference(store.state.teamAScore, 0)
+    expectNoDifference(store.state.canUndo, false)
+  }
+
+  @Test
+  func failedCentrePassCorrectionLeavesSelectionUnchanged() async throws {
+    let store = Self.makeScoringStore()
+    try await store.dependencies.defaultDatabase.write { db in
+      try Game.find(UUID(3)).delete().execute(db)
+    }
+
+    await store.send(.centrePassTeamButtonTapped(UUID(2)))
+    await store.receive {
+      guard case .centrePassTeamResponse(.failure) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(store.state.centrePassTeamID, UUID(1))
+  }
+
+  @Test
+  func invalidCentrePassTeamIsIgnored() async throws {
+    let store = Self.makeScoringStore()
+
+    await store.send(.centrePassTeamButtonTapped(UUID(99)))
+
+    expectNoDifference(store.state.centrePassTeamID, UUID(1))
+  }
+
+  @Test
+  func failedQuarterTransitionLeavesProgressUnchanged() async throws {
+    var state = Self.scoringState()
+    state.elapsedSeconds = 42
+    state.hasTimerStartedThisPeriod = true
+    let store = Self.makeScoringStore(state: state)
+    try await store.dependencies.defaultDatabase.write { db in
+      try Game.find(UUID(3)).delete().execute(db)
+    }
+
+    await store.send(.nextQuarterButtonTapped) {
+      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    }
+    await store.send(
+      .confirmationDialog(.presented(.lastCentrePassTakenButtonTapped))
+    ) {
+      $0.confirmationDialog = nil
+    }
+    await store.receive {
+      guard case .nextQuarterResponse(.failure) = $0 else { return false }
+      return true
+    }
+
+    expectNoDifference(store.state.centrePassTeamID, UUID(1))
+    expectNoDifference(store.state.elapsedSeconds, 42)
+    expectNoDifference(store.state.hasTimerStartedThisPeriod, true)
+    expectNoDifference(store.state.period, 1)
   }
 
   @Test
@@ -323,6 +521,7 @@ struct NetscoreTests {
     expectNoDifference(game?.endedAt, endedAt)
     expectNoDifference(game?.currentPeriod, 4)
     expectNoDifference(game?.hasTimerStartedCurrentPeriod, true)
+    expectNoDifference(game?.centrePassTeamID, UUID(1))
     expectNoDifference(finishedGameID, UUID(3))
   }
 
@@ -431,6 +630,12 @@ struct NetscoreTests {
     expectNoDifference(game?.currentPeriod, 1)
     expectNoDifference(game?.elapsedSeconds, 0)
     expectNoDifference(game?.hasTimerStartedCurrentPeriod, false)
+    expectNoDifference(game?.centrePassTeamID, nil)
+
+    let snapshot = try await database.read { db in
+      try GameSnapshot.fetch(db, gameID: UUID(-1))
+    }
+    expectNoDifference(ScoringFeature.State(snapshot: snapshot).centrePassTeamID, UUID(-1))
   }
 
   @Test
@@ -501,12 +706,14 @@ struct NetscoreTests {
     expectNoDifference(first.teamAScore, 0)
     expectNoDifference(first.teamBScore, 1)
     expectNoDifference(first.canUndo, true)
+    expectNoDifference(first.centrePassTeamID, UUID(-1))
     expectNoDifference(first.isTimerRunning, false)
     expectNoDifference(second.period, 2)
     expectNoDifference(second.elapsedSeconds, 75)
     expectNoDifference(second.teamAScore, 2)
     expectNoDifference(second.teamBScore, 0)
     expectNoDifference(second.canUndo, true)
+    expectNoDifference(second.centrePassTeamID, UUID(-3))
     expectNoDifference(second.isTimerRunning, false)
   }
 
@@ -660,6 +867,7 @@ struct NetscoreTests {
             endedAt: nil,
             teamAID: UUID(1),
             teamBID: UUID(2),
+            centrePassTeamID: state.centrePassTeamID,
             periodDurationSeconds: state.periodDurationSeconds,
             currentPeriod: state.period,
             elapsedSeconds: state.elapsedSeconds,
@@ -687,6 +895,7 @@ struct NetscoreTests {
 
   private nonisolated static func scoringState() -> ScoringFeature.State {
     ScoringFeature.State(
+      centrePassTeamID: UUID(1),
       gameID: UUID(3),
       startedAt: Date(timeIntervalSince1970: 500),
       teamA: ScoringFeature.Team(id: UUID(1), name: "Ravens"),

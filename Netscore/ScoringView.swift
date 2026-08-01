@@ -9,6 +9,7 @@ struct ScoringView: View {
     ScrollView {
       VStack(spacing: 20) {
         scoreboard
+        centrePassControl
         timerPanel
         gameControls
       }
@@ -61,6 +62,35 @@ struct ScoringView: View {
         .buttonStyle(.bordered)
       }
     }
+  }
+
+  private var centrePassControl: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Label("Centre pass", systemImage: "arrow.left.arrow.right")
+        .font(.headline)
+
+      HStack(spacing: 12) {
+        CentrePassButton(
+          isSelected: store.centrePassTeamID == store.teamA.id,
+          name: store.teamA.name
+        ) {
+          store.send(.centrePassTeamButtonTapped(store.teamA.id))
+        }
+
+        CentrePassButton(
+          isSelected: store.centrePassTeamID == store.teamB.id,
+          name: store.teamB.name
+        ) {
+          store.send(.centrePassTeamButtonTapped(store.teamB.id))
+        }
+      }
+
+      Text("Tap a team to correct the next centre pass.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+    .padding()
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
   }
 
   private var scoreboard: some View {
@@ -168,14 +198,49 @@ private struct ScoreButton: View {
   }
 }
 
+private struct CentrePassButton: View {
+  var isSelected: Bool
+  var name: String
+  var action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      HStack(spacing: 8) {
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+        Text(name)
+          .lineLimit(2)
+          .multilineTextAlignment(.center)
+      }
+      .font(.subheadline.weight(.semibold))
+      .frame(maxWidth: .infinity, minHeight: 44)
+      .padding(.horizontal, 8)
+      .foregroundStyle(isSelected ? Color.white : Color.primary)
+      .background(
+        isSelected ? Color.accentColor : Color.clear,
+        in: RoundedRectangle(cornerRadius: 8)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 8)
+          .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.4))
+      }
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel("\(name) centre pass")
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+}
+
 #Preview {
+  let teamAID = UUID()
+  let teamBID = UUID()
   ScoringView(
     store: Store(
       initialState: ScoringFeature.State(
+        centrePassTeamID: teamAID,
         gameID: UUID(),
         startedAt: Date(),
-        teamA: ScoringFeature.Team(id: UUID(), name: "Ravens"),
-        teamB: ScoringFeature.Team(id: UUID(), name: "Swifts")
+        teamA: ScoringFeature.Team(id: teamAID, name: "Ravens"),
+        teamB: ScoringFeature.Team(id: teamBID, name: "Swifts")
       )
     ) {
       ScoringFeature()

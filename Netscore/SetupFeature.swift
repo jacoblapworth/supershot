@@ -4,18 +4,29 @@ import SQLiteData
 
 @Reducer
 struct SetupFeature {
+  nonisolated enum TeamSide: Equatable, Hashable, Sendable {
+    case teamA
+    case teamB
+  }
+
   @ObservableState
   struct State: Equatable {
     var errorMessage: String?
+    var firstCentrePass: TeamSide?
     var isSaving = false
     var teamAName = "Team A"
     var teamBName = "Team B"
 
     var canStartGame: Bool {
+      hasValidTeamNames
+        && firstCentrePass != nil
+        && !isSaving
+    }
+
+    var hasValidTeamNames: Bool {
       !trimmedTeamAName.isEmpty
         && !trimmedTeamBName.isEmpty
         && trimmedTeamAName.localizedCaseInsensitiveCompare(trimmedTeamBName) != .orderedSame
-        && !isSaving
     }
 
     var trimmedTeamAName: String {
@@ -54,14 +65,20 @@ struct SetupFeature {
         return .none
 
       case .startGameButtonTapped:
-        guard state.canStartGame else {
+        guard !state.isSaving else { return .none }
+        guard state.hasValidTeamNames else {
           state.errorMessage = "Enter two different team names."
+          return .none
+        }
+        guard let firstCentrePass = state.firstCentrePass else {
+          state.errorMessage = "Choose the team taking the first centre pass."
           return .none
         }
 
         state.errorMessage = nil
         state.isSaving = true
         return startGameEffect(
+          firstCentrePass: firstCentrePass,
           teamAName: state.trimmedTeamAName,
           teamBName: state.trimmedTeamBName
         )
@@ -79,6 +96,7 @@ struct SetupFeature {
   }
 
   private func startGameEffect(
+    firstCentrePass: TeamSide,
     teamAName: String,
     teamBName: String
   ) -> Effect<Action> {
@@ -88,6 +106,7 @@ struct SetupFeature {
     let teamBID = uuid()
     let teamA = Team(id: teamAID, name: teamAName)
     let teamB = Team(id: teamBID, name: teamBName)
+    let centrePassTeamID = firstCentrePass == .teamA ? teamAID : teamBID
     let periodDurationSeconds = ScoringFeature.State.defaultPeriodDurationSeconds
     let game = Game(
       id: gameID,
@@ -95,6 +114,7 @@ struct SetupFeature {
       endedAt: nil,
       teamAID: teamAID,
       teamBID: teamBID,
+      centrePassTeamID: centrePassTeamID,
       periodDurationSeconds: periodDurationSeconds,
       currentPeriod: 1,
       elapsedSeconds: 0,
@@ -117,6 +137,7 @@ struct SetupFeature {
         }
 
         return ScoringFeature.State(
+          centrePassTeamID: centrePassTeamID,
           gameID: gameID,
           periodDurationSeconds: periodDurationSeconds,
           startedAt: startedAt,

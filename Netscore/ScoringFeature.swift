@@ -6,8 +6,16 @@ import SQLiteData
 struct ScoringFeature {
   struct ScoreSnapshot: Equatable, Sendable {
     var canUndo = false
+    var centrePassTeamID: Team.ID
     var teamAScore = 0
     var teamBScore = 0
+  }
+
+  struct QuarterSnapshot: Equatable, Sendable {
+    var centrePassTeamID: Team.ID
+    var elapsedSeconds: Int
+    var hasTimerStartedThisPeriod: Bool
+    var period: Int
   }
 
   struct Team: Equatable, Identifiable, Sendable {
@@ -21,6 +29,7 @@ struct ScoringFeature {
     static let maximumPeriod = 4
 
     var canUndo = false
+    var centrePassTeamID: Team.ID
     @Presents var confirmationDialog: ConfirmationDialogState<ConfirmationDialogAction>?
     var elapsedSeconds = 0
     let gameID: Game.ID
@@ -39,6 +48,10 @@ struct ScoringFeature {
       period == Self.maximumPeriod && !isTimerRunning && hasTimerStartedThisPeriod
     }
 
+    var centrePassTeam: Team {
+      centrePassTeamID == teamB.id ? teamB : teamA
+    }
+
     var canMoveToNextQuarter: Bool {
       period < Self.maximumPeriod && !isTimerRunning && hasTimerStartedThisPeriod
     }
@@ -53,6 +66,8 @@ struct ScoringFeature {
   }
 
   enum Action {
+    case centrePassTeamButtonTapped(Team.ID)
+    case centrePassTeamResponse(Result<Team.ID, any Error>)
     case closeButtonTapped
     case confirmationDialog(PresentationAction<ConfirmationDialogAction>)
     case delegate(Delegate)
@@ -61,6 +76,7 @@ struct ScoringFeature {
     case goalButtonTapped(Team.ID)
     case goalResponse(Result<ScoreSnapshot, any Error>)
     case nextQuarterButtonTapped
+    case nextQuarterResponse(Result<QuarterSnapshot, any Error>)
     case pauseTimerButtonTapped
     case resumeTimerButtonTapped
     case sceneBecameInactive
@@ -75,6 +91,8 @@ struct ScoringFeature {
   }
 
   enum ConfirmationDialogAction: Equatable {
+    case lastCentrePassNotTakenButtonTapped
+    case lastCentrePassTakenButtonTapped
     case recordGoalButtonTapped
   }
 
@@ -91,6 +109,19 @@ struct ScoringFeature {
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case let .centrePassTeamButtonTapped(teamID):
+        guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
+        guard teamID != state.centrePassTeamID else { return .none }
+        return updateCentrePassEffect(gameID: state.gameID, teamID: teamID)
+
+      case let .centrePassTeamResponse(.success(teamID)):
+        guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
+        state.centrePassTeamID = teamID
+        return .none
+
+      case .centrePassTeamResponse(.failure):
+        return .none
+
       case .closeButtonTapped:
         state.isTimerRunning = false
         return .concatenate(
@@ -102,6 +133,14 @@ struct ScoringFeature {
       case .confirmationDialog(.dismiss):
         state.pendingPausedGoalTeamID = nil
         return .none
+
+      case .confirmationDialog(.presented(.lastCentrePassNotTakenButtonTapped)):
+        state.confirmationDialog = nil
+        return nextQuarterEffect(state: state, wasLastCentrePassTaken: false)
+
+      case .confirmationDialog(.presented(.lastCentrePassTakenButtonTapped)):
+        state.confirmationDialog = nil
+        return nextQuarterEffect(state: state, wasLastCentrePassTaken: true)
 
       case .confirmationDialog(.presented(.recordGoalButtonTapped)):
         guard let teamID = state.pendingPausedGoalTeamID else { return .none }
@@ -144,14 +183,21 @@ struct ScoringFeature {
 
       case .nextQuarterButtonTapped:
         guard state.canMoveToNextQuarter else { return .none }
-        state.elapsedSeconds = 0
-        state.hasTimerStartedThisPeriod = false
-        state.isTimerRunning = false
-        state.period += 1
-        return .merge(
-          .cancel(id: CancelID.timer),
-          saveProgressEffect(state: state)
+        state.confirmationDialog = .lastCentrePassConfirmation(
+          teamName: state.centrePassTeam.name
         )
+        return .none
+
+      case let .nextQuarterResponse(.success(snapshot)):
+        state.centrePassTeamID = snapshot.centrePassTeamID
+        state.elapsedSeconds = snapshot.elapsedSeconds
+        state.hasTimerStartedThisPeriod = snapshot.hasTimerStartedThisPeriod
+        state.isTimerRunning = false
+        state.period = snapshot.period
+        return .cancel(id: CancelID.timer)
+
+      case .nextQuarterResponse(.failure):
+        return .none
 
       case .pauseTimerButtonTapped:
         state.isTimerRunning = false
@@ -216,6 +262,7 @@ struct ScoringFeature {
 
   private func apply(_ snapshot: ScoreSnapshot, to state: inout State) {
     state.canUndo = snapshot.canUndo
+    state.centrePassTeamID = snapshot.centrePassTeamID
     state.teamAScore = snapshot.teamAScore
     state.teamBScore = snapshot.teamBScore
   }
@@ -230,6 +277,9 @@ struct ScoringFeature {
     return .run { send in
       let result = await Result {
         try await database.write { db in
+          guard try Game.find(gameID).fetchOne(db) != nil else {
+            throw ScoringPersistenceError.gameNotFound
+          }
           try Game.find(gameID).update {
             $0.currentPeriod = currentPeriod
             $0.elapsedSeconds = elapsedSeconds
@@ -261,8 +311,27 @@ struct ScoringFeature {
     return .run { send in
       let result = await Result {
         try await database.write { db in
+          guard let game = try Game.find(gameID).fetchOne(db) else {
+            throw ScoringPersistenceError.gameNotFound
+          }
+          let centrePassTeamID = resolvedCentrePassTeamID(
+            game.centrePassTeamID,
+            teamAID: teamAID,
+            teamBID: teamBID
+          )
+          let nextCentrePassTeamID = opposingTeamID(
+            centrePassTeamID,
+            teamAID: teamAID,
+            teamBID: teamBID
+          )
+
           try Goal.insert {
             goal
+          }
+          .execute(db)
+
+          try Game.find(gameID).update {
+            $0.centrePassTeamID = #bind(nextCentrePassTeamID)
           }
           .execute(db)
 
@@ -323,6 +392,24 @@ struct ScoringFeature {
             try Goal.find(latestGoal.id)
               .delete()
               .execute(db)
+
+            guard let game = try Game.find(gameID).fetchOne(db) else {
+              throw ScoringPersistenceError.gameNotFound
+            }
+            let centrePassTeamID = resolvedCentrePassTeamID(
+              game.centrePassTeamID,
+              teamAID: teamAID,
+              teamBID: teamBID
+            )
+            let nextCentrePassTeamID = opposingTeamID(
+              centrePassTeamID,
+              teamAID: teamAID,
+              teamBID: teamBID
+            )
+            try Game.find(gameID).update {
+              $0.centrePassTeamID = #bind(nextCentrePassTeamID)
+            }
+            .execute(db)
           }
 
           return try ScoreSnapshot.fetch(
@@ -336,9 +423,87 @@ struct ScoringFeature {
       await send(.undoResponse(result))
     }
   }
+
+  private func nextQuarterEffect(
+    state: State,
+    wasLastCentrePassTaken: Bool
+  ) -> Effect<Action> {
+    let centrePassTeamID = wasLastCentrePassTaken
+      ? opposingTeamID(
+        state.centrePassTeamID,
+        teamAID: state.teamA.id,
+        teamBID: state.teamB.id
+      )
+      : state.centrePassTeamID
+    let gameID = state.gameID
+    let snapshot = QuarterSnapshot(
+      centrePassTeamID: centrePassTeamID,
+      elapsedSeconds: 0,
+      hasTimerStartedThisPeriod: false,
+      period: state.period + 1
+    )
+
+    return .run { send in
+      let result = await Result {
+        try await database.write { db in
+          guard try Game.find(gameID).fetchOne(db) != nil else {
+            throw ScoringPersistenceError.gameNotFound
+          }
+          try Game.find(gameID).update {
+            $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
+            $0.currentPeriod = snapshot.period
+            $0.elapsedSeconds = snapshot.elapsedSeconds
+            $0.hasTimerStartedCurrentPeriod = snapshot.hasTimerStartedThisPeriod
+          }
+          .execute(db)
+        }
+        return snapshot
+      }
+      await send(.nextQuarterResponse(result))
+    }
+  }
+
+  private func updateCentrePassEffect(
+    gameID: Game.ID,
+    teamID: Team.ID
+  ) -> Effect<Action> {
+    .run { send in
+      let result = await Result {
+        try await database.write { db in
+          guard try Game.find(gameID).fetchOne(db) != nil else {
+            throw ScoringPersistenceError.gameNotFound
+          }
+          try Game.find(gameID).update {
+            $0.centrePassTeamID = #bind(teamID)
+          }
+          .execute(db)
+        }
+        return teamID
+      }
+      await send(.centrePassTeamResponse(result))
+    }
+  }
 }
 
 extension ConfirmationDialogState where Action == ScoringFeature.ConfirmationDialogAction {
+  static func lastCentrePassConfirmation(teamName: String) -> Self {
+    Self {
+      TextState("Last centre pass")
+    } actions: {
+      ButtonState(action: .lastCentrePassTakenButtonTapped) {
+        TextState("Yes, pass taken")
+      }
+      ButtonState(action: .lastCentrePassNotTakenButtonTapped) {
+        TextState("No, not taken")
+      }
+      ButtonState(role: .cancel) {
+        TextState("Cancel")
+      }
+    } message: {
+      TextState("Did \(teamName) take the last centre pass?")
+    }
+  }
+
   static var pausedGoalConfirmation: Self {
     Self {
       TextState("Timer paused")
@@ -362,12 +527,20 @@ extension ScoringFeature.ScoreSnapshot {
     teamAID: Team.ID,
     teamBID: Team.ID
   ) throws -> Self {
+    guard let game = try Game.find(gameID).fetchOne(db) else {
+      throw ScoringPersistenceError.gameNotFound
+    }
     let goals = try Goal
       .where { $0.gameID.eq(gameID) }
       .fetchAll(db)
 
     return Self(
       canUndo: !goals.isEmpty,
+      centrePassTeamID: resolvedCentrePassTeamID(
+        game.centrePassTeamID,
+        teamAID: teamAID,
+        teamBID: teamBID
+      ),
       teamAScore: goals
         .filter { $0.teamID == teamAID }
         .reduce(0) { $0 + $1.points },
@@ -376,4 +549,24 @@ extension ScoringFeature.ScoreSnapshot {
         .reduce(0) { $0 + $1.points }
     )
   }
+}
+
+private nonisolated enum ScoringPersistenceError: Error {
+  case gameNotFound
+}
+
+private nonisolated func opposingTeamID(
+  _ teamID: Team.ID,
+  teamAID: Team.ID,
+  teamBID: Team.ID
+) -> Team.ID {
+  teamID == teamAID ? teamBID : teamAID
+}
+
+private nonisolated func resolvedCentrePassTeamID(
+  _ teamID: Team.ID?,
+  teamAID: Team.ID,
+  teamBID: Team.ID
+) -> Team.ID {
+  teamID == teamBID ? teamBID : teamAID
 }

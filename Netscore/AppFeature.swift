@@ -128,6 +128,9 @@ extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
     self.init(
       canUndo: !snapshot.goals.isEmpty,
+      centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
+        ? snapshot.teamB.id
+        : snapshot.teamA.id,
       elapsedSeconds: min(
         max(snapshot.game.elapsedSeconds, 0),
         snapshot.game.periodDurationSeconds
