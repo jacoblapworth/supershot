@@ -30,7 +30,6 @@ struct GameDetailView: View {
       }
     }
     .navigationTitle("Game")
-    .navigationBarTitleDisplayMode(.inline)
   }
 
   private func detailContent(_ detail: CompletedGameDetail) -> some View {
@@ -56,6 +55,7 @@ struct GameDetailView: View {
       HStack(alignment: .top, spacing: 16) {
         GameDetailScore(
           alignment: .leading,
+          colorHex: detail.teamAColorHex,
           name: detail.teamAName,
           score: detail.teamAScore
         )
@@ -67,6 +67,7 @@ struct GameDetailView: View {
 
         GameDetailScore(
           alignment: .trailing,
+          colorHex: detail.teamBColorHex,
           name: detail.teamBName,
           score: detail.teamBScore
         )
@@ -80,6 +81,10 @@ struct GameDetailView: View {
         }
         LabeledContent("Finished") {
           Text(detail.endedAt.formatted(date: .abbreviated, time: .shortened))
+        }
+        LabeledContent("Timing") {
+          Text(detail.timingSummary)
+            .multilineTextAlignment(.trailing)
         }
       }
       .font(.subheadline)
@@ -118,11 +123,17 @@ struct GameDetailView: View {
 
 private struct GameDetailScore: View {
   var alignment: HorizontalAlignment
+  var colorHex: String
   var name: String
   var score: Int
 
   var body: some View {
     VStack(alignment: alignment, spacing: 8) {
+      Capsule()
+        .fill(Color(teamHex: colorHex))
+        .frame(width: 36, height: 6)
+        .accessibilityHidden(true)
+
       Text(name)
         .font(.headline)
         .lineLimit(3)
@@ -148,9 +159,9 @@ private struct GoalTimelineRow: View {
     HStack(alignment: .top, spacing: 12) {
       Image(systemName: "soccerball")
         .font(.title3)
-        .foregroundStyle(.tint)
+        .foregroundStyle(Color(teamHex: goal.scoringTeamColorHex))
         .frame(width: 28, height: 28)
-        .background(.tint.opacity(0.12), in: Circle())
+        .background(Color(teamHex: goal.scoringTeamColorHex).opacity(0.12), in: Circle())
 
       VStack(alignment: .leading, spacing: 5) {
         Text(goal.scoringTeamName)

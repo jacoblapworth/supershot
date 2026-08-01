@@ -21,24 +21,20 @@ import Testing
 struct SupershotTests {
   @Test
   func setupValidationRequiresDifferentTeamNames() async {
-    var state = SetupFeature.State()
-    state.teamAName = "Ravens"
-    state.teamBName = "Ravens"
+    let state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
 
     let store = TestStore(initialState: state) {
       SetupFeature()
     }
 
     await store.send(.startGameButtonTapped) {
-      $0.errorMessage = "Enter two different team names."
+      $0.errorMessage = "Team names must be unique."
     }
   }
 
   @Test
   func setupValidationRequiresFirstCentrePass() async {
-    var state = SetupFeature.State()
-    state.teamAName = "Ravens"
-    state.teamBName = "Swifts"
+    let state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
 
     let store = TestStore(initialState: state) {
       SetupFeature()
@@ -51,10 +47,8 @@ struct SupershotTests {
 
   @Test
   func startGameCreatesTeamsAndGame() async throws {
-    var state = SetupFeature.State()
+    var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
     state.firstCentrePass = .teamB
-    state.teamAName = "Ravens"
-    state.teamBName = "Swifts"
 
     let startedAt = Date(timeIntervalSince1970: 1_000)
     let store = TestStore(initialState: state) {
@@ -91,12 +85,227 @@ struct SupershotTests {
     }
 
     expectNoDifference(teams.map { $0.name }, ["Ravens", "Swifts"])
+    expectNoDifference(teams.map { $0.normalizedName }, ["ravens", "swifts"])
+    expectNoDifference(teams.map { $0.colorHex }, [TeamColorPalette.blue, TeamColorPalette.red])
     expectNoDifference(games.count, 1)
     expectNoDifference(games.first?.startedAt, startedAt)
     expectNoDifference(games.first?.centrePassTeamID, scoringState?.teamB.id)
+    expectNoDifference(games.first?.firstBreakDurationSeconds, 240)
+    expectNoDifference(games.first?.halfTimeDurationSeconds, 240)
+    expectNoDifference(games.first?.secondBreakDurationSeconds, 240)
     expectNoDifference(scoringState?.centrePassTeamID, scoringState?.teamB.id)
     expectNoDifference(scoringState?.teamA.name, "Ravens")
     expectNoDifference(scoringState?.teamB.name, "Swifts")
+    expectNoDifference(scoringState?.teamA.colorHex, TeamColorPalette.blue)
+    expectNoDifference(scoringState?.teamB.colorHex, TeamColorPalette.red)
+  }
+
+  @Test
+  func editingSavedTeamsIsStagedAndSupportsSafeNameSwaps() async throws {
+    let ravens = Team(id: UUID(30), name: "Ravens", colorHex: TeamColorPalette.blue)
+    let swifts = Team(id: UUID(31), name: "Swifts", colorHex: TeamColorPalette.red)
+    var state = SetupFeature.State()
+    state.availableTeams = [ravens, swifts]
+    state.firstCentrePass = .teamA
+    state.leftTeam.mode = .locked
+    state.leftTeam.selection = .existing(
+      original: ravens,
+      draft: TeamSlotFeature.TeamDraft(colorHex: "#34C759", name: "Swifts")
+    )
+    state.rightTeam.mode = .locked
+    state.rightTeam.selection = .existing(
+      original: swifts,
+      draft: TeamSlotFeature.TeamDraft(colorHex: "#FF9500", name: "Ravens")
+    )
+
+    let store = TestStore(initialState: state) {
+      SetupFeature()
+    } withDependencies: {
+      $0.date.now = Date(timeIntervalSince1970: 1_000)
+      $0.uuid = .incrementing
+      try! $0.bootstrapDatabase()
+      try! Self.clearDatabase($0.defaultDatabase)
+      try! $0.defaultDatabase.write { db in
+        try Team.insert {
+          ravens
+          swifts
+        }
+        .execute(db)
+      }
+    }
+
+    await store.send(.startGameButtonTapped) {
+      $0.confirmationDialog = .confirmTeamUpdates(
+        message: "Ravens will become Swifts in game history. "
+          + "Swifts will become Ravens in game history."
+      )
+    }
+    await store.send(
+      .confirmationDialog(.presented(.updateAndStartButtonTapped))
+    ) {
+      $0.confirmationDialog = nil
+      $0.isSaving = true
+    }
+    await store.receive {
+      guard case .startGameResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.isSaving = false
+    }
+    await store.receive {
+      guard case .delegate(.gameStarted) = $0 else { return false }
+      return true
+    }
+
+    let values = try await store.dependencies.defaultDatabase.read { db in
+      (
+        try Team.find(ravens.id).fetchOne(db),
+        try Team.find(swifts.id).fetchOne(db),
+        try Game.fetchOne(db)
+      )
+    }
+    expectNoDifference(values.0?.name, "Swifts")
+    expectNoDifference(values.0?.normalizedName, "swifts")
+    expectNoDifference(values.0?.colorHex, "#34C759")
+    expectNoDifference(values.1?.name, "Ravens")
+    expectNoDifference(values.1?.normalizedName, "ravens")
+    expectNoDifference(values.1?.colorHex, "#FF9500")
+    expectNoDifference(values.2?.teamAID, ravens.id)
+    expectNoDifference(values.2?.teamBID, swifts.id)
+  }
+
+  @Test
+  func cancellingAndRevertingTeamEditsKeepsTheSavedDraft() async {
+    let ravens = Team(id: UUID(20), name: "Ravens", colorHex: TeamColorPalette.blue)
+    var state = TeamSlotFeature.State(side: .left)
+    state.mode = .locked
+    state.selection = .existing(
+      original: ravens,
+      draft: TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+    )
+    let store = TestStore(initialState: state) {
+      TeamSlotFeature()
+    }
+
+    await store.send(.editTeamButtonTapped) {
+      $0.editor = TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+      $0.mode = .editing
+    }
+    await store.send(.binding(.set(\.editor.name, "Falcons"))) {
+      $0.editor.name = "Falcons"
+    }
+    await store.send(.cancelButtonTapped) {
+      $0.mode = .locked
+    }
+    expectNoDifference(store.state.selectedDraft?.name, "Ravens")
+
+    await store.send(.editTeamButtonTapped) {
+      $0.editor.name = "Ravens"
+      $0.mode = .editing
+    }
+    await store.send(.binding(.set(\.editor.name, "Falcons"))) {
+      $0.editor.name = "Falcons"
+    }
+    await store.send(.paletteColorButtonTapped("#34C759")) {
+      $0.editor.colorHex = "#34C759"
+    }
+    await store.send(.doneButtonTapped) {
+      $0.mode = .locked
+      $0.selection = .existing(
+        original: ravens,
+        draft: TeamSlotFeature.TeamDraft(colorHex: "#34C759", name: "Falcons")
+      )
+    }
+    await store.send(.revertChangesButtonTapped) {
+      $0.selection = .existing(
+        original: ravens,
+        draft: TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+      )
+    }
+  }
+
+  @Test
+  func emptyTeamCardOffersExistingTeamsAndCreateFlow() async {
+    let ravens = Team(id: UUID(20), name: "Ravens", colorHex: "#AF52DE")
+    var state = SetupFeature.State()
+    state.availableTeams = [ravens]
+    let store = TestStore(initialState: state) {
+      SetupFeature()
+    }
+
+    await store.send(.leftTeam(.cardTapped)) {
+      $0.leftTeam.mode = .choosing
+    }
+    await store.send(.leftTeam(.existingTeamSelected(ravens))) {
+      $0.leftTeam.mode = .locked
+      $0.leftTeam.selection = .existing(
+        original: ravens,
+        draft: TeamSlotFeature.TeamDraft(
+          colorHex: "#AF52DE",
+          name: "Ravens"
+        )
+      )
+    }
+
+    await store.send(.rightTeam(.cardTapped)) {
+      $0.rightTeam.mode = .choosing
+    }
+    await store.send(.rightTeam(.createTeamButtonTapped)) {
+      $0.rightTeam.mode = .creating
+    }
+  }
+
+  @Test
+  func swappingTeamsSwapsCompleteSelectionsAndFirstCentrePass() async {
+    var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
+    state.firstCentrePass = .teamA
+    let store = TestStore(initialState: state) {
+      SetupFeature()
+    }
+
+    await store.send(.swapTeamsButtonTapped) {
+      let leftSelection = $0.leftTeam.selection
+      $0.leftTeam.selection = $0.rightTeam.selection
+      $0.rightTeam.selection = leftSelection
+      $0.firstCentrePass = .teamB
+    }
+
+    expectNoDifference(store.state.leftTeam.selectedDraft?.name, "Swifts")
+    expectNoDifference(store.state.leftTeam.selectedDraft?.colorHex, TeamColorPalette.red)
+    expectNoDifference(store.state.rightTeam.selectedDraft?.name, "Ravens")
+    expectNoDifference(store.state.rightTeam.selectedDraft?.colorHex, TeamColorPalette.blue)
+  }
+
+  @Test
+  func breakDurationsCanBeUniformOrCustomized() async {
+    let store = TestStore(initialState: SetupFeature.State()) {
+      SetupFeature()
+    }
+
+    await store.send(.allBreakPresetButtonTapped(120)) {
+      $0.firstBreakDuration = .init(totalSeconds: 120)
+      $0.halfTimeDuration = .init(totalSeconds: 120)
+      $0.secondBreakDuration = .init(totalSeconds: 120)
+    }
+    await store.send(.customizeBreaksButtonTapped) {
+      $0.customizesBreaks = true
+    }
+    await store.send(.halfTimePresetButtonTapped(600)) {
+      $0.halfTimeDuration = .init(totalSeconds: 600)
+    }
+    await store.send(.useFirstBreakForAllButtonTapped) {
+      $0.customizesBreaks = false
+      $0.halfTimeDuration = .init(totalSeconds: 120)
+      $0.secondBreakDuration = .init(totalSeconds: 120)
+    }
+
+    var invalidState = Self.setupState(leftName: "Ravens", rightName: "Swifts")
+    invalidState.firstCentrePass = .teamA
+    invalidState.periodDuration = .init(totalSeconds: 0)
+    expectNoDifference(invalidState.canStartGame, false)
+    invalidState.periodDuration = .init(totalSeconds: 1)
+    invalidState.halfTimeDuration.minutesText = "100"
+    expectNoDifference(invalidState.canStartGame, false)
   }
 
   @Test
@@ -156,6 +365,7 @@ struct SupershotTests {
       return true
     } assert: {
       $0.elapsedSeconds = $0.periodDurationSeconds
+      $0.isShowingLastCentrePassBanner = true
       $0.isTimerRunning = false
     }
   }
@@ -167,20 +377,20 @@ struct SupershotTests {
     state.hasTimerStartedThisPeriod = true
     let store = Self.makeScoringStore(state: state)
 
-    await store.send(.nextQuarterButtonTapped) {
-      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    await store.send(.endQuarterButtonTapped) {
+      $0.isShowingLastCentrePassBanner = true
     }
-    await store.send(
-      .confirmationDialog(.presented(.lastCentrePassNotTakenButtonTapped))
-    ) {
-      $0.confirmationDialog = nil
+    await store.send(.lastCentrePassNotTakenButtonTapped) {
+      $0.isTransitioningPeriod = true
     }
     await store.receive {
-      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      guard case .lastCentrePassResponse(.success) = $0 else { return false }
       return true
     } assert: {
       $0.elapsedSeconds = 0
       $0.hasTimerStartedThisPeriod = false
+      $0.isShowingLastCentrePassBanner = false
+      $0.isTransitioningPeriod = false
       $0.period = 2
     }
 
@@ -190,6 +400,7 @@ struct SupershotTests {
     expectNoDifference(game?.centrePassTeamID, UUID(1))
     expectNoDifference(game?.currentPeriod, 2)
     expectNoDifference(game?.elapsedSeconds, 0)
+    expectNoDifference(game?.isAwaitingCentrePassConfirmation, false)
   }
 
   @Test
@@ -199,21 +410,21 @@ struct SupershotTests {
     state.hasTimerStartedThisPeriod = true
     let store = Self.makeScoringStore(state: state)
 
-    await store.send(.nextQuarterButtonTapped) {
-      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    await store.send(.endQuarterButtonTapped) {
+      $0.isShowingLastCentrePassBanner = true
     }
-    await store.send(
-      .confirmationDialog(.presented(.lastCentrePassTakenButtonTapped))
-    ) {
-      $0.confirmationDialog = nil
+    await store.send(.lastCentrePassTakenButtonTapped) {
+      $0.isTransitioningPeriod = true
     }
     await store.receive {
-      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      guard case .lastCentrePassResponse(.success) = $0 else { return false }
       return true
     } assert: {
       $0.centrePassTeamID = UUID(2)
       $0.elapsedSeconds = 0
       $0.hasTimerStartedThisPeriod = false
+      $0.isShowingLastCentrePassBanner = false
+      $0.isTransitioningPeriod = false
       $0.period = 2
     }
 
@@ -225,29 +436,207 @@ struct SupershotTests {
   }
 
   @Test
-  func cancellingLastCentrePassQuestionKeepsQuarter() async throws {
+  func lastCentrePassBannerKeepsQuarterUntilAnswered() async throws {
     var state = Self.scoringState()
     state.elapsedSeconds = 42
     state.hasTimerStartedThisPeriod = true
     let store = Self.makeScoringStore(state: state)
 
-    await store.send(.nextQuarterButtonTapped) {
-      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
-    }
-    await store.send(.confirmationDialog(.dismiss)) {
-      $0.confirmationDialog = nil
+    await store.send(.endQuarterButtonTapped) {
+      $0.isShowingLastCentrePassBanner = true
     }
 
     expectNoDifference(store.state.period, 1)
     expectNoDifference(store.state.elapsedSeconds, 42)
     expectNoDifference(store.state.centrePassTeamID, UUID(1))
+    expectNoDifference(store.state.canMoveToNextQuarter, false)
   }
 
   @Test
   func nextQuarterUnavailableBeforePeriodStarts() async throws {
     let store = Self.makeScoringStore()
 
-    await store.send(.nextQuarterButtonTapped)
+    await store.send(.endQuarterButtonTapped)
+  }
+
+  @Test
+  func endingQuarterRunsConfiguredBreakThenWaitsForContinue() async throws {
+    let clock = TestClock()
+    var state = Self.scoringState()
+    state.elapsedSeconds = 42
+    state.firstBreakDurationSeconds = 2
+    state.hasTimerStartedThisPeriod = true
+    let store = Self.makeScoringStore(state: state, clock: clock)
+
+    await store.send(.endQuarterButtonTapped) {
+      $0.clockPhase = .breakTime
+      $0.elapsedSeconds = 0
+      $0.isShowingLastCentrePassBanner = true
+      $0.isTimerRunning = true
+    }
+    await store.send(.lastCentrePassNotTakenButtonTapped) {
+      $0.isTransitioningPeriod = true
+    }
+    await store.receive {
+      guard case .lastCentrePassResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.isShowingLastCentrePassBanner = false
+      $0.isTransitioningPeriod = false
+    }
+
+    await clock.advance(by: .seconds(1))
+    await store.receive {
+      guard case .timerTick = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = 1
+    }
+
+    await clock.advance(by: .seconds(1))
+    await store.receive {
+      guard case .timerTick = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = 2
+      $0.isTimerRunning = false
+    }
+
+    expectNoDifference(store.state.canContinueToNextQuarter, true)
+    await store.send(.continueToNextQuarterButtonTapped) {
+      $0.isTransitioningPeriod = true
+    }
+    await store.receive {
+      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.clockPhase = .quarter
+      $0.elapsedSeconds = 0
+      $0.hasTimerStartedThisPeriod = false
+      $0.isTransitioningPeriod = false
+      $0.period = 2
+    }
+
+    expectNoDifference(store.state.isShowingOriginalTeamOrder, false)
+    let game = try await store.dependencies.defaultDatabase.read { db in
+      try Game.find(UUID(3)).fetchOne(db)
+    }
+    expectNoDifference(game?.currentPeriod, 2)
+    expectNoDifference(game?.isInBreak, false)
+  }
+
+  @Test
+  func halfTimeUsesItsOwnDurationAndDisablesGoals() async throws {
+    var state = Self.scoringState()
+    state.clockPhase = .breakTime
+    state.elapsedSeconds = 60
+    state.firstBreakDurationSeconds = 120
+    state.halfTimeDurationSeconds = 600
+    state.hasTimerStartedThisPeriod = true
+    state.period = 2
+    state.secondBreakDurationSeconds = 300
+    let store = Self.makeScoringStore(state: state)
+
+    expectNoDifference(store.state.currentDurationSeconds, 600)
+    expectNoDifference(store.state.isShowingOriginalTeamOrder, false)
+    await store.send(.goalButtonTapped(UUID(1)))
+    await store.send(.centrePassTeamButtonTapped(UUID(2)))
+
+    await store.send(.skipBreakButtonTapped) {
+      $0.elapsedSeconds = 600
+      $0.isTransitioningPeriod = true
+    }
+    await store.receive {
+      guard case .nextQuarterResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.clockPhase = .quarter
+      $0.elapsedSeconds = 0
+      $0.hasTimerStartedThisPeriod = false
+      $0.isTransitioningPeriod = false
+      $0.period = 3
+    }
+
+    expectNoDifference(store.state.isShowingOriginalTeamOrder, true)
+  }
+
+  @Test
+  func zeroDurationBreakAdvancesToNextQuarterPaused() async throws {
+    var state = Self.scoringState()
+    state.elapsedSeconds = 42
+    state.hasTimerStartedThisPeriod = true
+    let store = Self.makeScoringStore(state: state)
+
+    await store.send(.endQuarterButtonTapped) {
+      $0.isShowingLastCentrePassBanner = true
+      $0.isTimerRunning = false
+    }
+    await store.send(.lastCentrePassNotTakenButtonTapped) {
+      $0.isTransitioningPeriod = true
+    }
+    await store.receive {
+      guard case .lastCentrePassResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = 0
+      $0.hasTimerStartedThisPeriod = false
+      $0.isShowingLastCentrePassBanner = false
+      $0.isTransitioningPeriod = false
+      $0.period = 2
+    }
+  }
+
+  @Test
+  func fourthQuarterNeverEntersABreak() async throws {
+    let clock = TestClock()
+    var state = Self.scoringState()
+    state.elapsedSeconds = state.periodDurationSeconds - 1
+    state.firstBreakDurationSeconds = 120
+    state.halfTimeDurationSeconds = 600
+    state.period = 4
+    state.secondBreakDurationSeconds = 300
+    let store = Self.makeScoringStore(state: state, clock: clock)
+
+    await store.send(.resumeTimerButtonTapped) {
+      $0.hasTimerStartedThisPeriod = true
+      $0.isTimerRunning = true
+    }
+    await clock.advance(by: .seconds(1))
+    await store.receive {
+      guard case .timerTick = $0 else { return false }
+      return true
+    } assert: {
+      $0.elapsedSeconds = $0.periodDurationSeconds
+      $0.isTimerRunning = false
+    }
+
+    expectNoDifference(store.state.clockPhase, .quarter)
+    expectNoDifference(store.state.canFinishGame, true)
+  }
+
+  @Test
+  func evenQuarterGoalRemainsAttributedToDisplayedTeamIdentity() async throws {
+    var state = Self.scoringState()
+    state.isTimerRunning = true
+    state.period = 2
+    let store = Self.makeScoringStore(state: state)
+
+    expectNoDifference(store.state.isShowingOriginalTeamOrder, false)
+    await store.send(.goalButtonTapped(UUID(2)))
+    await store.receive {
+      guard case .goalResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.canUndo = true
+      $0.centrePassTeamID = UUID(2)
+      $0.teamBScore = 1
+    }
+
+    let goal = try await store.dependencies.defaultDatabase.read { db in
+      try Goal.fetchOne(db)
+    }
+    expectNoDifference(goal?.teamID, UUID(2))
+    expectNoDifference(goal?.period, 2)
   }
 
   @Test
@@ -474,22 +863,23 @@ struct SupershotTests {
       try Game.find(UUID(3)).delete().execute(db)
     }
 
-    await store.send(.nextQuarterButtonTapped) {
-      $0.confirmationDialog = .lastCentrePassConfirmation(teamName: "Ravens")
+    await store.send(.endQuarterButtonTapped) {
+      $0.isShowingLastCentrePassBanner = true
     }
-    await store.send(
-      .confirmationDialog(.presented(.lastCentrePassTakenButtonTapped))
-    ) {
-      $0.confirmationDialog = nil
+    await store.send(.lastCentrePassTakenButtonTapped) {
+      $0.isTransitioningPeriod = true
     }
     await store.receive {
-      guard case .nextQuarterResponse(.failure) = $0 else { return false }
+      guard case .lastCentrePassResponse(.failure) = $0 else { return false }
       return true
+    } assert: {
+      $0.isTransitioningPeriod = false
     }
 
     expectNoDifference(store.state.centrePassTeamID, UUID(1))
     expectNoDifference(store.state.elapsedSeconds, 42)
     expectNoDifference(store.state.hasTimerStartedThisPeriod, true)
+    expectNoDifference(store.state.isShowingLastCentrePassBanner, true)
     expectNoDifference(store.state.period, 1)
   }
 
@@ -534,17 +924,20 @@ struct SupershotTests {
     let newerDate = Date(timeIntervalSince1970: 2_000)
     try await database.write { db in
       try db.seed {
-        Team(id: UUID(-1), name: "Ravens")
-        Team(id: UUID(-2), name: "Swifts")
-        Team(id: UUID(-3), name: "Foxes")
-        Team(id: UUID(-4), name: "Owls")
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Team(id: UUID(-3), name: "Foxes", colorHex: "#34C759")
+        Team(id: UUID(-4), name: "Owls", colorHex: "#FF9500")
         Game(
           id: UUID(-1),
           startedAt: newerDate,
           endedAt: nil,
           teamAID: UUID(-1),
           teamBID: UUID(-2),
-          periodDurationSeconds: 900
+          periodDurationSeconds: 900,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
+          secondBreakDurationSeconds: 240
         )
         Game(
           id: UUID(-2),
@@ -584,10 +977,16 @@ struct SupershotTests {
       [
         GameListItem(
           endedAt: nil,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
           id: UUID(-1),
+          periodDurationSeconds: 900,
+          secondBreakDurationSeconds: 240,
           startedAt: newerDate,
+          teamAColorHex: TeamColorPalette.blue,
           teamAName: "Ravens",
           teamAScore: 2,
+          teamBColorHex: TeamColorPalette.red,
           teamBName: "Swifts",
           teamBScore: 0
         ),
@@ -595,8 +994,10 @@ struct SupershotTests {
           endedAt: Date(timeIntervalSince1970: 1_500),
           id: UUID(-2),
           startedAt: olderDate,
+          teamAColorHex: "#34C759",
           teamAName: "Foxes",
           teamAScore: 0,
+          teamBColorHex: "#FF9500",
           teamBName: "Owls",
           teamBScore: 1
         ),
@@ -611,15 +1012,18 @@ struct SupershotTests {
 
     try await database.write { db in
       try db.seed {
-        Team(id: UUID(-1), name: "Ravens")
-        Team(id: UUID(-2), name: "Swifts")
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
         Game(
           id: UUID(-1),
           startedAt: Date(timeIntervalSince1970: 1_000),
           endedAt: nil,
           teamAID: UUID(-1),
           teamBID: UUID(-2),
-          periodDurationSeconds: 900
+          periodDurationSeconds: 900,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
+          secondBreakDurationSeconds: 240
         )
       }
     }
@@ -630,12 +1034,89 @@ struct SupershotTests {
     expectNoDifference(game?.currentPeriod, 1)
     expectNoDifference(game?.elapsedSeconds, 0)
     expectNoDifference(game?.hasTimerStartedCurrentPeriod, false)
+    expectNoDifference(game?.isAwaitingCentrePassConfirmation, false)
     expectNoDifference(game?.centrePassTeamID, nil)
 
     let snapshot = try await database.read { db in
       try GameSnapshot.fetch(db, gameID: UUID(-1))
     }
     expectNoDifference(ScoringFeature.State(snapshot: snapshot).centrePassTeamID, UUID(-1))
+  }
+
+  @Test
+  func breakSnapshotRehydratesPausedInTheCompletedQuartersOrder() {
+    let ravens = Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+    let swifts = Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+    let snapshot = GameSnapshot(
+      game: Game(
+        id: UUID(-3),
+        startedAt: Date(timeIntervalSince1970: 1_000),
+        endedAt: nil,
+        teamAID: ravens.id,
+        teamBID: swifts.id,
+        centrePassTeamID: ravens.id,
+        periodDurationSeconds: 900,
+        firstBreakDurationSeconds: 240,
+        halfTimeDurationSeconds: 600,
+        secondBreakDurationSeconds: 240,
+        isInBreak: true,
+        isAwaitingCentrePassConfirmation: true,
+        currentPeriod: 2,
+        elapsedSeconds: 125,
+        hasTimerStartedCurrentPeriod: true
+      ),
+      goals: [],
+      teamA: ravens,
+      teamB: swifts
+    )
+
+    let state = ScoringFeature.State(snapshot: snapshot)
+    expectNoDifference(state.clockPhase, .breakTime)
+    expectNoDifference(state.currentDurationSeconds, 600)
+    expectNoDifference(state.elapsedSeconds, 125)
+    expectNoDifference(state.isShowingLastCentrePassBanner, true)
+    expectNoDifference(state.isShowingOriginalTeamOrder, false)
+    expectNoDifference(state.isTimerRunning, false)
+  }
+
+  @Test
+  func teamIdentityUsesStableUnicodeNormalizationAndCanonicalColor() {
+    let team = Team(id: UUID(50), name: "  E\u{301}CLAIRS  ", colorHex: "#abcdef")
+
+    expectNoDifference(team.name, "E\u{301}CLAIRS")
+    expectNoDifference(team.normalizedName, "éclairs")
+    expectNoDifference(team.colorHex, "#ABCDEF")
+    expectNoDifference(Team.normalizeName("Éclairs"), team.normalizedName)
+  }
+
+  @Test
+  func normalizedTeamNameIndexRejectsDuplicateProfiles() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    try await database.write { db in
+      try Team.insert {
+        Team(id: UUID(51), name: "Éclairs")
+      }
+      .execute(db)
+    }
+
+    do {
+      try await database.write { db in
+        try Team.insert {
+          Team(id: UUID(52), name: "  E\u{301}CLAIRS ")
+        }
+        .execute(db)
+      }
+      Issue.record("Expected normalized team names to be unique")
+    } catch {
+      // The unique index is the final transactional guard against concurrent duplicates.
+    }
+
+    let teams = try await database.read { db in
+      try Team.fetchAll(db)
+    }
+    expectNoDifference(teams.map(\.id), [UUID(51)])
   }
 
   @Test
@@ -726,15 +1207,18 @@ struct SupershotTests {
     let endedAt = Date(timeIntervalSince1970: 2_000)
     try await database.write { db in
       try db.seed {
-        Team(id: UUID(-1), name: "Ravens")
-        Team(id: UUID(-2), name: "Swifts")
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
         Game(
           id: UUID(-1),
           startedAt: startedAt,
           endedAt: endedAt,
           teamAID: UUID(-1),
           teamBID: UUID(-2),
-          periodDurationSeconds: 900
+          periodDurationSeconds: 900,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
+          secondBreakDurationSeconds: 240
         )
         Goal(
           id: UUID(-3),
@@ -774,12 +1258,14 @@ struct SupershotTests {
       value.detail,
       CompletedGameDetail(
         endedAt: endedAt,
+        firstBreakDurationSeconds: 240,
         goals: [
           GoalTimelineItem(
             clockSecondsRemaining: 800,
             id: UUID(-1),
             period: 1,
             points: 2,
+            scoringTeamColorHex: TeamColorPalette.blue,
             scoringTeamName: "Ravens",
             teamAScore: 2,
             teamBScore: 0
@@ -789,6 +1275,7 @@ struct SupershotTests {
             id: UUID(-2),
             period: 1,
             points: 1,
+            scoringTeamColorHex: TeamColorPalette.red,
             scoringTeamName: "Swifts",
             teamAScore: 2,
             teamBScore: 1
@@ -798,15 +1285,21 @@ struct SupershotTests {
             id: UUID(-3),
             period: 2,
             points: 1,
+            scoringTeamColorHex: TeamColorPalette.red,
             scoringTeamName: "Swifts",
             teamAScore: 2,
             teamBScore: 2
           ),
         ],
+        halfTimeDurationSeconds: 600,
         id: UUID(-1),
+        periodDurationSeconds: 900,
+        secondBreakDurationSeconds: 240,
         startedAt: startedAt,
+        teamAColorHex: TeamColorPalette.blue,
         teamAName: "Ravens",
         teamAScore: 2,
+        teamBColorHex: TeamColorPalette.red,
         teamBName: "Swifts",
         teamBScore: 2
       )
@@ -869,6 +1362,11 @@ struct SupershotTests {
             teamBID: UUID(2),
             centrePassTeamID: state.centrePassTeamID,
             periodDurationSeconds: state.periodDurationSeconds,
+            firstBreakDurationSeconds: state.firstBreakDurationSeconds,
+            halfTimeDurationSeconds: state.halfTimeDurationSeconds,
+            secondBreakDurationSeconds: state.secondBreakDurationSeconds,
+            isInBreak: state.clockPhase == .breakTime,
+            isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
             currentPeriod: state.period,
             elapsedSeconds: state.elapsedSeconds,
             hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod
@@ -898,8 +1396,38 @@ struct SupershotTests {
       centrePassTeamID: UUID(1),
       gameID: UUID(3),
       startedAt: Date(timeIntervalSince1970: 500),
-      teamA: ScoringFeature.Team(id: UUID(1), name: "Ravens"),
-      teamB: ScoringFeature.Team(id: UUID(2), name: "Swifts")
+      teamA: ScoringFeature.Team(
+        id: UUID(1),
+        colorHex: TeamColorPalette.blue,
+        name: "Ravens"
+      ),
+      teamB: ScoringFeature.Team(
+        id: UUID(2),
+        colorHex: TeamColorPalette.red,
+        name: "Swifts"
+      )
     )
+  }
+
+  private static func setupState(
+    leftName: String,
+    rightName: String
+  ) -> SetupFeature.State {
+    var state = SetupFeature.State()
+    state.leftTeam.mode = .locked
+    state.leftTeam.selection = .new(
+      TeamSlotFeature.TeamDraft(
+        colorHex: TeamColorPalette.blue,
+        name: leftName
+      )
+    )
+    state.rightTeam.mode = .locked
+    state.rightTeam.selection = .new(
+      TeamSlotFeature.TeamDraft(
+        colorHex: TeamColorPalette.red,
+        name: rightName
+      )
+    )
+    return state
   }
 }

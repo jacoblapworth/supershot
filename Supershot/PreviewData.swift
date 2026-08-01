@@ -7,10 +7,10 @@ extension DatabaseWriter {
   func seedPreviewGames() throws {
     try write { db in
       try db.seed {
-        Team(id: UUID(1), name: "Ravens")
-        Team(id: UUID(2), name: "Swifts")
-        Team(id: UUID(3), name: "Foxes")
-        Team(id: UUID(4), name: "Owls")
+        Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Team(id: UUID(3), name: "Foxes", colorHex: "#34C759")
+        Team(id: UUID(4), name: "Owls", colorHex: "#FF9500")
         Game(
           id: UUID(10),
           startedAt: Date(timeIntervalSince1970: 1_785_573_000),
@@ -19,6 +19,9 @@ extension DatabaseWriter {
           teamBID: UUID(2),
           centrePassTeamID: UUID(2),
           periodDurationSeconds: 900,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
+          secondBreakDurationSeconds: 240,
           currentPeriod: 4,
           elapsedSeconds: 900,
           hasTimerStartedCurrentPeriod: true
@@ -31,6 +34,9 @@ extension DatabaseWriter {
           teamBID: UUID(4),
           centrePassTeamID: UUID(3),
           periodDurationSeconds: 900,
+          firstBreakDurationSeconds: 240,
+          halfTimeDurationSeconds: 600,
+          secondBreakDurationSeconds: 240,
           currentPeriod: 2,
           elapsedSeconds: 324,
           hasTimerStartedCurrentPeriod: true

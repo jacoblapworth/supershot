@@ -103,6 +103,7 @@ private struct GameRow: View {
       HStack(alignment: .center, spacing: 12) {
         TeamScore(
           alignment: .leading,
+          colorHex: game.teamAColorHex,
           name: game.teamAName,
           score: game.teamAScore
         )
@@ -113,10 +114,16 @@ private struct GameRow: View {
 
         TeamScore(
           alignment: .trailing,
+          colorHex: game.teamBColorHex,
           name: game.teamBName,
           score: game.teamBScore
         )
       }
+
+      Text(game.timingSummary)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.vertical, 8)
     .contentShape(Rectangle())
@@ -128,17 +135,23 @@ private struct GameRow: View {
     let date = game.startedAt.formatted(date: .abbreviated, time: .shortened)
     let status = game.isCompleted ? "Final" : "In progress"
     return "\(date), \(game.teamAName) \(game.teamAScore), "
-      + "\(game.teamBName) \(game.teamBScore), \(status)"
+      + "\(game.teamBName) \(game.teamBScore), \(status), \(game.timingSummary)"
   }
 }
 
 private struct TeamScore: View {
   var alignment: HorizontalAlignment
+  var colorHex: String
   var name: String
   var score: Int
 
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
+      Circle()
+        .fill(Color(teamHex: colorHex))
+        .frame(width: 12, height: 12)
+        .accessibilityHidden(true)
+
       Text(name)
         .font(.headline)
         .lineLimit(3)

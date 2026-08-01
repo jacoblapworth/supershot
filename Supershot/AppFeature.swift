@@ -126,30 +126,45 @@ extension AlertState where Action == AppFeature.Alert {
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
+    let period = min(
+      max(snapshot.game.currentPeriod, 1),
+      Self.maximumPeriod
+    )
+    let clockPhase = snapshot.game.isInBreak
+      ? ScoringFeature.ClockPhase.breakTime
+      : .quarter
+    let currentDuration = clockPhase == .breakTime
+      ? snapshot.game.breakDuration(after: period)
+      : snapshot.game.periodDurationSeconds
+
     self.init(
       canUndo: !snapshot.goals.isEmpty,
       centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
         ? snapshot.teamB.id
         : snapshot.teamA.id,
+      clockPhase: clockPhase,
       elapsedSeconds: min(
         max(snapshot.game.elapsedSeconds, 0),
-        snapshot.game.periodDurationSeconds
+        max(currentDuration, 0)
       ),
+      firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
       gameID: snapshot.game.id,
+      halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
       hasTimerStartedThisPeriod: snapshot.game.hasTimerStartedCurrentPeriod,
-      period: min(
-        max(snapshot.game.currentPeriod, 1),
-        Self.maximumPeriod
-      ),
+      isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
+      period: period,
       periodDurationSeconds: snapshot.game.periodDurationSeconds,
+      secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
       startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(
         id: snapshot.teamA.id,
+        colorHex: snapshot.teamA.colorHex,
         name: snapshot.teamA.name
       ),
       teamAScore: snapshot.teamAScore,
       teamB: ScoringFeature.Team(
         id: snapshot.teamB.id,
+        colorHex: snapshot.teamB.colorHex,
         name: snapshot.teamB.name
       ),
       teamBScore: snapshot.teamBScore

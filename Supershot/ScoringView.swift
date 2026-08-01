@@ -9,22 +9,32 @@ struct ScoringView: View {
     ScrollView {
       VStack(spacing: 20) {
         scoreboard
-        centrePassControl
+        if store.isShowingLastCentrePassBanner {
+          lastCentrePassBanner
+        } else if store.clockPhase == .quarter {
+          centrePassControl
+        }
         timerPanel
         gameControls
       }
       .padding()
     }
-    .navigationTitle("Quarter \(store.period)")
+    .navigationTitle(
+      store.clockPhase == .breakTime
+        ? "Break after quarter \(store.period)"
+        : "Quarter \(store.period)"
+    )
     .navigationBarBackButtonHidden()
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        Button {
-          store.send(.closeButtonTapped)
-        } label: {
-          Label("Games", systemImage: "chevron.left")
-        }
+      #if os(macOS)
+      ToolbarItem(placement: .navigation) {
+        gamesButton
       }
+      #else
+      ToolbarItem(placement: .topBarLeading) {
+        gamesButton
+      }
+      #endif
 
       ToolbarItem(placement: .primaryAction) {
         Button {
@@ -32,7 +42,7 @@ struct ScoringView: View {
         } label: {
           Image(systemName: "arrow.uturn.backward")
         }
-        .disabled(!store.canUndo)
+        .disabled(!store.canUndo || store.isShowingLastCentrePassBanner)
         .accessibilityLabel("Undo last goal")
       }
     }
@@ -40,13 +50,38 @@ struct ScoringView: View {
     .onChange(of: scenePhase, scenePhaseChanged)
   }
 
+  private var gamesButton: some View {
+    Button {
+      store.send(.closeButtonTapped)
+    } label: {
+      Label("Games", systemImage: "chevron.left")
+    }
+  }
+
   private var gameControls: some View {
     VStack(spacing: 12) {
-      if store.canMoveToNextQuarter {
+      if store.canContinueToNextQuarter {
         Button {
-          store.send(.nextQuarterButtonTapped)
+          store.send(.continueToNextQuarterButtonTapped)
         } label: {
-          Label("Next quarter", systemImage: "arrow.forward.circle.fill")
+          Label("Continue to quarter \(store.period + 1)", systemImage: "arrow.forward.circle.fill")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+      } else if store.clockPhase == .breakTime {
+        Button {
+          store.send(.skipBreakButtonTapped)
+        } label: {
+          Label("Skip break", systemImage: "forward.end.fill")
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .disabled(store.isShowingLastCentrePassBanner || store.isTransitioningPeriod)
+      } else if store.canMoveToNextQuarter {
+        Button {
+          store.send(.endQuarterButtonTapped)
+        } label: {
+          Label("End quarter", systemImage: "stop.circle.fill")
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
@@ -64,24 +99,59 @@ struct ScoringView: View {
     }
   }
 
+  private var lastCentrePassBanner: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      Label("Quarter \(store.period) complete", systemImage: "flag.checkered")
+        .font(.headline)
+
+      HStack(spacing: 8) {
+        Circle()
+          .fill(Color(teamHex: store.centrePassTeam.colorHex))
+          .frame(width: 12, height: 12)
+          .accessibilityHidden(true)
+        Text("Did **\(store.centrePassTeam.name)** take the last centre pass?")
+      }
+
+      HStack(spacing: 10) {
+        Button("No, not taken") {
+          store.send(.lastCentrePassNotTakenButtonTapped)
+        }
+        .buttonStyle(.bordered)
+
+        Button("Yes, pass taken") {
+          store.send(.lastCentrePassTakenButtonTapped)
+        }
+        .buttonStyle(.borderedProminent)
+      }
+      .disabled(store.isTransitioningPeriod)
+
+      if store.isTransitioningPeriod {
+        ProgressView("Saving quarter…")
+          .font(.caption)
+      }
+    }
+    .padding()
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+    .overlay {
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(Color.accentColor, lineWidth: 1)
+    }
+    .accessibilityElement(children: .contain)
+  }
+
   private var centrePassControl: some View {
     VStack(alignment: .leading, spacing: 12) {
       Label("Centre pass", systemImage: "arrow.left.arrow.right")
         .font(.headline)
 
       HStack(spacing: 12) {
-        CentrePassButton(
-          isSelected: store.centrePassTeamID == store.teamA.id,
-          name: store.teamA.name
-        ) {
-          store.send(.centrePassTeamButtonTapped(store.teamA.id))
-        }
-
-        CentrePassButton(
-          isSelected: store.centrePassTeamID == store.teamB.id,
-          name: store.teamB.name
-        ) {
-          store.send(.centrePassTeamButtonTapped(store.teamB.id))
+        if store.isShowingOriginalTeamOrder {
+          centrePassButton(team: store.teamA)
+          centrePassButton(team: store.teamB)
+        } else {
+          centrePassButton(team: store.teamB)
+          centrePassButton(team: store.teamA)
         }
       }
 
@@ -95,18 +165,12 @@ struct ScoringView: View {
 
   private var scoreboard: some View {
     HStack(spacing: 12) {
-      ScoreButton(
-        name: store.teamA.name,
-        score: store.teamAScore
-      ) {
-        store.send(.goalButtonTapped(store.teamA.id))
-      }
-
-      ScoreButton(
-        name: store.teamB.name,
-        score: store.teamBScore
-      ) {
-        store.send(.goalButtonTapped(store.teamB.id))
+      if store.isShowingOriginalTeamOrder {
+        scoreButton(team: store.teamA, score: store.teamAScore)
+        scoreButton(team: store.teamB, score: store.teamBScore)
+      } else {
+        scoreButton(team: store.teamB, score: store.teamBScore)
+        scoreButton(team: store.teamA, score: store.teamAScore)
       }
     }
   }
@@ -120,40 +184,66 @@ struct ScoringView: View {
 
       ProgressView(
         value: Double(store.elapsedSeconds),
-        total: Double(store.periodDurationSeconds)
+        total: Double(max(store.currentDurationSeconds, 1))
       )
 
-      HStack {
-        if store.isTimerRunning {
-          Button {
-            store.send(.pauseTimerButtonTapped)
-          } label: {
-            Label("Pause", systemImage: "pause.fill")
-              .frame(maxWidth: .infinity)
+      if !store.isShowingLastCentrePassBanner || store.clockPhase == .breakTime {
+        HStack {
+          if store.isTimerRunning {
+            Button {
+              store.send(.pauseTimerButtonTapped)
+            } label: {
+              Label("Pause", systemImage: "pause.fill")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+          } else if store.elapsedSeconds == 0 {
+            Button {
+              store.send(.startTimerButtonTapped)
+            } label: {
+              Label("Start", systemImage: "play.fill")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+          } else {
+            Button {
+              store.send(.resumeTimerButtonTapped)
+            } label: {
+              Label("Resume", systemImage: "play.fill")
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(store.isPeriodComplete)
           }
-          .buttonStyle(.borderedProminent)
-        } else if store.elapsedSeconds == 0 {
-          Button {
-            store.send(.startTimerButtonTapped)
-          } label: {
-            Label("Start", systemImage: "play.fill")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent)
-        } else {
-          Button {
-            store.send(.resumeTimerButtonTapped)
-          } label: {
-            Label("Resume", systemImage: "play.fill")
-              .frame(maxWidth: .infinity)
-          }
-          .buttonStyle(.borderedProminent)
-          .disabled(store.isPeriodComplete)
         }
       }
     }
     .padding()
     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+  }
+
+  private func centrePassButton(team: ScoringFeature.Team) -> some View {
+    CentrePassButton(
+      colorHex: team.colorHex,
+      isSelected: store.centrePassTeamID == team.id,
+      name: team.name
+    ) {
+      store.send(.centrePassTeamButtonTapped(team.id))
+    }
+  }
+
+  private func scoreButton(
+    team: ScoringFeature.Team,
+    score: Int
+  ) -> some View {
+    ScoreButton(
+      colorHex: team.colorHex,
+      isDisabled: store.clockPhase == .breakTime || store.isShowingLastCentrePassBanner,
+      name: team.name,
+      score: score
+    ) {
+      store.send(.goalButtonTapped(team.id))
+    }
   }
 
   private func formattedTime(_ seconds: Int) -> String {
@@ -172,6 +262,8 @@ struct ScoringView: View {
 }
 
 private struct ScoreButton: View {
+  var colorHex: String
+  var isDisabled: Bool
   var name: String
   var score: Int
   var action: () -> Void
@@ -193,12 +285,23 @@ private struct ScoreButton: View {
           .font(.subheadline.weight(.semibold))
       }
       .frame(maxWidth: .infinity, minHeight: 180)
+      .background(
+        Color(teamHex: colorHex).opacity(0.12),
+        in: RoundedRectangle(cornerRadius: 12)
+      )
+      .overlay {
+        RoundedRectangle(cornerRadius: 12)
+          .stroke(Color(teamHex: colorHex), lineWidth: 2)
+      }
     }
-    .buttonStyle(.bordered)
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .opacity(isDisabled ? 0.65 : 1)
   }
 }
 
 private struct CentrePassButton: View {
+  var colorHex: String
   var isSelected: Bool
   var name: String
   var action: () -> Void
@@ -214,14 +317,17 @@ private struct CentrePassButton: View {
       .font(.subheadline.weight(.semibold))
       .frame(maxWidth: .infinity, minHeight: 44)
       .padding(.horizontal, 8)
-      .foregroundStyle(isSelected ? Color.white : Color.primary)
+      .foregroundStyle(Color.primary)
       .background(
-        isSelected ? Color.accentColor : Color.clear,
+        isSelected ? Color(teamHex: colorHex).opacity(0.2) : Color.clear,
         in: RoundedRectangle(cornerRadius: 8)
       )
       .overlay {
         RoundedRectangle(cornerRadius: 8)
-          .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.4))
+          .stroke(
+            isSelected ? Color(teamHex: colorHex) : Color.secondary.opacity(0.4),
+            lineWidth: isSelected ? 2 : 1
+          )
       }
     }
     .buttonStyle(.plain)
@@ -237,10 +343,21 @@ private struct CentrePassButton: View {
     store: Store(
       initialState: ScoringFeature.State(
         centrePassTeamID: teamAID,
+        firstBreakDurationSeconds: 240,
         gameID: UUID(),
+        halfTimeDurationSeconds: 600,
+        secondBreakDurationSeconds: 240,
         startedAt: Date(),
-        teamA: ScoringFeature.Team(id: teamAID, name: "Ravens"),
-        teamB: ScoringFeature.Team(id: teamBID, name: "Swifts")
+        teamA: ScoringFeature.Team(
+          id: teamAID,
+          colorHex: TeamColorPalette.blue,
+          name: "Ravens"
+        ),
+        teamB: ScoringFeature.Team(
+          id: teamBID,
+          colorHex: TeamColorPalette.red,
+          name: "Swifts"
+        )
       )
     ) {
       ScoringFeature()

@@ -3,15 +3,30 @@ import SQLiteData
 
 nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   let endedAt: Date?
+  var firstBreakDurationSeconds = 0
+  var halfTimeDurationSeconds = 0
   let id: Game.ID
+  var periodDurationSeconds = 15 * 60
+  var secondBreakDurationSeconds = 0
   let startedAt: Date
+  var teamAColorHex = TeamColorPalette.blue
   let teamAName: String
   let teamAScore: Int
+  var teamBColorHex = TeamColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
   var isCompleted: Bool {
     endedAt != nil
+  }
+
+  var timingSummary: String {
+    gameTimingSummary(
+      periodDurationSeconds: periodDurationSeconds,
+      firstBreakDurationSeconds: firstBreakDurationSeconds,
+      halfTimeDurationSeconds: halfTimeDurationSeconds,
+      secondBreakDurationSeconds: secondBreakDurationSeconds
+    )
   }
 }
 
@@ -20,6 +35,7 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let id: Goal.ID
   let period: Int
   let points: Int
+  var scoringTeamColorHex = TeamColorPalette.blue
   let scoringTeamName: String
   let teamAScore: Int
   let teamBScore: Int
@@ -27,11 +43,17 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
 
 nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let endedAt: Date
+  var firstBreakDurationSeconds = 0
   let goals: [GoalTimelineItem]
+  var halfTimeDurationSeconds = 0
   let id: Game.ID
+  var periodDurationSeconds = 15 * 60
+  var secondBreakDurationSeconds = 0
   let startedAt: Date
+  var teamAColorHex = TeamColorPalette.blue
   let teamAName: String
   let teamAScore: Int
+  var teamBColorHex = TeamColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
@@ -43,6 +65,15 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
     } else {
       return "\(teamBName) win"
     }
+  }
+
+  var timingSummary: String {
+    gameTimingSummary(
+      periodDurationSeconds: periodDurationSeconds,
+      firstBreakDurationSeconds: firstBreakDurationSeconds,
+      halfTimeDurationSeconds: halfTimeDurationSeconds,
+      secondBreakDurationSeconds: secondBreakDurationSeconds
+    )
   }
 }
 
@@ -114,12 +145,18 @@ nonisolated struct GamesRequest: FetchKeyRequest {
         let gameGoals = goalsByGame[game.id, default: []]
         return GameListItem(
           endedAt: game.endedAt,
+          firstBreakDurationSeconds: game.firstBreakDurationSeconds,
+          halfTimeDurationSeconds: game.halfTimeDurationSeconds,
           id: game.id,
+          periodDurationSeconds: game.periodDurationSeconds,
+          secondBreakDurationSeconds: game.secondBreakDurationSeconds,
           startedAt: game.startedAt,
+          teamAColorHex: teamA.colorHex,
           teamAName: teamA.name,
           teamAScore: gameGoals
             .filter { $0.teamID == teamA.id }
             .reduce(0) { $0 + $1.points },
+          teamBColorHex: teamB.colorHex,
           teamBName: teamB.name,
           teamBScore: gameGoals
             .filter { $0.teamID == teamB.id }
@@ -144,14 +181,18 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
     var teamAScore = 0
     var teamBScore = 0
     let timeline = snapshot.goals.map { goal in
+      let scoringTeamColorHex: String
       let scoringTeamName: String
       if goal.teamID == snapshot.teamA.id {
         teamAScore += goal.points
+        scoringTeamColorHex = snapshot.teamA.colorHex
         scoringTeamName = snapshot.teamA.name
       } else if goal.teamID == snapshot.teamB.id {
         teamBScore += goal.points
+        scoringTeamColorHex = snapshot.teamB.colorHex
         scoringTeamName = snapshot.teamB.name
       } else {
+        scoringTeamColorHex = TeamColorPalette.blue
         scoringTeamName = "Unknown team"
       }
 
@@ -163,6 +204,7 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         id: goal.id,
         period: goal.period,
         points: goal.points,
+        scoringTeamColorHex: scoringTeamColorHex,
         scoringTeamName: scoringTeamName,
         teamAScore: teamAScore,
         teamBScore: teamBScore
@@ -172,16 +214,45 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
     return Value(
       detail: CompletedGameDetail(
         endedAt: endedAt,
+        firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
         goals: timeline,
+        halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
         id: snapshot.game.id,
+        periodDurationSeconds: snapshot.game.periodDurationSeconds,
+        secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
         startedAt: snapshot.game.startedAt,
+        teamAColorHex: snapshot.teamA.colorHex,
         teamAName: snapshot.teamA.name,
         teamAScore: teamAScore,
+        teamBColorHex: snapshot.teamB.colorHex,
         teamBName: snapshot.teamB.name,
         teamBScore: teamBScore
       )
     )
   }
+}
+
+private nonisolated func gameTimingSummary(
+  periodDurationSeconds: Int,
+  firstBreakDurationSeconds: Int,
+  halfTimeDurationSeconds: Int,
+  secondBreakDurationSeconds: Int
+) -> String {
+  let quarter = formattedDuration(periodDurationSeconds)
+  let breaks = [
+    formattedDuration(firstBreakDurationSeconds),
+    formattedDuration(halfTimeDurationSeconds),
+    formattedDuration(secondBreakDurationSeconds),
+  ]
+  if Set(breaks).count == 1, let first = breaks.first {
+    return "4 × \(quarter) · \(first) breaks"
+  }
+  return "4 × \(quarter) · breaks \(breaks.joined(separator: " / "))"
+}
+
+private nonisolated func formattedDuration(_ seconds: Int) -> String {
+  let clampedSeconds = max(seconds, 0)
+  return "\(clampedSeconds / 60):\(String(format: "%02d", clampedSeconds % 60))"
 }
 
 private nonisolated enum GameQueryError: Error {

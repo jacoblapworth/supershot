@@ -19,15 +19,60 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var teamBID: Team.ID
   var centrePassTeamID: Team.ID?
   var periodDurationSeconds: Int
+  var firstBreakDurationSeconds = 0
+  var halfTimeDurationSeconds = 0
+  var secondBreakDurationSeconds = 0
+  var isInBreak = false
+  var isAwaitingCentrePassConfirmation = false
   var currentPeriod = 1
   var elapsedSeconds = 0
   var hasTimerStartedCurrentPeriod = false
+
+  func breakDuration(after period: Int) -> Int {
+    switch period {
+    case 1:
+      firstBreakDurationSeconds
+    case 2:
+      halfTimeDurationSeconds
+    case 3:
+      secondBreakDurationSeconds
+    default:
+      0
+    }
+  }
 }
 
 @Table
 nonisolated struct Team: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
+  var colorHex: String
   var name: String
+  var normalizedName: String
+}
+
+extension Team {
+  nonisolated init(
+    id: UUID,
+    name: String,
+    colorHex: String = TeamColorPalette.blue
+  ) {
+    self.id = id
+    self.colorHex = TeamColorPalette.isValid(colorHex)
+      ? colorHex.uppercased()
+      : TeamColorPalette.blue
+    self.name = Self.trimmedName(name)
+    self.normalizedName = Self.normalizeName(name)
+  }
+
+  nonisolated static func normalizeName(_ name: String) -> String {
+    trimmedName(name)
+      .folding(options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+      .precomposedStringWithCanonicalMapping
+  }
+
+  nonisolated static func trimmedName(_ name: String) -> String {
+    name.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
 }
 
 @Table
@@ -47,11 +92,17 @@ nonisolated func uuid() -> UUID {
   return uuid()
 }
 
+@DatabaseFunction
+nonisolated func normalizedTeamName(_ name: String) -> String {
+  Team.normalizeName(name)
+}
+
 extension DependencyValues {
   nonisolated mutating func bootstrapDatabase() throws {
     var configuration = Configuration()
     configuration.prepareDatabase { db in
       db.add(function: $uuid)
+      db.add(function: $normalizedTeamName)
     }
 
     let database = try SQLiteData.defaultDatabase(configuration: configuration)
@@ -176,9 +227,123 @@ extension DependencyValues {
       .execute(db)
     }
 
+    migrator.registerMigration("Add per-break game timing") { db in
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "firstBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "halfTimeDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "secondBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "isInBreak" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
+
+    migrator.registerMigration("Add reusable team profiles") { db in
+      try #sql(
+        """
+        ALTER TABLE "teams"
+        ADD COLUMN "colorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF'
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        ALTER TABLE "teams"
+        ADD COLUMN "normalizedName" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT ''
+        """
+      )
+      .execute(db)
+
+      let teams = try Team.fetchAll(db)
+      let groups = Dictionary(grouping: teams) {
+        Team.normalizeName($0.name)
+      }
+
+      for (normalizedName, group) in groups {
+        let sorted = group.sorted { $0.id.uuidString < $1.id.uuidString }
+        guard let survivor = sorted.first else { continue }
+
+        for duplicate in sorted.dropFirst() {
+          try Game
+            .where { $0.teamAID.eq(duplicate.id) }
+            .update { $0.teamAID = #bind(survivor.id) }
+            .execute(db)
+          try Game
+            .where { $0.teamBID.eq(duplicate.id) }
+            .update { $0.teamBID = #bind(survivor.id) }
+            .execute(db)
+          try Game
+            .where { $0.centrePassTeamID.eq(duplicate.id) }
+            .update { $0.centrePassTeamID = #bind(survivor.id) }
+            .execute(db)
+          try Goal
+            .where { $0.teamID.eq(duplicate.id) }
+            .update { $0.teamID = #bind(survivor.id) }
+            .execute(db)
+          try Team.find(duplicate.id).delete().execute(db)
+        }
+
+        let trimmedName = Team.trimmedName(survivor.name)
+        try Team.find(survivor.id).update {
+          $0.name = #bind(trimmedName)
+          $0.normalizedName = #bind(normalizedName)
+        }
+        .execute(db)
+      }
+
+      let remainingTeams = try Team
+        .order { ($0.normalizedName, $0.id) }
+        .fetchAll(db)
+      for (index, team) in remainingTeams.enumerated() {
+        let colorHex = TeamColorPalette.options[index % TeamColorPalette.options.count].hex
+        try Team.find(team.id).update {
+          $0.colorHex = #bind(colorHex)
+        }
+        .execute(db)
+      }
+
+      try #sql(
+        """
+        CREATE UNIQUE INDEX "idx_teams_normalizedName"
+        ON "teams"("normalizedName")
+        """
+      )
+      .execute(db)
+    }
+
+    migrator.registerMigration("Persist centre pass confirmation") { db in
+      try #sql(
+        """
+        ALTER TABLE "games"
+        ADD COLUMN "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
+        """
+      )
+      .execute(db)
+    }
+
     try migrator.migrate(database)
     defaultDatabase = database
   }
 }
 
-nonisolated private let logger = Logger(subsystem: "Netscore", category: "Database")
+nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")

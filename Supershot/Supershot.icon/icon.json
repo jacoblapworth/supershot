@@ -3,7 +3,7 @@
     "specular-location"
   ],
   "fill" : {
-    "automatic-gradient" : "display-p3:0.94241,0.20670,0.96783,1.00000"
+    "automatic-gradient" : "display-p3:0.82534,0.30426,0.78604,1.00000"
   },
   "groups" : [
     {
@@ -35,7 +35,7 @@
       "layers" : [
         {
           "fill" : {
-            "automatic-gradient" : "display-p3:0.32298,0.00079,0.25731,1.00000"
+            "automatic-gradient" : "display-p3:0.11572,0.00000,0.09297,1.00000"
           },
           "image-name" : "lines 2.svg",
           "name" : "lines"
