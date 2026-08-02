@@ -2,7 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct SetupTimingView: View {
-  @Bindable var store: StoreOf<SetupFeature>
+  @Bindable var store: StoreOf<NewGameFeature>
 
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
@@ -61,7 +61,7 @@ struct SetupTimingView: View {
 }
 
 private struct DurationEditor: View {
-  @Binding var duration: SetupFeature.DurationDraft
+  @Binding var duration: NewGameFeature.DurationDraft
   var label: String
   var presets: [Int]
   var presetTapped: (Int) -> Void

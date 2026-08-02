@@ -1,8 +1,8 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct SetupMatchupView: View {
-  @Bindable var store: StoreOf<SetupFeature>
+struct NewGameTeamsView: View {
+  @Bindable var store: StoreOf<NewGameFeature>
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -134,16 +134,16 @@ private struct TeamCard: View {
 }
 
 #Preview("Empty matchup") {
-  SetupMatchupView(store: setupPreviewStore())
+  NewGameTeamsView(store: setupPreviewStore())
     .padding()
 }
 
 #Preview("Selected matchup") {
-  SetupMatchupView(store: setupPreviewStore(.previewReady))
+  NewGameTeamsView(store: setupPreviewStore(.previewReady))
     .padding()
 }
 
 #Preview("Loading matchup") {
-  SetupMatchupView(store: setupPreviewStore(.previewLoading))
+  NewGameTeamsView(store: setupPreviewStore(.previewLoading))
     .padding()
 }

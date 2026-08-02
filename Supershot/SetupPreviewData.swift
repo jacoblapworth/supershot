@@ -59,7 +59,7 @@ extension TeamSlotFeature.State {
   }
 }
 
-extension SetupFeature.State {
+extension NewGameFeature.State {
   static var previewReady: Self {
     var state = Self()
     state.availableTeams = .previewTeams
@@ -108,14 +108,14 @@ extension SetupFeature.State {
 }
 
 @MainActor
-func setupPreviewStore() -> StoreOf<SetupFeature> {
-  setupPreviewStore(SetupFeature.State())
+func setupPreviewStore() -> StoreOf<NewGameFeature> {
+  setupPreviewStore(NewGameFeature.State())
 }
 
 @MainActor
-func setupPreviewStore(_ state: SetupFeature.State) -> StoreOf<SetupFeature> {
+func setupPreviewStore(_ state: NewGameFeature.State) -> StoreOf<NewGameFeature> {
   Store(initialState: state) {
-    SetupFeature()
+    NewGameFeature()
   }
 }
 #endif

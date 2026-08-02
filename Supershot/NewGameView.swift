@@ -1,13 +1,13 @@
 import ComposableArchitecture
 import SwiftUI
 
-struct SetupView: View {
-  @Bindable var store: StoreOf<SetupFeature>
+struct NewGameView: View {
+  @Bindable var store: StoreOf<NewGameFeature>
 
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
-        SetupMatchupView(store: store)
+        NewGameTeamsView(store: store)
 
         if store.leftTeam.mode.isInteracting {
           TeamSlotPanel(
@@ -56,12 +56,12 @@ struct SetupView: View {
 
 #Preview("Empty setup") {
   NavigationStack {
-    SetupView(store: setupPreviewStore())
+    NewGameView(store: setupPreviewStore())
   }
 }
 
 #Preview("Ready to start") {
   NavigationStack {
-    SetupView(store: setupPreviewStore(.previewReady))
+    NewGameView(store: setupPreviewStore(.previewReady))
   }
 }

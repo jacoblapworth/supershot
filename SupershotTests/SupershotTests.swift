@@ -261,7 +261,7 @@ struct SupershotTests {
     let state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
 
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     }
 
     await store.send(.startGameButtonTapped) {
@@ -274,7 +274,7 @@ struct SupershotTests {
     let state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
 
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     }
 
     await store.send(.startGameButtonTapped) {
@@ -289,7 +289,7 @@ struct SupershotTests {
 
     let startedAt = Date(timeIntervalSince1970: 1_000)
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     } withDependencies: {
       $0.date.now = startedAt
       $0.uuid = .incrementing
@@ -341,7 +341,7 @@ struct SupershotTests {
   func editingSavedTeamsIsStagedAndSupportsSafeNameSwaps() async throws {
     let ravens = Team(id: UUID(30), name: "Ravens", colorHex: TeamColorPalette.blue)
     let swifts = Team(id: UUID(31), name: "Swifts", colorHex: TeamColorPalette.red)
-    var state = SetupFeature.State()
+    var state = NewGameFeature.State()
     state.availableTeams = [ravens, swifts]
     state.firstCentrePass = .teamA
     state.leftTeam.mode = .locked
@@ -356,7 +356,7 @@ struct SupershotTests {
     )
 
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     } withDependencies: {
       $0.date.now = Date(timeIntervalSince1970: 1_000)
       $0.uuid = .incrementing
@@ -464,10 +464,10 @@ struct SupershotTests {
   @Test
   func emptyTeamCardOffersExistingTeamsAndCreateFlow() async {
     let ravens = Team(id: UUID(20), name: "Ravens", colorHex: "#AF52DE")
-    var state = SetupFeature.State()
+    var state = NewGameFeature.State()
     state.availableTeams = [ravens]
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     }
 
     await store.send(.leftTeam(.cardTapped)) {
@@ -497,7 +497,7 @@ struct SupershotTests {
     var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
     state.firstCentrePass = .teamA
     let store = TestStore(initialState: state) {
-      SetupFeature()
+      NewGameFeature()
     }
 
     await store.send(.swapTeamsButtonTapped) {
@@ -515,8 +515,8 @@ struct SupershotTests {
 
   @Test
   func breakDurationsCanBeUniformOrCustomized() async {
-    let store = TestStore(initialState: SetupFeature.State()) {
-      SetupFeature()
+    let store = TestStore(initialState: NewGameFeature.State()) {
+      NewGameFeature()
     }
 
     await store.send(.allBreakPresetButtonTapped(120)) {
@@ -2262,7 +2262,7 @@ struct SupershotTests {
   @Test
   func tabsRetainIndependentNavigationHistories() async {
     var state = AppFeature.State()
-    state.path.append(.setup(SetupFeature.State()))
+    state.path.append(.setup(NewGameFeature.State()))
     state.teamsPath.append(
       .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
     )
@@ -2521,8 +2521,8 @@ struct SupershotTests {
   private static func setupState(
     leftName: String,
     rightName: String
-  ) -> SetupFeature.State {
-    var state = SetupFeature.State()
+  ) -> NewGameFeature.State {
+    var state = NewGameFeature.State()
     state.leftTeam.mode = .locked
     state.leftTeam.selection = .new(
       TeamSlotFeature.TeamDraft(

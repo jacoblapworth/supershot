@@ -59,7 +59,7 @@ struct AppView: View {
         ScoringView(store: scoringStore)
           .toolbarVisibility(.hidden, for: .tabBar)
       case .setup(let setupStore):
-        SetupView(store: setupStore)
+        NewGameView(store: setupStore)
           .toolbarVisibility(.hidden, for: .tabBar)
       case .teamDetail(let teamDetailStore):
         TeamDetailView(
@@ -85,7 +85,7 @@ struct AppView: View {
         ScoringView(store: scoringStore)
           .toolbarVisibility(.hidden, for: .tabBar)
       case .setup(let setupStore):
-        SetupView(store: setupStore)
+        NewGameView(store: setupStore)
           .toolbarVisibility(.hidden, for: .tabBar)
       case .teamDetail(let teamDetailStore):
         TeamDetailView(

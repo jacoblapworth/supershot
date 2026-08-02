@@ -6,7 +6,7 @@ import SQLiteData
 enum AppPath {
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
-  case setup(SetupFeature)
+  case setup(NewGameFeature)
   case teamDetail(TeamDetailFeature)
 }
 
@@ -132,7 +132,7 @@ struct AppFeature {
         return resumeGameEffect(gameID: game.id)
 
       case .newGameButtonTapped:
-        state.path.append(.setup(SetupFeature.State()))
+        state.path.append(.setup(NewGameFeature.State()))
         return .none
 
       case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):

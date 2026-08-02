@@ -16,8 +16,9 @@ struct GamesHomeView: View {
         } description: {
           Text("Start a game to keep score and build your history.")
         } actions: {
-          Button("New game", action: newGameTapped)
+          Button("New Game", action: newGameTapped)
             .buttonStyle(.borderedProminent)
+            .fontWeight(.medium)
             .controlSize(.large)
         }
         .listRowBackground(Color.clear)

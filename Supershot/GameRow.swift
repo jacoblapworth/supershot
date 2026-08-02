@@ -13,7 +13,8 @@ struct GameRow: View {
           alignment: .leading,
           colorHex: game.teamAColorHex,
           name: game.teamAName,
-          score: game.teamAScore
+          score: game.teamAScore,
+          scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
         )
 
 //        Text("–")
@@ -24,7 +25,8 @@ struct GameRow: View {
           alignment: .trailing,
           colorHex: game.teamBColorHex,
           name: game.teamBName,
-          score: game.teamBScore
+          score: game.teamBScore,
+          scoreColor: scoreColor(for: game.teamBScore, opponentScore: game.teamAScore)
         )
       }
       
@@ -53,6 +55,11 @@ struct GameRow: View {
     .accessibilityLabel(accessibilityText)
   }
 
+  private func scoreColor(for score: Int, opponentScore: Int) -> Color {
+    guard game.isCompleted, score < opponentScore else { return .primary }
+    return .secondary
+  }
+
   private var accessibilityText: String {
     let date = game.startedAt.formatted(date: .abbreviated, time: .shortened)
     let status = game.isCompleted ? "Final" : "In progress"
@@ -66,6 +73,7 @@ private struct TeamScore: View {
   var colorHex: String
   var name: String
   var score: Int
+  var scoreColor: Color
 
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
@@ -83,6 +91,7 @@ private struct TeamScore: View {
       Text("\(score)")
         .font(.system(.largeTitle, design: .rounded, weight: .bold))
         .monospacedDigit()
+        .foregroundStyle(scoreColor)
     }
     .frame(
       maxWidth: .infinity,

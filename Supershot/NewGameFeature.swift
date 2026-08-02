@@ -194,7 +194,7 @@ struct TeamSlotFeature {
 }
 
 @Reducer
-struct SetupFeature {
+struct NewGameFeature {
   nonisolated enum TeamSide: Equatable, Hashable, Sendable {
     case teamA
     case teamB
@@ -708,7 +708,7 @@ struct SetupFeature {
   }
 }
 
-extension ConfirmationDialogState where Action == SetupFeature.ConfirmationDialogAction {
+extension ConfirmationDialogState where Action == NewGameFeature.ConfirmationDialogAction {
   static func confirmTeamUpdates(message: String) -> Self {
     Self {
       TextState("Update saved teams?")
