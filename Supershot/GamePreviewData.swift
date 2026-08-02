@@ -65,6 +65,24 @@ extension CompletedGameDetail {
     periodDurationSeconds: 900,
     secondBreakDurationSeconds: 240,
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
+    statistics: CompletedGameStatistics(
+      teamA: TeamGameStatistics(
+        averageTimeToGoalSeconds: 18,
+        centrePass: CentrePassStatistics(
+          conversions: 31,
+          inferredTurnovers: 7,
+          opportunities: 38
+        )
+      ),
+      teamB: TeamGameStatistics(
+        averageTimeToGoalSeconds: 22,
+        centrePass: CentrePassStatistics(
+          conversions: 29,
+          inferredTurnovers: 8,
+          opportunities: 37
+        )
+      )
+    ),
     teamAName: "North London Ravens",
     teamAScore: 42,
     teamBName: "Westminster Swifts",
@@ -87,6 +105,24 @@ extension CompletedGameDetail {
     goals: [],
     id: UUID(),
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
+    statistics: CompletedGameStatistics(
+      teamA: TeamGameStatistics(
+        averageTimeToGoalSeconds: nil,
+        centrePass: CentrePassStatistics(
+          conversions: 0,
+          inferredTurnovers: 0,
+          opportunities: 0
+        )
+      ),
+      teamB: TeamGameStatistics(
+        averageTimeToGoalSeconds: nil,
+        centrePass: CentrePassStatistics(
+          conversions: 0,
+          inferredTurnovers: 0,
+          opportunities: 0
+        )
+      )
+    ),
     teamAName: "Ravens",
     teamAScore: 0,
     teamBName: "Swifts",

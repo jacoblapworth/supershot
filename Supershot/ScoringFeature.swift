@@ -583,16 +583,11 @@ struct ScoringFeature {
   }
 
   private func insertGoalEffect(state: State, teamID: Team.ID) -> Effect<Action> {
-    let goal = Goal(
-      id: uuid(),
-      gameID: state.gameID,
-      teamID: teamID,
-      period: state.period,
-      elapsedSeconds: state.elapsedSeconds,
-      points: 1,
-      createdAt: now
-    )
+    let createdAt = now
+    let elapsedSeconds = state.elapsedSeconds
     let gameID = state.gameID
+    let goalID = uuid()
+    let period = state.period
     let teamAID = state.teamA.id
     let teamBID = state.teamB.id
 
@@ -606,6 +601,16 @@ struct ScoringFeature {
             game.centrePassTeamID,
             teamAID: teamAID,
             teamBID: teamBID
+          )
+          let goal = Goal(
+            id: goalID,
+            gameID: gameID,
+            centrePassTeamID: centrePassTeamID,
+            teamID: teamID,
+            period: period,
+            elapsedSeconds: elapsedSeconds,
+            points: 1,
+            createdAt: createdAt
           )
           let nextCentrePassTeamID = opposingTeamID(
             centrePassTeamID,

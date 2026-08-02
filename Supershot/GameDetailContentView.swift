@@ -7,6 +7,7 @@ struct GameDetailContentView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 28) {
         GameOverviewView(detail: detail)
+        GameStatisticsView(detail: detail)
         GoalTimelineView(detail: detail)
       }
       .padding()

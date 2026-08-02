@@ -1351,6 +1351,7 @@ struct SupershotTests {
       try Goal.fetchAll(db)
     }
     expectNoDifference(goals.count, 1)
+    expectNoDifference(goals.first?.centrePassTeamID, UUID(1))
     expectNoDifference(goals.first?.teamID, UUID(1))
     expectNoDifference(goals.first?.period, 1)
     expectNoDifference(goals.first?.elapsedSeconds, 0)
@@ -1427,6 +1428,11 @@ struct SupershotTests {
       $0.centrePassTeamID = UUID(1)
       $0.teamAScore = 1
     }
+
+    let goal = try await store.dependencies.defaultDatabase.read { db in
+      try Goal.fetchOne(db)
+    }
+    expectNoDifference(goal?.centrePassTeamID, UUID(2))
     await store.finish()
   }
 
@@ -2111,6 +2117,7 @@ struct SupershotTests {
         Goal(
           id: UUID(-3),
           gameID: UUID(-1),
+          centrePassTeamID: UUID(-2),
           teamID: UUID(-2),
           period: 2,
           elapsedSeconds: 30,
@@ -2120,6 +2127,7 @@ struct SupershotTests {
         Goal(
           id: UUID(-1),
           gameID: UUID(-1),
+          centrePassTeamID: UUID(-1),
           teamID: UUID(-1),
           period: 1,
           elapsedSeconds: 100,
@@ -2129,6 +2137,7 @@ struct SupershotTests {
         Goal(
           id: UUID(-2),
           gameID: UUID(-1),
+          centrePassTeamID: UUID(-1),
           teamID: UUID(-2),
           period: 1,
           elapsedSeconds: 200,
@@ -2184,12 +2193,78 @@ struct SupershotTests {
         periodDurationSeconds: 900,
         secondBreakDurationSeconds: 240,
         startedAt: startedAt,
+        statistics: CompletedGameStatistics(
+          teamA: TeamGameStatistics(
+            averageTimeToGoalSeconds: 100,
+            centrePass: CentrePassStatistics(
+              conversions: 1,
+              inferredTurnovers: 1,
+              opportunities: 2
+            )
+          ),
+          teamB: TeamGameStatistics(
+            averageTimeToGoalSeconds: 65,
+            centrePass: CentrePassStatistics(
+              conversions: 1,
+              inferredTurnovers: 0,
+              opportunities: 1
+            )
+          )
+        ),
         teamAColorHex: TeamColorPalette.blue,
         teamAName: "Ravens",
         teamAScore: 2,
         teamBColorHex: TeamColorPalette.red,
         teamBName: "Swifts",
         teamBScore: 2
+      )
+    )
+  }
+
+  @Test
+  func completedGameDetailKeepsLegacyCentrePassStatisticsUnavailable() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    try await database.write { db in
+      try db.seed {
+        Team(id: UUID(-1), name: "Ravens")
+        Team(id: UUID(-2), name: "Swifts")
+        Game(
+          id: UUID(-1),
+          startedAt: Date(timeIntervalSince1970: 1_000),
+          endedAt: Date(timeIntervalSince1970: 2_000),
+          teamAID: UUID(-1),
+          teamBID: UUID(-2),
+          periodDurationSeconds: 900
+        )
+        Goal(
+          id: UUID(-1),
+          gameID: UUID(-1),
+          teamID: UUID(-1),
+          period: 1,
+          elapsedSeconds: 42,
+          points: 1,
+          createdAt: Date(timeIntervalSince1970: 1_042)
+        )
+      }
+    }
+
+    let detail = try await database.read { db in
+      try GameDetailRequest(gameID: UUID(-1)).fetch(db).detail
+    }
+
+    expectNoDifference(
+      detail?.statistics,
+      CompletedGameStatistics(
+        teamA: TeamGameStatistics(
+          averageTimeToGoalSeconds: 42,
+          centrePass: nil
+        ),
+        teamB: TeamGameStatistics(
+          averageTimeToGoalSeconds: nil,
+          centrePass: nil
+        )
       )
     )
   }

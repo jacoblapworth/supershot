@@ -48,6 +48,22 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let teamBScore: Int
 }
 
+nonisolated struct CentrePassStatistics: Equatable, Sendable {
+  let conversions: Int
+  let inferredTurnovers: Int
+  let opportunities: Int
+}
+
+nonisolated struct TeamGameStatistics: Equatable, Sendable {
+  var averageTimeToGoalSeconds: Double?
+  var centrePass: CentrePassStatistics?
+}
+
+nonisolated struct CompletedGameStatistics: Equatable, Sendable {
+  var teamA = TeamGameStatistics()
+  var teamB = TeamGameStatistics()
+}
+
 nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let endedAt: Date
   var firstBreakDurationSeconds = 0
@@ -57,6 +73,7 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   var periodDurationSeconds = 15 * 60
   var secondBreakDurationSeconds = 0
   let startedAt: Date
+  var statistics = CompletedGameStatistics()
   var teamAColorHex = TeamColorPalette.blue
   let teamAName: String
   let teamAScore: Int
@@ -280,6 +297,11 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         periodDurationSeconds: snapshot.game.periodDurationSeconds,
         secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
         startedAt: snapshot.game.startedAt,
+        statistics: completedGameStatistics(
+          goals: snapshot.goals,
+          teamAID: snapshot.teamA.id,
+          teamBID: snapshot.teamB.id
+        ),
         teamAColorHex: snapshot.teamA.colorHex,
         teamAName: snapshot.teamA.name,
         teamAScore: teamAScore,
@@ -289,6 +311,55 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
       )
     )
   }
+}
+
+private nonisolated func completedGameStatistics(
+  goals: [Goal],
+  teamAID: Team.ID,
+  teamBID: Team.ID
+) -> CompletedGameStatistics {
+  var goalDurationsByTeamID: [Team.ID: [Int]] = [:]
+  var previousGoalElapsedSecondsByPeriod: [Int: Int] = [:]
+
+  for goal in goals {
+    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.period, default: 0]
+    let duration = max(goal.elapsedSeconds - previousElapsedSeconds, 0)
+    previousGoalElapsedSecondsByPeriod[goal.period] = goal.elapsedSeconds
+
+    if goal.teamID == teamAID || goal.teamID == teamBID {
+      goalDurationsByTeamID[goal.teamID, default: []].append(duration)
+    }
+  }
+
+  let hasCompleteCentrePassData = goals.allSatisfy { goal in
+    (goal.teamID == teamAID || goal.teamID == teamBID)
+      && (goal.centrePassTeamID == teamAID || goal.centrePassTeamID == teamBID)
+  }
+
+  func centrePassStatistics(for teamID: Team.ID) -> CentrePassStatistics? {
+    guard hasCompleteCentrePassData else { return nil }
+    let opportunities = goals.filter { $0.centrePassTeamID == teamID }
+    return CentrePassStatistics(
+      conversions: opportunities.count { $0.teamID == teamID },
+      inferredTurnovers: opportunities.count { $0.teamID != teamID },
+      opportunities: opportunities.count
+    )
+  }
+
+  func teamStatistics(for teamID: Team.ID) -> TeamGameStatistics {
+    let durations = goalDurationsByTeamID[teamID, default: []]
+    return TeamGameStatistics(
+      averageTimeToGoalSeconds: durations.isEmpty
+        ? nil
+        : Double(durations.reduce(0, +)) / Double(durations.count),
+      centrePass: centrePassStatistics(for: teamID)
+    )
+  }
+
+  return CompletedGameStatistics(
+    teamA: teamStatistics(for: teamAID),
+    teamB: teamStatistics(for: teamBID)
+  )
 }
 
 private nonisolated func gameTimingSummary(

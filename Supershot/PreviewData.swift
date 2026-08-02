@@ -44,6 +44,7 @@ extension DatabaseWriter {
         Goal(
           id: UUID(20),
           gameID: UUID(10),
+          centrePassTeamID: UUID(1),
           teamID: UUID(1),
           period: 1,
           elapsedSeconds: 120,
@@ -53,6 +54,7 @@ extension DatabaseWriter {
         Goal(
           id: UUID(21),
           gameID: UUID(10),
+          centrePassTeamID: UUID(1),
           teamID: UUID(2),
           period: 2,
           elapsedSeconds: 480,
@@ -62,6 +64,7 @@ extension DatabaseWriter {
         Goal(
           id: UUID(22),
           gameID: UUID(10),
+          centrePassTeamID: UUID(2),
           teamID: UUID(1),
           period: 4,
           elapsedSeconds: 720,
@@ -71,6 +74,7 @@ extension DatabaseWriter {
         Goal(
           id: UUID(23),
           gameID: UUID(11),
+          centrePassTeamID: UUID(3),
           teamID: UUID(4),
           period: 1,
           elapsedSeconds: 240,

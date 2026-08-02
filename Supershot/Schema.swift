@@ -80,6 +80,7 @@ extension Team {
 nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
   var gameID: Game.ID
+  var centrePassTeamID: Team.ID? = nil
   var teamID: Team.ID
   var period: Int
   var elapsedSeconds: Int
@@ -344,6 +345,16 @@ extension DependencyValues {
 
     migrator.registerMigration("Add running timer end date") { db in
       try migrateAddRunningTimerEndDate(db)
+    }
+
+    migrator.registerMigration("Record goal centre pass team") { db in
+      try #sql(
+        """
+        ALTER TABLE "goals"
+        ADD COLUMN "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE SET NULL
+        """
+      )
+      .execute(db)
     }
 
     try migrator.migrate(database)
