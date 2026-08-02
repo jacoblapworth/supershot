@@ -53,7 +53,7 @@ private struct TeamCard: View {
     VStack(spacing: 10) {
       if let draft = store.selectedDraft {
         Circle()
-          .fill(Color(teamHex: draft.colorHex))
+          .fill(Color(teamHex: draft.teamColorHex))
           .frame(width: 30, height: 30)
           .overlay {
             Circle().stroke(.white.opacity(0.8), lineWidth: 2)
@@ -80,8 +80,8 @@ private struct TeamCard: View {
           if store.selection?.hasSharedChanges == true {
             VStack(spacing: 6) {
               Label(
-                "Updates history",
-                systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90"
+                "Updates saved team",
+                systemImage: "person.crop.circle.badge.checkmark"
               )
               .font(.caption2)
               .foregroundStyle(.orange)
@@ -117,14 +117,15 @@ private struct TeamCard: View {
     .frame(maxWidth: .infinity, minHeight: 150)
     .padding(10)
     .background(
-      Color(teamHex: store.selectedDraft?.colorHex ?? store.side.defaultColorHex).opacity(0.09),
+      Color(teamHex: store.selectedDraft?.teamColorHex ?? store.side.defaultColorHex)
+        .opacity(0.09),
       in: RoundedRectangle(cornerRadius: 12)
     )
     .overlay {
       RoundedRectangle(cornerRadius: 12)
         .stroke(
           store.mode.isInteracting
-            ? Color(teamHex: store.selectedDraft?.colorHex ?? store.side.defaultColorHex)
+            ? Color(teamHex: store.selectedDraft?.teamColorHex ?? store.side.defaultColorHex)
             : Color.secondary.opacity(0.25),
           lineWidth: store.mode.isInteracting ? 2 : 1
         )

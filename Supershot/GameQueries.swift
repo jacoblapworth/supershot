@@ -9,10 +9,10 @@ nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   var periodDurationSeconds = 15 * 60
   var secondBreakDurationSeconds = 0
   let startedAt: Date
-  var teamAColorHex = TeamColorPalette.blue
+  var teamABibColorHex = TeamColorPalette.blue
   let teamAName: String
   let teamAScore: Int
-  var teamBColorHex = TeamColorPalette.red
+  var teamBBibColorHex = TeamColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
@@ -42,7 +42,7 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let id: Goal.ID
   let period: Int
   let points: Int
-  var scoringTeamColorHex = TeamColorPalette.blue
+  var scoringTeamBibColorHex = TeamColorPalette.blue
   let scoringTeamName: String
   let teamAScore: Int
   let teamBScore: Int
@@ -74,10 +74,10 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   var secondBreakDurationSeconds = 0
   let startedAt: Date
   var statistics = CompletedGameStatistics()
-  var teamAColorHex = TeamColorPalette.blue
+  var teamABibColorHex = TeamColorPalette.blue
   let teamAName: String
   let teamAScore: Int
-  var teamBColorHex = TeamColorPalette.red
+  var teamBBibColorHex = TeamColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
@@ -175,12 +175,12 @@ nonisolated struct GamesRequest: FetchKeyRequest {
           periodDurationSeconds: game.periodDurationSeconds,
           secondBreakDurationSeconds: game.secondBreakDurationSeconds,
           startedAt: game.startedAt,
-          teamAColorHex: teamA.colorHex,
+          teamABibColorHex: game.teamABibColorHex,
           teamAName: teamA.name,
           teamAScore: gameGoals
             .filter { $0.teamID == teamA.id }
             .reduce(0) { $0 + $1.points },
-          teamBColorHex: teamB.colorHex,
+          teamBBibColorHex: game.teamBBibColorHex,
           teamBName: teamB.name,
           teamBScore: gameGoals
             .filter { $0.teamID == teamB.id }
@@ -257,18 +257,18 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
     var teamAScore = 0
     var teamBScore = 0
     let timeline = snapshot.goals.map { goal in
-      let scoringTeamColorHex: String
+      let scoringTeamBibColorHex: String
       let scoringTeamName: String
       if goal.teamID == snapshot.teamA.id {
         teamAScore += goal.points
-        scoringTeamColorHex = snapshot.teamA.colorHex
+        scoringTeamBibColorHex = snapshot.game.teamABibColorHex
         scoringTeamName = snapshot.teamA.name
       } else if goal.teamID == snapshot.teamB.id {
         teamBScore += goal.points
-        scoringTeamColorHex = snapshot.teamB.colorHex
+        scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
         scoringTeamName = snapshot.teamB.name
       } else {
-        scoringTeamColorHex = TeamColorPalette.blue
+        scoringTeamBibColorHex = TeamColorPalette.blue
         scoringTeamName = "Unknown team"
       }
 
@@ -280,7 +280,7 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         id: goal.id,
         period: goal.period,
         points: goal.points,
-        scoringTeamColorHex: scoringTeamColorHex,
+        scoringTeamBibColorHex: scoringTeamBibColorHex,
         scoringTeamName: scoringTeamName,
         teamAScore: teamAScore,
         teamBScore: teamBScore
@@ -302,10 +302,10 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
           teamAID: snapshot.teamA.id,
           teamBID: snapshot.teamB.id
         ),
-        teamAColorHex: snapshot.teamA.colorHex,
+        teamABibColorHex: snapshot.game.teamABibColorHex,
         teamAName: snapshot.teamA.name,
         teamAScore: teamAScore,
-        teamBColorHex: snapshot.teamB.colorHex,
+        teamBBibColorHex: snapshot.game.teamBBibColorHex,
         teamBName: snapshot.teamB.name,
         teamBScore: teamBScore
       )

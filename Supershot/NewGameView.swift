@@ -24,6 +24,11 @@ struct NewGameView: View {
         }
 
         if store.leftTeam.isLocked, store.rightTeam.isLocked {
+          SetupBibColorsView(
+            leftStore: store.scope(state: \.leftTeam, action: \.leftTeam),
+            rightStore: store.scope(state: \.rightTeam, action: \.rightTeam)
+          )
+
           SetupCentrePassView(
             firstCentrePass: $store.firstCentrePass,
             leftTeamName: store.leftTeam.selectedDraft?.trimmedName ?? "Left",

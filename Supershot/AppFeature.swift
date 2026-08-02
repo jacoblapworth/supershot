@@ -356,13 +356,13 @@ extension ScoringFeature.State {
       startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(
         id: snapshot.teamA.id,
-        colorHex: snapshot.teamA.colorHex,
+        bibColorHex: snapshot.game.teamABibColorHex,
         name: snapshot.teamA.name
       ),
       teamAScore: snapshot.teamAScore,
       teamB: ScoringFeature.Team(
         id: snapshot.teamB.id,
-        colorHex: snapshot.teamB.colorHex,
+        bibColorHex: snapshot.game.teamBBibColorHex,
         name: snapshot.teamB.name
       ),
       teamBScore: snapshot.teamBScore,

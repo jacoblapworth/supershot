@@ -11,12 +11,12 @@ struct GameStatisticsView: View {
       VStack(spacing: 16) {
         HStack(alignment: .top, spacing: 16) {
           TeamStatisticsHeader(
-            colorHex: detail.teamAColorHex,
+            colorHex: detail.teamABibColorHex,
             name: detail.teamAName
           )
 
           TeamStatisticsHeader(
-            colorHex: detail.teamBColorHex,
+            colorHex: detail.teamBBibColorHex,
             isTrailing: true,
             name: detail.teamBName
           )

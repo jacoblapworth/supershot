@@ -90,14 +90,14 @@ struct TeamSlotPanel: View {
         .font(.headline)
 
       TeamEditorFields(
-        colorHex: $store.editor.colorHex,
+        colorHex: $store.editor.teamColorHex,
         name: $store.editor.name,
         paletteColorTapped: { store.send(.paletteColorButtonTapped($0)) }
       )
 
       if store.selection?.existingID != nil, store.mode == .editing {
         Label(
-          "Changes update this saved team in previous and future games.",
+          "Name changes update game history. Team color changes do not change past bib colors.",
           systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90"
         )
         .font(.caption)

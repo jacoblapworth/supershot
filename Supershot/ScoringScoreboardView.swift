@@ -26,7 +26,7 @@ struct ScoringScoreboardView: View {
     score: Int
   ) -> some View {
     ScoreButton(
-      colorHex: team.colorHex,
+      colorHex: team.bibColorHex,
       isDisabled: isDisabled,
       name: team.name,
       score: score,

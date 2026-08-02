@@ -283,9 +283,21 @@ struct SupershotTests {
   }
 
   @Test
+  func setupAllowsMatchingBibColors() {
+    var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
+    state.firstCentrePass = .teamA
+    state.leftTeam.bibColorHex = "#34C759"
+    state.rightTeam.bibColorHex = "#34C759"
+
+    expectNoDifference(state.canStartGame, true)
+  }
+
+  @Test
   func startGameCreatesTeamsAndGame() async throws {
     var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
     state.firstCentrePass = .teamB
+    state.leftTeam.bibColorHex = "#AF52DE"
+    state.rightTeam.bibColorHex = "#FF2D55"
 
     let startedAt = Date(timeIntervalSince1970: 1_000)
     let store = TestStore(initialState: state) {
@@ -330,11 +342,13 @@ struct SupershotTests {
     expectNoDifference(games.first?.firstBreakDurationSeconds, 240)
     expectNoDifference(games.first?.halfTimeDurationSeconds, 240)
     expectNoDifference(games.first?.secondBreakDurationSeconds, 240)
+    expectNoDifference(games.first?.teamABibColorHex, "#AF52DE")
+    expectNoDifference(games.first?.teamBBibColorHex, "#FF2D55")
     expectNoDifference(scoringState?.centrePassTeamID, scoringState?.teamB.id)
     expectNoDifference(scoringState?.teamA.name, "Ravens")
     expectNoDifference(scoringState?.teamB.name, "Swifts")
-    expectNoDifference(scoringState?.teamA.colorHex, TeamColorPalette.blue)
-    expectNoDifference(scoringState?.teamB.colorHex, TeamColorPalette.red)
+    expectNoDifference(scoringState?.teamA.bibColorHex, "#AF52DE")
+    expectNoDifference(scoringState?.teamB.bibColorHex, "#FF2D55")
   }
 
   @Test
@@ -347,12 +361,12 @@ struct SupershotTests {
     state.leftTeam.mode = .locked
     state.leftTeam.selection = .existing(
       original: ravens,
-      draft: TeamSlotFeature.TeamDraft(colorHex: "#34C759", name: "Swifts")
+      draft: TeamSlotFeature.TeamDraft(teamColorHex: "#34C759", name: "Swifts")
     )
     state.rightTeam.mode = .locked
     state.rightTeam.selection = .existing(
       original: swifts,
-      draft: TeamSlotFeature.TeamDraft(colorHex: "#FF9500", name: "Ravens")
+      draft: TeamSlotFeature.TeamDraft(teamColorHex: "#FF9500", name: "Ravens")
     )
 
     let store = TestStore(initialState: state) {
@@ -373,8 +387,8 @@ struct SupershotTests {
 
     await store.send(.startGameButtonTapped) {
       $0.confirmationDialog = .confirmTeamUpdates(
-        message: "Ravens will become Swifts in game history. "
-          + "Swifts will become Ravens in game history."
+        message: "Ravens will become Swifts in game history, and its team color will update. "
+          + "Swifts will become Ravens in game history, and its team color will update."
       )
     }
     await store.send(
@@ -418,14 +432,15 @@ struct SupershotTests {
     state.mode = .locked
     state.selection = .existing(
       original: ravens,
-      draft: TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+      draft: TeamSlotFeature.TeamDraft(teamColorHex: ravens.colorHex, name: ravens.name)
     )
+    state.bibColorHex = "#FF9500"
     let store = TestStore(initialState: state) {
       TeamSlotFeature()
     }
 
     await store.send(.editTeamButtonTapped) {
-      $0.editor = TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+      $0.editor = TeamSlotFeature.TeamDraft(teamColorHex: ravens.colorHex, name: ravens.name)
       $0.mode = .editing
     }
     await store.send(.binding(.set(\.editor.name, "Falcons"))) {
@@ -444,21 +459,22 @@ struct SupershotTests {
       $0.editor.name = "Falcons"
     }
     await store.send(.paletteColorButtonTapped("#34C759")) {
-      $0.editor.colorHex = "#34C759"
+      $0.editor.teamColorHex = "#34C759"
     }
     await store.send(.doneButtonTapped) {
       $0.mode = .locked
       $0.selection = .existing(
         original: ravens,
-        draft: TeamSlotFeature.TeamDraft(colorHex: "#34C759", name: "Falcons")
+        draft: TeamSlotFeature.TeamDraft(teamColorHex: "#34C759", name: "Falcons")
       )
     }
     await store.send(.revertChangesButtonTapped) {
       $0.selection = .existing(
         original: ravens,
-        draft: TeamSlotFeature.TeamDraft(colorHex: ravens.colorHex, name: ravens.name)
+        draft: TeamSlotFeature.TeamDraft(teamColorHex: ravens.colorHex, name: ravens.name)
       )
     }
+    expectNoDifference(store.state.bibColorHex, "#FF9500")
   }
 
   @Test
@@ -468,17 +484,20 @@ struct SupershotTests {
     state.availableTeams = [ravens]
     let store = TestStore(initialState: state) {
       NewGameFeature()
+    } withDependencies: {
+      $0.withRandomNumberGenerator = .init(ZeroRandomNumberGenerator())
     }
 
     await store.send(.leftTeam(.cardTapped)) {
       $0.leftTeam.mode = .choosing
     }
     await store.send(.leftTeam(.existingTeamSelected(ravens))) {
+      $0.leftTeam.bibColorHex = "#AF52DE"
       $0.leftTeam.mode = .locked
       $0.leftTeam.selection = .existing(
         original: ravens,
         draft: TeamSlotFeature.TeamDraft(
-          colorHex: "#AF52DE",
+          teamColorHex: "#AF52DE",
           name: "Ravens"
         )
       )
@@ -488,29 +507,54 @@ struct SupershotTests {
       $0.rightTeam.mode = .choosing
     }
     await store.send(.rightTeam(.createTeamButtonTapped)) {
+      $0.rightTeam.editor.teamColorHex = TeamColorPalette.blue
       $0.rightTeam.mode = .creating
     }
+    await store.send(.rightTeam(.binding(.set(\.editor.name, "Falcons")))) {
+      $0.rightTeam.editor.name = "Falcons"
+    }
+    await store.send(.rightTeam(.paletteColorButtonTapped("#34C759"))) {
+      $0.rightTeam.editor.teamColorHex = "#34C759"
+    }
+    await store.send(.rightTeam(.doneButtonTapped)) {
+      $0.rightTeam.bibColorHex = "#34C759"
+      $0.rightTeam.mode = .locked
+      $0.rightTeam.selection = .new(
+        TeamSlotFeature.TeamDraft(teamColorHex: "#34C759", name: "Falcons")
+      )
+    }
+    await store.send(.rightTeam(.bibPaletteColorButtonTapped("#FF3B30"))) {
+      $0.rightTeam.bibColorHex = "#FF3B30"
+    }
+    expectNoDifference(store.state.rightTeam.selectedDraft?.teamColorHex, "#34C759")
   }
 
   @Test
   func swappingTeamsSwapsCompleteSelectionsAndFirstCentrePass() async {
     var state = Self.setupState(leftName: "Ravens", rightName: "Swifts")
     state.firstCentrePass = .teamA
+    state.leftTeam.bibColorHex = "#AF52DE"
+    state.rightTeam.bibColorHex = "#FF9500"
     let store = TestStore(initialState: state) {
       NewGameFeature()
     }
 
     await store.send(.swapTeamsButtonTapped) {
       let leftSelection = $0.leftTeam.selection
+      let leftBibColorHex = $0.leftTeam.bibColorHex
       $0.leftTeam.selection = $0.rightTeam.selection
+      $0.leftTeam.bibColorHex = $0.rightTeam.bibColorHex
       $0.rightTeam.selection = leftSelection
+      $0.rightTeam.bibColorHex = leftBibColorHex
       $0.firstCentrePass = .teamB
     }
 
     expectNoDifference(store.state.leftTeam.selectedDraft?.name, "Swifts")
-    expectNoDifference(store.state.leftTeam.selectedDraft?.colorHex, TeamColorPalette.red)
+    expectNoDifference(store.state.leftTeam.selectedDraft?.teamColorHex, TeamColorPalette.red)
     expectNoDifference(store.state.rightTeam.selectedDraft?.name, "Ravens")
-    expectNoDifference(store.state.rightTeam.selectedDraft?.colorHex, TeamColorPalette.blue)
+    expectNoDifference(store.state.rightTeam.selectedDraft?.teamColorHex, TeamColorPalette.blue)
+    expectNoDifference(store.state.leftTeam.bibColorHex, "#FF9500")
+    expectNoDifference(store.state.rightTeam.bibColorHex, "#AF52DE")
   }
 
   @Test
@@ -570,6 +614,66 @@ struct SupershotTests {
       )
       expectNoDifference(row?["elapsedSeconds"] as Int?, 42)
       expectNoDifference(row?["timerEndsAt"] as String?, nil)
+    }
+  }
+
+  @Test
+  func perGameBibColorMigrationSnapshotsTeamColorsAndUsesFallbacks() throws {
+    let database = try DatabaseQueue()
+    try database.write { db in
+      try db.execute(
+        sql: """
+          CREATE TABLE "teams"(
+            "id" TEXT PRIMARY KEY NOT NULL,
+            "colorHex" TEXT NOT NULL
+          ) STRICT
+          """
+      )
+      try db.execute(
+        sql: """
+          CREATE TABLE "games"(
+            "id" TEXT PRIMARY KEY NOT NULL,
+            "teamAID" TEXT NOT NULL,
+            "teamBID" TEXT NOT NULL
+          ) STRICT
+          """
+      )
+      try db.execute(
+        sql: "INSERT INTO \"teams\" (\"id\", \"colorHex\") VALUES (?, ?), (?, ?)",
+        arguments: [
+          UUID(1).uuidString, "#34C759",
+          UUID(2).uuidString, "#FF9500",
+        ]
+      )
+      try db.execute(
+        sql: "INSERT INTO \"games\" (\"id\", \"teamAID\", \"teamBID\") VALUES (?, ?, ?), (?, ?, ?)",
+        arguments: [
+          UUID(3).uuidString, UUID(1).uuidString, UUID(2).uuidString,
+          UUID(4).uuidString, UUID(5).uuidString, UUID(6).uuidString,
+        ]
+      )
+
+      try migrateAddPerGameBibColors(db)
+
+      let rows = try Row.fetchAll(
+        db,
+        sql: "SELECT \"teamABibColorHex\", \"teamBBibColorHex\" FROM \"games\" ORDER BY \"id\""
+      )
+      expectNoDifference(rows[0]["teamABibColorHex"] as String?, "#34C759")
+      expectNoDifference(rows[0]["teamBBibColorHex"] as String?, "#FF9500")
+      expectNoDifference(rows[1]["teamABibColorHex"] as String?, TeamColorPalette.blue)
+      expectNoDifference(rows[1]["teamBBibColorHex"] as String?, TeamColorPalette.red)
+
+      try db.execute(
+        sql: "UPDATE \"teams\" SET \"colorHex\" = '#AF52DE'"
+      )
+      let unchangedRow = try Row.fetchOne(
+        db,
+        sql: "SELECT \"teamABibColorHex\", \"teamBBibColorHex\" FROM \"games\" WHERE \"id\" = ?",
+        arguments: [UUID(3).uuidString]
+      )
+      expectNoDifference(unchangedRow?["teamABibColorHex"] as String?, "#34C759")
+      expectNoDifference(unchangedRow?["teamBBibColorHex"] as String?, "#FF9500")
     }
   }
 
@@ -1572,7 +1676,9 @@ struct SupershotTests {
           startedAt: olderDate,
           endedAt: Date(timeIntervalSince1970: 1_500),
           teamAID: UUID(-3),
+          teamABibColorHex: "#34C759",
           teamBID: UUID(-4),
+          teamBBibColorHex: "#FF9500",
           periodDurationSeconds: 900
         )
         Goal(
@@ -1611,10 +1717,10 @@ struct SupershotTests {
           periodDurationSeconds: 900,
           secondBreakDurationSeconds: 240,
           startedAt: newerDate,
-          teamAColorHex: TeamColorPalette.blue,
+          teamABibColorHex: TeamColorPalette.blue,
           teamAName: "Ravens",
           teamAScore: 2,
-          teamBColorHex: TeamColorPalette.red,
+          teamBBibColorHex: TeamColorPalette.red,
           teamBName: "Swifts",
           teamBScore: 0
         ),
@@ -1622,15 +1728,83 @@ struct SupershotTests {
           endedAt: Date(timeIntervalSince1970: 1_500),
           id: UUID(-2),
           startedAt: olderDate,
-          teamAColorHex: "#34C759",
+          teamABibColorHex: "#34C759",
           teamAName: "Foxes",
           teamAScore: 0,
-          teamBColorHex: "#FF9500",
+          teamBBibColorHex: "#FF9500",
           teamBName: "Owls",
           teamBScore: 1
         ),
       ]
     )
+  }
+
+  @Test
+  func gameHistoryKeepsBibColorsAfterTeamProfileColorsChange() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    let startedAt = Date(timeIntervalSince1970: 1_000)
+    let updatedRavensColorHex = "#34C759"
+    let updatedSwiftsColorHex = "#FF2D55"
+    try await database.write { db in
+      try db.seed {
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Game(
+          id: UUID(-1),
+          startedAt: startedAt,
+          endedAt: Date(timeIntervalSince1970: 2_000),
+          teamAID: UUID(-1),
+          teamABibColorHex: "#AF52DE",
+          teamBID: UUID(-2),
+          teamBBibColorHex: "#FF9500",
+          periodDurationSeconds: 900
+        )
+        Game(
+          id: UUID(-2),
+          startedAt: Date(timeIntervalSince1970: 3_000),
+          endedAt: nil,
+          teamAID: UUID(-1),
+          teamABibColorHex: "#30B0C7",
+          teamBID: UUID(-2),
+          teamBBibColorHex: "#FF2D55",
+          periodDurationSeconds: 900
+        )
+        Goal(
+          id: UUID(-1),
+          gameID: UUID(-1),
+          teamID: UUID(-1),
+          period: 1,
+          elapsedSeconds: 20,
+          points: 1,
+          createdAt: startedAt
+        )
+      }
+      try Team.find(UUID(-1)).update {
+        $0.colorHex = #bind(updatedRavensColorHex)
+      }
+      .execute(db)
+      try Team.find(UUID(-2)).update {
+        $0.colorHex = #bind(updatedSwiftsColorHex)
+      }
+      .execute(db)
+    }
+
+    let values = try await database.read { db in
+      (
+        try GamesRequest().fetch(db),
+        try TeamsRequest().fetch(db),
+        try GameDetailRequest(gameID: UUID(-1)).fetch(db)
+      )
+    }
+
+    expectNoDifference(values.0.games.map(\.teamABibColorHex), ["#30B0C7", "#AF52DE"])
+    expectNoDifference(values.0.games.map(\.teamBBibColorHex), ["#FF2D55", "#FF9500"])
+    expectNoDifference(values.1.teams.map(\.colorHex), ["#34C759", "#FF2D55"])
+    expectNoDifference(values.2.detail?.teamABibColorHex, "#AF52DE")
+    expectNoDifference(values.2.detail?.teamBBibColorHex, "#FF9500")
+    expectNoDifference(values.2.detail?.goals.first?.scoringTeamBibColorHex, "#AF52DE")
   }
 
   @Test
@@ -1716,7 +1890,9 @@ struct SupershotTests {
           startedAt: newerDate,
           endedAt: nil,
           teamAID: UUID(-3),
+          teamABibColorHex: "#34C759",
           teamBID: UUID(-1),
+          teamBBibColorHex: TeamColorPalette.blue,
           periodDurationSeconds: 600
         )
         Game(
@@ -1761,10 +1937,10 @@ struct SupershotTests {
             id: UUID(-2),
             periodDurationSeconds: 600,
             startedAt: newerDate,
-            teamAColorHex: "#34C759",
+            teamABibColorHex: "#34C759",
             teamAName: "Aces",
             teamAScore: 1,
-            teamBColorHex: TeamColorPalette.blue,
+            teamBBibColorHex: TeamColorPalette.blue,
             teamBName: "Ravens",
             teamBScore: 0
           ),
@@ -1772,10 +1948,10 @@ struct SupershotTests {
             endedAt: Date(timeIntervalSince1970: 1_500),
             id: UUID(-1),
             startedAt: olderDate,
-            teamAColorHex: TeamColorPalette.blue,
+            teamABibColorHex: TeamColorPalette.blue,
             teamAName: "Ravens",
             teamAScore: 2,
-            teamBColorHex: TeamColorPalette.red,
+            teamBBibColorHex: TeamColorPalette.red,
             teamBName: "Swifts",
             teamBScore: 0
           ),
@@ -1913,7 +2089,9 @@ struct SupershotTests {
           startedAt: Date(timeIntervalSince1970: 1_000),
           endedAt: nil,
           teamAID: UUID(-1),
+          teamABibColorHex: "#AF52DE",
           teamBID: UUID(-2),
+          teamBBibColorHex: "#FF9500",
           periodDurationSeconds: 900,
           firstBreakDurationSeconds: 240,
           halfTimeDurationSeconds: 600,
@@ -1934,7 +2112,10 @@ struct SupershotTests {
     let snapshot = try await database.read { db in
       try GameSnapshot.fetch(db, gameID: UUID(-1))
     }
-    expectNoDifference(ScoringFeature.State(snapshot: snapshot).centrePassTeamID, UUID(-1))
+    let state = ScoringFeature.State(snapshot: snapshot)
+    expectNoDifference(state.centrePassTeamID, UUID(-1))
+    expectNoDifference(state.teamA.bibColorHex, "#AF52DE")
+    expectNoDifference(state.teamB.bibColorHex, "#FF9500")
   }
 
   @Test
@@ -2162,7 +2343,7 @@ struct SupershotTests {
             id: UUID(-1),
             period: 1,
             points: 2,
-            scoringTeamColorHex: TeamColorPalette.blue,
+            scoringTeamBibColorHex: TeamColorPalette.blue,
             scoringTeamName: "Ravens",
             teamAScore: 2,
             teamBScore: 0
@@ -2172,7 +2353,7 @@ struct SupershotTests {
             id: UUID(-2),
             period: 1,
             points: 1,
-            scoringTeamColorHex: TeamColorPalette.red,
+            scoringTeamBibColorHex: TeamColorPalette.red,
             scoringTeamName: "Swifts",
             teamAScore: 2,
             teamBScore: 1
@@ -2182,7 +2363,7 @@ struct SupershotTests {
             id: UUID(-3),
             period: 2,
             points: 1,
-            scoringTeamColorHex: TeamColorPalette.red,
+            scoringTeamBibColorHex: TeamColorPalette.red,
             scoringTeamName: "Swifts",
             teamAScore: 2,
             teamBScore: 2
@@ -2211,10 +2392,10 @@ struct SupershotTests {
             )
           )
         ),
-        teamAColorHex: TeamColorPalette.blue,
+        teamABibColorHex: TeamColorPalette.blue,
         teamAName: "Ravens",
         teamAScore: 2,
-        teamBColorHex: TeamColorPalette.red,
+        teamBBibColorHex: TeamColorPalette.red,
         teamBName: "Swifts",
         teamBScore: 2
       )
@@ -2582,12 +2763,12 @@ struct SupershotTests {
       startedAt: Date(timeIntervalSince1970: 500),
       teamA: ScoringFeature.Team(
         id: UUID(1),
-        colorHex: TeamColorPalette.blue,
+        bibColorHex: TeamColorPalette.blue,
         name: "Ravens"
       ),
       teamB: ScoringFeature.Team(
         id: UUID(2),
-        colorHex: TeamColorPalette.red,
+        bibColorHex: TeamColorPalette.red,
         name: "Swifts"
       )
     )
@@ -2601,14 +2782,14 @@ struct SupershotTests {
     state.leftTeam.mode = .locked
     state.leftTeam.selection = .new(
       TeamSlotFeature.TeamDraft(
-        colorHex: TeamColorPalette.blue,
+        teamColorHex: TeamColorPalette.blue,
         name: leftName
       )
     )
     state.rightTeam.mode = .locked
     state.rightTeam.selection = .new(
       TeamSlotFeature.TeamDraft(
-        colorHex: TeamColorPalette.red,
+        teamColorHex: TeamColorPalette.red,
         name: rightName
       )
     )
@@ -2621,6 +2802,10 @@ private nonisolated enum TimerSystemEvent: Equatable, Sendable {
   case alarm(Date?, requestsAuthorization: Bool)
   case cancelAlarm
   case endActivity
+}
+
+private nonisolated struct ZeroRandomNumberGenerator: RandomNumberGenerator, Sendable {
+  mutating func next() -> UInt64 { 0 }
 }
 
 private nonisolated enum AlarmAuthorizationTestError: Error {

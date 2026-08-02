@@ -6,10 +6,10 @@ extension GameListItem {
     endedAt: nil,
     id: UUID(),
     startedAt: Date(timeIntervalSince1970: 1_785_659_400),
-    teamAColorHex: "#34C759",
+    teamABibColorHex: "#34C759",
     teamAName: "North London Ravens",
     teamAScore: 18,
-    teamBColorHex: "#FF9500",
+    teamBBibColorHex: "#FF9500",
     teamBName: "Westminster Swifts",
     teamBScore: 16
   )
@@ -54,7 +54,7 @@ extension CompletedGameDetail {
         id: UUID(),
         period: 2,
         points: 2,
-        scoringTeamColorHex: TeamColorPalette.red,
+        scoringTeamBibColorHex: TeamColorPalette.red,
         scoringTeamName: "Westminster Swifts",
         teamAScore: 1,
         teamBScore: 2

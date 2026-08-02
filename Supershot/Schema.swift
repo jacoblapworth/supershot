@@ -16,7 +16,9 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var startedAt: Date
   var endedAt: Date?
   var teamAID: Team.ID
+  var teamABibColorHex = TeamColorPalette.blue
   var teamBID: Team.ID
+  var teamBBibColorHex = TeamColorPalette.red
   var centrePassTeamID: Team.ID?
   var periodDurationSeconds: Int
   var firstBreakDurationSeconds = 0
@@ -357,6 +359,10 @@ extension DependencyValues {
       .execute(db)
     }
 
+    migrator.registerMigration("Add per-game bib colors") { db in
+      try migrateAddPerGameBibColors(db)
+    }
+
     try migrator.migrate(database)
     defaultDatabase = database
   }
@@ -367,6 +373,43 @@ nonisolated func migrateAddRunningTimerEndDate(_ db: Database) throws {
     """
     ALTER TABLE "games"
     ADD COLUMN "timerEndsAt" TEXT
+    """
+  )
+  .execute(db)
+}
+
+nonisolated func migrateAddPerGameBibColors(_ db: Database) throws {
+  try #sql(
+    """
+    ALTER TABLE "games"
+    ADD COLUMN "teamABibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF'
+    """
+  )
+  .execute(db)
+  try #sql(
+    """
+    ALTER TABLE "games"
+    ADD COLUMN "teamBBibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#FF3B30'
+    """
+  )
+  .execute(db)
+  try #sql(
+    """
+    UPDATE "games"
+    SET "teamABibColorHex" = COALESCE(
+      (SELECT "colorHex" FROM "teams" WHERE "teams"."id" = "games"."teamAID"),
+      '#007AFF'
+    )
+    """
+  )
+  .execute(db)
+  try #sql(
+    """
+    UPDATE "games"
+    SET "teamBBibColorHex" = COALESCE(
+      (SELECT "colorHex" FROM "teams" WHERE "teams"."id" = "games"."teamBID"),
+      '#FF3B30'
+    )
     """
   )
   .execute(db)

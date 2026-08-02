@@ -101,9 +101,9 @@ private nonisolated extension GameActivityAttributes {
   init(snapshot: GameSnapshot) {
     self.init(
       gameID: snapshot.game.id,
-      teamAColorHex: snapshot.teamA.colorHex,
+      teamAColorHex: snapshot.game.teamABibColorHex,
       teamAName: snapshot.teamA.name,
-      teamBColorHex: snapshot.teamB.colorHex,
+      teamBColorHex: snapshot.game.teamBBibColorHex,
       teamBName: snapshot.teamB.name
     )
   }

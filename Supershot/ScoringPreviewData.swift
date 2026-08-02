@@ -5,12 +5,12 @@ import Foundation
 extension ScoringFeature.Team {
   static let previewRavens = Self(
     id: UUID(),
-    colorHex: TeamColorPalette.blue,
+    bibColorHex: TeamColorPalette.blue,
     name: "North London Ravens"
   )
   static let previewSwifts = Self(
     id: UUID(),
-    colorHex: TeamColorPalette.red,
+    bibColorHex: TeamColorPalette.red,
     name: "Westminster Swifts"
   )
 }

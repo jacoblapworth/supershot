@@ -39,9 +39,9 @@ private struct GoalTimelineRow: View {
     HStack(alignment: .top, spacing: 12) {
       Image(systemName: "soccerball")
         .font(.title3)
-        .foregroundStyle(Color(teamHex: goal.scoringTeamColorHex))
+        .foregroundStyle(Color(teamHex: goal.scoringTeamBibColorHex))
         .frame(width: 28, height: 28)
-        .background(Color(teamHex: goal.scoringTeamColorHex).opacity(0.12), in: Circle())
+        .background(Color(teamHex: goal.scoringTeamBibColorHex).opacity(0.12), in: Circle())
 
       VStack(alignment: .leading, spacing: 5) {
         Text(goal.scoringTeamName)

@@ -11,8 +11,8 @@ struct SetupTimingView: View {
 
       DurationEditor(
         duration: $store.periodDuration,
-        label: "Quarter length",
-        presets: [6, 10, 12, 15, 20].map { $0 * 60 },
+        label: "Quarters",
+        presets: [8, 10, 12, 15].map { $0 * 60 },
         presetTapped: { store.send(.periodPresetButtonTapped($0)) }
       )
 
@@ -45,7 +45,7 @@ struct SetupTimingView: View {
       } else {
         DurationEditor(
           duration: $store.firstBreakDuration,
-          label: "All breaks",
+          label: "Breaks",
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.allBreakPresetButtonTapped($0)) }
         )
@@ -98,13 +98,16 @@ private struct DurationEditor: View {
       HStack(spacing: 8) {
         TextField("Minutes", text: $duration.minutesText)
           .textFieldStyle(.roundedBorder)
+          .frame(maxWidth: 80)
         Text("min")
           .foregroundStyle(.secondary)
         TextField("Seconds", text: $duration.secondsText)
           .textFieldStyle(.roundedBorder)
+          .frame(maxWidth: 80)
         Text("sec")
           .foregroundStyle(.secondary)
       }
+      .keyboardType(.numberPad)
       .font(.subheadline)
     }
   }

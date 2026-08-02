@@ -32,7 +32,7 @@ struct CentrePassControl: View {
 
   private func centrePassButton(team: ScoringFeature.Team) -> some View {
     CentrePassButton(
-      colorHex: team.colorHex,
+      colorHex: team.bibColorHex,
       isSelected: centrePassTeamID == team.id,
       name: team.name,
       action: { centrePassTeamTapped(team.id) }
@@ -54,7 +54,7 @@ struct LastCentrePassBanner: View {
 
       HStack(spacing: 8) {
         Circle()
-          .fill(Color(teamHex: centrePassTeam.colorHex))
+          .fill(Color(teamHex: centrePassTeam.bibColorHex))
           .frame(width: 12, height: 12)
           .accessibilityHidden(true)
         Text("Did **\(centrePassTeam.name)** take the last centre pass?")

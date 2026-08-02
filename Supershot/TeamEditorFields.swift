@@ -9,8 +9,22 @@ struct TeamEditorFields: View {
     TextField("Team name", text: $name)
       .textFieldStyle(.roundedBorder)
 
+    TeamColorPicker(
+      colorHex: $colorHex,
+      title: "Team color",
+      paletteColorTapped: paletteColorTapped
+    )
+  }
+}
+
+struct TeamColorPicker: View {
+  @Binding var colorHex: String
+  var title: String
+  var paletteColorTapped: (String) -> Void
+
+  var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      Text("Team color")
+      Text(title)
         .font(.subheadline.weight(.semibold))
 
       LazyVGrid(columns: [GridItem(.adaptive(minimum: 42))], spacing: 12) {

@@ -30,7 +30,7 @@ struct TeamSlotFeature {
   }
 
   nonisolated struct TeamDraft: Equatable, Sendable {
-    var colorHex: String
+    var teamColorHex: String
     var name = ""
 
     var trimmedName: String {
@@ -56,7 +56,7 @@ struct TeamSlotFeature {
 
     var hasSharedChanges: Bool {
       guard case let .existing(original, draft) = self else { return false }
-      return original.name != draft.trimmedName || original.colorHex != draft.colorHex
+      return original.name != draft.trimmedName || original.colorHex != draft.teamColorHex
     }
 
     func updating(_ draft: TeamDraft) -> Self {
@@ -71,6 +71,7 @@ struct TeamSlotFeature {
 
   @ObservableState
   struct State: Equatable {
+    var bibColorHex: String
     var editor: TeamDraft
     var mode = Mode.empty
     var searchText = ""
@@ -79,11 +80,12 @@ struct TeamSlotFeature {
 
     init(side: Side) {
       self.side = side
-      self.editor = TeamDraft(colorHex: side.defaultColorHex)
+      self.bibColorHex = side.defaultColorHex
+      self.editor = TeamDraft(teamColorHex: side.defaultColorHex)
     }
 
     var canFinishEditing: Bool {
-      !editor.trimmedName.isEmpty && TeamColorPalette.isValid(editor.colorHex)
+      !editor.trimmedName.isEmpty && TeamColorPalette.isValid(editor.teamColorHex)
     }
 
     var isLocked: Bool {
@@ -97,6 +99,7 @@ struct TeamSlotFeature {
 
   enum Action: BindableAction {
     case binding(BindingAction<State>)
+    case bibPaletteColorButtonTapped(String)
     case cancelButtonTapped
     case cardTapped
     case changeTeamButtonTapped
@@ -108,11 +111,18 @@ struct TeamSlotFeature {
     case revertChangesButtonTapped
   }
 
+  @Dependency(\.withRandomNumberGenerator) var withRandomNumberGenerator
+
   var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
       switch action {
       case .binding:
+        return .none
+
+      case let .bibPaletteColorButtonTapped(colorHex):
+        guard state.isLocked, TeamColorPalette.isValid(colorHex) else { return .none }
+        state.bibColorHex = colorHex.uppercased()
         return .none
 
       case .cancelButtonTapped:
@@ -142,7 +152,11 @@ struct TeamSlotFeature {
 
       case .createTeamButtonTapped:
         guard state.mode == .choosing else { return .none }
-        state.editor = TeamDraft(colorHex: state.side.defaultColorHex)
+        let teamColorHex =
+          withRandomNumberGenerator { generator in
+            TeamColorPalette.options.randomElement(using: &generator)?.hex
+          } ?? TeamColorPalette.blue
+        state.editor = TeamDraft(teamColorHex: teamColorHex)
         state.mode = .creating
         return .none
 
@@ -152,6 +166,7 @@ struct TeamSlotFeature {
         switch state.mode {
         case .creating:
           state.selection = .new(state.editor)
+          state.bibColorHex = state.editor.teamColorHex
           state.mode = .locked
         case .editing:
           state.selection = state.selection?.updating(state.editor)
@@ -169,7 +184,8 @@ struct TeamSlotFeature {
 
       case let .existingTeamSelected(team):
         guard state.mode == .choosing else { return .none }
-        let draft = TeamDraft(colorHex: team.colorHex, name: team.name)
+        let draft = TeamDraft(teamColorHex: team.colorHex, name: team.name)
+        state.bibColorHex = team.colorHex
         state.selection = .existing(original: team, draft: draft)
         state.mode = .locked
         state.searchText = ""
@@ -178,14 +194,14 @@ struct TeamSlotFeature {
       case let .paletteColorButtonTapped(colorHex):
         guard state.mode == .creating || state.mode == .editing else { return .none }
         guard TeamColorPalette.isValid(colorHex) else { return .none }
-        state.editor.colorHex = colorHex.uppercased()
+        state.editor.teamColorHex = colorHex.uppercased()
         return .none
 
       case .revertChangesButtonTapped:
         guard case let .existing(original, _) = state.selection else { return .none }
         state.selection = .existing(
           original: original,
-          draft: TeamDraft(colorHex: original.colorHex, name: original.name)
+          draft: TeamDraft(teamColorHex: original.colorHex, name: original.name)
         )
         return .none
       }
@@ -257,6 +273,8 @@ struct NewGameFeature {
     var canStartGame: Bool {
       leftTeam.isLocked
         && rightTeam.isLocked
+        && TeamColorPalette.isValid(leftTeam.bibColorHex)
+        && TeamColorPalette.isValid(rightTeam.bibColorHex)
         && activeTeamSide == nil
         && firstCentrePass != nil
         && hasUniqueTeamNames
@@ -351,10 +369,15 @@ struct NewGameFeature {
             case let .existing(original, draft) = selection,
             selection.hasSharedChanges
           else { return nil }
-          if original.name == draft.trimmedName {
-            return "\(original.name)'s color will update in game history."
+          let changesName = original.name != draft.trimmedName
+          let changesTeamColor = original.colorHex != draft.teamColorHex
+          if changesName && changesTeamColor {
+            return "\(original.name) will become \(draft.trimmedName) in game history, "
+              + "and its team color will update."
+          } else if changesName {
+            return "\(original.name) will become \(draft.trimmedName) in game history."
           }
-          return "\(original.name) will become \(draft.trimmedName) in game history."
+          return "\(original.name)'s team color will update without changing past bib colors."
         }
         .joined(separator: " ")
     }
@@ -389,6 +412,7 @@ struct NewGameFeature {
   }
 
   private struct PreparedTeam: Sendable {
+    let bibColorHex: String
     let draft: TeamSlotFeature.TeamDraft
     let existingID: Team.ID?
     let id: Team.ID
@@ -482,6 +506,13 @@ struct NewGameFeature {
             state.errorMessage = state.teamNameErrorMessage ?? "Team names must be unique."
             return .none
           }
+          guard
+            TeamColorPalette.isValid(state.leftTeam.bibColorHex),
+            TeamColorPalette.isValid(state.rightTeam.bibColorHex)
+          else {
+            state.errorMessage = "Choose a valid bib color for both teams."
+            return .none
+          }
           guard state.firstCentrePass != nil else {
             state.errorMessage = "Choose the team taking the first centre pass."
             return .none
@@ -513,8 +544,11 @@ struct NewGameFeature {
         case .swapTeamsButtonTapped:
           guard state.canSwapTeams else { return .none }
           let leftSelection = state.leftTeam.selection
+          let leftBibColorHex = state.leftTeam.bibColorHex
           state.leftTeam.selection = state.rightTeam.selection
+          state.leftTeam.bibColorHex = state.rightTeam.bibColorHex
           state.rightTeam.selection = leftSelection
+          state.rightTeam.bibColorHex = leftBibColorHex
           if state.firstCentrePass == .teamA {
             state.firstCentrePass = .teamB
           } else if state.firstCentrePass == .teamB {
@@ -569,11 +603,13 @@ struct NewGameFeature {
 
     let gameID = uuid()
     let teamA = PreparedTeam(
+      bibColorHex: state.leftTeam.bibColorHex,
       draft: leftSelection.draft,
       existingID: leftSelection.existingID,
       id: leftSelection.existingID ?? uuid()
     )
     let teamB = PreparedTeam(
+      bibColorHex: state.rightTeam.bibColorHex,
       draft: rightSelection.draft,
       existingID: rightSelection.existingID,
       id: rightSelection.existingID ?? uuid()
@@ -623,8 +659,12 @@ struct NewGameFeature {
           }
           let editedIDs = Set([teamA.existingID, teamB.existingID].compactMap { $0 })
           finalTeams.removeAll { editedIDs.contains($0.id) }
-          finalTeams.append(Team(id: teamA.id, name: teamA.draft.name, colorHex: teamA.draft.colorHex))
-          finalTeams.append(Team(id: teamB.id, name: teamB.draft.name, colorHex: teamB.draft.colorHex))
+          finalTeams.append(
+            Team(id: teamA.id, name: teamA.draft.name, colorHex: teamA.draft.teamColorHex)
+          )
+          finalTeams.append(
+            Team(id: teamB.id, name: teamB.draft.name, colorHex: teamB.draft.teamColorHex)
+          )
           let normalizedNames = finalTeams.map(\.normalizedName)
           guard Set(normalizedNames).count == normalizedNames.count else {
             throw SetupPersistenceError.duplicateTeamName
@@ -647,7 +687,7 @@ struct NewGameFeature {
             let savedTeam = Team(
               id: team.id,
               name: team.draft.name,
-              colorHex: team.draft.colorHex
+              colorHex: team.draft.teamColorHex
             )
             if team.existingID != nil {
               try Team.find(team.id).update {
@@ -667,7 +707,9 @@ struct NewGameFeature {
               startedAt: startedAt,
               endedAt: nil,
               teamAID: teamA.id,
+              teamABibColorHex: teamA.bibColorHex,
               teamBID: teamB.id,
+              teamBBibColorHex: teamB.bibColorHex,
               centrePassTeamID: centrePassTeamID,
               periodDurationSeconds: periodDurationSeconds,
               firstBreakDurationSeconds: firstBreakDurationSeconds,
@@ -693,12 +735,12 @@ struct NewGameFeature {
           startedAt: startedAt,
           teamA: ScoringFeature.Team(
             id: teamA.id,
-            colorHex: teamA.draft.colorHex,
+            bibColorHex: teamA.bibColorHex,
             name: teamA.draft.trimmedName
           ),
           teamB: ScoringFeature.Team(
             id: teamB.id,
-            colorHex: teamB.draft.colorHex,
+            bibColorHex: teamB.bibColorHex,
             name: teamB.draft.trimmedName
           )
         )

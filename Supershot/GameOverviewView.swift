@@ -16,7 +16,7 @@ struct GameOverviewView: View {
       HStack(alignment: .top, spacing: 16) {
         GameDetailScore(
           alignment: .leading,
-          colorHex: detail.teamAColorHex,
+          colorHex: detail.teamABibColorHex,
           name: detail.teamAName,
           score: detail.teamAScore
         )
@@ -28,7 +28,7 @@ struct GameOverviewView: View {
 
         GameDetailScore(
           alignment: .trailing,
-          colorHex: detail.teamBColorHex,
+          colorHex: detail.teamBBibColorHex,
           name: detail.teamBName,
           score: detail.teamBScore
         )

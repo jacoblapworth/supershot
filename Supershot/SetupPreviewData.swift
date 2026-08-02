@@ -47,7 +47,7 @@ extension TeamSlotFeature.State {
   static var previewEditing: Self {
     var state = Self(side: .left)
     state.editor = TeamSlotFeature.TeamDraft(
-      colorHex: "#34C759",
+      teamColorHex: "#34C759",
       name: Team.previewRavens.name
     )
     state.mode = .editing
@@ -69,7 +69,7 @@ extension NewGameFeature.State {
     state.leftTeam.selection = .existing(
       original: .previewRavens,
       draft: TeamSlotFeature.TeamDraft(
-        colorHex: Team.previewRavens.colorHex,
+        teamColorHex: Team.previewRavens.colorHex,
         name: Team.previewRavens.name
       )
     )
@@ -77,7 +77,7 @@ extension NewGameFeature.State {
     state.rightTeam.selection = .existing(
       original: .previewSwifts,
       draft: TeamSlotFeature.TeamDraft(
-        colorHex: Team.previewSwifts.colorHex,
+        teamColorHex: Team.previewSwifts.colorHex,
         name: Team.previewSwifts.name
       )
     )

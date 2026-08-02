@@ -11,7 +11,7 @@ struct GameRow: View {
       HStack(alignment: .center, spacing: 12) {
         TeamScore(
           alignment: .leading,
-          colorHex: game.teamAColorHex,
+          colorHex: game.teamABibColorHex,
           name: game.teamAName,
           score: game.teamAScore,
           scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
@@ -23,7 +23,7 @@ struct GameRow: View {
 
         TeamScore(
           alignment: .trailing,
-          colorHex: game.teamBColorHex,
+          colorHex: game.teamBBibColorHex,
           name: game.teamBName,
           score: game.teamBScore,
           scoreColor: scoreColor(for: game.teamBScore, opponentScore: game.teamAScore)

@@ -30,7 +30,7 @@ struct ScoringFeature {
 
   struct Team: Equatable, Identifiable, Sendable {
     let id: UUID
-    var colorHex = TeamColorPalette.blue
+    var bibColorHex = TeamColorPalette.blue
     var name: String
   }
 
