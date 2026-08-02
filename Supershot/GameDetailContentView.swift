@@ -8,7 +8,13 @@ struct GameDetailContentView: View {
       VStack(alignment: .leading, spacing: 28) {
         GameOverviewView(detail: detail)
         GameStatisticsView(detail: detail)
-        GoalTimelineView(detail: detail)
+        GoalTimelineView(
+          teamABibColorHex: detail.teamABibColorHex,
+          teamAName: detail.teamAName,
+          teamBBibColorHex: detail.teamBBibColorHex,
+          teamBName: detail.teamBName,
+          timeline: detail.goalTimeline
+        )
       }
       .padding()
     }

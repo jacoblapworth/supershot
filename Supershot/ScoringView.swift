@@ -1,9 +1,23 @@
 import ComposableArchitecture
+import Dependencies
+import SQLiteData
 import SwiftUI
 
 struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
+  @Fetch private var timelineResponse: GoalTimelineRequest.Value
   @Bindable var store: StoreOf<ScoringFeature>
+
+  init(store: StoreOf<ScoringFeature>) {
+    self.store = store
+    _timelineResponse = Fetch(
+      wrappedValue: GoalTimelineRequest.Value(
+        timeline: .empty(through: store.period)
+      ),
+      GoalTimelineRequest(gameID: store.gameID),
+      animation: .default
+    )
+  }
 
   var body: some View {
     ScrollView {
@@ -67,6 +81,14 @@ struct ScoringView: View {
           finishGameTapped: { store.send(.finishGameButtonTapped) },
           skipBreakTapped: { store.send(.skipBreakButtonTapped) }
         )
+
+        GoalTimelineView(
+          teamABibColorHex: store.teamA.bibColorHex,
+          teamAName: store.teamA.name,
+          teamBBibColorHex: store.teamB.bibColorHex,
+          teamBName: store.teamB.name,
+          timeline: timelineResponse.timeline
+        )
       }
       .padding()
     }
@@ -123,18 +145,30 @@ struct ScoringView: View {
 }
 
 #Preview("Quarter") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedPreviewGames()
+  }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewQuarter))
   }
 }
 
 #Preview("Quarter complete") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedPreviewGames()
+  }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewQuarterComplete))
   }
 }
 
 #Preview("Break") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedPreviewGames()
+  }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewBreak))
   }

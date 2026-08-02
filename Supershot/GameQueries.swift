@@ -37,6 +37,38 @@ nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
   let name: String
 }
 
+nonisolated struct GoalTimeline: Equatable, Sendable {
+  var quarters: [GoalTimelineQuarter] = []
+
+  static func empty(through period: Int) -> Self {
+    let finalPeriod = min(max(period, 1), 4)
+    return Self(
+      quarters: (1...finalPeriod).reversed().map {
+        GoalTimelineQuarter(
+          goals: [],
+          period: $0,
+          teamAQuarterScore: 0,
+          teamBQuarterScore: 0
+        )
+      }
+    )
+  }
+}
+
+nonisolated struct GoalTimelineQuarter: Equatable, Identifiable, Sendable {
+  var id: Int { period }
+  let goals: [GoalTimelineItem]
+  let period: Int
+  let teamAQuarterScore: Int
+  let teamBQuarterScore: Int
+}
+
+nonisolated enum GoalTimelineTeamSide: Equatable, Sendable {
+  case teamA
+  case teamB
+  case unknown
+}
+
 nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let clockSecondsRemaining: Int
   let id: Goal.ID
@@ -44,6 +76,7 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let points: Int
   var scoringTeamBibColorHex = TeamColorPalette.blue
   let scoringTeamName: String
+  let scoringTeamSide: GoalTimelineTeamSide
   let teamAScore: Int
   let teamBScore: Int
 }
@@ -67,7 +100,7 @@ nonisolated struct CompletedGameStatistics: Equatable, Sendable {
 nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let endedAt: Date
   var firstBreakDurationSeconds = 0
-  let goals: [GoalTimelineItem]
+  let goalTimeline: GoalTimeline
   var halfTimeDurationSeconds = 0
   let id: Game.ID
   var periodDurationSeconds = 15 * 60
@@ -243,6 +276,22 @@ nonisolated struct TeamDetailRequest: FetchKeyRequest {
   }
 }
 
+nonisolated struct GoalTimelineRequest: FetchKeyRequest {
+  struct Value: Equatable, Sendable {
+    var timeline = GoalTimeline()
+  }
+
+  let gameID: Game.ID
+
+  func fetch(_ db: Database) throws -> Value {
+    Value(
+      timeline: goalTimeline(
+        snapshot: try GameSnapshot.fetch(db, gameID: gameID)
+      )
+    )
+  }
+}
+
 nonisolated struct GameDetailRequest: FetchKeyRequest {
   struct Value: Equatable, Sendable {
     var detail: CompletedGameDetail?
@@ -253,45 +302,13 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
   func fetch(_ db: Database) throws -> Value {
     let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
     guard let endedAt = snapshot.game.endedAt else { return Value() }
-
-    var teamAScore = 0
-    var teamBScore = 0
-    let timeline = snapshot.goals.map { goal in
-      let scoringTeamBibColorHex: String
-      let scoringTeamName: String
-      if goal.teamID == snapshot.teamA.id {
-        teamAScore += goal.points
-        scoringTeamBibColorHex = snapshot.game.teamABibColorHex
-        scoringTeamName = snapshot.teamA.name
-      } else if goal.teamID == snapshot.teamB.id {
-        teamBScore += goal.points
-        scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
-        scoringTeamName = snapshot.teamB.name
-      } else {
-        scoringTeamBibColorHex = TeamColorPalette.blue
-        scoringTeamName = "Unknown team"
-      }
-
-      return GoalTimelineItem(
-        clockSecondsRemaining: max(
-          snapshot.game.periodDurationSeconds - goal.elapsedSeconds,
-          0
-        ),
-        id: goal.id,
-        period: goal.period,
-        points: goal.points,
-        scoringTeamBibColorHex: scoringTeamBibColorHex,
-        scoringTeamName: scoringTeamName,
-        teamAScore: teamAScore,
-        teamBScore: teamBScore
-      )
-    }
+    let timeline = goalTimeline(snapshot: snapshot)
 
     return Value(
       detail: CompletedGameDetail(
         endedAt: endedAt,
         firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
-        goals: timeline,
+        goalTimeline: timeline,
         halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
         id: snapshot.game.id,
         periodDurationSeconds: snapshot.game.periodDurationSeconds,
@@ -304,13 +321,84 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         ),
         teamABibColorHex: snapshot.game.teamABibColorHex,
         teamAName: snapshot.teamA.name,
-        teamAScore: teamAScore,
+        teamAScore: snapshot.teamAScore,
         teamBBibColorHex: snapshot.game.teamBBibColorHex,
         teamBName: snapshot.teamB.name,
+        teamBScore: snapshot.teamBScore
+      )
+    )
+  }
+}
+
+private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
+  var goalsByPeriod: [Int: [GoalTimelineItem]] = [:]
+  var quarterScoresByPeriod: [Int: (teamA: Int, teamB: Int)] = [:]
+  var teamAScore = 0
+  var teamBScore = 0
+
+  for goal in snapshot.goals {
+    let scoringTeamBibColorHex: String
+    let scoringTeamName: String
+    let scoringTeamSide: GoalTimelineTeamSide
+
+    if goal.teamID == snapshot.teamA.id {
+      teamAScore += goal.points
+      quarterScoresByPeriod[goal.period, default: (0, 0)].teamA += goal.points
+      scoringTeamBibColorHex = snapshot.game.teamABibColorHex
+      scoringTeamName = snapshot.teamA.name
+      scoringTeamSide = .teamA
+    } else if goal.teamID == snapshot.teamB.id {
+      teamBScore += goal.points
+      quarterScoresByPeriod[goal.period, default: (0, 0)].teamB += goal.points
+      scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
+      scoringTeamName = snapshot.teamB.name
+      scoringTeamSide = .teamB
+    } else {
+      scoringTeamBibColorHex = TeamColorPalette.blue
+      scoringTeamName = "Unknown team"
+      scoringTeamSide = .unknown
+    }
+
+    goalsByPeriod[goal.period, default: []].append(
+      GoalTimelineItem(
+        clockSecondsRemaining: max(
+          snapshot.game.periodDurationSeconds - goal.elapsedSeconds,
+          0
+        ),
+        id: goal.id,
+        period: goal.period,
+        points: goal.points,
+        scoringTeamBibColorHex: scoringTeamBibColorHex,
+        scoringTeamName: scoringTeamName,
+        scoringTeamSide: scoringTeamSide,
+        teamAScore: teamAScore,
         teamBScore: teamBScore
       )
     )
   }
+
+  let maximumPeriod = 4
+  let playedPeriod = snapshot.game.endedAt == nil
+    ? min(
+      max(
+        snapshot.game.currentPeriod,
+        snapshot.goals.map(\.period).max() ?? 1
+      ),
+      maximumPeriod
+    )
+    : maximumPeriod
+
+  return GoalTimeline(
+    quarters: (1...max(playedPeriod, 1)).reversed().map { period in
+      let quarterScore = quarterScoresByPeriod[period, default: (0, 0)]
+      return GoalTimelineQuarter(
+        goals: Array(goalsByPeriod[period, default: []].reversed()),
+        period: period,
+        teamAQuarterScore: quarterScore.teamA,
+        teamBQuarterScore: quarterScore.teamB
+      )
+    }
+  )
 }
 
 private nonisolated func completedGameStatistics(

@@ -34,6 +34,14 @@ struct GameOverviewView: View {
         )
       }
 
+      QuarterScoreBreakdown(
+        quarters: detail.goalTimeline.quarters,
+        teamABibColorHex: detail.teamABibColorHex,
+        teamAName: detail.teamAName,
+        teamBBibColorHex: detail.teamBBibColorHex,
+        teamBName: detail.teamBName
+      )
+
       Divider()
 
       VStack(alignment: .leading, spacing: 8) {
@@ -53,6 +61,76 @@ struct GameOverviewView: View {
     .frame(maxWidth: .infinity)
     .padding()
     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+  }
+}
+
+private struct QuarterScoreBreakdown: View {
+  var quarters: [GoalTimelineQuarter]
+  var teamABibColorHex: String
+  var teamAName: String
+  var teamBBibColorHex: String
+  var teamBName: String
+
+  var body: some View {
+    VStack(spacing: 8) {
+      Text("Points by quarter")
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+      VStack(spacing: 6) {
+        HStack(spacing: 12) {
+          teamName(teamAName, colorHex: teamABibColorHex, alignment: .leading)
+          Text("Quarter")
+            .frame(width: 64)
+          teamName(teamBName, colorHex: teamBBibColorHex, alignment: .trailing)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+
+        ForEach(quarters.sorted(using: KeyPathComparator(\.period))) { quarter in
+          HStack(spacing: 12) {
+            Text("\(quarter.teamAQuarterScore)")
+              .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Q\(quarter.period)")
+              .frame(width: 64)
+              .foregroundStyle(.secondary)
+
+            Text("\(quarter.teamBQuarterScore)")
+              .frame(maxWidth: .infinity, alignment: .trailing)
+          }
+          .font(.system(.body, design: .rounded, weight: .semibold))
+          .monospacedDigit()
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel(
+            "Quarter \(quarter.period), \(teamAName) \(quarter.teamAQuarterScore), "
+              + "\(teamBName) \(quarter.teamBQuarterScore)"
+          )
+        }
+      }
+    }
+  }
+
+  private func teamName(
+    _ name: String,
+    colorHex: String,
+    alignment: Alignment
+  ) -> some View {
+    HStack(spacing: 5) {
+      if alignment == .trailing {
+        Spacer(minLength: 0)
+      }
+      Circle()
+        .fill(Color(teamHex: colorHex))
+        .frame(width: 8, height: 8)
+        .accessibilityHidden(true)
+      Text(name)
+        .lineLimit(1)
+      if alignment == .leading {
+        Spacer(minLength: 0)
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: alignment)
   }
 }
 

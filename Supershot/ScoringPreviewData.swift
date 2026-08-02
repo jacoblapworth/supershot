@@ -4,14 +4,14 @@ import Foundation
 
 extension ScoringFeature.Team {
   static let previewRavens = Self(
-    id: UUID(),
-    bibColorHex: TeamColorPalette.blue,
-    name: "North London Ravens"
+    id: UUID(3),
+    bibColorHex: "#34C759",
+    name: "Foxes"
   )
   static let previewSwifts = Self(
-    id: UUID(),
-    bibColorHex: TeamColorPalette.red,
-    name: "Westminster Swifts"
+    id: UUID(4),
+    bibColorHex: "#FF9500",
+    name: "Owls"
   )
 }
 
@@ -20,12 +20,14 @@ extension ScoringFeature.State {
     Self(
       centrePassTeamID: ScoringFeature.Team.previewRavens.id,
       firstBreakDurationSeconds: 240,
-      gameID: UUID(),
+      gameID: UUID(11),
       halfTimeDurationSeconds: 600,
+      period: 2,
       secondBreakDurationSeconds: 240,
       startedAt: Date(),
       teamA: .previewRavens,
-      teamB: .previewSwifts
+      teamB: .previewSwifts,
+      teamBScore: 1
     )
   }
 

@@ -1804,7 +1804,10 @@ struct SupershotTests {
     expectNoDifference(values.1.teams.map(\.colorHex), ["#34C759", "#FF2D55"])
     expectNoDifference(values.2.detail?.teamABibColorHex, "#AF52DE")
     expectNoDifference(values.2.detail?.teamBBibColorHex, "#FF9500")
-    expectNoDifference(values.2.detail?.goals.first?.scoringTeamBibColorHex, "#AF52DE")
+    expectNoDifference(
+      values.2.detail?.goalTimeline.quarters.last?.goals.first?.scoringTeamBibColorHex,
+      "#AF52DE"
+    )
   }
 
   @Test
@@ -2274,7 +2277,7 @@ struct SupershotTests {
   }
 
   @Test
-  func completedGameDetailBuildsChronologicalRunningScore() async throws {
+  func completedGameDetailBuildsReverseChronologicalQuarterTimeline() async throws {
     @Dependency(\.defaultDatabase) var database
     try Self.clearDatabase(database)
 
@@ -2337,38 +2340,69 @@ struct SupershotTests {
       CompletedGameDetail(
         endedAt: endedAt,
         firstBreakDurationSeconds: 240,
-        goals: [
-          GoalTimelineItem(
-            clockSecondsRemaining: 800,
-            id: UUID(-1),
-            period: 1,
-            points: 2,
-            scoringTeamBibColorHex: TeamColorPalette.blue,
-            scoringTeamName: "Ravens",
-            teamAScore: 2,
-            teamBScore: 0
-          ),
-          GoalTimelineItem(
-            clockSecondsRemaining: 700,
-            id: UUID(-2),
-            period: 1,
-            points: 1,
-            scoringTeamBibColorHex: TeamColorPalette.red,
-            scoringTeamName: "Swifts",
-            teamAScore: 2,
-            teamBScore: 1
-          ),
-          GoalTimelineItem(
-            clockSecondsRemaining: 870,
-            id: UUID(-3),
-            period: 2,
-            points: 1,
-            scoringTeamBibColorHex: TeamColorPalette.red,
-            scoringTeamName: "Swifts",
-            teamAScore: 2,
-            teamBScore: 2
-          ),
-        ],
+        goalTimeline: GoalTimeline(
+          quarters: [
+            GoalTimelineQuarter(
+              goals: [],
+              period: 4,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 0
+            ),
+            GoalTimelineQuarter(
+              goals: [],
+              period: 3,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 0
+            ),
+            GoalTimelineQuarter(
+              goals: [
+                GoalTimelineItem(
+                  clockSecondsRemaining: 870,
+                  id: UUID(-3),
+                  period: 2,
+                  points: 1,
+                  scoringTeamBibColorHex: TeamColorPalette.red,
+                  scoringTeamName: "Swifts",
+                  scoringTeamSide: .teamB,
+                  teamAScore: 2,
+                  teamBScore: 2
+                )
+              ],
+              period: 2,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 1
+            ),
+            GoalTimelineQuarter(
+              goals: [
+                GoalTimelineItem(
+                  clockSecondsRemaining: 700,
+                  id: UUID(-2),
+                  period: 1,
+                  points: 1,
+                  scoringTeamBibColorHex: TeamColorPalette.red,
+                  scoringTeamName: "Swifts",
+                  scoringTeamSide: .teamB,
+                  teamAScore: 2,
+                  teamBScore: 1
+                ),
+                GoalTimelineItem(
+                  clockSecondsRemaining: 800,
+                  id: UUID(-1),
+                  period: 1,
+                  points: 2,
+                  scoringTeamBibColorHex: TeamColorPalette.blue,
+                  scoringTeamName: "Ravens",
+                  scoringTeamSide: .teamA,
+                  teamAScore: 2,
+                  teamBScore: 0
+                ),
+              ],
+              period: 1,
+              teamAQuarterScore: 2,
+              teamBQuarterScore: 1
+            ),
+          ]
+        ),
         halfTimeDurationSeconds: 600,
         id: UUID(-1),
         periodDurationSeconds: 900,
@@ -2400,6 +2434,79 @@ struct SupershotTests {
         teamBScore: 2
       )
     )
+  }
+
+  @Test
+  func liveGoalTimelineIncludesEmptyPlayedQuartersAndReflectsGoalChanges() async throws {
+    @Dependency(\.defaultDatabase) var database
+    try Self.clearDatabase(database)
+
+    try await database.write { db in
+      try db.seed {
+        Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+        Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+        Game(
+          id: UUID(-1),
+          startedAt: Date(timeIntervalSince1970: 1_000),
+          endedAt: nil,
+          teamAID: UUID(-1),
+          teamBID: UUID(-2),
+          periodDurationSeconds: 900,
+          currentPeriod: 3
+        )
+        Goal(
+          id: UUID(-1),
+          gameID: UUID(-1),
+          teamID: UUID(-1),
+          period: 1,
+          elapsedSeconds: 100,
+          points: 1,
+          createdAt: Date(timeIntervalSince1970: 1_100)
+        )
+      }
+    }
+
+    let initial = try await database.read { db in
+      try GoalTimelineRequest(gameID: UUID(-1)).fetch(db).timeline
+    }
+    expectNoDifference(initial.quarters.map(\.period), [3, 2, 1])
+    expectNoDifference(initial.quarters.map(\.goals.count), [0, 0, 1])
+    expectNoDifference(initial.quarters.last?.teamAQuarterScore, 1)
+    expectNoDifference(initial.quarters.last?.goals.first?.scoringTeamSide, .teamA)
+
+    try await database.write { db in
+      try Goal.insert {
+        Goal(
+          id: UUID(-2),
+          gameID: UUID(-1),
+          teamID: UUID(-2),
+          period: 3,
+          elapsedSeconds: 200,
+          points: 2,
+          createdAt: Date(timeIntervalSince1970: 1_200)
+        )
+      }
+      .execute(db)
+    }
+
+    let afterGoal = try await database.read { db in
+      try GoalTimelineRequest(gameID: UUID(-1)).fetch(db).timeline
+    }
+    expectNoDifference(afterGoal.quarters.first?.teamAQuarterScore, 0)
+    expectNoDifference(afterGoal.quarters.first?.teamBQuarterScore, 2)
+    expectNoDifference(afterGoal.quarters.first?.goals.first?.scoringTeamSide, .teamB)
+    expectNoDifference(afterGoal.quarters.first?.goals.first?.teamAScore, 1)
+    expectNoDifference(afterGoal.quarters.first?.goals.first?.teamBScore, 2)
+
+    try await database.write { db in
+      try Goal.find(UUID(-2)).delete().execute(db)
+    }
+
+    let afterUndo = try await database.read { db in
+      try GoalTimelineRequest(gameID: UUID(-1)).fetch(db).timeline
+    }
+    expectNoDifference(afterUndo.quarters.first?.goals, [])
+    expectNoDifference(afterUndo.quarters.first?.teamBQuarterScore, 0)
   }
 
   @Test
