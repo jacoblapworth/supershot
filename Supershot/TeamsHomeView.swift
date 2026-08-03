@@ -4,6 +4,7 @@ import SwiftUI
 struct TeamsHomeView: View {
   var deleteTeamTapped: (Team.ID) -> Void
   var deletingTeamID: Team.ID?
+  var newTeamTapped: () -> Void
   var teamTapped: (TeamListItem) -> Void
   var teams: [TeamListItem]
 
@@ -13,7 +14,7 @@ struct TeamsHomeView: View {
         ContentUnavailableView(
           "No teams yet",
           systemImage: "person.2",
-          description: Text("Teams are saved when you start a game.")
+          description: Text("Create a team to use in your next game.")
         )
         .listRowBackground(Color.clear)
       } else {
@@ -34,6 +35,14 @@ struct TeamsHomeView: View {
       }
     }
     .navigationTitle("Teams")
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Button(action: newTeamTapped) {
+          Label("New team", systemImage: "plus")
+        }
+        .disabled(deletingTeamID != nil)
+      }
+    }
   }
 }
 
@@ -73,6 +82,7 @@ private struct TeamRow: View {
     TeamsHomeView(
       deleteTeamTapped: { _ in },
       deletingTeamID: nil,
+      newTeamTapped: {},
       teamTapped: { _ in },
       teams: []
     )
@@ -84,6 +94,7 @@ private struct TeamRow: View {
     TeamsHomeView(
       deleteTeamTapped: { _ in },
       deletingTeamID: nil,
+      newTeamTapped: {},
       teamTapped: { _ in },
       teams: [
         TeamListItem(

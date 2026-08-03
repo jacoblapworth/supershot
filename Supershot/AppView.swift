@@ -76,6 +76,7 @@ struct AppView: View {
       TeamsHomeView(
         deleteTeamTapped: { store.send(.deleteTeamButtonTapped($0)) },
         deletingTeamID: store.deletingTeamID,
+        newTeamTapped: { store.send(.newTeamButtonTapped) },
         teamTapped: { store.send(.teamRowTapped($0)) },
         teams: teamsResponse.teams
       )
@@ -95,6 +96,11 @@ struct AppView: View {
           deletingGameID: store.deletingGameID,
           loadingGameID: store.loadingGameTab == .teams ? store.loadingGameID : nil
         )
+      }
+    }
+    .sheet(item: $store.scope(state: \.teamEditor, action: \.teamEditor)) { editorStore in
+      NavigationStack {
+        TeamEditorView(store: editorStore)
       }
     }
   }

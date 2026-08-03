@@ -9,20 +9,6 @@ struct NewGameView: View {
       VStack(spacing: 20) {
         NewGameTeamsView(store: store)
 
-        if store.leftTeam.mode.isInteracting {
-          TeamSlotPanel(
-            store: store.scope(state: \.leftTeam, action: \.leftTeam),
-            teams: store.availableTeams,
-            unavailableTeamID: store.rightTeam.selection?.existingID
-          )
-        } else if store.rightTeam.mode.isInteracting {
-          TeamSlotPanel(
-            store: store.scope(state: \.rightTeam, action: \.rightTeam),
-            teams: store.availableTeams,
-            unavailableTeamID: store.leftTeam.selection?.existingID
-          )
-        }
-
         if store.leftTeam.isLocked, store.rightTeam.isLocked {
           SetupBibColorsView(
             leftStore: store.scope(state: \.leftTeam, action: \.leftTeam),
@@ -53,6 +39,28 @@ struct NewGameView: View {
     .confirmationDialog(
       $store.scope(state: \.confirmationDialog, action: \.confirmationDialog)
     )
+    .sheet(isPresented: $store.isPresentingTeamPicker) {
+      NavigationStack {
+        Group {
+          if store.leftTeam.mode.isInteracting {
+            TeamSlotPanel(
+              store: store.scope(state: \.leftTeam, action: \.leftTeam),
+              teams: store.availableTeams,
+              unavailableTeamID: store.rightTeam.selection?.existingID
+            )
+          } else if store.rightTeam.mode.isInteracting {
+            TeamSlotPanel(
+              store: store.scope(state: \.rightTeam, action: \.rightTeam),
+              teams: store.availableTeams,
+              unavailableTeamID: store.leftTeam.selection?.existingID
+            )
+          }
+        }
+        .padding()
+        .navigationTitle("Select team")
+        .navigationBarTitleDisplayMode(.inline)
+      }
+    }
     .task {
       store.send(.task)
     }

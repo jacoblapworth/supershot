@@ -2067,6 +2067,46 @@ struct SupershotTests {
   }
 
   @Test
+  func teamEditorCreatesNewTeam() async throws {
+    let store = TestStore(initialState: TeamEditorFeature.State()) {
+      TeamEditorFeature()
+    } withDependencies: {
+      $0.uuid = .incrementing
+      try! $0.bootstrapDatabase()
+      try! Self.clearDatabase($0.defaultDatabase)
+    }
+
+    await store.send(.binding(.set(\.name, "  Falcons  "))) {
+      $0.name = "  Falcons  "
+    }
+    await store.send(.paletteColorButtonTapped("#34c759")) {
+      $0.colorHex = "#34C759"
+    }
+    await store.send(.saveButtonTapped) {
+      $0.errorMessage = nil
+      $0.isSaving = true
+      $0.name = "Falcons"
+    }
+    await store.receive {
+      guard case .saveResponse(.success) = $0 else { return false }
+      return true
+    } assert: {
+      $0.isSaving = false
+    }
+    await store.receive {
+      guard case .delegate(.saved) = $0 else { return false }
+      return true
+    }
+
+    let savedTeams = try await store.dependencies.defaultDatabase.read { db in
+      try Team.fetchAll(db)
+    }
+    expectNoDifference(savedTeams.count, 1)
+    expectNoDifference(savedTeams.first?.name, "Falcons")
+    expectNoDifference(savedTeams.first?.colorHex, "#34C759")
+  }
+
+  @Test
   func teamEditorRejectsDuplicateNormalizedName() async throws {
     let ravens = Team(id: UUID(-1), name: "Ravens")
     let swifts = Team(id: UUID(-2), name: "Swifts")

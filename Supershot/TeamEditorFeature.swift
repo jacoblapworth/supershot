@@ -5,20 +5,37 @@ import SQLiteData
 struct TeamEditorFeature {
   @ObservableState
   struct State: Equatable {
+    enum Mode: Equatable {
+      case creating
+      case editing(Team.ID)
+    }
+
     var colorHex: String
     var errorMessage: String?
     var isSaving = false
     var name: String
+    var mode: Mode
     let originalColorHex: String
     let originalName: String
-    let teamID: Team.ID
 
     init(team: Team) {
       colorHex = team.colorHex
       name = team.name
+      mode = .editing(team.id)
       originalColorHex = team.colorHex
       originalName = team.name
-      teamID = team.id
+    }
+
+    init() {
+      colorHex = TeamColorPalette.blue
+      name = ""
+      mode = .creating
+      originalColorHex = TeamColorPalette.blue
+      originalName = ""
+    }
+
+    var isCreating: Bool {
+      mode == .creating
     }
 
     var canSave: Bool {
@@ -26,7 +43,7 @@ struct TeamEditorFeature {
       return !trimmedName.isEmpty
         && TeamColorPalette.isValid(colorHex)
         && !isSaving
-        && (trimmedName != originalName || colorHex != originalColorHex)
+        && (isCreating || trimmedName != originalName || colorHex != originalColorHex)
     }
   }
 
@@ -45,6 +62,7 @@ struct TeamEditorFeature {
   }
 
   @Dependency(\.defaultDatabase) var database
+  @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
     BindingReducer()
@@ -78,36 +96,46 @@ struct TeamEditorFeature {
           state.errorMessage = "Choose a valid team color."
           return .none
         }
-        guard name != state.originalName || state.colorHex != state.originalColorHex else {
+        guard state.isCreating || name != state.originalName || state.colorHex != state.originalColorHex else {
           return .none
         }
 
         let savedTeam = Team(
-          id: state.teamID,
+          id: {
+            if case let .editing(teamID) = state.mode {
+              return teamID
+            }
+            return uuid()
+          }(),
           name: name,
           colorHex: state.colorHex
         )
+        let isCreating = state.isCreating
         state.errorMessage = nil
         state.isSaving = true
         state.name = name
         return .run { send in
           let result = await Result {
             try await database.write { db in
-              guard try Team.find(savedTeam.id).fetchOne(db) != nil else {
-                throw TeamEditorPersistenceError.teamUnavailable
-              }
               let teams = try Team.fetchAll(db)
               guard !teams.contains(where: {
                 $0.id != savedTeam.id && $0.normalizedName == savedTeam.normalizedName
               }) else {
                 throw TeamEditorPersistenceError.duplicateName
               }
-              try Team.find(savedTeam.id).update {
-                $0.colorHex = #bind(savedTeam.colorHex)
-                $0.name = #bind(savedTeam.name)
-                $0.normalizedName = #bind(savedTeam.normalizedName)
+              if isCreating {
+                try Team.insert { savedTeam }.execute(db)
+              } else {
+                guard try Team.find(savedTeam.id).fetchOne(db) != nil else {
+                  throw TeamEditorPersistenceError.teamUnavailable
+                }
+                try Team.find(savedTeam.id).update {
+                  $0.colorHex = #bind(savedTeam.colorHex)
+                  $0.name = #bind(savedTeam.name)
+                  $0.normalizedName = #bind(savedTeam.normalizedName)
+                }
+                .execute(db)
               }
-              .execute(db)
             }
           }
           await send(.saveResponse(result))

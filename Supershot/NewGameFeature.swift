@@ -264,6 +264,19 @@ struct NewGameFeature {
       return nil
     }
 
+    var isPresentingTeamPicker: Bool {
+      get { activeTeamSide != nil }
+      set {
+        guard !newValue else { return }
+        if leftTeam.mode.isInteracting {
+          leftTeam.mode = leftTeam.selection == nil ? .empty : .locked
+        }
+        if rightTeam.mode.isInteracting {
+          rightTeam.mode = rightTeam.selection == nil ? .empty : .locked
+        }
+      }
+    }
+
     var breakDurationsAreValid: Bool {
       firstBreakDuration.totalSeconds != nil
         && halfTimeDuration.totalSeconds != nil

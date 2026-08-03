@@ -30,6 +30,7 @@ struct AppFeature {
     var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
     var selectedTab = Tab.games
+    @Presents var teamEditor: TeamEditorFeature.State?
     var teamsPath = StackState<AppPath.State>()
   }
 
@@ -43,10 +44,12 @@ struct AppFeature {
     case deleteTeamResponse(Team.ID, Result<Void, any Error>)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
+    case newTeamButtonTapped
     case path(StackActionOf<AppPath>)
     case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
     case selectedTabChanged(Tab)
     case task
+    case teamEditor(PresentationAction<TeamEditorFeature.Action>)
     case teamGameRowTapped(GameListItem)
     case teamRowTapped(TeamListItem)
     case teamsPath(StackActionOf<AppPath>)
@@ -165,6 +168,10 @@ struct AppFeature {
         state.path.append(.setup(NewGameFeature.State()))
         return .none
 
+      case .newTeamButtonTapped:
+        state.teamEditor = TeamEditorFeature.State()
+        return .none
+
       case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):
         state.path.pop(from: id)
         state.path.append(
@@ -223,6 +230,14 @@ struct AppFeature {
         if alarmAuthorization.status() == .notDetermined {
           state.alarmOnboarding = AlarmOnboardingFeature.State()
         }
+        return .none
+
+      case .teamEditor(.presented(.delegate(.cancelled))),
+        .teamEditor(.presented(.delegate(.saved))):
+        state.teamEditor = nil
+        return .none
+
+      case .teamEditor:
         return .none
 
       case let .teamGameRowTapped(game):
@@ -298,6 +313,9 @@ struct AppFeature {
     }
     .ifLet(\.$alarmOnboarding, action: \.alarmOnboarding) {
       AlarmOnboardingFeature()
+    }
+    .ifLet(\.$teamEditor, action: \.teamEditor) {
+      TeamEditorFeature()
     }
     .ifLet(\.$alert, action: \.alert)
   }

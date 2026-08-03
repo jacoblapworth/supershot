@@ -31,7 +31,7 @@ struct TeamEditorView: View {
         }
       }
     }
-    .navigationTitle("Edit team")
+    .navigationTitle(store.isCreating ? "New team" : "Edit team")
     .navigationBarTitleDisplayMode(.inline)
     .interactiveDismissDisabled(store.isSaving)
     .toolbar {
