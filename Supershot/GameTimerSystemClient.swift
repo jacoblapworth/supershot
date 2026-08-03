@@ -101,8 +101,10 @@ private nonisolated extension GameActivityAttributes {
   init(snapshot: GameSnapshot) {
     self.init(
       gameID: snapshot.game.id,
+      teamAID: snapshot.teamA.id,
       teamAColorHex: snapshot.game.teamABibColorHex,
       teamAName: snapshot.teamA.name,
+      teamBID: snapshot.teamB.id,
       teamBColorHex: snapshot.game.teamBBibColorHex,
       teamBName: snapshot.teamB.name
     )
@@ -112,6 +114,7 @@ private nonisolated extension GameActivityAttributes {
 private nonisolated extension GameActivityAttributes.ContentState {
   init(snapshot: GameSnapshot) {
     self.init(
+      centrePassTeamID: snapshot.game.centrePassTeamID ?? snapshot.teamA.id,
       currentDurationSeconds: snapshot.game.currentTimerDurationSeconds,
       elapsedSeconds: snapshot.game.elapsedSeconds,
       isInBreak: snapshot.game.isInBreak,

@@ -4,6 +4,7 @@ import Foundation
 
 nonisolated struct GameActivityAttributes: ActivityAttributes {
   nonisolated struct ContentState: Codable, Hashable, Sendable {
+    var centrePassTeamID: UUID
     var currentDurationSeconds: Int
     var elapsedSeconds: Int
     var isInBreak: Bool
@@ -14,8 +15,10 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
   }
 
   var gameID: UUID
+  var teamAID: UUID
   var teamAColorHex: String
   var teamAName: String
+  var teamBID: UUID
   var teamBColorHex: String
   var teamBName: String
 }

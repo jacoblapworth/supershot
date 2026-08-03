@@ -16,6 +16,7 @@ struct GameLiveActivity: Widget {
         DynamicIslandExpandedRegion(.leading) {
           teamScore(
             colorHex: context.attributes.teamAColorHex,
+            isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
             name: context.attributes.teamAName,
             score: context.state.teamAScore
           )
@@ -23,6 +24,7 @@ struct GameLiveActivity: Widget {
         DynamicIslandExpandedRegion(.trailing) {
           teamScore(
             colorHex: context.attributes.teamBColorHex,
+            isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
             name: context.attributes.teamBName,
             score: context.state.teamBScore
           )
@@ -54,9 +56,11 @@ struct GameLiveActivity: Widget {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.caption2.monospacedDigit())
       }
+      
       .widgetURL(context.attributes.gameURL)
       .keylineTint(.orange)
     }
+    .supplementalActivityFamilies([.small, .medium])
   }
 
   private func phaseLabel(
@@ -67,13 +71,20 @@ struct GameLiveActivity: Widget {
 
   private func teamScore(
     colorHex: String,
+    isCentrePassTeam: Bool,
     name: String,
     score: Int
   ) -> some View {
     VStack(spacing: 2) {
-      Text(name)
-        .font(.caption2.weight(.semibold))
-        .lineLimit(1)
+      HStack(spacing: 3) {
+        if isCentrePassTeam {
+          Image(systemName: "arrow.right.circle.fill")
+            .accessibilityLabel("Current centre pass")
+        }
+        Text(name)
+          .lineLimit(1)
+      }
+      .font(.caption2.weight(.semibold))
       Text("\(score)")
         .font(.title.bold())
         .monospacedDigit()
@@ -91,6 +102,7 @@ private struct LockScreenGameView: View {
       HStack(alignment: .firstTextBaseline) {
         team(
           colorHex: context.attributes.teamAColorHex,
+          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
           score: context.state.teamAScore,
           alignment: .leading
@@ -100,6 +112,7 @@ private struct LockScreenGameView: View {
           .foregroundStyle(.secondary)
         team(
           colorHex: context.attributes.teamBColorHex,
+          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
           score: context.state.teamBScore,
           alignment: .trailing
@@ -129,15 +142,22 @@ private struct LockScreenGameView: View {
 
   private func team(
     colorHex: String,
+    isCentrePassTeam: Bool,
     name: String,
     score: Int,
     alignment: HorizontalAlignment
   ) -> some View {
     VStack(alignment: alignment, spacing: 3) {
-      Text(name)
-        .font(.headline)
-        .lineLimit(2)
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+      HStack(spacing: 4) {
+        if isCentrePassTeam {
+          Image(systemName: "arrow.right.circle.fill")
+            .accessibilityLabel("Current centre pass")
+        }
+        Text(name)
+          .lineLimit(2)
+          .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+      }
+      .font(.headline)
       Text("\(score)")
         .font(.system(.title, design: .rounded, weight: .bold))
         .monospacedDigit()
@@ -219,8 +239,10 @@ private extension GameActivityAttributes {
 
   static let preview = Self(
     gameID: UUID(),
+    teamAID: UUID(),
     teamAColorHex: "#007AFF",
     teamAName: "North London Ravens",
+    teamBID: UUID(),
     teamBColorHex: "#FF3B30",
     teamBName: "Westminster Swifts"
   )
@@ -236,6 +258,7 @@ private extension GameActivityAttributes.ContentState {
   }
 
   static let pausedPreview = Self(
+    centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     isInBreak: false,
@@ -246,6 +269,7 @@ private extension GameActivityAttributes.ContentState {
   )
 
   static let runningPreview = Self(
+    centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     isInBreak: false,
@@ -256,6 +280,7 @@ private extension GameActivityAttributes.ContentState {
   )
 
   static let endedPreview = Self(
+    centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 900,
     isInBreak: false,
