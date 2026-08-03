@@ -60,6 +60,7 @@ struct NewGameView: View {
         .navigationTitle("Select team")
         .navigationBarTitleDisplayMode(.inline)
       }
+      .presentationDetents([.medium, .large])
     }
     .task {
       store.send(.task)

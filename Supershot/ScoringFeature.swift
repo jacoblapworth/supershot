@@ -140,7 +140,6 @@ struct ScoringFeature {
     case lastCentrePassTakenButtonTapped
     case nextQuarterResponse(Result<QuarterSnapshot, any Error>)
     case pauseTimerButtonTapped
-    case resumeTimerButtonTapped
     case sceneBecameActive
     case sceneBecameInactive
     case skipBreakButtonTapped
@@ -335,28 +334,6 @@ struct ScoringFeature {
       case .timerPauseResponse(.failure):
         return .none
 
-      case .resumeTimerButtonTapped:
-        guard
-          !state.isTimerRunning,
-          !state.isPeriodComplete,
-          (!state.isShowingLastCentrePassBanner || state.clockPhase == .breakTime)
-        else { return .none }
-        state.hasTimerStartedThisPeriod = true
-        state.isTimerRunning = true
-        state.timerEndsAt = GameTimerMath.endDate(
-          durationSeconds: state.currentDurationSeconds,
-          elapsedSeconds: state.elapsedSeconds,
-          now: now
-        )
-        return .merge(
-          startTimerEffect(
-            gameID: state.gameID,
-            expectedPeriod: state.period,
-            requestsAuthorization: false
-          ),
-          timerEffect()
-        )
-
       case .sceneBecameActive:
         return reconcileTimerEffect(gameID: state.gameID)
 
@@ -382,9 +359,10 @@ struct ScoringFeature {
       case .startTimerButtonTapped:
         guard
           !state.isTimerRunning,
-          state.elapsedSeconds == 0,
+          !state.isPeriodComplete,
           (!state.isShowingLastCentrePassBanner || state.clockPhase == .breakTime)
         else { return .none }
+        let requestsAuthorization = !state.hasTimerStartedThisPeriod
         state.hasTimerStartedThisPeriod = true
         state.isTimerRunning = true
         state.timerEndsAt = GameTimerMath.endDate(
@@ -396,7 +374,7 @@ struct ScoringFeature {
           startTimerEffect(
             gameID: state.gameID,
             expectedPeriod: state.period,
-            requestsAuthorization: true
+            requestsAuthorization: requestsAuthorization
           ),
           timerEffect()
         )

@@ -9,8 +9,9 @@ struct GoalTimelineView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Goal timeline")
+      Text("Play-by-play")
         .font(.title2.bold())
+        .frame(maxWidth: .infinity)
 
       GoalTimelineLegend(
         teamABibColorHex: teamABibColorHex,

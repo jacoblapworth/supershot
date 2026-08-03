@@ -8,61 +8,42 @@ struct TimerView: View {
   var isShowingLastCentrePassBanner: Bool
   var isTimerRunning: Bool
   var pauseTimerTapped: () -> Void
-  var resumeTimerTapped: () -> Void
   var startTimerTapped: () -> Void
-
+  
   var body: some View {
     VStack(spacing: 16) {
-      Text(formattedTime(timeRemainingSeconds))
-        .font(.system(size: 56, weight: .bold, design: .rounded))
-        .monospacedDigit()
-        .frame(maxWidth: .infinity)
-
+      HStack {
+        Text(formattedTime(timeRemainingSeconds))
+          .font(.system(size: 56, weight: .bold, design: .rounded))
+          .monospacedDigit()
+          .foregroundStyle(.white)
+        Spacer()
+        TimerButton(type: isTimerRunning ? .pause : .play) {
+          withAnimation {
+            if isTimerRunning {
+              pauseTimerTapped()
+            } else {
+              startTimerTapped()
+            }
+          }
+        }
+        .disabled(isPeriodComplete)
+      }
+      
       ProgressView(
         value: Double(elapsedSeconds),
         total: Double(max(currentDurationSeconds, 1))
       )
-
-      if !isShowingLastCentrePassBanner || clockPhase == .breakTime {
-        HStack {
-          if isTimerRunning {
-            Button {
-              pauseTimerTapped()
-            } label: {
-              Label("Pause", systemImage: "pause.fill")
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-          } else if elapsedSeconds == 0 {
-            Button {
-              startTimerTapped()
-            } label: {
-              Label("Start", systemImage: "play.fill")
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-          } else {
-            Button {
-              resumeTimerTapped()
-            } label: {
-              Label("Resume", systemImage: "play.fill")
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(isPeriodComplete)
-          }
-        }
-        .controlSize(.large)
-      }
+      .controlSize(.large)
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    .background(.black, in: RoundedRectangle(cornerRadius: 16))
   }
-
+  
   private var timeRemainingSeconds: Int {
     max(currentDurationSeconds - elapsedSeconds, 0)
   }
-
+  
   private func formattedTime(_ seconds: Int) -> String {
     let minutes = seconds / 60
     let seconds = seconds % 60
@@ -79,7 +60,6 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: false,
     isTimerRunning: false,
     pauseTimerTapped: {},
-    resumeTimerTapped: {},
     startTimerTapped: {}
   )
   .padding()
@@ -94,7 +74,6 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: false,
     isTimerRunning: true,
     pauseTimerTapped: {},
-    resumeTimerTapped: {},
     startTimerTapped: {}
   )
   .padding()
@@ -109,7 +88,6 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: true,
     isTimerRunning: false,
     pauseTimerTapped: {},
-    resumeTimerTapped: {},
     startTimerTapped: {}
   )
   .padding()

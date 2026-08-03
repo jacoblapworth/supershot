@@ -62,7 +62,6 @@ struct ScoringView: View {
           isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
           isTimerRunning: store.isTimerRunning,
           pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
-          resumeTimerTapped: { store.send(.resumeTimerButtonTapped) },
           startTimerTapped: { store.send(.startTimerButtonTapped) }
         )
 

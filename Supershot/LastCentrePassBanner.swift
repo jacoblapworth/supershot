@@ -47,7 +47,7 @@ struct LastCentrePassBanner: View {
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
     .accessibilityElement(children: .contain)
   }
 }

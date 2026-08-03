@@ -45,7 +45,7 @@ extension SupershotTestSuite {
         return true
       }
 
-      await store.send(.resumeTimerButtonTapped) {
+      await store.send(.startTimerButtonTapped) {
         $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       }
@@ -80,7 +80,7 @@ extension SupershotTestSuite {
       state.elapsedSeconds = state.periodDurationSeconds - 1
       let store = Self.makeScoringStore(state: state, clock: clock)
 
-      await store.send(.resumeTimerButtonTapped) {
+      await store.send(.startTimerButtonTapped) {
         $0.hasTimerStartedThisPeriod = true
         $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_001)
@@ -347,7 +347,7 @@ extension SupershotTestSuite {
       state.secondBreakDurationSeconds = 300
       let store = Self.makeScoringStore(state: state, clock: clock)
 
-      await store.send(.resumeTimerButtonTapped) {
+      await store.send(.startTimerButtonTapped) {
         $0.hasTimerStartedThisPeriod = true
         $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_001)

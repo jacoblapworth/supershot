@@ -241,7 +241,7 @@ extension SupershotTestSuite {
         return true
       }
 
-      await store.send(.resumeTimerButtonTapped) {
+      await store.send(.startTimerButtonTapped) {
         $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       }

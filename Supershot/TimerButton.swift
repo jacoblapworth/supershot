@@ -54,8 +54,10 @@ struct TimerButton: View {
   var body: some View {
     Button(action: action) {
       Label(type.label, systemImage: type.systemImage)
+        .contentTransition(.symbolEffect)
     }
     .controlSize(.extraLarge)
+    .font(.largeTitle)
     .labelStyle(.iconOnly)
     .buttonStyle(.bordered)
     .buttonBorderShape(.circle)

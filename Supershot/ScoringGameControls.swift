@@ -30,16 +30,20 @@ struct ScoringGameControls: View {
           Label("Skip break", systemImage: "forward.end.fill")
             .frame(maxWidth: .infinity)
         }
+        .fontWeight(.medium)
+        .controlSize(.large)
         .buttonStyle(.bordered)
         .disabled(isShowingLastCentrePassBanner || isTransitioningPeriod)
       } else if canMoveToNextQuarter {
         Button {
           endQuarterTapped()
         } label: {
-          Label("End quarter", systemImage: "stop.circle.fill")
+          Label("End quarter", systemImage: "forward.end.fill")
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
+        .fontWeight(.medium)
+        .controlSize(.large)
+        .buttonStyle(.bordered)
       }
 
       if canFinishGame {
