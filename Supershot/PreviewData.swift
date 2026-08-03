@@ -4,8 +4,10 @@ import Foundation
 import SQLiteData
 
 extension DatabaseWriter {
-  func seedPreviewGames() throws {
+  func seedDebugExamplesIfNeeded() throws {
     try write { db in
+//      guard try Team.fetchCount(db) == 0 else { return }
+
       try db.seed {
         Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
         Team(id: UUID(2), name: "Swifts", colorHex: TeamColorPalette.red)

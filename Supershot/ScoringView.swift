@@ -147,7 +147,7 @@ struct ScoringView: View {
 #Preview("Quarter") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewQuarter))
@@ -157,7 +157,7 @@ struct ScoringView: View {
 #Preview("Quarter complete") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewQuarterComplete))
@@ -167,7 +167,7 @@ struct ScoringView: View {
 #Preview("Break") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   NavigationStack {
     ScoringView(store: scoringPreviewStore(.previewBreak))

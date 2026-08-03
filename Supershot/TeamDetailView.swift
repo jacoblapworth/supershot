@@ -41,8 +41,15 @@ struct TeamDetailView: View {
     .toolbar {
       if let team = response.team {
         ToolbarItem(placement: .primaryAction) {
-          Button("Edit", systemImage: "pencil") {
-            store.send(.editButtonTapped(team))
+          Menu {
+            Button("Edit", systemImage: "pencil") {
+              store.send(.editButtonTapped(team))
+            }
+            Button("Delete team", systemImage: "trash", role: .destructive) {
+              store.send(.deleteButtonTapped)
+            }
+          } label: {
+            Label("Team actions", systemImage: "ellipsis")
           }
         }
       }
@@ -111,7 +118,7 @@ private struct TeamDetailLoadingView: View {
 #Preview("Team detail") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   NavigationStack {
     TeamDetailView(

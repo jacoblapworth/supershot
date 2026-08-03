@@ -74,6 +74,8 @@ struct AppView: View {
   private var teamsNavigation: some View {
     NavigationStack(path: $store.scope(state: \.teamsPath, action: \.teamsPath)) {
       TeamsHomeView(
+        deleteTeamTapped: { store.send(.deleteTeamButtonTapped($0)) },
+        deletingTeamID: store.deletingTeamID,
         teamTapped: { store.send(.teamRowTapped($0)) },
         teams: teamsResponse.teams
       )
@@ -101,7 +103,7 @@ struct AppView: View {
 #Preview("Games") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   AppView(
     store: Store(initialState: AppFeature.State()) {

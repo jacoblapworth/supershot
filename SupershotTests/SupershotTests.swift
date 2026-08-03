@@ -257,6 +257,60 @@ struct SupershotTests {
   }
 
   @Test
+  func deletingTeamRemovesItsGamesAndGoalsAndEndsPresentations() async throws {
+    let seedStore = Self.makeScoringStore()
+    let database = seedStore.dependencies.defaultDatabase
+    let events = LockIsolated<[TimerSystemEvent]>([])
+    try await database.write { db in
+      try Goal.insert {
+        Goal(
+          id: UUID(4),
+          gameID: UUID(3),
+          teamID: UUID(1),
+          period: 1,
+          elapsedSeconds: 10,
+          points: 1,
+          createdAt: Date(timeIntervalSince1970: 1_000)
+        )
+      }
+      .execute(db)
+    }
+
+    let store = TestStore(initialState: AppFeature.State()) {
+      AppFeature()
+    } withDependencies: {
+      $0.defaultDatabase = database
+      $0.gameTimer = .live(system: Self.timerSystemClient(events: events))
+    }
+
+    await store.send(.deleteTeamButtonTapped(UUID(1))) {
+      $0.deletingTeamID = UUID(1)
+    }
+    await store.receive {
+      guard case let .deleteTeamResponse(teamID, .success) = $0 else {
+        return false
+      }
+      return teamID == UUID(1)
+    } assert: {
+      $0.deletingTeamID = nil
+    }
+
+    let values = try await database.read { db in
+      (
+        try Team.find(UUID(1)).fetchOne(db),
+        try Game.find(UUID(3)).fetchOne(db),
+        try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
+        try Team.find(UUID(2)).fetchOne(db)
+      )
+    }
+    expectNoDifference(values.0, nil)
+    expectNoDifference(values.1, nil)
+    expectNoDifference(values.2, [])
+    expectNoDifference(values.3?.name, "Swifts")
+    expectNoDifference(events.value, [.cancelAlarm, .endActivity])
+  }
+
+  @Test
   func setupValidationRequiresDifferentTeamNames() async {
     let state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
 

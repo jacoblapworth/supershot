@@ -24,6 +24,7 @@ struct AppFeature {
     @Presents var alarmOnboarding: AlarmOnboardingFeature.State?
     @Presents var alert: AlertState<Alert>?
     var deletingGameID: Game.ID?
+    var deletingTeamID: Team.ID?
     var hasCheckedAlarmAuthorization = false
     var loadingGameID: Game.ID?
     var loadingGameTab: Tab?
@@ -38,6 +39,8 @@ struct AppFeature {
     case deepLinkOpened(URL)
     case deleteGameButtonTapped(Game.ID)
     case deleteGameResponse(Game.ID, Result<Void, any Error>)
+    case deleteTeamButtonTapped(Team.ID)
+    case deleteTeamResponse(Team.ID, Result<Void, any Error>)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
     case path(StackActionOf<AppPath>)
@@ -99,7 +102,11 @@ struct AppFeature {
         return resumeGameEffect(gameID: gameID)
 
       case let .deleteGameButtonTapped(gameID):
-        guard state.deletingGameID == nil, state.loadingGameID == nil else {
+        guard
+          state.deletingGameID == nil,
+          state.deletingTeamID == nil,
+          state.loadingGameID == nil
+        else {
           return .none
         }
         state.alert = nil
@@ -117,8 +124,31 @@ struct AppFeature {
         state.alert = .gameDeletionFailed
         return .none
 
+      case let .deleteTeamButtonTapped(teamID):
+        guard
+          state.deletingGameID == nil,
+          state.deletingTeamID == nil,
+          state.loadingGameID == nil
+        else {
+          return .none
+        }
+        state.alert = nil
+        state.deletingTeamID = teamID
+        return deleteTeamEffect(teamID: teamID)
+
+      case let .deleteTeamResponse(teamID, .success):
+        guard state.deletingTeamID == teamID else { return .none }
+        state.deletingTeamID = nil
+        return .none
+
+      case let .deleteTeamResponse(teamID, .failure):
+        guard state.deletingTeamID == teamID else { return .none }
+        state.deletingTeamID = nil
+        state.alert = .teamDeletionFailed
+        return .none
+
       case let .gameRowTapped(game):
-        guard state.deletingGameID == nil else { return .none }
+        guard state.deletingGameID == nil, state.deletingTeamID == nil else { return .none }
         guard !game.isCompleted else {
           state.path.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -196,7 +226,7 @@ struct AppFeature {
         return .none
 
       case let .teamGameRowTapped(game):
-        guard state.deletingGameID == nil else { return .none }
+        guard state.deletingGameID == nil, state.deletingTeamID == nil else { return .none }
         guard !game.isCompleted else {
           state.teamsPath.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -224,6 +254,23 @@ struct AppFeature {
         let gameID = gameDetail.gameID
         state.teamsPath.pop(from: id)
         return .send(.deleteGameButtonTapped(gameID))
+
+      case let .teamsPath(
+        .element(id: id, action: .teamDetail(.delegate(.deleteTeamButtonTapped)))
+      ):
+        guard
+          state.deletingGameID == nil,
+          state.deletingTeamID == nil,
+          state.loadingGameID == nil
+        else {
+          return .none
+        }
+        guard case let .teamDetail(teamDetail) = state.teamsPath[id: id] else {
+          return .none
+        }
+        let teamID = teamDetail.teamID
+        state.teamsPath.pop(from: id)
+        return .send(.deleteTeamButtonTapped(teamID))
 
       case let .teamsPath(
         .element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))
@@ -289,6 +336,26 @@ struct AppFeature {
     }
   }
 
+  private func deleteTeamEffect(teamID: Team.ID) -> Effect<Action> {
+    .run { send in
+      let result = await Result {
+        let gameIDs = try await database.read { db in
+          try Game
+            .where { $0.teamAID.eq(teamID) || $0.teamBID.eq(teamID) }
+            .fetchAll(db)
+            .map(\.id)
+        }
+        for gameID in gameIDs {
+          await gameTimer.endPresentation(gameID)
+        }
+        try await database.write { db in
+          try Team.find(teamID).delete().execute(db)
+        }
+      }
+      await send(.deleteTeamResponse(teamID, result))
+    }
+  }
+
   private func gameID(from url: URL) -> Game.ID? {
     guard url.scheme == "supershot", url.host == "game" else { return nil }
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
@@ -311,6 +378,18 @@ extension AlertState where Action == AppFeature.Alert {
   static var gameDeletionFailed: Self {
     Self {
       TextState("Couldn’t delete game")
+    } actions: {
+      ButtonState(role: .cancel, action: .dismissButtonTapped) {
+        TextState("OK")
+      }
+    } message: {
+      TextState("Try again.")
+    }
+  }
+
+  static var teamDeletionFailed: Self {
+    Self {
+      TextState("Couldn’t delete team")
     } actions: {
       ButtonState(role: .cancel, action: .dismissButtonTapped) {
         TextState("OK")

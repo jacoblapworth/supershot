@@ -47,7 +47,7 @@ struct GameDetailView: View {
 #Preview("Completed game") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedPreviewGames()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
   NavigationStack {
     GameDetailView(

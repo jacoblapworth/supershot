@@ -2,6 +2,8 @@ import Dependencies
 import SwiftUI
 
 struct TeamsHomeView: View {
+  var deleteTeamTapped: (Team.ID) -> Void
+  var deletingTeamID: Team.ID?
   var teamTapped: (TeamListItem) -> Void
   var teams: [TeamListItem]
 
@@ -22,6 +24,12 @@ struct TeamsHomeView: View {
             TeamRow(team: team)
           }
           .buttonStyle(.plain)
+          .disabled(deletingTeamID != nil)
+          .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button("Delete", systemImage: "trash", role: .destructive) {
+              deleteTeamTapped(team.id)
+            }
+          }
         }
       }
     }
@@ -62,13 +70,20 @@ private struct TeamRow: View {
 
 #Preview("Empty teams") {
   NavigationStack {
-    TeamsHomeView(teamTapped: { _ in }, teams: [])
+    TeamsHomeView(
+      deleteTeamTapped: { _ in },
+      deletingTeamID: nil,
+      teamTapped: { _ in },
+      teams: []
+    )
   }
 }
 
 #Preview("Teams") {
   NavigationStack {
     TeamsHomeView(
+      deleteTeamTapped: { _ in },
+      deletingTeamID: nil,
       teamTapped: { _ in },
       teams: [
         TeamListItem(

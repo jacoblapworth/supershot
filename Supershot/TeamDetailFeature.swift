@@ -10,12 +10,14 @@ struct TeamDetailFeature {
   }
 
   enum Action {
+    case deleteButtonTapped
     case delegate(Delegate)
     case editButtonTapped(Team)
     case editor(PresentationAction<TeamEditorFeature.Action>)
     case gameRowTapped(GameListItem)
 
     enum Delegate: Equatable {
+      case deleteTeamButtonTapped
       case gameRowTapped(GameListItem)
     }
   }
@@ -23,6 +25,9 @@ struct TeamDetailFeature {
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case .deleteButtonTapped:
+        return .send(.delegate(.deleteTeamButtonTapped))
+
       case .delegate:
         return .none
 

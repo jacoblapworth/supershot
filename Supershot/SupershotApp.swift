@@ -6,6 +6,9 @@ import ComposableArchitecture
   init() {
     try! prepareDependencies {
       try $0.bootstrapDatabase()
+#if DEBUG
+      try $0.defaultDatabase.seedDebugExamplesIfNeeded()
+#endif
     }
   }
 
