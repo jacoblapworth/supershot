@@ -50,7 +50,6 @@ nonisolated struct Team: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
   var colorHex: String
   var name: String
-  var normalizedName: String
 }
 
 extension Team {
@@ -64,13 +63,6 @@ extension Team {
       ? colorHex.uppercased()
       : TeamColorPalette.blue
     self.name = Self.trimmedName(name)
-    self.normalizedName = Self.normalizeName(name)
-  }
-
-  nonisolated static func normalizeName(_ name: String) -> String {
-    trimmedName(name)
-      .folding(options: [.caseInsensitive], locale: Locale(identifier: "en_US_POSIX"))
-      .precomposedStringWithCanonicalMapping
   }
 
   nonisolated static func trimmedName(_ name: String) -> String {
@@ -96,17 +88,11 @@ nonisolated func uuid() -> UUID {
   return uuid()
 }
 
-@DatabaseFunction
-nonisolated func normalizedTeamName(_ name: String) -> String {
-  Team.normalizeName(name)
-}
-
 extension DependencyValues {
   nonisolated mutating func bootstrapDatabase() throws {
     var configuration = Configuration()
     configuration.prepareDatabase { db in
       db.add(function: $uuid)
-      db.add(function: $normalizedTeamName)
     }
 
     let database = try SQLiteData.defaultDatabase(configuration: configuration)
@@ -122,10 +108,11 @@ extension DependencyValues {
     migrator.eraseDatabaseOnSchemaChange = true
 #endif
 
-    migrator.registerMigration("Create initial tables") { db in
+    migrator.registerMigration("Create schema") { db in
       try #sql("""
         CREATE TABLE "teams"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
+          "colorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF',
           "name" TEXT NOT NULL
         ) STRICT
         """)
@@ -137,8 +124,20 @@ extension DependencyValues {
           "startedAt" TEXT NOT NULL,
           "endedAt" TEXT,
           "teamAID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
+          "teamABibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF',
           "teamBID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
-          "periodDurationSeconds" INTEGER NOT NULL
+          "teamBBibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#FF3B30',
+          "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE CASCADE,
+          "periodDurationSeconds" INTEGER NOT NULL,
+          "firstBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "halfTimeDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "secondBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "isInBreak" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "currentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 1,
+          "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "hasTimerStartedCurrentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "timerEndsAt" TEXT
         ) STRICT
         """)
       .execute(db)
@@ -147,6 +146,7 @@ extension DependencyValues {
         CREATE TABLE "goals"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
           "gameID" TEXT NOT NULL REFERENCES "games"("id") ON DELETE CASCADE,
+          "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE SET NULL,
           "teamID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "period" INTEGER NOT NULL,
           "elapsedSeconds" INTEGER NOT NULL,
@@ -155,264 +155,39 @@ extension DependencyValues {
         ) STRICT
         """)
       .execute(db)
-    }
-
-    migrator.registerMigration("Create foreign key indexes") { db in
       try #sql(
         """
-        CREATE INDEX IF NOT EXISTS "idx_games_teamAID"
+        CREATE INDEX "idx_games_teamAID"
         ON "games"("teamAID")
         """
       )
       .execute(db)
       try #sql(
         """
-        CREATE INDEX IF NOT EXISTS "idx_games_teamBID"
+        CREATE INDEX "idx_games_teamBID"
         ON "games"("teamBID")
         """
       )
       .execute(db)
       try #sql(
         """
-        CREATE INDEX IF NOT EXISTS "idx_goals_gameID"
+        CREATE INDEX "idx_goals_gameID"
         ON "goals"("gameID")
         """
       )
       .execute(db)
       try #sql(
         """
-        CREATE INDEX IF NOT EXISTS "idx_goals_gameID_createdAt"
+        CREATE INDEX "idx_goals_gameID_createdAt"
         ON "goals"("gameID", "createdAt")
         """
       )
       .execute(db)
     }
 
-    migrator.registerMigration("Add resumable game progress") { db in
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "currentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 1
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "hasTimerStartedCurrentPeriod" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Add centre pass tracking") { db in
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE CASCADE
-        """
-      )
-      .execute(db)
-
-      try #sql(
-        """
-        UPDATE "games"
-        SET "centrePassTeamID" = "teamAID"
-        WHERE "centrePassTeamID" IS NULL
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Add per-break game timing") { db in
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "firstBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "halfTimeDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "secondBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "isInBreak" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Add reusable team profiles") { db in
-      try #sql(
-        """
-        ALTER TABLE "teams"
-        ADD COLUMN "colorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF'
-        """
-      )
-      .execute(db)
-      try #sql(
-        """
-        ALTER TABLE "teams"
-        ADD COLUMN "normalizedName" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT ''
-        """
-      )
-      .execute(db)
-
-      let teams = try Team.fetchAll(db)
-      let groups = Dictionary(grouping: teams) {
-        Team.normalizeName($0.name)
-      }
-
-      for (normalizedName, group) in groups {
-        let sorted = group.sorted { $0.id.uuidString < $1.id.uuidString }
-        guard let survivor = sorted.first else { continue }
-
-        for duplicate in sorted.dropFirst() {
-          try Game
-            .where { $0.teamAID.eq(duplicate.id) }
-            .update { $0.teamAID = #bind(survivor.id) }
-            .execute(db)
-          try Game
-            .where { $0.teamBID.eq(duplicate.id) }
-            .update { $0.teamBID = #bind(survivor.id) }
-            .execute(db)
-          try Game
-            .where { $0.centrePassTeamID.eq(duplicate.id) }
-            .update { $0.centrePassTeamID = #bind(survivor.id) }
-            .execute(db)
-          try Goal
-            .where { $0.teamID.eq(duplicate.id) }
-            .update { $0.teamID = #bind(survivor.id) }
-            .execute(db)
-          try Team.find(duplicate.id).delete().execute(db)
-        }
-
-        let trimmedName = Team.trimmedName(survivor.name)
-        try Team.find(survivor.id).update {
-          $0.name = #bind(trimmedName)
-          $0.normalizedName = #bind(normalizedName)
-        }
-        .execute(db)
-      }
-
-      let remainingTeams = try Team
-        .order { ($0.normalizedName, $0.id) }
-        .fetchAll(db)
-      for (index, team) in remainingTeams.enumerated() {
-        let colorHex = TeamColorPalette.options[index % TeamColorPalette.options.count].hex
-        try Team.find(team.id).update {
-          $0.colorHex = #bind(colorHex)
-        }
-        .execute(db)
-      }
-
-      try #sql(
-        """
-        CREATE UNIQUE INDEX "idx_teams_normalizedName"
-        ON "teams"("normalizedName")
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Persist centre pass confirmation") { db in
-      try #sql(
-        """
-        ALTER TABLE "games"
-        ADD COLUMN "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Add running timer end date") { db in
-      try migrateAddRunningTimerEndDate(db)
-    }
-
-    migrator.registerMigration("Record goal centre pass team") { db in
-      try #sql(
-        """
-        ALTER TABLE "goals"
-        ADD COLUMN "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE SET NULL
-        """
-      )
-      .execute(db)
-    }
-
-    migrator.registerMigration("Add per-game bib colors") { db in
-      try migrateAddPerGameBibColors(db)
-    }
-
     try migrator.migrate(database)
     defaultDatabase = database
   }
-}
-
-nonisolated func migrateAddRunningTimerEndDate(_ db: Database) throws {
-  try #sql(
-    """
-    ALTER TABLE "games"
-    ADD COLUMN "timerEndsAt" TEXT
-    """
-  )
-  .execute(db)
-}
-
-nonisolated func migrateAddPerGameBibColors(_ db: Database) throws {
-  try #sql(
-    """
-    ALTER TABLE "games"
-    ADD COLUMN "teamABibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF'
-    """
-  )
-  .execute(db)
-  try #sql(
-    """
-    ALTER TABLE "games"
-    ADD COLUMN "teamBBibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#FF3B30'
-    """
-  )
-  .execute(db)
-  try #sql(
-    """
-    UPDATE "games"
-    SET "teamABibColorHex" = COALESCE(
-      (SELECT "colorHex" FROM "teams" WHERE "teams"."id" = "games"."teamAID"),
-      '#007AFF'
-    )
-    """
-  )
-  .execute(db)
-  try #sql(
-    """
-    UPDATE "games"
-    SET "teamBBibColorHex" = COALESCE(
-      (SELECT "colorHex" FROM "teams" WHERE "teams"."id" = "games"."teamBID"),
-      '#FF3B30'
-    )
-    """
-  )
-  .execute(db)
 }
 
 nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")

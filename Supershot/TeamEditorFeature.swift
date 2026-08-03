@@ -117,12 +117,6 @@ struct TeamEditorFeature {
         return .run { send in
           let result = await Result {
             try await database.write { db in
-              let teams = try Team.fetchAll(db)
-              guard !teams.contains(where: {
-                $0.id != savedTeam.id && $0.normalizedName == savedTeam.normalizedName
-              }) else {
-                throw TeamEditorPersistenceError.duplicateName
-              }
               if isCreating {
                 try Team.insert { savedTeam }.execute(db)
               } else {
@@ -132,7 +126,6 @@ struct TeamEditorFeature {
                 try Team.find(savedTeam.id).update {
                   $0.colorHex = #bind(savedTeam.colorHex)
                   $0.name = #bind(savedTeam.name)
-                  $0.normalizedName = #bind(savedTeam.normalizedName)
                 }
                 .execute(db)
               }
@@ -148,8 +141,6 @@ struct TeamEditorFeature {
       case let .saveResponse(.failure(error)):
         state.isSaving = false
         switch error as? TeamEditorPersistenceError {
-        case .duplicateName:
-          state.errorMessage = "Team names must be unique."
         case .teamUnavailable:
           state.errorMessage = "This team is no longer available."
         case nil:
@@ -162,6 +153,5 @@ struct TeamEditorFeature {
 }
 
 private enum TeamEditorPersistenceError: Error {
-  case duplicateName
   case teamUnavailable
 }

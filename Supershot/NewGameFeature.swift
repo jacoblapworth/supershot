@@ -290,7 +290,6 @@ struct NewGameFeature {
         && TeamColorPalette.isValid(rightTeam.bibColorHex)
         && activeTeamSide == nil
         && firstCentrePass != nil
-        && hasUniqueTeamNames
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
         && !isLoadingTeams
@@ -330,31 +329,17 @@ struct NewGameFeature {
         || rightTeam.selection?.hasSharedChanges == true
     }
 
-    var hasUniqueTeamNames: Bool {
+    var hasDifferentSelectedTeams: Bool {
       guard
         let leftSelection = leftTeam.selection,
-        let rightSelection = rightTeam.selection,
-        !leftSelection.draft.trimmedName.isEmpty,
-        !rightSelection.draft.trimmedName.isEmpty
+        let rightSelection = rightTeam.selection
       else { return false }
 
-      if
+      guard
         let leftID = leftSelection.existingID,
-        let rightID = rightSelection.existingID,
-        leftID == rightID
-      {
-        return false
-      }
-
-      let selectedExistingIDs = Set(
-        [leftSelection.existingID, rightSelection.existingID].compactMap { $0 }
-      )
-      var names = availableTeams
-        .filter { !selectedExistingIDs.contains($0.id) }
-        .map(\.normalizedName)
-      names.append(Team.normalizeName(leftSelection.draft.name))
-      names.append(Team.normalizeName(rightSelection.draft.name))
-      return Set(names).count == names.count
+        let rightID = rightSelection.existingID
+      else { return true }
+      return leftID != rightID
     }
 
     var teamNameErrorMessage: String? {
@@ -371,7 +356,7 @@ struct NewGameFeature {
       {
         return "Choose two different teams."
       }
-      return hasUniqueTeamNames ? nil : "Team names must be unique."
+      return hasDifferentSelectedTeams ? nil : "Choose two different teams."
     }
 
     var teamUpdateMessage: String {
@@ -515,8 +500,8 @@ struct NewGameFeature {
             state.errorMessage = "Choose both teams."
             return .none
           }
-          guard state.hasUniqueTeamNames else {
-            state.errorMessage = state.teamNameErrorMessage ?? "Team names must be unique."
+          guard state.hasDifferentSelectedTeams else {
+            state.errorMessage = state.teamNameErrorMessage ?? "Choose two different teams."
             return .none
           }
           guard
@@ -546,8 +531,8 @@ struct NewGameFeature {
           return .send(.delegate(.gameStarted(scoring)))
 
         case let .startGameResponse(.failure(error)):
-          if case .duplicateTeamName = error as? SetupPersistenceError {
-            state.errorMessage = "Team names must be unique."
+          if case .duplicateTeam = error as? SetupPersistenceError {
+            state.errorMessage = "Choose two different teams."
           } else {
             state.errorMessage = "Could not start the game. Please choose the teams again."
           }
@@ -576,7 +561,7 @@ struct NewGameFeature {
           return .run { send in
             let result = await Result {
               try await database.read { db in
-                try Team.order { ($0.normalizedName, $0.id) }.fetchAll(db)
+                try Team.order { ($0.name, $0.id) }.fetchAll(db)
               }
             }
             await send(.teamsResponse(result))
@@ -660,7 +645,7 @@ struct NewGameFeature {
       let result = await Result {
         try await database.write { db in
           guard teamA.id != teamB.id else {
-            throw SetupPersistenceError.duplicateTeamName
+            throw SetupPersistenceError.duplicateTeam
           }
 
           var finalTeams = try Team.fetchAll(db)
@@ -670,32 +655,6 @@ struct NewGameFeature {
               throw SetupPersistenceError.teamUnavailable
             }
           }
-          let editedIDs = Set([teamA.existingID, teamB.existingID].compactMap { $0 })
-          finalTeams.removeAll { editedIDs.contains($0.id) }
-          finalTeams.append(
-            Team(id: teamA.id, name: teamA.draft.name, colorHex: teamA.draft.teamColorHex)
-          )
-          finalTeams.append(
-            Team(id: teamB.id, name: teamB.draft.name, colorHex: teamB.draft.teamColorHex)
-          )
-          let normalizedNames = finalTeams.map(\.normalizedName)
-          guard Set(normalizedNames).count == normalizedNames.count else {
-            throw SetupPersistenceError.duplicateTeamName
-          }
-
-          var occupiedNormalizedNames = Set(finalTeams.map(\.normalizedName))
-          for (index, team) in [teamA, teamB].enumerated() where team.existingID != nil {
-            var temporaryNormalizedName = "__supershot_pending__\(gameID.uuidString.lowercased())-\(index)"
-            while occupiedNormalizedNames.contains(temporaryNormalizedName) {
-              temporaryNormalizedName.append("_")
-            }
-            occupiedNormalizedNames.insert(temporaryNormalizedName)
-            try Team.find(team.id).update {
-              $0.normalizedName = #bind(temporaryNormalizedName)
-            }
-            .execute(db)
-          }
-
           for team in [teamA, teamB] {
             let savedTeam = Team(
               id: team.id,
@@ -706,7 +665,6 @@ struct NewGameFeature {
               try Team.find(team.id).update {
                 $0.colorHex = #bind(savedTeam.colorHex)
                 $0.name = #bind(savedTeam.name)
-                $0.normalizedName = #bind(savedTeam.normalizedName)
               }
               .execute(db)
             } else {
@@ -781,6 +739,6 @@ extension ConfirmationDialogState where Action == NewGameFeature.ConfirmationDia
 }
 
 private nonisolated enum SetupPersistenceError: Error {
-  case duplicateTeamName
+  case duplicateTeam
   case teamUnavailable
 }

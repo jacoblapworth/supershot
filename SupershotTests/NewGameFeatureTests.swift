@@ -11,16 +11,11 @@ extension SupershotTestSuite {
   @MainActor
   @Suite struct NewGameFeatureTests {
     @Test
-    func setupValidationRequiresDifferentTeamNames() async {
-      let state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
+    func setupAllowsMatchingTeamNames() {
+      var state = Self.setupState(leftName: "Ravens", rightName: "Ravens")
+      state.firstCentrePass = .teamA
 
-      let store = TestStore(initialState: state) {
-        NewGameFeature()
-      }
-
-      await store.send(.startGameButtonTapped) {
-        $0.errorMessage = "Team names must be unique."
-      }
+      expectNoDifference(state.canStartGame, true)
     }
 
     @Test
@@ -88,7 +83,6 @@ extension SupershotTestSuite {
       }
 
       expectNoDifference(teams.map { $0.name }, ["Ravens", "Swifts"])
-      expectNoDifference(teams.map { $0.normalizedName }, ["ravens", "swifts"])
       expectNoDifference(teams.map { $0.colorHex }, [TeamColorPalette.blue, TeamColorPalette.red])
       expectNoDifference(games.count, 1)
       expectNoDifference(games.first?.startedAt, startedAt)
@@ -170,10 +164,8 @@ extension SupershotTestSuite {
         )
       }
       expectNoDifference(values.0?.name, "Swifts")
-      expectNoDifference(values.0?.normalizedName, "swifts")
       expectNoDifference(values.0?.colorHex, "#34C759")
       expectNoDifference(values.1?.name, "Ravens")
-      expectNoDifference(values.1?.normalizedName, "ravens")
       expectNoDifference(values.1?.colorHex, "#FF9500")
       expectNoDifference(values.2?.teamAID, ravens.id)
       expectNoDifference(values.2?.teamBID, swifts.id)

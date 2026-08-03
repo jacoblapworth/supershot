@@ -121,9 +121,11 @@ struct TeamSlotPanel: View {
   }
 
   private var filteredTeams: [Team] {
-    let query = Team.normalizeName(store.searchText)
+    let query = Team.trimmedName(store.searchText)
     guard !query.isEmpty else { return teams }
-    return teams.filter { $0.normalizedName.contains(query) }
+    return teams.filter {
+      $0.name.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+    }
   }
 }
 

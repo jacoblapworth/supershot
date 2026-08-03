@@ -96,7 +96,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func teamEditorRejectsDuplicateNormalizedName() async throws {
+    func teamEditorAllowsDuplicateNames() async throws {
       let ravens = Team(id: UUID(-1), name: "Ravens")
       let swifts = Team(id: UUID(-2), name: "Swifts")
       let store = TestStore(initialState: TeamEditorFeature.State(team: ravens)) {
@@ -122,17 +122,20 @@ extension SupershotTestSuite {
         $0.name = "SWIFTS"
       }
       await store.receive {
-        guard case .saveResponse(.failure) = $0 else { return false }
+        guard case .saveResponse(.success) = $0 else { return false }
         return true
       } assert: {
-        $0.errorMessage = "Team names must be unique."
         $0.isSaving = false
+      }
+      await store.receive {
+        guard case .delegate(.saved) = $0 else { return false }
+        return true
       }
 
       let savedTeam = try await store.dependencies.defaultDatabase.read { db in
         try Team.find(ravens.id).fetchOne(db)
       }
-      expectNoDifference(savedTeam, ravens)
+      expectNoDifference(savedTeam?.name, "SWIFTS")
     }
 
     @Test

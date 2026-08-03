@@ -232,7 +232,7 @@ nonisolated struct TeamsRequest: FetchKeyRequest {
   func fetch(_ db: Database) throws -> Value {
     let games = try Game.fetchAll(db)
     let teams = try Team
-      .order { ($0.normalizedName, $0.id) }
+      .order { ($0.name, $0.id) }
       .fetchAll(db)
     let gameCounts = games.reduce(into: [Team.ID: Int]()) { counts, game in
       for teamID in Set([game.teamAID, game.teamBID]) {

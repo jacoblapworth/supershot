@@ -54,7 +54,7 @@ struct ScoringView: View {
           )
         }
 
-        ScoringTimerView(
+        TimerView(
           clockPhase: store.clockPhase,
           currentDurationSeconds: store.currentDurationSeconds,
           elapsedSeconds: store.elapsedSeconds,
