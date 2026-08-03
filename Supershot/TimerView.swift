@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ScoringTimerView: View {
+struct TimerView: View {
   var clockPhase: ScoringFeature.ClockPhase
   var currentDurationSeconds: Int
   var elapsedSeconds: Int
@@ -71,7 +71,7 @@ struct ScoringTimerView: View {
 }
 
 #Preview("Timer not started") {
-  ScoringTimerView(
+  TimerView(
     clockPhase: .quarter,
     currentDurationSeconds: 900,
     elapsedSeconds: 0,
@@ -86,7 +86,7 @@ struct ScoringTimerView: View {
 }
 
 #Preview("Timer running") {
-  ScoringTimerView(
+  TimerView(
     clockPhase: .quarter,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
@@ -101,7 +101,7 @@ struct ScoringTimerView: View {
 }
 
 #Preview("Timer complete") {
-  ScoringTimerView(
+  TimerView(
     clockPhase: .quarter,
     currentDurationSeconds: 900,
     elapsedSeconds: 900,

@@ -6,8 +6,7 @@ import WidgetKit
 struct GameLiveActivity: Widget {
   var body: some WidgetConfiguration {
     ActivityConfiguration(for: GameActivityAttributes.self) { context in
-      LockScreenGameView(context: context)
-        .padding()
+      ActivityGameView(context: context)
         .activityBackgroundTint(.black.opacity(0.86))
         .activitySystemActionForegroundColor(.white)
         .widgetURL(context.attributes.gameURL)
@@ -16,6 +15,7 @@ struct GameLiveActivity: Widget {
         DynamicIslandExpandedRegion(.leading) {
           teamScore(
             colorHex: context.attributes.teamAColorHex,
+            centrePassDirection: .leading,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
             name: context.attributes.teamAName,
             score: context.state.teamAScore
@@ -24,6 +24,7 @@ struct GameLiveActivity: Widget {
         DynamicIslandExpandedRegion(.trailing) {
           teamScore(
             colorHex: context.attributes.teamBColorHex,
+            centrePassDirection: .trailing,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
             name: context.attributes.teamBName,
             score: context.state.teamBScore
@@ -71,18 +72,21 @@ struct GameLiveActivity: Widget {
 
   private func teamScore(
     colorHex: String,
+    centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
     score: Int
   ) -> some View {
     VStack(spacing: 2) {
       HStack(spacing: 3) {
-        if isCentrePassTeam {
-          Image(systemName: "arrow.right.circle.fill")
-            .accessibilityLabel("Current centre pass")
+        if isCentrePassTeam, centrePassDirection == .trailing {
+          CentrePassIndicator(direction: centrePassDirection)
         }
         Text(name)
           .lineLimit(1)
+        if isCentrePassTeam, centrePassDirection == .leading {
+          CentrePassIndicator(direction: centrePassDirection)
+        }
       }
       .font(.caption2.weight(.semibold))
       Text("\(score)")
@@ -94,6 +98,90 @@ struct GameLiveActivity: Widget {
   }
 }
 
+private struct ActivityGameView: View {
+  let context: ActivityViewContext<GameActivityAttributes>
+  @Environment(\.activityFamily) private var activityFamily
+
+  var body: some View {
+    Group {
+      switch activityFamily {
+      case .small:
+        SmallActivityGameView(context: context)
+      case .medium:
+        LockScreenGameView(context: context)
+      @unknown default:
+        fatalError("Widget only supports small and medium activity families")
+      }
+    }
+    .padding(activityFamily == .small ? 8 : 16)
+  }
+}
+
+private struct SmallActivityGameView: View {
+  let context: ActivityViewContext<GameActivityAttributes>
+
+  var body: some View {
+    VStack(spacing: 6) {
+      HStack(spacing: 8) {
+        team(
+          colorHex: context.attributes.teamAColorHex,
+          centrePassDirection: .leading,
+          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
+          name: context.attributes.teamAName,
+          score: context.state.teamAScore
+        )
+        Text("–")
+          .font(.headline.weight(.bold))
+          .foregroundStyle(.secondary)
+        team(
+          colorHex: context.attributes.teamBColorHex,
+          centrePassDirection: .trailing,
+          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
+          name: context.attributes.teamBName,
+          score: context.state.teamBScore
+        )
+      }
+
+      HStack(spacing: 6) {
+        Text(context.state.isInBreak ? "Break" : "Q\(context.state.period)")
+          .foregroundStyle(.secondary)
+        TimerText(state: context.state, isStale: context.isStale)
+      }
+      .font(.caption.weight(.semibold))
+    }
+    .foregroundStyle(.white)
+  }
+
+  private func team(
+    colorHex: String,
+    centrePassDirection: Edge,
+    isCentrePassTeam: Bool,
+    name: String,
+    score: Int
+  ) -> some View {
+    VStack(spacing: 1) {
+      HStack(spacing: 2) {
+        if isCentrePassTeam, centrePassDirection == .trailing {
+          CentrePassIndicator(direction: centrePassDirection)
+        }
+        Text(name)
+          .lineLimit(1)
+          .minimumScaleFactor(0.6)
+        if isCentrePassTeam, centrePassDirection == .leading {
+          CentrePassIndicator(direction: centrePassDirection)
+        }
+      }
+      .font(.caption2.weight(.semibold))
+
+      Text("\(score)")
+        .font(.title2.bold())
+        .monospacedDigit()
+        .foregroundStyle(Color(teamHex: colorHex))
+    }
+    .frame(maxWidth: .infinity)
+  }
+}
+
 private struct LockScreenGameView: View {
   let context: ActivityViewContext<GameActivityAttributes>
 
@@ -102,6 +190,7 @@ private struct LockScreenGameView: View {
       HStack(alignment: .firstTextBaseline) {
         team(
           colorHex: context.attributes.teamAColorHex,
+          centrePassDirection: .leading,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
           score: context.state.teamAScore,
@@ -112,6 +201,7 @@ private struct LockScreenGameView: View {
           .foregroundStyle(.secondary)
         team(
           colorHex: context.attributes.teamBColorHex,
+          centrePassDirection: .trailing,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
           score: context.state.teamBScore,
@@ -142,6 +232,7 @@ private struct LockScreenGameView: View {
 
   private func team(
     colorHex: String,
+    centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
     score: Int,
@@ -149,13 +240,15 @@ private struct LockScreenGameView: View {
   ) -> some View {
     VStack(alignment: alignment, spacing: 3) {
       HStack(spacing: 4) {
-        if isCentrePassTeam {
-          Image(systemName: "arrow.right.circle.fill")
-            .accessibilityLabel("Current centre pass")
+        if isCentrePassTeam, centrePassDirection == .trailing {
+          CentrePassIndicator(direction: centrePassDirection)
         }
         Text(name)
           .lineLimit(2)
           .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
+        if isCentrePassTeam, centrePassDirection == .leading {
+          CentrePassIndicator(direction: centrePassDirection)
+        }
       }
       .font(.headline)
       Text("\(score)")
@@ -167,6 +260,19 @@ private struct LockScreenGameView: View {
       maxWidth: .infinity,
       alignment: alignment == .leading ? .leading : .trailing
     )
+  }
+}
+
+private struct CentrePassIndicator: View {
+  var direction: Edge
+
+  var body: some View {
+    Image(
+      systemName: direction == .leading
+        ? "arrow.left.circle.fill"
+        : "arrow.right.circle.fill"
+    )
+    .accessibilityLabel("Current centre pass")
   }
 }
 
