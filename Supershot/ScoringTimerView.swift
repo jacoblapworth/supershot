@@ -52,6 +52,7 @@ struct ScoringTimerView: View {
             .disabled(isPeriodComplete)
           }
         }
+        .controlSize(.large)
       }
     }
     .padding()

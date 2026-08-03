@@ -40,51 +40,6 @@ struct CentrePassControl: View {
   }
 }
 
-struct LastCentrePassBanner: View {
-  var centrePassTeam: ScoringFeature.Team
-  var isTransitioningPeriod: Bool
-  var period: Int
-  var lastCentrePassNotTakenTapped: () -> Void
-  var lastCentrePassTakenTapped: () -> Void
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      Label("Quarter \(period) complete", systemImage: "flag.checkered")
-        .font(.headline)
-
-      HStack(spacing: 8) {
-        Circle()
-          .fill(Color(teamHex: centrePassTeam.bibColorHex))
-          .frame(width: 12, height: 12)
-          .accessibilityHidden(true)
-        Text("Did **\(centrePassTeam.name)** take the last centre pass?")
-      }
-
-      HStack(spacing: 10) {
-        Button("No, not taken", action: lastCentrePassNotTakenTapped)
-          .buttonStyle(.bordered)
-
-        Button("Yes, pass taken", action: lastCentrePassTakenTapped)
-          .buttonStyle(.borderedProminent)
-      }
-      .disabled(isTransitioningPeriod)
-
-      if isTransitioningPeriod {
-        ProgressView("Saving quarter…")
-          .font(.caption)
-      }
-    }
-    .padding()
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
-    .overlay {
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(Color.accentColor, lineWidth: 1)
-    }
-    .accessibilityElement(children: .contain)
-  }
-}
-
 private struct CentrePassButton: View {
   var colorHex: String
   var isSelected: Bool
@@ -132,24 +87,3 @@ private struct CentrePassButton: View {
   .padding()
 }
 
-#Preview("Last centre pass") {
-  LastCentrePassBanner(
-    centrePassTeam: .previewSwifts,
-    isTransitioningPeriod: false,
-    period: 2,
-    lastCentrePassNotTakenTapped: {},
-    lastCentrePassTakenTapped: {}
-  )
-  .padding()
-}
-
-#Preview("Saving quarter") {
-  LastCentrePassBanner(
-    centrePassTeam: .previewSwifts,
-    isTransitioningPeriod: true,
-    period: 2,
-    lastCentrePassNotTakenTapped: {},
-    lastCentrePassTakenTapped: {}
-  )
-  .padding()
-}
