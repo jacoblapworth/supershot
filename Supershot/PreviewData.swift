@@ -6,7 +6,7 @@ import SQLiteData
 extension DatabaseWriter {
   func seedDebugExamplesIfNeeded() throws {
     try write { db in
-//      guard try Team.fetchCount(db) == 0 else { return }
+      guard try Team.fetchCount(db) == 0 else { return }
 
       try db.seed {
         Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
