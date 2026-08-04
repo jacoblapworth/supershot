@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 121C048F302213DA00ED9B54 /* RevenueCat */; };
+		121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 121C0491302213DA00ED9B54 /* RevenueCatUI */; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
 		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
 		12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60A301E25CB00094D7C /* DependenciesMacros */; };
@@ -105,7 +107,9 @@
 			files = (
 				12715897300D144600B14CCB /* Sharing in Frameworks */,
 				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
+				121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */,
 				12A4C612301E295800094D7C /* ComposableArchitecture in Frameworks */,
+				121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */,
 				12A4C610301E295200094D7C /* SQLiteData in Frameworks */,
 				12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */,
 				12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */,
@@ -184,6 +188,8 @@
 				12A4C60F301E295200094D7C /* SQLiteData */,
 				12A4C611301E295800094D7C /* ComposableArchitecture */,
 				12A4C613301E296700094D7C /* SwiftUINavigation */,
+				121C048F302213DA00ED9B54 /* RevenueCat */,
+				121C0491302213DA00ED9B54 /* RevenueCatUI */,
 			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Supershot.app */;
@@ -271,6 +277,7 @@
 				12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */,
 				12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */,
+				121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -707,6 +714,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.83.0;
+			};
+		};
 		1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
@@ -764,6 +779,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		121C048F302213DA00ED9B54 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		121C0491302213DA00ED9B54 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
 		12715896300D144600B14CCB /* Sharing */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */;
