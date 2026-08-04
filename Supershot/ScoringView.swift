@@ -61,12 +61,14 @@ struct ScoringView: View {
           isPeriodComplete: store.isPeriodComplete,
           isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
           isTimerRunning: store.isTimerRunning,
+          period: store.period,
           pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
+          skipBreakTapped: { store.send(.skipBreakButtonTapped) },
           startTimerTapped: { store.send(.startTimerButtonTapped) }
         )
 
         ScoringGameControls(
-          canContinueToNextQuarter: store.canContinueToNextQuarter,
+          canContinueToNextQuarter: false,
           canFinishGame: store.canFinishGame,
           canMoveToNextQuarter: store.canMoveToNextQuarter,
           clockPhase: store.clockPhase,

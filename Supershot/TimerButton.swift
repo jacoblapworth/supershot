@@ -53,8 +53,11 @@ struct TimerButton: View {
   
   var body: some View {
     Button(action: action) {
-      Label(type.label, systemImage: type.systemImage)
-        .contentTransition(.symbolEffect)
+      ZStack {
+//        CircularProgressView(value: 60, total: 120)
+        Label(type.label, systemImage: type.systemImage)
+          .contentTransition(.symbolEffect)
+      }
     }
     .controlSize(.extraLarge)
     .font(.largeTitle)
