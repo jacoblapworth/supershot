@@ -34,6 +34,10 @@ struct GameStatisticsView: View {
 
         Divider()
 
+        GoalProgressChartView(detail: detail)
+
+        Divider()
+
         StatisticComparisonRow(
           teamAName: detail.teamAName,
           teamAValue: averageTimeToGoal(detail.statistics.teamA),

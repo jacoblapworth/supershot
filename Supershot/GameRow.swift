@@ -50,7 +50,7 @@ struct GameRow: View {
       .font(.caption.weight(.semibold))
     }
     .padding(.vertical, 8)
-    .contentShape(Rectangle())
+//    .contentShape(Rectangle())
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
   }
@@ -83,7 +83,7 @@ private struct TeamScore: View {
         .accessibilityHidden(true)
 
       Text(name)
-        .font(.headline)
+        .font(.default)
         .lineLimit(3)
         .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
         .foregroundStyle(.secondary)
