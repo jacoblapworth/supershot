@@ -30,10 +30,10 @@ struct LastCentrePassBanner: View {
 
       HStack(spacing: 10) {
         Button("No, not taken", action: lastCentrePassNotTakenTapped)
-          .frame(maxWidth: .infinity)
+          .buttonSizing(.flexible)
           .buttonStyle(.bordered)
         Button("Yes, pass taken", action: lastCentrePassTakenTapped)
-          .frame(maxWidth: .infinity)
+          .buttonSizing(.flexible)
           .buttonStyle(.borderedProminent)
       }
       .fontWeight(.medium)

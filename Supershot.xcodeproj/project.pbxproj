@@ -70,6 +70,13 @@
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
 		};
+		12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AvatarView.swift,
+			);
+			target = 12C000073020000000000001 /* SupershotWidgets */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -77,6 +84,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */,
+				12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */,
 			);
 			path = Supershot;
 			sourceTree = "<group>";

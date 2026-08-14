@@ -43,22 +43,23 @@ struct NewGameView: View {
       NavigationStack {
         Group {
           if store.leftTeam.mode.isInteracting {
-            TeamSlotPanel(
+            TeamSlotView(
               store: store.scope(state: \.leftTeam, action: \.leftTeam),
               teams: store.availableTeams,
               unavailableTeamID: store.rightTeam.selection?.existingID
             )
           } else if store.rightTeam.mode.isInteracting {
-            TeamSlotPanel(
+            TeamSlotView(
               store: store.scope(state: \.rightTeam, action: \.rightTeam),
               teams: store.availableTeams,
               unavailableTeamID: store.leftTeam.selection?.existingID
             )
           }
         }
-        .padding()
         .navigationTitle("Select team")
+#if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+#endif
       }
       .presentationDetents([.medium, .large])
     }

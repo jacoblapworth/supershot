@@ -22,6 +22,19 @@ struct ScoringView: View {
   var body: some View {
     ScrollView {
       VStack(spacing: 20) {
+        TimerView(
+          clockPhase: store.clockPhase,
+          currentDurationSeconds: store.currentDurationSeconds,
+          elapsedSeconds: store.elapsedSeconds,
+          isPeriodComplete: store.isPeriodComplete,
+          isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
+          isTimerRunning: store.isTimerRunning,
+          period: store.period,
+          pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
+          skipBreakTapped: { store.send(.skipBreakButtonTapped) },
+          startTimerTapped: { store.send(.startTimerButtonTapped) }
+        )
+        
         ScoringScoreboardView(
           isDisabled: store.clockPhase == .breakTime || store.isShowingLastCentrePassBanner,
           isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
@@ -54,18 +67,6 @@ struct ScoringView: View {
           )
         }
 
-        TimerView(
-          clockPhase: store.clockPhase,
-          currentDurationSeconds: store.currentDurationSeconds,
-          elapsedSeconds: store.elapsedSeconds,
-          isPeriodComplete: store.isPeriodComplete,
-          isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
-          isTimerRunning: store.isTimerRunning,
-          period: store.period,
-          pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
-          skipBreakTapped: { store.send(.skipBreakButtonTapped) },
-          startTimerTapped: { store.send(.startTimerButtonTapped) }
-        )
 
         ScoringGameControls(
           canContinueToNextQuarter: false,
@@ -93,11 +94,11 @@ struct ScoringView: View {
       }
       .padding()
     }
-    .navigationTitle(
-      store.clockPhase == .breakTime
-        ? "Break after quarter \(store.period)"
-        : "Quarter \(store.period)"
-    )
+//    .navigationTitle(
+//      store.clockPhase == .breakTime
+//        ? "Break after quarter \(store.period)"
+//        : "Quarter \(store.period)"
+//    )
     .navigationBarBackButtonHidden()
     .toolbar {
       #if os(macOS)

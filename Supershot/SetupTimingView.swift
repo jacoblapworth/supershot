@@ -3,21 +3,21 @@ import SwiftUI
 
 struct SetupTimingView: View {
   @Bindable var store: StoreOf<NewGameFeature>
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
       Label("Timing", systemImage: "timer")
         .font(.headline)
-
+      
       DurationEditor(
         duration: $store.periodDuration,
         label: "Quarters",
         presets: [8, 10, 12, 15].map { $0 * 60 },
         presetTapped: { store.send(.periodPresetButtonTapped($0)) }
       )
-
+      
       Divider()
-
+      
       if store.customizesBreaks {
         DurationEditor(
           duration: $store.firstBreakDuration,
@@ -37,7 +37,7 @@ struct SetupTimingView: View {
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.secondBreakPresetButtonTapped($0)) }
         )
-
+        
         Button("Use first break for all") {
           store.send(.useFirstBreakForAllButtonTapped)
         }
@@ -49,7 +49,7 @@ struct SetupTimingView: View {
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.allBreakPresetButtonTapped($0)) }
         )
-
+        
         Button("Customize each break") {
           store.send(.customizeBreaksButtonTapped)
         }
@@ -65,7 +65,7 @@ private struct DurationEditor: View {
   var label: String
   var presets: [Int]
   var presetTapped: (Int) -> Void
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
       HStack {
@@ -76,7 +76,7 @@ private struct DurationEditor: View {
           .font(.subheadline.monospacedDigit().weight(.semibold))
           .foregroundStyle(duration.totalSeconds == nil ? Color.red : Color.secondary)
       }
-
+      
       ScrollView(.horizontal) {
         HStack(spacing: 8) {
           ForEach(presets, id: \.self) { seconds in
@@ -94,24 +94,29 @@ private struct DurationEditor: View {
         }
       }
       .scrollIndicators(.hidden)
-
+      
       HStack(spacing: 8) {
         TextField("Minutes", text: $duration.minutesText)
           .textFieldStyle(.roundedBorder)
           .frame(maxWidth: 80)
+#if os(iOS)
+          .keyboardType(.numberPad)
+#endif
         Text("min")
           .foregroundStyle(.secondary)
         TextField("Seconds", text: $duration.secondsText)
           .textFieldStyle(.roundedBorder)
           .frame(maxWidth: 80)
+#if os(iOS)
+          .keyboardType(.numberPad)
+#endif
         Text("sec")
           .foregroundStyle(.secondary)
       }
-      .keyboardType(.numberPad)
       .font(.subheadline)
     }
   }
-
+  
   private func formatted(_ seconds: Int) -> String {
     "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
   }

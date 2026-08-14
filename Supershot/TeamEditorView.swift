@@ -32,8 +32,10 @@ struct TeamEditorView: View {
       }
     }
     .navigationTitle(store.isCreating ? "New team" : "Edit team")
+#if os(iOS)
     .navigationBarTitleDisplayMode(.inline)
     .interactiveDismissDisabled(store.isSaving)
+#endif
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Cancel") {
@@ -68,3 +70,4 @@ struct TeamEditorView: View {
     )
   }
 }
+

@@ -43,34 +43,37 @@ private struct ScoreButton: View {
   var action: () -> Void
 
   var body: some View {
-    Button(action: action) {
-      VStack(spacing: 10) {
-        Text(name)
-          .font(.headline)
-          .lineLimit(2)
-          .multilineTextAlignment(.center)
-          .frame(minHeight: 44)
-
-        Text("\(score)")
-          .font(.system(size: 64, weight: .bold, design: .rounded))
-          .monospacedDigit()
-
+    VStack {
+        VStack(spacing: 10) {
+          Text(name)
+            .font(.headline)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .frame(minHeight: 44)
+          
+          Text("\(score)")
+            .font(.system(size: 64, weight: .bold))
+            .fontWidth(.compressed)
+            .monospacedDigit()
+            .shadow(radius: 4)
+        }
+        .frame(maxWidth: .infinity, minHeight: 180)
+        .background(
+          Color(teamHex: colorHex).opacity(0.12),
+          in: RoundedRectangle(cornerRadius: 12)
+        )
+        .overlay {
+          RoundedRectangle(cornerRadius: 12)
+            .stroke(Color(teamHex: colorHex), lineWidth: 2)
+        }
+      .opacity(isDisabled ? 0.65 : 1)
+      Button(action: action) {
         Label("Goal", systemImage: "plus.circle.fill")
-          .font(.subheadline.weight(.semibold))
       }
-      .frame(maxWidth: .infinity, minHeight: 180)
-      .background(
-        Color(teamHex: colorHex).opacity(0.12),
-        in: RoundedRectangle(cornerRadius: 12)
-      )
-      .overlay {
-        RoundedRectangle(cornerRadius: 12)
-          .stroke(Color(teamHex: colorHex), lineWidth: 2)
-      }
+      .buttonStyle(.myAppPrimaryButton)
+      .buttonSizing(.flexible)
+      .disabled(isDisabled)
     }
-    .buttonStyle(.plain)
-    .disabled(isDisabled)
-    .opacity(isDisabled ? 0.65 : 1)
   }
 }
 

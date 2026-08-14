@@ -3,11 +3,11 @@ import SwiftUI
 struct GameRow: View {
   var game: GameListItem
   var isLoading: Bool
-
+  
   var body: some View {
     VStack(spacing: 14) {
-
-
+      
+      
       HStack(alignment: .center, spacing: 12) {
         TeamScore(
           alignment: .leading,
@@ -16,11 +16,11 @@ struct GameRow: View {
           score: game.teamAScore,
           scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
         )
-
-//        Text("–")
-//          .font(.title2.bold())
-//          .foregroundStyle(.secondary)
-
+        
+        //        Text("–")
+        //          .font(.title2.bold())
+        //          .foregroundStyle(.secondary)
+        
         TeamScore(
           alignment: .trailing,
           colorHex: game.teamBBibColorHex,
@@ -50,21 +50,21 @@ struct GameRow: View {
       .font(.caption.weight(.semibold))
     }
     .padding(.vertical, 8)
-//    .contentShape(Rectangle())
+    //    .contentShape(Rectangle())
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
   }
-
+  
   private func scoreColor(for score: Int, opponentScore: Int) -> Color {
     guard game.isCompleted, score < opponentScore else { return .primary }
     return .secondary
   }
-
+  
   private var accessibilityText: String {
     let date = game.startedAt.formatted(date: .abbreviated, time: .shortened)
     let status = game.isCompleted ? "Final" : "In progress"
     return "\(date), \(game.teamAName) \(game.teamAScore), "
-      + "\(game.teamBName) \(game.teamBScore), \(status), \(game.timingSummary)"
+    + "\(game.teamBName) \(game.teamBScore), \(status), \(game.timingSummary)"
   }
 }
 
@@ -74,24 +74,37 @@ private struct TeamScore: View {
   var name: String
   var score: Int
   var scoreColor: Color
-
+  
+  private var team: some View {
+    VStack(alignment: .center, spacing: 4) {
+      AvatarView(label: name)
+//      Circle()
+//        .fill(Color(teamHex: colorHex))
+//        .frame(width: 32, height: 32)
+//        .accessibilityHidden(true)
+      Text(name)
+        .font(.caption)
+        .lineLimit(3)
+        .multilineTextAlignment(.center)
+        .foregroundStyle(.secondary)
+    }
+    .frame(maxWidth: 100)
+  }
+  
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
-      Circle()
-        .fill(Color(teamHex: colorHex))
-        .frame(width: 12, height: 12)
-        .accessibilityHidden(true)
-
-      Text(name)
-        .font(.default)
-        .lineLimit(3)
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-        .foregroundStyle(.secondary)
-
-      Text("\(score)")
-        .font(.system(.largeTitle, design: .rounded, weight: .bold))
-        .monospacedDigit()
-        .foregroundStyle(scoreColor)
+      HStack(alignment: .top, spacing: 8) {
+        if alignment == .leading {
+          team
+        }
+        Text("\(score)")
+          .font(.system(.largeTitle, design: .rounded, weight: .bold))
+          .monospacedDigit()
+          .foregroundStyle(scoreColor)
+        if alignment == .trailing {
+          team
+        }
+      }
     }
     .frame(
       maxWidth: .infinity,

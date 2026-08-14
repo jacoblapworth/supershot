@@ -32,7 +32,11 @@ struct GamesHomeView: View {
               isLoading: loadingGameID == game.id
             )
           }
+          
           .buttonStyle(.plain)
+          .alignmentGuide(.listRowSeparatorLeading, computeValue: { _ in
+            return 0
+          })
           .disabled(loadingGameID != nil || deletingGameID != nil)
           .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Delete", systemImage: "trash", role: .destructive) {

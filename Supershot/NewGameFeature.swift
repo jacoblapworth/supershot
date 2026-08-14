@@ -648,7 +648,7 @@ struct NewGameFeature {
             throw SetupPersistenceError.duplicateTeam
           }
 
-          var finalTeams = try Team.fetchAll(db)
+          let finalTeams = try Team.fetchAll(db)
           let existingTeamIDs = Set(finalTeams.map(\.id))
           for existingID in [teamA.existingID, teamB.existingID].compactMap({ $0 }) {
             guard existingTeamIDs.contains(existingID) else {
