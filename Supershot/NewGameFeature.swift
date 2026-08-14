@@ -2,212 +2,7 @@ import ComposableArchitecture
 import Foundation
 import SQLiteData
 
-@Reducer
-struct TeamSlotFeature {
-  nonisolated enum Mode: Equatable, Sendable {
-    case creating
-    case editing
-    case empty
-    case choosing
-    case locked
 
-    var isInteracting: Bool {
-      self == .choosing || self == .creating || self == .editing
-    }
-  }
-
-  nonisolated enum Side: Equatable, Hashable, Sendable {
-    case left
-    case right
-
-    var defaultColorHex: String {
-      self == .left ? TeamColorPalette.blue : TeamColorPalette.red
-    }
-
-    var title: String {
-      self == .left ? "Left team" : "Right team"
-    }
-  }
-
-  nonisolated struct TeamDraft: Equatable, Sendable {
-    var teamColorHex: String
-    var name = ""
-
-    var trimmedName: String {
-      Team.trimmedName(name)
-    }
-  }
-
-  nonisolated enum Selection: Equatable, Sendable {
-    case existing(original: Team, draft: TeamDraft)
-    case new(TeamDraft)
-
-    var draft: TeamDraft {
-      switch self {
-      case let .existing(_, draft), let .new(draft):
-        draft
-      }
-    }
-
-    var existingID: Team.ID? {
-      guard case let .existing(original, _) = self else { return nil }
-      return original.id
-    }
-
-    var hasSharedChanges: Bool {
-      guard case let .existing(original, draft) = self else { return false }
-      return original.name != draft.trimmedName || original.colorHex != draft.teamColorHex
-    }
-
-    func updating(_ draft: TeamDraft) -> Self {
-      switch self {
-      case let .existing(original, _):
-        .existing(original: original, draft: draft)
-      case .new:
-        .new(draft)
-      }
-    }
-  }
-
-  @ObservableState
-  struct State: Equatable {
-    var bibColorHex: String
-    var editor: TeamDraft
-    var mode = Mode.empty
-    var searchText = ""
-    var selection: Selection?
-    let side: Side
-
-    init(side: Side) {
-      self.side = side
-      self.bibColorHex = side.defaultColorHex
-      self.editor = TeamDraft(teamColorHex: side.defaultColorHex)
-    }
-
-    var canFinishEditing: Bool {
-      !editor.trimmedName.isEmpty && TeamColorPalette.isValid(editor.teamColorHex)
-    }
-
-    var isLocked: Bool {
-      mode == .locked && selection != nil
-    }
-
-    var selectedDraft: TeamDraft? {
-      selection?.draft
-    }
-  }
-
-  enum Action: BindableAction {
-    case binding(BindingAction<State>)
-    case bibPaletteColorButtonTapped(String)
-    case cancelButtonTapped
-    case cardTapped
-    case changeTeamButtonTapped
-    case createTeamButtonTapped
-    case doneButtonTapped
-    case editTeamButtonTapped
-    case existingTeamSelected(Team)
-    case paletteColorButtonTapped(String)
-    case revertChangesButtonTapped
-  }
-
-  @Dependency(\.withRandomNumberGenerator) var withRandomNumberGenerator
-
-  var body: some Reducer<State, Action> {
-    BindingReducer()
-    Reduce { state, action in
-      switch action {
-      case .binding:
-        return .none
-
-      case let .bibPaletteColorButtonTapped(colorHex):
-        guard state.isLocked, TeamColorPalette.isValid(colorHex) else { return .none }
-        state.bibColorHex = colorHex.uppercased()
-        return .none
-
-      case .cancelButtonTapped:
-        switch state.mode {
-        case .choosing:
-          state.mode = state.selection == nil ? .empty : .locked
-        case .creating:
-          state.mode = .choosing
-        case .editing:
-          state.mode = .locked
-        case .empty, .locked:
-          break
-        }
-        return .none
-
-      case .cardTapped:
-        guard state.mode == .empty else { return .none }
-        state.mode = .choosing
-        state.searchText = ""
-        return .none
-
-      case .changeTeamButtonTapped:
-        guard state.mode == .locked else { return .none }
-        state.mode = .choosing
-        state.searchText = ""
-        return .none
-
-      case .createTeamButtonTapped:
-        guard state.mode == .choosing else { return .none }
-        let teamColorHex =
-          withRandomNumberGenerator { generator in
-            TeamColorPalette.options.randomElement(using: &generator)?.hex
-          } ?? TeamColorPalette.blue
-        state.editor = TeamDraft(teamColorHex: teamColorHex)
-        state.mode = .creating
-        return .none
-
-      case .doneButtonTapped:
-        guard state.canFinishEditing else { return .none }
-        state.editor.name = state.editor.trimmedName
-        switch state.mode {
-        case .creating:
-          state.selection = .new(state.editor)
-          state.bibColorHex = state.editor.teamColorHex
-          state.mode = .locked
-        case .editing:
-          state.selection = state.selection?.updating(state.editor)
-          state.mode = .locked
-        case .choosing, .empty, .locked:
-          break
-        }
-        return .none
-
-      case .editTeamButtonTapped:
-        guard state.mode == .locked, let selection = state.selection else { return .none }
-        state.editor = selection.draft
-        state.mode = .editing
-        return .none
-
-      case let .existingTeamSelected(team):
-        guard state.mode == .choosing else { return .none }
-        let draft = TeamDraft(teamColorHex: team.colorHex, name: team.name)
-        state.bibColorHex = team.colorHex
-        state.selection = .existing(original: team, draft: draft)
-        state.mode = .locked
-        state.searchText = ""
-        return .none
-
-      case let .paletteColorButtonTapped(colorHex):
-        guard state.mode == .creating || state.mode == .editing else { return .none }
-        guard TeamColorPalette.isValid(colorHex) else { return .none }
-        state.editor.teamColorHex = colorHex.uppercased()
-        return .none
-
-      case .revertChangesButtonTapped:
-        guard case let .existing(original, _) = state.selection else { return .none }
-        state.selection = .existing(
-          original: original,
-          draft: TeamDraft(teamColorHex: original.colorHex, name: original.name)
-        )
-        return .none
-      }
-    }
-  }
-}
 
 @Reducer
 struct NewGameFeature {
@@ -241,41 +36,29 @@ struct NewGameFeature {
     }
   }
 
+  nonisolated struct TeamSelection: Equatable, Sendable {
+    var bibColorHex: String
+    var team: Team?
+
+    init(bibColorHex: String) {
+      self.bibColorHex = bibColorHex
+    }
+  }
+
   @ObservableState
   struct State: Equatable {
-    var availableTeams: [Team] = []
-    @Presents var confirmationDialog: ConfirmationDialogState<ConfirmationDialogAction>?
     var customizesBreaks = false
-    var didLoadTeams = false
     var errorMessage: String?
     var firstBreakDuration = DurationDraft(totalSeconds: 4 * 60)
     var firstCentrePass: TeamSide?
     var halfTimeDuration = DurationDraft(totalSeconds: 4 * 60)
-    var isLoadingTeams = false
     var isSaving = false
-    var leftTeam = TeamSlotFeature.State(side: .left)
+    var leftTeam = TeamSelection(bibColorHex: TeamColorPalette.blue)
+    @Presents var picker: TeamPickerFeature.State?
+    var pickingTeamSide: TeamSide?
     var periodDuration = DurationDraft(totalSeconds: 15 * 60)
-    var rightTeam = TeamSlotFeature.State(side: .right)
+    var rightTeam = TeamSelection(bibColorHex: TeamColorPalette.red)
     var secondBreakDuration = DurationDraft(totalSeconds: 4 * 60)
-
-    var activeTeamSide: TeamSide? {
-      if leftTeam.mode.isInteracting { return .teamA }
-      if rightTeam.mode.isInteracting { return .teamB }
-      return nil
-    }
-
-    var isPresentingTeamPicker: Bool {
-      get { activeTeamSide != nil }
-      set {
-        guard !newValue else { return }
-        if leftTeam.mode.isInteracting {
-          leftTeam.mode = leftTeam.selection == nil ? .empty : .locked
-        }
-        if rightTeam.mode.isInteracting {
-          rightTeam.mode = rightTeam.selection == nil ? .empty : .locked
-        }
-      }
-    }
 
     var breakDurationsAreValid: Bool {
       firstBreakDuration.totalSeconds != nil
@@ -284,27 +67,25 @@ struct NewGameFeature {
     }
 
     var canStartGame: Bool {
-      leftTeam.isLocked
-        && rightTeam.isLocked
+      leftTeam.team != nil
+        && rightTeam.team != nil
         && TeamColorPalette.isValid(leftTeam.bibColorHex)
         && TeamColorPalette.isValid(rightTeam.bibColorHex)
-        && activeTeamSide == nil
         && firstCentrePass != nil
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
-        && !isLoadingTeams
         && !isSaving
     }
 
     var canSwapTeams: Bool {
-      leftTeam.isLocked && rightTeam.isLocked && activeTeamSide == nil && !isSaving
+      leftTeam.team != nil && rightTeam.team != nil && picker == nil && !isSaving
     }
 
     var configurationSummary: String {
       let matchup: String
       if
-        let leftName = leftTeam.selectedDraft?.trimmedName,
-        let rightName = rightTeam.selectedDraft?.trimmedName,
+        let leftName = leftTeam.team?.name,
+        let rightName = rightTeam.team?.name,
         !leftName.isEmpty,
         !rightName.isEmpty
       {
@@ -324,80 +105,31 @@ struct NewGameFeature {
       return "\(matchup)4 × \(quarter) · breaks \(breaks.joined(separator: " / "))"
     }
 
-    var hasSharedTeamChanges: Bool {
-      leftTeam.selection?.hasSharedChanges == true
-        || rightTeam.selection?.hasSharedChanges == true
-    }
-
     var hasDifferentSelectedTeams: Bool {
-      guard
-        let leftSelection = leftTeam.selection,
-        let rightSelection = rightTeam.selection
-      else { return false }
-
-      guard
-        let leftID = leftSelection.existingID,
-        let rightID = rightSelection.existingID
-      else { return true }
+      guard let leftID = leftTeam.team?.id, let rightID = rightTeam.team?.id else { return false }
       return leftID != rightID
     }
 
     var teamNameErrorMessage: String? {
-      guard leftTeam.isLocked, rightTeam.isLocked else { return nil }
-      guard
-        let leftSelection = leftTeam.selection,
-        let rightSelection = rightTeam.selection
-      else { return nil }
-      if leftSelection.draft.trimmedName.isEmpty || rightSelection.draft.trimmedName.isEmpty {
-        return "Enter a name for both teams."
-      }
-      if leftSelection.existingID == rightSelection.existingID,
-        leftSelection.existingID != nil
-      {
-        return "Choose two different teams."
-      }
+      guard leftTeam.team != nil, rightTeam.team != nil else { return nil }
       return hasDifferentSelectedTeams ? nil : "Choose two different teams."
-    }
-
-    var teamUpdateMessage: String {
-      [leftTeam.selection, rightTeam.selection]
-        .compactMap { selection -> String? in
-          guard
-            let selection,
-            case let .existing(original, draft) = selection,
-            selection.hasSharedChanges
-          else { return nil }
-          let changesName = original.name != draft.trimmedName
-          let changesTeamColor = original.colorHex != draft.teamColorHex
-          if changesName && changesTeamColor {
-            return "\(original.name) will become \(draft.trimmedName) in game history, "
-              + "and its team color will update."
-          } else if changesName {
-            return "\(original.name) will become \(draft.trimmedName) in game history."
-          }
-          return "\(original.name)'s team color will update without changing past bib colors."
-        }
-        .joined(separator: " ")
     }
   }
 
   enum Action: BindableAction {
     case allBreakPresetButtonTapped(Int)
     case binding(BindingAction<State>)
-    case confirmationDialog(PresentationAction<ConfirmationDialogAction>)
     case customizeBreaksButtonTapped
     case delegate(Delegate)
     case firstBreakPresetButtonTapped(Int)
     case halfTimePresetButtonTapped(Int)
-    case leftTeam(TeamSlotFeature.Action)
     case periodPresetButtonTapped(Int)
-    case rightTeam(TeamSlotFeature.Action)
+    case picker(PresentationAction<TeamPickerFeature.Action>)
+    case selectTeamButtonTapped(TeamSide)
     case secondBreakPresetButtonTapped(Int)
     case startGameButtonTapped
     case startGameResponse(Result<ScoringFeature.State, any Error>)
     case swapTeamsButtonTapped
-    case task
-    case teamsResponse(Result<[Team], any Error>)
     case useFirstBreakForAllButtonTapped
 
     enum Delegate {
@@ -405,15 +137,9 @@ struct NewGameFeature {
     }
   }
 
-  enum ConfirmationDialogAction: Equatable {
-    case updateAndStartButtonTapped
-  }
-
   private struct PreparedTeam: Sendable {
     let bibColorHex: String
-    let draft: TeamSlotFeature.TeamDraft
-    let existingID: Team.ID?
-    let id: Team.ID
+    let team: Team
   }
 
   @Dependency(\.date.now) var now
@@ -421,15 +147,8 @@ struct NewGameFeature {
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
-    CombineReducers {
-      BindingReducer()
-      Scope(state: \.leftTeam, action: \.leftTeam) {
-        TeamSlotFeature()
-      }
-      Scope(state: \.rightTeam, action: \.rightTeam) {
-        TeamSlotFeature()
-      }
-      Reduce { state, action in
+    BindingReducer()
+    Reduce { state, action in
         switch action {
         case let .allBreakPresetButtonTapped(seconds):
           let duration = DurationDraft(totalSeconds: seconds)
@@ -446,13 +165,6 @@ struct NewGameFeature {
           }
           return .none
 
-        case .confirmationDialog(.dismiss):
-          return .none
-
-        case .confirmationDialog(.presented(.updateAndStartButtonTapped)):
-          state.confirmationDialog = nil
-          return beginStartingGame(state: &state)
-
         case .customizeBreaksButtonTapped:
           state.customizesBreaks = true
           return .none
@@ -468,25 +180,51 @@ struct NewGameFeature {
           state.halfTimeDuration = DurationDraft(totalSeconds: seconds)
           return .none
 
-        case .leftTeam(.createTeamButtonTapped), .leftTeam(.existingTeamSelected(_)):
+        case let .picker(.presented(.delegate(.teamSelected(team)))):
+          guard let pickingTeamSide = state.pickingTeamSide else { return .none }
+          switch pickingTeamSide {
+          case .teamA:
+            state.leftTeam.team = team
+            state.leftTeam.bibColorHex = team.colorHex
+          case .teamB:
+            state.rightTeam.team = team
+            state.rightTeam.bibColorHex = team.colorHex
+          }
+          state.picker = nil
+          state.pickingTeamSide = nil
           state.firstCentrePass = nil
           state.errorMessage = nil
           return .none
 
-        case .leftTeam:
-          state.errorMessage = nil
+        case .picker(.presented(.delegate(.cancelled))):
+          state.picker = nil
+          state.pickingTeamSide = nil
+          return .none
+
+        case .picker(.dismiss):
+          state.picker = nil
+          state.pickingTeamSide = nil
+          return .none
+
+        case .picker:
           return .none
 
         case let .periodPresetButtonTapped(seconds):
           state.periodDuration = DurationDraft(totalSeconds: seconds)
           return .none
 
-        case .rightTeam(.createTeamButtonTapped), .rightTeam(.existingTeamSelected(_)):
+        case let .selectTeamButtonTapped(side):
+          guard !state.isSaving else { return .none }
+          let excludedTeamIDs: Set<Team.ID>
+          switch side {
+          case .teamA:
+            excludedTeamIDs = state.rightTeam.team.map { [$0.id] } ?? []
+          case .teamB:
+            excludedTeamIDs = state.leftTeam.team.map { [$0.id] } ?? []
+          }
+          state.pickingTeamSide = side
+          state.picker = TeamPickerFeature.State(excluding: excludedTeamIDs)
           state.firstCentrePass = nil
-          state.errorMessage = nil
-          return .none
-
-        case .rightTeam:
           state.errorMessage = nil
           return .none
 
@@ -496,7 +234,7 @@ struct NewGameFeature {
 
         case .startGameButtonTapped:
           guard !state.isSaving else { return .none }
-          guard state.leftTeam.isLocked, state.rightTeam.isLocked else {
+          guard state.leftTeam.team != nil, state.rightTeam.team != nil else {
             state.errorMessage = "Choose both teams."
             return .none
           }
@@ -520,10 +258,6 @@ struct NewGameFeature {
             return .none
           }
 
-          if state.hasSharedTeamChanges {
-            state.confirmationDialog = .confirmTeamUpdates(message: state.teamUpdateMessage)
-            return .none
-          }
           return beginStartingGame(state: &state)
 
         case let .startGameResponse(.success(scoring)):
@@ -541,40 +275,14 @@ struct NewGameFeature {
 
         case .swapTeamsButtonTapped:
           guard state.canSwapTeams else { return .none }
-          let leftSelection = state.leftTeam.selection
-          let leftBibColorHex = state.leftTeam.bibColorHex
-          state.leftTeam.selection = state.rightTeam.selection
-          state.leftTeam.bibColorHex = state.rightTeam.bibColorHex
-          state.rightTeam.selection = leftSelection
-          state.rightTeam.bibColorHex = leftBibColorHex
+          let leftTeam = state.leftTeam
+          state.leftTeam = state.rightTeam
+          state.rightTeam = leftTeam
           if state.firstCentrePass == .teamA {
             state.firstCentrePass = .teamB
           } else if state.firstCentrePass == .teamB {
             state.firstCentrePass = .teamA
           }
-          return .none
-
-        case .task:
-          guard !state.didLoadTeams else { return .none }
-          state.didLoadTeams = true
-          state.isLoadingTeams = true
-          return .run { send in
-            let result = await Result {
-              try await database.read { db in
-                try Team.order { ($0.name, $0.id) }.fetchAll(db)
-              }
-            }
-            await send(.teamsResponse(result))
-          }
-
-        case let .teamsResponse(.success(teams)):
-          state.availableTeams = teams
-          state.isLoadingTeams = false
-          return .none
-
-        case .teamsResponse(.failure):
-          state.errorMessage = "Could not load saved teams."
-          state.isLoadingTeams = false
           return .none
 
         case .useFirstBreakForAllButtonTapped:
@@ -583,15 +291,16 @@ struct NewGameFeature {
           state.customizesBreaks = false
           return .none
         }
-      }
     }
-    .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
+    .ifLet(\.$picker, action: \.picker) {
+      TeamPickerFeature()
+    }
   }
 
   private func beginStartingGame(state: inout State) -> Effect<Action> {
     guard
-      let leftSelection = state.leftTeam.selection,
-      let rightSelection = state.rightTeam.selection,
+      let leftTeam = state.leftTeam.team,
+      let rightTeam = state.rightTeam.team,
       let firstCentrePass = state.firstCentrePass,
       let periodDurationSeconds = state.periodDuration.totalSeconds,
       let firstBreakDurationSeconds = state.firstBreakDuration.totalSeconds,
@@ -602,17 +311,13 @@ struct NewGameFeature {
     let gameID = uuid()
     let teamA = PreparedTeam(
       bibColorHex: state.leftTeam.bibColorHex,
-      draft: leftSelection.draft,
-      existingID: leftSelection.existingID,
-      id: leftSelection.existingID ?? uuid()
+      team: leftTeam
     )
     let teamB = PreparedTeam(
       bibColorHex: state.rightTeam.bibColorHex,
-      draft: rightSelection.draft,
-      existingID: rightSelection.existingID,
-      id: rightSelection.existingID ?? uuid()
+      team: rightTeam
     )
-    let centrePassTeamID = firstCentrePass == .teamA ? teamA.id : teamB.id
+    let centrePassTeamID = firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
     let startedAt = now
 
     state.errorMessage = nil
@@ -644,31 +349,15 @@ struct NewGameFeature {
     .run { send in
       let result = await Result {
         try await database.write { db in
-          guard teamA.id != teamB.id else {
+          guard teamA.team.id != teamB.team.id else {
             throw SetupPersistenceError.duplicateTeam
           }
 
           let finalTeams = try Team.fetchAll(db)
           let existingTeamIDs = Set(finalTeams.map(\.id))
-          for existingID in [teamA.existingID, teamB.existingID].compactMap({ $0 }) {
-            guard existingTeamIDs.contains(existingID) else {
+          for team in [teamA.team, teamB.team] {
+            guard existingTeamIDs.contains(team.id) else {
               throw SetupPersistenceError.teamUnavailable
-            }
-          }
-          for team in [teamA, teamB] {
-            let savedTeam = Team(
-              id: team.id,
-              name: team.draft.name,
-              colorHex: team.draft.teamColorHex
-            )
-            if team.existingID != nil {
-              try Team.find(team.id).update {
-                $0.colorHex = #bind(savedTeam.colorHex)
-                $0.name = #bind(savedTeam.name)
-              }
-              .execute(db)
-            } else {
-              try Team.insert { savedTeam }.execute(db)
             }
           }
 
@@ -677,9 +366,9 @@ struct NewGameFeature {
               id: gameID,
               startedAt: startedAt,
               endedAt: nil,
-              teamAID: teamA.id,
+              teamAID: teamA.team.id,
               teamABibColorHex: teamA.bibColorHex,
-              teamBID: teamB.id,
+              teamBID: teamB.team.id,
               teamBBibColorHex: teamB.bibColorHex,
               centrePassTeamID: centrePassTeamID,
               periodDurationSeconds: periodDurationSeconds,
@@ -705,35 +394,18 @@ struct NewGameFeature {
           secondBreakDurationSeconds: secondBreakDurationSeconds,
           startedAt: startedAt,
           teamA: ScoringFeature.Team(
-            id: teamA.id,
+            id: teamA.team.id,
             bibColorHex: teamA.bibColorHex,
-            name: teamA.draft.trimmedName
+            name: teamA.team.name
           ),
           teamB: ScoringFeature.Team(
-            id: teamB.id,
+            id: teamB.team.id,
             bibColorHex: teamB.bibColorHex,
-            name: teamB.draft.trimmedName
+            name: teamB.team.name
           )
         )
       }
       await send(.startGameResponse(result))
-    }
-  }
-}
-
-extension ConfirmationDialogState where Action == NewGameFeature.ConfirmationDialogAction {
-  static func confirmTeamUpdates(message: String) -> Self {
-    Self {
-      TextState("Update saved teams?")
-    } actions: {
-      ButtonState(action: .updateAndStartButtonTapped) {
-        TextState("Update and start")
-      }
-      ButtonState(role: .cancel) {
-        TextState("Cancel")
-      }
-    } message: {
-      TextState(message)
     }
   }
 }

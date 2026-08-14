@@ -233,7 +233,7 @@ struct AppFeature {
         return .none
 
       case .teamEditor(.presented(.delegate(.cancelled))),
-        .teamEditor(.presented(.delegate(.saved))):
+        .teamEditor(.presented(.delegate(.saved(_)))):
         state.teamEditor = nil
         return .none
 

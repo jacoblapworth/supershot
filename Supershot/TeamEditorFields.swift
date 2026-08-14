@@ -1,22 +1,5 @@
 import SwiftUI
 
-struct TeamEditorFields: View {
-  @Binding var colorHex: String
-  @Binding var name: String
-  var paletteColorTapped: (String) -> Void
-
-  var body: some View {
-    TextField("Team name", text: $name)
-      .textFieldStyle(.roundedBorder)
-
-    TeamColorPicker(
-      colorHex: $colorHex,
-      title: "Team color",
-      paletteColorTapped: paletteColorTapped
-    )
-  }
-}
-
 struct TeamColorPicker: View {
   @Binding var colorHex: String
   var title: String

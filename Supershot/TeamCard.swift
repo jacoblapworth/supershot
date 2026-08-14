@@ -9,7 +9,7 @@
 import ComposableArchitecture
 import SwiftUI
 
-private struct TeamCard: View {
+struct TeamCard: View {
   var action: () -> Void
   var team: Team?
 
@@ -41,9 +41,6 @@ private struct TeamCard: View {
               .font(.title)
             Text("Team")
               .font(.headline)
-            Text("Tap to choose")
-              .font(.caption)
-              .foregroundStyle(.secondary)
           }
           .frame(maxWidth: .infinity)
         }
@@ -52,17 +49,31 @@ private struct TeamCard: View {
     }
     .frame(maxWidth: .infinity, minHeight: 150)
     .padding(10)
-    .background(
-      Color(teamHex: team?.colorHex ?? TeamColorPalette.blue)
-        .opacity(0.09),
-      in: RoundedRectangle(cornerRadius: 12)
-    )
-    .overlay {
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(
-          Color.secondary.opacity(0.25),
-          lineWidth: 1
-        )
-    }
+    .glassEffect({
+      let material: Glass = (team?.colorHex).map { .regular.tint(Color(teamHex: $0)) } ?? .regular
+      return material
+    }(), in: RoundedRectangle(cornerRadius: 12))
+//    .background(
+//      //      .regularMaterial,
+//      //      (team?.colorHex).map { Color(teamHex: $0).opacity(0.09) } ?? Color(UIColor.secondarySystemBackground),
+//      in: RoundedRectangle(cornerRadius: 12)
+//    )
+//    .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+//    .overlay {
+//      RoundedRectangle(cornerRadius: 12)
+//        .stroke(
+//          Color.secondary.opacity(0.25),
+//          lineWidth: 1
+//        )
+//    }
   }
 }
+
+#Preview("Selected") {
+  TeamCard(action: {}, team: .previewFoxes)
+}
+
+#Preview("Empty") {
+  TeamCard(action: {})
+}
+

@@ -10,6 +10,7 @@ struct TeamEditorFeature {
       case editing(Team.ID)
     }
 
+    var focus: Field? = .name
     var colorHex: String
     var errorMessage: String?
     var isSaving = false
@@ -19,6 +20,7 @@ struct TeamEditorFeature {
     let originalName: String
 
     init(team: Team) {
+      focus = .name
       colorHex = team.colorHex
       name = team.name
       mode = .editing(team.id)
@@ -27,6 +29,7 @@ struct TeamEditorFeature {
     }
 
     init() {
+      focus = .name
       colorHex = TeamColorPalette.blue
       name = ""
       mode = .creating
@@ -53,12 +56,16 @@ struct TeamEditorFeature {
     case delegate(Delegate)
     case paletteColorButtonTapped(String)
     case saveButtonTapped
-    case saveResponse(Result<Void, any Error>)
+    case saveResponse(Result<Team, any Error>)
 
     enum Delegate: Equatable {
       case cancelled
-      case saved
+      case saved(Team)
     }
+  }
+  
+  nonisolated enum Field: Hashable, Sendable {
+    case name
   }
 
   @Dependency(\.defaultDatabase) var database
@@ -130,13 +137,14 @@ struct TeamEditorFeature {
                 .execute(db)
               }
             }
+            return savedTeam
           }
           await send(.saveResponse(result))
         }
 
-      case .saveResponse(.success):
+      case let .saveResponse(.success(savedTeam)):
         state.isSaving = false
-        return .send(.delegate(.saved))
+        return .send(.delegate(.saved(savedTeam)))
 
       case let .saveResponse(.failure(error)):
         state.isSaving = false

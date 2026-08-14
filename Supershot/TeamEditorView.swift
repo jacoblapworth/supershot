@@ -3,16 +3,21 @@ import SwiftUI
 
 struct TeamEditorView: View {
   @Bindable var store: StoreOf<TeamEditorFeature>
+  @FocusState private var focus: TeamEditorFeature.Field?
 
   var body: some View {
     Form {
       Section {
-        TeamEditorFields(
+        TextField("Team name", text: $store.name)
+          .textFieldStyle(.roundedBorder)
+          .focused($focus, equals: .name)
+          .disabled(store.isSaving)
+        TeamColorPicker(
           colorHex: $store.colorHex,
-          name: $store.name,
+          title: "Team color",
           paletteColorTapped: { store.send(.paletteColorButtonTapped($0)) }
         )
-        .disabled(store.isSaving)
+          .disabled(store.isSaving)
       }
 
       Section {
@@ -31,6 +36,7 @@ struct TeamEditorView: View {
         }
       }
     }
+    .bind($store.focus, to: $focus)
     .navigationTitle(store.isCreating ? "New team" : "Edit team")
 #if os(iOS)
     .navigationBarTitleDisplayMode(.inline)

@@ -17,7 +17,5 @@
 	</array>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Supershot uses alarms to alert you when a game quarter ends.</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 </dict>
 </plist>

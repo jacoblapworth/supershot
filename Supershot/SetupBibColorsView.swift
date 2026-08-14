@@ -2,8 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct SetupBibColorsView: View {
-  @Bindable var leftStore: StoreOf<TeamSlotFeature>
-  @Bindable var rightStore: StoreOf<TeamSlotFeature>
+  @Bindable var store: StoreOf<NewGameFeature>
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -11,17 +10,17 @@ struct SetupBibColorsView: View {
         .font(.headline)
 
       TeamColorPicker(
-        colorHex: $leftStore.bibColorHex,
-        title: "\(leftStore.selectedDraft?.trimmedName ?? "Left team") bib",
-        paletteColorTapped: { leftStore.send(.bibPaletteColorButtonTapped($0)) }
+      colorHex: $store.leftTeam.bibColorHex,
+      title: "\(store.leftTeam.team?.name ?? "Left team") bib",
+      paletteColorTapped: { store.leftTeam.bibColorHex = $0 }
       )
 
       Divider()
 
       TeamColorPicker(
-        colorHex: $rightStore.bibColorHex,
-        title: "\(rightStore.selectedDraft?.trimmedName ?? "Right team") bib",
-        paletteColorTapped: { rightStore.send(.bibPaletteColorButtonTapped($0)) }
+      colorHex: $store.rightTeam.bibColorHex,
+      title: "\(store.rightTeam.team?.name ?? "Right team") bib",
+      paletteColorTapped: { store.rightTeam.bibColorHex = $0 }
       )
     }
     .setupCardStyle()
@@ -30,14 +29,7 @@ struct SetupBibColorsView: View {
 
 #Preview {
   SetupBibColorsView(
-    leftStore: setupPreviewStore(.previewReady).scope(
-      state: \.leftTeam,
-      action: \.leftTeam
-    ),
-    rightStore: setupPreviewStore(.previewReady).scope(
-      state: \.rightTeam,
-      action: \.rightTeam
-    )
+    store: setupPreviewStore(.previewReady)
   )
   .padding()
 }

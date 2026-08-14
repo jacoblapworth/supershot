@@ -37,7 +37,7 @@ struct TeamDetailFeature {
         return .none
 
       case .editor(.presented(.delegate(.cancelled))),
-        .editor(.presented(.delegate(.saved))):
+        .editor(.presented(.delegate(.saved(_)))):
         state.editor = nil
         return .none
 

@@ -30,64 +30,17 @@ extension Array where Element == Team {
   }
 }
 
-extension TeamSlotFeature.State {
-  static var previewChoosing: Self {
-    var state = Self(side: .left)
-    state.mode = .choosing
-    return state
-  }
-
-  static var previewCreating: Self {
-    var state = Self(side: .left)
-    state.editor.name = "Falcons"
-    state.mode = .creating
-    return state
-  }
-
-  static var previewEditing: Self {
-    var state = Self(side: .left)
-    state.editor = TeamSlotFeature.TeamDraft(
-      teamColorHex: "#34C759",
-      name: Team.previewRavens.name
-    )
-    state.mode = .editing
-    state.selection = .existing(
-      original: .previewRavens,
-      draft: state.editor
-    )
-    return state
-  }
-}
-
 extension NewGameFeature.State {
   static var previewReady: Self {
     var state = Self()
-    state.availableTeams = .previewTeams
-    state.didLoadTeams = true
     state.firstCentrePass = .teamA
-    state.leftTeam.mode = .locked
-    state.leftTeam.selection = .existing(
-      original: .previewRavens,
-      draft: TeamSlotFeature.TeamDraft(
-        teamColorHex: Team.previewRavens.colorHex,
-        name: Team.previewRavens.name
-      )
-    )
-    state.rightTeam.mode = .locked
-    state.rightTeam.selection = .existing(
-      original: .previewSwifts,
-      draft: TeamSlotFeature.TeamDraft(
-        teamColorHex: Team.previewSwifts.colorHex,
-        name: Team.previewSwifts.name
-      )
-    )
+    state.leftTeam.team = Team.previewRavens
+    state.rightTeam.team = Team.previewSwifts
     return state
   }
 
   static var previewLoading: Self {
-    var state = Self()
-    state.isLoadingTeams = true
-    return state
+    Self()
   }
 
   static var previewCustomTiming: Self {

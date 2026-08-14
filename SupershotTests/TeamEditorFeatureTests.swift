@@ -42,7 +42,7 @@ extension SupershotTestSuite {
         $0.isSaving = false
       }
       await store.receive {
-        guard case .delegate(.saved) = $0 else { return false }
+        guard case .delegate(.saved(_)) = $0 else { return false }
         return true
       }
 
@@ -83,7 +83,7 @@ extension SupershotTestSuite {
         $0.isSaving = false
       }
       await store.receive {
-        guard case .delegate(.saved) = $0 else { return false }
+        guard case .delegate(.saved(_)) = $0 else { return false }
         return true
       }
 
@@ -128,7 +128,7 @@ extension SupershotTestSuite {
         $0.isSaving = false
       }
       await store.receive {
-        guard case .delegate(.saved) = $0 else { return false }
+        guard case .delegate(.saved(_)) = $0 else { return false }
         return true
       }
 

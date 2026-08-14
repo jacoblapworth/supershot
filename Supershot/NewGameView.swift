@@ -9,16 +9,15 @@ struct NewGameView: View {
       VStack(spacing: 20) {
         NewGameTeamsView(store: store)
 
-        if store.leftTeam.isLocked, store.rightTeam.isLocked {
+        if store.leftTeam.team != nil, store.rightTeam.team != nil {
           SetupBibColorsView(
-            leftStore: store.scope(state: \.leftTeam, action: \.leftTeam),
-            rightStore: store.scope(state: \.rightTeam, action: \.rightTeam)
+            store: store
           )
 
           SetupCentrePassView(
             firstCentrePass: $store.firstCentrePass,
-            leftTeamName: store.leftTeam.selectedDraft?.trimmedName ?? "Left",
-            rightTeamName: store.rightTeam.selectedDraft?.trimmedName ?? "Right"
+            leftTeamName: store.leftTeam.team?.name ?? "Left",
+            rightTeamName: store.rightTeam.team?.name ?? "Right"
           )
         }
 
@@ -36,35 +35,15 @@ struct NewGameView: View {
         startGameTapped: { store.send(.startGameButtonTapped) }
       )
     }
-    .confirmationDialog(
-      $store.scope(state: \.confirmationDialog, action: \.confirmationDialog)
-    )
-    .sheet(isPresented: $store.isPresentingTeamPicker) {
+    .sheet(item: $store.scope(state: \.picker, action: \.picker)) { pickerStore in
       NavigationStack {
-        Group {
-          if store.leftTeam.mode.isInteracting {
-            TeamSlotView(
-              store: store.scope(state: \.leftTeam, action: \.leftTeam),
-              teams: store.availableTeams,
-              unavailableTeamID: store.rightTeam.selection?.existingID
-            )
-          } else if store.rightTeam.mode.isInteracting {
-            TeamSlotView(
-              store: store.scope(state: \.rightTeam, action: \.rightTeam),
-              teams: store.availableTeams,
-              unavailableTeamID: store.leftTeam.selection?.existingID
-            )
-          }
-        }
+        TeamPickerView(store: pickerStore)
         .navigationTitle("Select team")
 #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
 #endif
       }
       .presentationDetents([.medium, .large])
-    }
-    .task {
-      store.send(.task)
     }
   }
 }
