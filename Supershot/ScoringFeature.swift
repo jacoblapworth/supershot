@@ -47,6 +47,7 @@ struct ScoringFeature {
     var elapsedSeconds = 0
     var firstBreakDurationSeconds = 0
     let gameID: Game.ID
+    var goalFeedbackTrigger = 0
     var halfTimeDurationSeconds = 0
     var hasTimerStartedThisPeriod = false
     var hasShownAlarmUnavailableAlert = false
@@ -173,6 +174,7 @@ struct ScoringFeature {
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.dismiss) var dismiss
   @Dependency(\.gameTimer) var gameTimer
+  @Dependency(\.soundEffects) var soundEffects
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
@@ -260,7 +262,11 @@ struct ScoringFeature {
 
       case let .goalResponse(.success(snapshot)):
         apply(snapshot, to: &state)
-        return refreshActivityEffect(gameID: state.gameID)
+        state.goalFeedbackTrigger += 1
+        return .merge(
+          .run { _ in await soundEffects.playGoal() },
+          refreshActivityEffect(gameID: state.gameID)
+        )
 
       case .goalResponse(.failure):
         return .none

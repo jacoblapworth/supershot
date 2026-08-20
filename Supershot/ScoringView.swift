@@ -123,6 +123,9 @@ struct ScoringView: View {
     }
     .alert($store.scope(state: \.alert, action: \.alert))
     .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
+    #if os(iOS)
+    .sensoryFeedback(.success, trigger: store.goalFeedbackTrigger)
+    #endif
     .task {
       guard scenePhase == .active else { return }
       store.send(.sceneBecameActive)
