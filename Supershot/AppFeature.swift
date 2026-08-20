@@ -420,23 +420,18 @@ extension AlertState where Action == AppFeature.Alert {
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
-    let period = min(
-      max(snapshot.game.currentPeriod, 1),
-      Self.maximumPeriod
+    let currentPhaseIndex = min(
+      max(snapshot.game.currentPhaseIndex, 0),
+      snapshot.game.phases.count - 1
     )
-    let clockPhase = snapshot.game.isInBreak
-      ? ScoringFeature.ClockPhase.breakTime
-      : .quarter
-    let currentDuration = clockPhase == .breakTime
-      ? snapshot.game.breakDuration(after: period)
-      : snapshot.game.periodDurationSeconds
+    let currentDuration = snapshot.game.phases[currentPhaseIndex].durationSeconds
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,
       centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
         ? snapshot.teamB.id
         : snapshot.teamA.id,
-      clockPhase: clockPhase,
+      currentPhaseIndex: currentPhaseIndex,
       elapsedSeconds: min(
         max(snapshot.game.elapsedSeconds, 0),
         max(currentDuration, 0)
@@ -444,10 +439,7 @@ extension ScoringFeature.State {
       firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
       gameID: snapshot.game.id,
       halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
-      hasTimerStartedThisPeriod: snapshot.game.hasTimerStartedCurrentPeriod,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
-      isTimerRunning: snapshot.game.timerEndsAt != nil,
-      period: period,
       periodDurationSeconds: snapshot.game.periodDurationSeconds,
       secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
       startedAt: snapshot.game.startedAt,

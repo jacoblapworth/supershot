@@ -375,11 +375,10 @@ struct NewGameFeature {
               firstBreakDurationSeconds: firstBreakDurationSeconds,
               halfTimeDurationSeconds: halfTimeDurationSeconds,
               secondBreakDurationSeconds: secondBreakDurationSeconds,
-              isInBreak: false,
               isAwaitingCentrePassConfirmation: false,
-              currentPeriod: 1,
+              currentPhaseIndex: 0,
               elapsedSeconds: 0,
-              hasTimerStartedCurrentPeriod: false
+              timerEndsAt: nil
             )
           }
           .execute(db)

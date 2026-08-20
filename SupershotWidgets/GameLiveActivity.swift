@@ -311,7 +311,7 @@ private struct TimerControl: View {
         Button(
           intent: PauseGameTimerIntent(
             gameID: attributes.gameID,
-            expectedPeriod: state.period
+            expectedPhaseIndex: state.phaseIndex
           )
         ) {
           Image(systemName: "pause.fill")
@@ -324,7 +324,7 @@ private struct TimerControl: View {
         Button(
           intent: ResumeGameTimerIntent(
             gameID: attributes.gameID,
-            expectedPeriod: state.period
+            expectedPhaseIndex: state.phaseIndex
           )
         ) {
           Image(systemName: "play.fill")
@@ -355,6 +355,10 @@ private extension GameActivityAttributes {
 }
 
 private extension GameActivityAttributes.ContentState {
+  var isInBreak: Bool { !phaseIndex.isMultiple(of: 2) }
+
+  var period: Int { phaseIndex / 2 + 1 }
+
   var isComplete: Bool {
     elapsedSeconds >= currentDurationSeconds
   }
@@ -367,8 +371,7 @@ private extension GameActivityAttributes.ContentState {
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
-    isInBreak: false,
-    period: 2,
+    phaseIndex: 2,
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
@@ -378,8 +381,7 @@ private extension GameActivityAttributes.ContentState {
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
-    isInBreak: false,
-    period: 2,
+    phaseIndex: 2,
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: Date.now.addingTimeInterval(655)
@@ -389,8 +391,7 @@ private extension GameActivityAttributes.ContentState {
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 900,
-    isInBreak: false,
-    period: 2,
+    phaseIndex: 2,
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil

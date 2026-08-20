@@ -16,15 +16,7 @@ struct ScoringFeature {
     var teamBScore = 0
   }
 
-  struct QuarterSnapshot: Equatable, Sendable {
-    var centrePassTeamID: Team.ID
-    var elapsedSeconds: Int
-    var hasTimerStartedThisPeriod: Bool
-    var period: Int
-  }
-
   struct LastCentrePassSnapshot: Equatable, Sendable {
-    var advancesToNextQuarter: Bool
     var centrePassTeamID: Team.ID
   }
 
@@ -37,25 +29,18 @@ struct ScoringFeature {
   @ObservableState
   struct State: Equatable {
     nonisolated static let defaultPeriodDurationSeconds = 15 * 60
-    nonisolated static let maximumPeriod = 4
-
     @Presents var alert: AlertState<Alert>?
     var canUndo = false
     var centrePassTeamID: Team.ID
-    var clockPhase = ClockPhase.quarter
-    @Presents var confirmationDialog: ConfirmationDialogState<ConfirmationDialogAction>?
+    var currentPhaseIndex = 0
     var elapsedSeconds = 0
     var firstBreakDurationSeconds = 0
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
     var halfTimeDurationSeconds = 0
-    var hasTimerStartedThisPeriod = false
     var hasShownAlarmUnavailableAlert = false
     var isShowingLastCentrePassBanner = false
-    var isTimerRunning = false
     var isTransitioningPeriod = false
-    var pendingPausedGoalTeamID: Team.ID?
-    var period = 1
     var periodDurationSeconds = defaultPeriodDurationSeconds
     var secondBreakDurationSeconds = 0
     let startedAt: Date
@@ -65,61 +50,73 @@ struct ScoringFeature {
     var teamBScore = 0
     var timerEndsAt: Date?
 
+    var phases: [GamePhase] {
+      [
+        .quarter(number: 1, durationSeconds: periodDurationSeconds),
+        .breakTime(afterQuarter: 1, durationSeconds: firstBreakDurationSeconds),
+        .quarter(number: 2, durationSeconds: periodDurationSeconds),
+        .breakTime(afterQuarter: 2, durationSeconds: halfTimeDurationSeconds),
+        .quarter(number: 3, durationSeconds: periodDurationSeconds),
+        .breakTime(afterQuarter: 3, durationSeconds: secondBreakDurationSeconds),
+        .quarter(number: 4, durationSeconds: periodDurationSeconds),
+      ]
+    }
+
+    var currentPhase: GamePhase {
+      phases[Swift.min(Swift.max(currentPhaseIndex, 0), phases.count - 1)]
+    }
+
+    var countdown: GameCountdown {
+      get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
+      set {
+        elapsedSeconds = newValue.elapsedSeconds
+        timerEndsAt = newValue.endsAt
+      }
+    }
+
+    var clockPhase: ClockPhase {
+      currentPhase.isBreak ? .breakTime : .quarter
+    }
+
+    var period: Int { currentPhase.quarterNumber }
+    var isTimerRunning: Bool { countdown.isRunning }
+    var currentDurationSeconds: Int { currentPhase.durationSeconds }
+    var isPeriodComplete: Bool { elapsedSeconds >= currentDurationSeconds }
+    var canScoreGoal: Bool {
+      currentPhase.isQuarter
+        && isTimerRunning
+        && !isPeriodComplete
+        && !isShowingLastCentrePassBanner
+    }
+
     var canFinishGame: Bool {
-      clockPhase == .quarter
-        && period == Self.maximumPeriod
+      currentPhase == .quarter(number: 4, durationSeconds: periodDurationSeconds)
+        && isPeriodComplete
         && !isTimerRunning
         && !isShowingLastCentrePassBanner
-        && hasTimerStartedThisPeriod
+    }
+
+    var canMoveToNextQuarter: Bool {
+      currentPhase.isQuarter
+        && !isPeriodComplete
+        && !isShowingLastCentrePassBanner
+        && !isTransitioningPeriod
     }
 
     var centrePassTeam: Team {
       centrePassTeamID == teamB.id ? teamB : teamA
     }
 
-    var canContinueToNextQuarter: Bool {
-      clockPhase == .breakTime
-        && !isTimerRunning
-        && !isShowingLastCentrePassBanner
-        && !isTransitioningPeriod
-        && isPeriodComplete
-    }
-
-    var canMoveToNextQuarter: Bool {
-      clockPhase == .quarter
-        && period < Self.maximumPeriod
-        && !isTimerRunning
-        && !isShowingLastCentrePassBanner
-        && hasTimerStartedThisPeriod
-    }
-
-    var currentDurationSeconds: Int {
-      clockPhase == .breakTime ? breakDuration(after: period) : periodDurationSeconds
-    }
-
-    var isPeriodComplete: Bool {
-      elapsedSeconds >= currentDurationSeconds
-    }
-
     var isShowingOriginalTeamOrder: Bool {
       !period.isMultiple(of: 2)
     }
 
-    var timeRemainingSeconds: Int {
-      max(currentDurationSeconds - elapsedSeconds, 0)
+    var lastCompletedQuarterNumber: Int {
+      currentPhase.isBreak ? period : max(period - 1, 1)
     }
 
-    func breakDuration(after period: Int) -> Int {
-      switch period {
-      case 1:
-        firstBreakDurationSeconds
-      case 2:
-        halfTimeDurationSeconds
-      case 3:
-        secondBreakDurationSeconds
-      default:
-        0
-      }
+    var timeRemainingSeconds: Int {
+      max(currentDurationSeconds - elapsedSeconds, 0)
     }
   }
 
@@ -128,8 +125,6 @@ struct ScoringFeature {
     case centrePassTeamButtonTapped(Team.ID)
     case centrePassTeamResponse(Result<Team.ID, any Error>)
     case closeButtonTapped
-    case confirmationDialog(PresentationAction<ConfirmationDialogAction>)
-    case continueToNextQuarterButtonTapped
     case delegate(Delegate)
     case endQuarterButtonTapped
     case finishGameButtonTapped
@@ -139,11 +134,11 @@ struct ScoringFeature {
     case lastCentrePassNotTakenButtonTapped
     case lastCentrePassResponse(Result<LastCentrePassSnapshot, any Error>)
     case lastCentrePassTakenButtonTapped
-    case nextQuarterResponse(Result<QuarterSnapshot, any Error>)
     case pauseTimerButtonTapped
     case sceneBecameActive
     case sceneBecameInactive
     case skipBreakButtonTapped
+    case skipPhaseResponse(Result<GameSnapshot, any Error>)
     case startTimerButtonTapped
     case timerTick
     case timerPauseResponse(Result<GameSnapshot, any Error>)
@@ -161,10 +156,6 @@ struct ScoringFeature {
     case dismissButtonTapped
   }
 
-  enum ConfirmationDialogAction: Equatable {
-    case recordGoalButtonTapped
-  }
-
   private nonisolated enum CancelID: Hashable, Sendable {
     case timer
   }
@@ -180,15 +171,16 @@ struct ScoringFeature {
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .alert:
+      case .alert, .delegate:
         return .none
 
       case let .centrePassTeamButtonTapped(teamID):
-        guard state.clockPhase == .quarter, !state.isShowingLastCentrePassBanner else {
-          return .none
-        }
-        guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
-        guard teamID != state.centrePassTeamID else { return .none }
+        guard
+          state.currentPhase.isQuarter,
+          !state.isShowingLastCentrePassBanner,
+          teamID == state.teamA.id || teamID == state.teamB.id,
+          teamID != state.centrePassTeamID
+        else { return .none }
         return updateCentrePassEffect(gameID: state.gameID, teamID: teamID)
 
       case let .centrePassTeamResponse(.success(teamID)):
@@ -206,33 +198,12 @@ struct ScoringFeature {
           .run { _ in await dismiss() }
         )
 
-      case .confirmationDialog(.dismiss):
-        state.pendingPausedGoalTeamID = nil
-        return .none
-
-      case .confirmationDialog(.presented(.recordGoalButtonTapped)):
-        guard let teamID = state.pendingPausedGoalTeamID else { return .none }
-        state.confirmationDialog = nil
-        state.pendingPausedGoalTeamID = nil
-        return insertGoalEffect(state: state, teamID: teamID)
-
-      case .continueToNextQuarterButtonTapped:
-        guard state.canContinueToNextQuarter else { return .none }
-        state.isTransitioningPeriod = true
-        return nextQuarterEffect(state: state)
-
-      case .delegate:
-        return .none
-
       case .endQuarterButtonTapped:
         guard state.canMoveToNextQuarter else { return .none }
-        return requestQuarterEnd(state: &state, timerEffectIsRunning: false)
+        return skipCurrentPhase(state: &state)
 
       case .finishGameButtonTapped:
         guard state.canFinishGame else { return .none }
-        synchronizeTimer(state: &state, now: now)
-        state.isTimerRunning = false
-        state.timerEndsAt = nil
         return .merge(
           .cancel(id: CancelID.timer),
           finishGameEffect(state: state)
@@ -245,17 +216,12 @@ struct ScoringFeature {
         return .none
 
       case let .goalButtonTapped(teamID):
-        guard state.clockPhase == .quarter, !state.isShowingLastCentrePassBanner else {
-          return .none
-        }
         guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
         synchronizeTimer(state: &state, now: now)
-        if state.isPeriodComplete, state.timerEndsAt == nil {
-          return reconcileTimerEffect(gameID: state.gameID)
-        }
-        guard state.isTimerRunning else {
-          state.confirmationDialog = .pausedGoalConfirmation
-          state.pendingPausedGoalTeamID = teamID
+        guard state.canScoreGoal else {
+          if state.isPeriodComplete {
+            return reconcileTimerEffect(gameID: state.gameID)
+          }
           return .none
         }
         return insertGoalEffect(state: state, teamID: teamID)
@@ -269,68 +235,31 @@ struct ScoringFeature {
         )
 
       case .goalResponse(.failure):
-        return .none
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case .lastCentrePassNotTakenButtonTapped:
-        guard state.isShowingLastCentrePassBanner, !state.isTransitioningPeriod else {
-          return .none
-        }
-        state.isTransitioningPeriod = true
-        return resolveLastCentrePassEffect(state: state, wasLastCentrePassTaken: false)
+        return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: false)
 
       case .lastCentrePassTakenButtonTapped:
-        guard state.isShowingLastCentrePassBanner, !state.isTransitioningPeriod else {
-          return .none
-        }
-        state.isTransitioningPeriod = true
-        return resolveLastCentrePassEffect(state: state, wasLastCentrePassTaken: true)
+        return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: true)
 
       case let .lastCentrePassResponse(.success(snapshot)):
         state.centrePassTeamID = snapshot.centrePassTeamID
         state.isShowingLastCentrePassBanner = false
         state.isTransitioningPeriod = false
-        guard snapshot.advancesToNextQuarter else { return .none }
-        state.clockPhase = .quarter
-        state.elapsedSeconds = 0
-        state.hasTimerStartedThisPeriod = false
-        state.isTimerRunning = false
-        state.period += 1
-        state.timerEndsAt = nil
-        return .merge(
-          .cancel(id: CancelID.timer),
-          refreshActivityEffect(gameID: state.gameID)
-        )
+        return refreshActivityEffect(gameID: state.gameID)
 
       case .lastCentrePassResponse(.failure):
-        state.isTransitioningPeriod = false
-        return .none
-
-      case let .nextQuarterResponse(.success(snapshot)):
-        state.centrePassTeamID = snapshot.centrePassTeamID
-        state.clockPhase = .quarter
-        state.elapsedSeconds = snapshot.elapsedSeconds
-        state.hasTimerStartedThisPeriod = snapshot.hasTimerStartedThisPeriod
-        state.isTimerRunning = false
-        state.isTransitioningPeriod = false
-        state.period = snapshot.period
-        state.timerEndsAt = nil
-        return .merge(
-          .cancel(id: CancelID.timer),
-          refreshActivityEffect(gameID: state.gameID)
-        )
-
-      case .nextQuarterResponse(.failure):
         state.isTransitioningPeriod = false
         return .none
 
       case .pauseTimerButtonTapped:
         guard state.isTimerRunning else { return .none }
         synchronizeTimer(state: &state, now: now)
-        state.isTimerRunning = false
         state.timerEndsAt = nil
         return .merge(
           .cancel(id: CancelID.timer),
-          pauseTimerEffect(gameID: state.gameID, expectedPeriod: state.period)
+          pauseTimerEffect(gameID: state.gameID, expectedPhaseIndex: state.currentPhaseIndex)
         )
 
       case let .timerPauseResponse(.success(snapshot)):
@@ -338,7 +267,7 @@ struct ScoringFeature {
         return .none
 
       case .timerPauseResponse(.failure):
-        return .none
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameActive:
         return reconcileTimerEffect(gameID: state.gameID)
@@ -347,30 +276,26 @@ struct ScoringFeature {
         return .cancel(id: CancelID.timer)
 
       case .skipBreakButtonTapped:
-        guard
-          state.clockPhase == .breakTime,
-          !state.isShowingLastCentrePassBanner,
-          !state.isTransitioningPeriod
-        else { return .none }
-        synchronizeTimer(state: &state, now: now)
-        state.elapsedSeconds = state.currentDurationSeconds
-        state.isTimerRunning = false
-        state.isTransitioningPeriod = true
-        state.timerEndsAt = nil
-        return .concatenate(
-          .cancel(id: CancelID.timer),
-          nextQuarterEffect(state: state)
-        )
+        guard state.currentPhase.isBreak, !state.isTransitioningPeriod else { return .none }
+        return skipCurrentPhase(state: &state)
+
+      case let .skipPhaseResponse(.success(snapshot)):
+        applyTimer(snapshot.game, to: &state)
+        state.isTransitioningPeriod = false
+        guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
+        return timerEffect()
+
+      case .skipPhaseResponse(.failure):
+        state.isTransitioningPeriod = false
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case .startTimerButtonTapped:
         guard
           !state.isTimerRunning,
           !state.isPeriodComplete,
-          (!state.isShowingLastCentrePassBanner || state.clockPhase == .breakTime)
+          state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
         else { return .none }
-        let requestsAuthorization = !state.hasTimerStartedThisPeriod
-        state.hasTimerStartedThisPeriod = true
-        state.isTimerRunning = true
+        let requestsAuthorization = state.currentPhaseIndex == 0 && state.elapsedSeconds == 0
         state.timerEndsAt = GameTimerMath.endDate(
           durationSeconds: state.currentDurationSeconds,
           elapsedSeconds: state.elapsedSeconds,
@@ -379,7 +304,7 @@ struct ScoringFeature {
         return .merge(
           startTimerEffect(
             gameID: state.gameID,
-            expectedPeriod: state.period,
+            expectedPhaseIndex: state.currentPhaseIndex,
             requestsAuthorization: requestsAuthorization
           ),
           timerEffect()
@@ -389,7 +314,6 @@ struct ScoringFeature {
         guard state.isTimerRunning else { return .none }
         synchronizeTimer(state: &state, now: now)
         guard state.isPeriodComplete else { return .none }
-        state.isTimerRunning = false
         state.timerEndsAt = nil
         return .merge(
           .cancel(id: CancelID.timer),
@@ -413,7 +337,7 @@ struct ScoringFeature {
         return .none
 
       case .timerStartResponse(.failure):
-        return .none
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case .undoButtonTapped:
         guard state.canUndo, !state.isShowingLastCentrePassBanner else { return .none }
@@ -425,11 +349,9 @@ struct ScoringFeature {
 
       case .undoResponse(.failure):
         return .none
-
       }
     }
     .ifLet(\.$alert, action: \.alert)
-    .ifLet(\.$confirmationDialog, action: \.confirmationDialog)
   }
 
   private func apply(_ snapshot: ScoreSnapshot, to state: inout State) {
@@ -440,45 +362,43 @@ struct ScoringFeature {
   }
 
   private func applyTimer(_ game: Game, to state: inout State) {
-    state.clockPhase = game.isInBreak ? .breakTime : .quarter
+    state.currentPhaseIndex = game.currentPhaseIndex
     state.elapsedSeconds = game.elapsedSeconds
-    state.hasTimerStartedThisPeriod = game.hasTimerStartedCurrentPeriod
     state.isShowingLastCentrePassBanner = game.isAwaitingCentrePassConfirmation
-    state.isTimerRunning = game.timerEndsAt != nil
-    state.period = game.currentPeriod
     state.timerEndsAt = game.timerEndsAt
   }
 
-  private func requestQuarterEnd(
-    state: inout State,
-    timerEffectIsRunning: Bool
-  ) -> Effect<Action> {
-    state.isShowingLastCentrePassBanner = true
-    let hasBreak = state.breakDuration(after: state.period) > 0
-    guard hasBreak else {
-      state.isTimerRunning = false
-      state.timerEndsAt = nil
-      return .merge(
-        .cancel(id: CancelID.timer),
-        saveProgressEffect(state: state)
-      )
-    }
-
-    state.clockPhase = .breakTime
-    state.elapsedSeconds = 0
-    state.hasTimerStartedThisPeriod = true
-    state.isTimerRunning = true
-    state.timerEndsAt = GameTimerMath.endDate(
-      durationSeconds: state.currentDurationSeconds,
-      elapsedSeconds: state.elapsedSeconds,
-      now: now
-    )
-    if timerEffectIsRunning {
-      return saveProgressEffect(state: state)
-    }
+  private func skipCurrentPhase(state: inout State) -> Effect<Action> {
+    synchronizeTimer(state: &state, now: now)
+    let gameID = state.gameID
+    let phaseIndex = state.currentPhaseIndex
+    state.timerEndsAt = nil
+    state.isTransitioningPeriod = true
     return .merge(
-      saveProgressEffect(state: state),
-      timerEffect()
+      .cancel(id: CancelID.timer),
+      .run { send in
+        await send(
+          .skipPhaseResponse(
+            await Result {
+              try await gameTimer.skip(gameID, phaseIndex)
+            }
+          )
+        )
+      }
+    )
+  }
+
+  private func resolveLastCentrePass(
+    state: inout State,
+    wasLastCentrePassTaken: Bool
+  ) -> Effect<Action> {
+    guard state.isShowingLastCentrePassBanner, !state.isTransitioningPeriod else {
+      return .none
+    }
+    state.isTransitioningPeriod = true
+    return resolveLastCentrePassEffect(
+      state: state,
+      wasLastCentrePassTaken: wasLastCentrePassTaken
     )
   }
 
@@ -493,13 +413,8 @@ struct ScoringFeature {
         teamBID: state.teamB.id
       )
       : state.centrePassTeamID
-    let advancesToNextQuarter = state.clockPhase == .quarter
     let gameID = state.gameID
-    let nextPeriod = state.period + 1
-    let snapshot = LastCentrePassSnapshot(
-      advancesToNextQuarter: advancesToNextQuarter,
-      centrePassTeamID: centrePassTeamID
-    )
+    let snapshot = LastCentrePassSnapshot(centrePassTeamID: centrePassTeamID)
 
     return .run { send in
       let result = await Result {
@@ -507,26 +422,12 @@ struct ScoringFeature {
           guard try Game.find(gameID).fetchOne(db) != nil else {
             throw ScoringPersistenceError.gameNotFound
           }
-          if advancesToNextQuarter {
-            try Game.find(gameID).update {
-              $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
-              $0.currentPeriod = nextPeriod
-              $0.elapsedSeconds = 0
-              $0.hasTimerStartedCurrentPeriod = false
-              $0.isAwaitingCentrePassConfirmation = false
-              $0.isInBreak = false
-              $0.timerEndsAt = #bind(nil as Date?)
-            }
-            .execute(db)
-          } else {
-            try Game.find(gameID).update {
-              $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
-              $0.isAwaitingCentrePassConfirmation = false
-            }
-            .execute(db)
+          try Game.find(gameID).update {
+            $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
+            $0.isAwaitingCentrePassConfirmation = false
           }
+          .execute(db)
         }
-        await gameTimer.refreshActivity(gameID)
         return snapshot
       }
       await send(.lastCentrePassResponse(result))
@@ -536,11 +437,8 @@ struct ScoringFeature {
   private func finishGameEffect(state: State) -> Effect<Action> {
     let endedAt = now
     let gameID = state.gameID
-    let currentPeriod = state.period
+    let currentPhaseIndex = state.currentPhaseIndex
     let elapsedSeconds = state.elapsedSeconds
-    let hasTimerStartedCurrentPeriod = state.hasTimerStartedThisPeriod
-    let isAwaitingCentrePassConfirmation = state.isShowingLastCentrePassBanner
-    let isInBreak = state.clockPhase == .breakTime
 
     return .run { send in
       let result = await Result {
@@ -549,12 +447,10 @@ struct ScoringFeature {
             throw ScoringPersistenceError.gameNotFound
           }
           try Game.find(gameID).update {
-            $0.currentPeriod = currentPeriod
+            $0.currentPhaseIndex = currentPhaseIndex
             $0.elapsedSeconds = elapsedSeconds
             $0.endedAt = #bind(endedAt)
-            $0.hasTimerStartedCurrentPeriod = hasTimerStartedCurrentPeriod
-            $0.isAwaitingCentrePassConfirmation = isAwaitingCentrePassConfirmation
-            $0.isInBreak = isInBreak
+            $0.isAwaitingCentrePassConfirmation = false
             $0.timerEndsAt = #bind(nil as Date?)
           }
           .execute(db)
@@ -568,10 +464,9 @@ struct ScoringFeature {
 
   private func insertGoalEffect(state: State, teamID: Team.ID) -> Effect<Action> {
     let createdAt = now
-    let elapsedSeconds = state.elapsedSeconds
+    let expectedPhaseIndex = state.currentPhaseIndex
     let gameID = state.gameID
     let goalID = uuid()
-    let period = state.period
     let teamAID = state.teamA.id
     let teamBID = state.teamB.id
 
@@ -581,34 +476,51 @@ struct ScoringFeature {
           guard let game = try Game.find(gameID).fetchOne(db) else {
             throw ScoringPersistenceError.gameNotFound
           }
+          guard
+            game.currentPhaseIndex == expectedPhaseIndex,
+            case let .quarter(quarterNumber, durationSeconds) = game.currentPhase,
+            let timerEndsAt = game.timerEndsAt,
+            timerEndsAt > createdAt
+          else {
+            throw ScoringPersistenceError.goalUnavailable
+          }
+          let elapsedSeconds = GameTimerMath.elapsedSeconds(
+            durationSeconds: durationSeconds,
+            persistedElapsedSeconds: game.elapsedSeconds,
+            timerEndsAt: timerEndsAt,
+            now: createdAt
+          )
+          guard elapsedSeconds < durationSeconds else {
+            throw ScoringPersistenceError.goalUnavailable
+          }
+
           let centrePassTeamID = resolvedCentrePassTeamID(
             game.centrePassTeamID,
             teamAID: teamAID,
             teamBID: teamBID
           )
-          let goal = Goal(
-            id: goalID,
-            gameID: gameID,
-            centrePassTeamID: centrePassTeamID,
-            teamID: teamID,
-            period: period,
-            elapsedSeconds: elapsedSeconds,
-            points: 1,
-            createdAt: createdAt
-          )
-          let nextCentrePassTeamID = opposingTeamID(
-            centrePassTeamID,
-            teamAID: teamAID,
-            teamBID: teamBID
-          )
-
           try Goal.insert {
-            goal
+            Goal(
+              id: goalID,
+              gameID: gameID,
+              centrePassTeamID: centrePassTeamID,
+              teamID: teamID,
+              quarterNumber: quarterNumber,
+              elapsedSeconds: elapsedSeconds,
+              points: 1,
+              createdAt: createdAt
+            )
           }
           .execute(db)
 
           try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(nextCentrePassTeamID)
+            $0.centrePassTeamID = #bind(
+              opposingTeamID(
+                centrePassTeamID,
+                teamAID: teamAID,
+                teamBID: teamBID
+              )
+            )
           }
           .execute(db)
 
@@ -634,44 +546,15 @@ struct ScoringFeature {
     .cancellable(id: CancelID.timer, cancelInFlight: true)
   }
 
-  private func saveProgressEffect(state: State) -> Effect<Action> {
-    let currentPeriod = state.period
-    let elapsedSeconds = state.elapsedSeconds
-    let gameID = state.gameID
-    let hasTimerStartedCurrentPeriod = state.hasTimerStartedThisPeriod
-    let isAwaitingCentrePassConfirmation = state.isShowingLastCentrePassBanner
-    let isInBreak = state.clockPhase == .breakTime
-    let timerEndsAt = state.timerEndsAt
-
-    return .run { _ in
-      await gameTimer.cancelAlert(gameID)
-      try? await database.write { db in
-        try Game.find(gameID).update {
-          $0.currentPeriod = currentPeriod
-          $0.elapsedSeconds = elapsedSeconds
-          $0.hasTimerStartedCurrentPeriod = hasTimerStartedCurrentPeriod
-          $0.isAwaitingCentrePassConfirmation = isAwaitingCentrePassConfirmation
-          $0.isInBreak = isInBreak
-          $0.timerEndsAt = #bind(timerEndsAt)
-        }
-        .execute(db)
-      }
-      if timerEndsAt != nil {
-        await gameTimer.scheduleAlert(gameID)
-      }
-      await gameTimer.refreshActivity(gameID)
-    }
-  }
-
   private func pauseTimerEffect(
     gameID: Game.ID,
-    expectedPeriod: Int
+    expectedPhaseIndex: Int
   ) -> Effect<Action> {
     .run { send in
       await send(
         .timerPauseResponse(
           await Result {
-            try await gameTimer.pause(gameID, expectedPeriod)
+            try await gameTimer.pause(gameID, expectedPhaseIndex)
           }
         )
       )
@@ -691,14 +574,12 @@ struct ScoringFeature {
   }
 
   private func refreshActivityEffect(gameID: Game.ID) -> Effect<Action> {
-    .run { _ in
-      await gameTimer.refreshActivity(gameID)
-    }
+    .run { _ in await gameTimer.refreshActivity(gameID) }
   }
 
   private func startTimerEffect(
     gameID: Game.ID,
-    expectedPeriod: Int,
+    expectedPhaseIndex: Int,
     requestsAuthorization: Bool
   ) -> Effect<Action> {
     .run { send in
@@ -707,7 +588,7 @@ struct ScoringFeature {
           await Result {
             try await gameTimer.startOrResume(
               gameID,
-              expectedPeriod,
+              expectedPhaseIndex,
               requestsAuthorization
             )
           }
@@ -725,15 +606,12 @@ struct ScoringFeature {
       let result = await Result {
         try await database.write { db in
           let latestGoal = try Goal
-            .where { goals in goals.gameID.eq(gameID) }
-            .order { goals in (goals.createdAt.desc(), goals.id.desc()) }
+            .where { $0.gameID.eq(gameID) }
+            .order { ($0.createdAt.desc(), $0.id.desc()) }
             .fetchOne(db)
 
           if let latestGoal {
-            try Goal.find(latestGoal.id)
-              .delete()
-              .execute(db)
-
+            try Goal.find(latestGoal.id).delete().execute(db)
             guard let game = try Game.find(gameID).fetchOne(db) else {
               throw ScoringPersistenceError.gameNotFound
             }
@@ -742,13 +620,14 @@ struct ScoringFeature {
               teamAID: teamAID,
               teamBID: teamBID
             )
-            let nextCentrePassTeamID = opposingTeamID(
-              centrePassTeamID,
-              teamAID: teamAID,
-              teamBID: teamBID
-            )
             try Game.find(gameID).update {
-              $0.centrePassTeamID = #bind(nextCentrePassTeamID)
+              $0.centrePassTeamID = #bind(
+                opposingTeamID(
+                  centrePassTeamID,
+                  teamAID: teamAID,
+                  teamBID: teamBID
+                )
+              )
             }
             .execute(db)
           }
@@ -762,39 +641,6 @@ struct ScoringFeature {
         }
       }
       await send(.undoResponse(result))
-    }
-  }
-
-  private func nextQuarterEffect(state: State) -> Effect<Action> {
-    let gameID = state.gameID
-    let snapshot = QuarterSnapshot(
-      centrePassTeamID: state.centrePassTeamID,
-      elapsedSeconds: 0,
-      hasTimerStartedThisPeriod: false,
-      period: state.period + 1
-    )
-
-    return .run { send in
-      let result = await Result {
-        try await database.write { db in
-          guard try Game.find(gameID).fetchOne(db) != nil else {
-            throw ScoringPersistenceError.gameNotFound
-          }
-          try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
-            $0.currentPeriod = snapshot.period
-            $0.elapsedSeconds = snapshot.elapsedSeconds
-            $0.hasTimerStartedCurrentPeriod = snapshot.hasTimerStartedThisPeriod
-            $0.isAwaitingCentrePassConfirmation = false
-            $0.isInBreak = false
-            $0.timerEndsAt = #bind(nil as Date?)
-          }
-          .execute(db)
-        }
-        await gameTimer.refreshActivity(gameID)
-        return snapshot
-      }
-      await send(.nextQuarterResponse(result))
     }
   }
 
@@ -825,23 +671,6 @@ struct ScoringFeature {
         return teamID
       }
       await send(.centrePassTeamResponse(result))
-    }
-  }
-}
-
-extension ConfirmationDialogState where Action == ScoringFeature.ConfirmationDialogAction {
-  static var pausedGoalConfirmation: Self {
-    Self {
-      TextState("Timer paused")
-    } actions: {
-      ButtonState(action: .recordGoalButtonTapped) {
-        TextState("Record goal")
-      }
-      ButtonState(role: .cancel) {
-        TextState("Cancel")
-      }
-    } message: {
-      TextState("Record goal while timer is paused?")
     }
   }
 }
@@ -895,6 +724,7 @@ extension ScoringFeature.ScoreSnapshot {
 
 private nonisolated enum ScoringPersistenceError: Error {
   case gameNotFound
+  case goalUnavailable
 }
 
 private nonisolated func opposingTeamID(

@@ -50,7 +50,7 @@ extension SupershotTestSuite {
         let teamBScore = gameGoals.filter { $0.teamID == game.teamBID }.count
         #expect(abs(teamAScore - teamBScore) <= 2)
 
-        for periodGoals in Dictionary(grouping: gameGoals, by: \.period).values {
+        for periodGoals in Dictionary(grouping: gameGoals, by: \.quarterNumber).values {
           let elapsedSeconds = periodGoals.map(\.elapsedSeconds).sorted()
           let scoringIntervals = zip([0] + elapsedSeconds, elapsedSeconds).map { $1 - $0 }
           #expect(scoringIntervals.allSatisfy { (20...30).contains($0) })
