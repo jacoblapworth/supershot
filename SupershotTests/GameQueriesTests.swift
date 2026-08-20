@@ -48,7 +48,7 @@ extension SupershotTestSuite {
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 2,
             createdAt: newerDate
@@ -57,7 +57,7 @@ extension SupershotTestSuite {
             id: UUID(-2),
             gameID: UUID(-2),
             teamID: UUID(-4),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: olderDate
@@ -138,7 +138,7 @@ extension SupershotTestSuite {
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: startedAt

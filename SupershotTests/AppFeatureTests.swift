@@ -42,8 +42,6 @@ extension SupershotTestSuite {
     @Test
     func gameDeepLinkReconcilesAndRestoresRunningScoringRoute() async {
       var scoring = Self.appScoringState()
-      scoring.hasTimerStartedThisPeriod = true
-      scoring.isTimerRunning = true
       scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       let seedStore = Self.makeAppScoringStore(state: scoring)
       let database = seedStore.dependencies.defaultDatabase
@@ -226,7 +224,7 @@ extension SupershotTestSuite {
             id: UUID(4),
             gameID: UUID(3),
             teamID: UUID(1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -278,7 +276,7 @@ extension SupershotTestSuite {
             id: UUID(4),
             gameID: UUID(3),
             teamID: UUID(1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -395,11 +393,9 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .breakTime,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
-                currentPeriod: state.period,
+                currentPhaseIndex: state.currentPhaseIndex,
                 elapsedSeconds: state.elapsedSeconds,
-                hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod,
                 timerEndsAt: state.timerEndsAt
               )
             }

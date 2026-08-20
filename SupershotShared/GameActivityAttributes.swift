@@ -7,8 +7,7 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
     var centrePassTeamID: UUID
     var currentDurationSeconds: Int
     var elapsedSeconds: Int
-    var isInBreak: Bool
-    var period: Int
+    var phaseIndex: Int
     var teamAScore: Int
     var teamBScore: Int
     var timerEndsAt: Date?

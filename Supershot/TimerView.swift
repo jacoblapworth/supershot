@@ -37,7 +37,10 @@ struct TimerView: View {
                 }
               }
             }
-            .disabled(isPeriodComplete)
+            .disabled(
+              isPeriodComplete
+                || (clockPhase == .quarter && isShowingLastCentrePassBanner)
+            )
           }
         }
         
@@ -96,6 +99,7 @@ struct TimerView: View {
     .controlSize(.large)
     .fontWeight(.medium)
     .tint(.green)
+    .disabled(clockPhase == .quarter && isShowingLastCentrePassBanner)
   }
   
   private var timeRemainingSeconds: Int {

@@ -12,8 +12,7 @@ nonisolated extension GameTimerSystemClient {
     #if os(iOS)
     Self(
       cancelAlarm: { gameID in
-        try? AlarmManager.shared.stop(id: gameID)
-        try? AlarmManager.shared.cancel(id: gameID)
+        cancelAlarms(for: gameID)
       },
       endActivity: { gameID in
         for activity in Activity<GameActivityAttributes>.activities
@@ -32,35 +31,59 @@ nonisolated extension GameTimerSystemClient {
           return authorizationState == .denied || requestsAuthorization
         }
 
-        try? manager.stop(id: snapshot.game.id)
-        try? manager.cancel(id: snapshot.game.id)
-        let title: LocalizedStringResource = snapshot.game.isInBreak
-          ? "Break ended."
-          : "Quarter \(snapshot.game.currentPeriod) ended."
-        let presentation = AlarmPresentation(
-          alert: AlarmPresentation.Alert(title: title)
-        )
-        let attributes = AlarmAttributes(
-          presentation: presentation,
-          metadata: SupershotAlarmMetadata(
-            gameID: snapshot.game.id,
-            period: snapshot.game.currentPeriod
-          ),
-          tintColor: .accentColor
-        )
-        let configuration = AlarmManager.AlarmConfiguration.alarm(
-          schedule: .fixed(timerEndsAt),
-          attributes: attributes
-        )
-        do {
-          _ = try await manager.schedule(
-            id: snapshot.game.id,
-            configuration: configuration
+        cancelAlarms(for: snapshot.game.id)
+        var alarms = [
+          ScheduledGameAlarm(
+            date: timerEndsAt,
+            phase: snapshot.game.currentPhase,
+            phaseIndex: snapshot.game.currentPhaseIndex
           )
-          return false
-        } catch {
-          return true
+        ]
+        if
+          snapshot.game.currentPhase.isQuarter,
+          snapshot.game.currentPhaseIndex + 1 < snapshot.game.phases.count
+        {
+          let breakPhase = snapshot.game.phases[snapshot.game.currentPhaseIndex + 1]
+          if breakPhase.durationSeconds > 0 {
+            alarms.append(
+              ScheduledGameAlarm(
+                date: timerEndsAt.addingTimeInterval(
+                  TimeInterval(breakPhase.durationSeconds)
+                ),
+                phase: breakPhase,
+                phaseIndex: snapshot.game.currentPhaseIndex + 1
+              )
+            )
+          }
         }
+
+        for alarm in alarms {
+          let presentation = AlarmPresentation(
+            alert: AlarmPresentation.Alert(title: alarm.title)
+          )
+          let attributes = AlarmAttributes(
+            presentation: presentation,
+            metadata: SupershotAlarmMetadata(
+              gameID: snapshot.game.id,
+              phaseIndex: alarm.phaseIndex
+            ),
+            tintColor: .accentColor
+          )
+          let configuration = AlarmManager.AlarmConfiguration.alarm(
+            schedule: .fixed(alarm.date),
+            attributes: attributes
+          )
+          do {
+            _ = try await manager.schedule(
+              id: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex),
+              configuration: configuration
+            )
+          } catch {
+            cancelAlarms(for: snapshot.game.id)
+            return true
+          }
+        }
+        return false
       },
       updateActivity: { snapshot, startsIfNeeded in
         guard snapshot.game.endedAt == nil else { return }
@@ -74,7 +97,11 @@ nonisolated extension GameTimerSystemClient {
           await activity.update(content)
         } else if
           startsIfNeeded,
-          snapshot.game.hasTimerStartedCurrentPeriod,
+          (
+            snapshot.game.timerEndsAt != nil
+              || snapshot.game.elapsedSeconds > 0
+              || snapshot.game.currentPhaseIndex > 0
+          ),
           ActivityAuthorizationInfo().areActivitiesEnabled
         {
           _ = try? Activity.request(
@@ -94,7 +121,45 @@ nonisolated extension GameTimerSystemClient {
 #if os(iOS)
 private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
   var gameID: UUID
-  var period: Int
+  var phaseIndex: Int
+}
+
+private nonisolated struct ScheduledGameAlarm {
+  var date: Date
+  var phase: GamePhase
+  var phaseIndex: Int
+
+  var title: LocalizedStringResource {
+    switch phase {
+    case let .quarter(number, _):
+      "Quarter \(number) ended."
+    case .breakTime:
+      "Break ended."
+    }
+  }
+}
+
+private nonisolated func cancelAlarms(for gameID: Game.ID) {
+  for phaseIndex in 0..<7 {
+    let id = alarmID(gameID: gameID, phaseIndex: phaseIndex)
+    try? AlarmManager.shared.stop(id: id)
+    try? AlarmManager.shared.cancel(id: id)
+  }
+  try? AlarmManager.shared.stop(id: gameID)
+  try? AlarmManager.shared.cancel(id: gameID)
+}
+
+private nonisolated func alarmID(gameID: Game.ID, phaseIndex: Int) -> UUID {
+  let value = gameID.uuid
+  return UUID(
+    uuid: (
+      value.0, value.1, value.2, value.3,
+      value.4, value.5, value.6, value.7,
+      value.8, value.9, value.10, value.11,
+      value.12, value.13, value.14,
+      value.15 ^ UInt8(truncatingIfNeeded: phaseIndex + 1)
+    )
+  )
 }
 
 private nonisolated extension GameActivityAttributes {
@@ -115,10 +180,9 @@ private nonisolated extension GameActivityAttributes.ContentState {
   init(snapshot: GameSnapshot) {
     self.init(
       centrePassTeamID: snapshot.game.centrePassTeamID ?? snapshot.teamA.id,
-      currentDurationSeconds: snapshot.game.currentTimerDurationSeconds,
+      currentDurationSeconds: snapshot.game.currentPhase.durationSeconds,
       elapsedSeconds: snapshot.game.elapsedSeconds,
-      isInBreak: snapshot.game.isInBreak,
-      period: snapshot.game.currentPeriod,
+      phaseIndex: snapshot.game.currentPhaseIndex,
       teamAScore: snapshot.teamAScore,
       teamBScore: snapshot.teamBScore,
       timerEndsAt: snapshot.game.timerEndsAt

@@ -166,7 +166,7 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
     let goals = try Goal
       .where { $0.gameID.eq(gameID) }
       .order { goals in (
-        goals.period,
+        goals.quarterNumber,
         goals.elapsedSeconds,
         goals.createdAt,
         goals.id
@@ -343,13 +343,13 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
 
     if goal.teamID == snapshot.teamA.id {
       teamAScore += goal.points
-      quarterScoresByPeriod[goal.period, default: (0, 0)].teamA += goal.points
+      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamA += goal.points
       scoringTeamBibColorHex = snapshot.game.teamABibColorHex
       scoringTeamName = snapshot.teamA.name
       scoringTeamSide = .teamA
     } else if goal.teamID == snapshot.teamB.id {
       teamBScore += goal.points
-      quarterScoresByPeriod[goal.period, default: (0, 0)].teamB += goal.points
+      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamB += goal.points
       scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
       scoringTeamName = snapshot.teamB.name
       scoringTeamSide = .teamB
@@ -359,14 +359,14 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
       scoringTeamSide = .unknown
     }
 
-    goalsByPeriod[goal.period, default: []].append(
+    goalsByPeriod[goal.quarterNumber, default: []].append(
       GoalTimelineItem(
         clockSecondsRemaining: max(
           snapshot.game.periodDurationSeconds - goal.elapsedSeconds,
           0
         ),
         id: goal.id,
-        period: goal.period,
+        period: goal.quarterNumber,
         points: goal.points,
         scoringTeamBibColorHex: scoringTeamBibColorHex,
         scoringTeamName: scoringTeamName,
@@ -381,8 +381,8 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   let playedPeriod = snapshot.game.endedAt == nil
     ? min(
       max(
-        snapshot.game.currentPeriod,
-        snapshot.goals.map(\.period).max() ?? 1
+        snapshot.game.currentPhase.quarterNumber,
+        snapshot.goals.map(\.quarterNumber).max() ?? 1
       ),
       maximumPeriod
     )
@@ -410,9 +410,9 @@ private nonisolated func completedGameStatistics(
   var previousGoalElapsedSecondsByPeriod: [Int: Int] = [:]
 
   for goal in goals {
-    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.period, default: 0]
+    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.quarterNumber, default: 0]
     let duration = max(goal.elapsedSeconds - previousElapsedSeconds, 0)
-    previousGoalElapsedSecondsByPeriod[goal.period] = goal.elapsedSeconds
+    previousGoalElapsedSecondsByPeriod[goal.quarterNumber] = goal.elapsedSeconds
 
     if goal.teamID == teamAID || goal.teamID == teamBID {
       goalDurationsByTeamID[goal.teamID, default: []].append(duration)

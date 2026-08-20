@@ -38,7 +38,7 @@ extension SupershotTestSuite {
             gameID: UUID(-1),
             centrePassTeamID: UUID(-2),
             teamID: UUID(-2),
-            period: 2,
+            quarterNumber: 2,
             elapsedSeconds: 30,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_300)
@@ -48,7 +48,7 @@ extension SupershotTestSuite {
             gameID: UUID(-1),
             centrePassTeamID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 100,
             points: 2,
             createdAt: Date(timeIntervalSince1970: 1_100)
@@ -58,7 +58,7 @@ extension SupershotTestSuite {
             gameID: UUID(-1),
             centrePassTeamID: UUID(-1),
             teamID: UUID(-2),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 200,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_200)
@@ -187,13 +187,13 @@ extension SupershotTestSuite {
             teamAID: UUID(-1),
             teamBID: UUID(-2),
             periodDurationSeconds: 900,
-            currentPeriod: 3
+            currentPhaseIndex: 4
           )
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 100,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_100)
@@ -215,7 +215,7 @@ extension SupershotTestSuite {
             id: UUID(-2),
             gameID: UUID(-1),
             teamID: UUID(-2),
-            period: 3,
+            quarterNumber: 3,
             elapsedSeconds: 200,
             points: 2,
             createdAt: Date(timeIntervalSince1970: 1_200)
@@ -265,7 +265,7 @@ extension SupershotTestSuite {
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 42,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_042)

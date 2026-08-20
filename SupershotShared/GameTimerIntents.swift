@@ -12,13 +12,13 @@ struct PauseGameTimerIntent: LiveActivityIntent {
   static var supportedModes: IntentModes { .background }
   static var title: LocalizedStringResource { "Pause game timer" }
 
-  @Parameter(title: "Period") var expectedPeriod: Int
+  @Parameter(title: "Phase") var expectedPhaseIndex: Int
   @Parameter(title: "Game") var gameID: String
 
   init() {}
 
-  init(gameID: UUID, expectedPeriod: Int) {
-    self.expectedPeriod = expectedPeriod
+  init(gameID: UUID, expectedPhaseIndex: Int) {
+    self.expectedPhaseIndex = expectedPhaseIndex
     self.gameID = gameID.uuidString
   }
 
@@ -26,7 +26,7 @@ struct PauseGameTimerIntent: LiveActivityIntent {
     #if !WIDGET_EXTENSION
     let gameTimer = DependencyValues._current.gameTimer
     if let gameID = UUID(uuidString: gameID) {
-      _ = try? await gameTimer.pause(gameID, expectedPeriod)
+      _ = try? await gameTimer.pause(gameID, expectedPhaseIndex)
     }
     #endif
     return .result()
@@ -39,13 +39,13 @@ struct ResumeGameTimerIntent: LiveActivityIntent {
   static var supportedModes: IntentModes { .background }
   static var title: LocalizedStringResource { "Resume game timer" }
 
-  @Parameter(title: "Period") var expectedPeriod: Int
+  @Parameter(title: "Phase") var expectedPhaseIndex: Int
   @Parameter(title: "Game") var gameID: String
 
   init() {}
 
-  init(gameID: UUID, expectedPeriod: Int) {
-    self.expectedPeriod = expectedPeriod
+  init(gameID: UUID, expectedPhaseIndex: Int) {
+    self.expectedPhaseIndex = expectedPhaseIndex
     self.gameID = gameID.uuidString
   }
 
@@ -53,7 +53,7 @@ struct ResumeGameTimerIntent: LiveActivityIntent {
     #if !WIDGET_EXTENSION
     let gameTimer = DependencyValues._current.gameTimer
     if let gameID = UUID(uuidString: gameID) {
-      _ = try? await gameTimer.startOrResume(gameID, expectedPeriod, false)
+      _ = try? await gameTimer.startOrResume(gameID, expectedPhaseIndex, false)
     }
     #endif
     return .result()
