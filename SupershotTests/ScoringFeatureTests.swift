@@ -210,7 +210,7 @@ extension SupershotTestSuite {
       let store = Self.makeScoringStore(state: state, clock: clock)
 
       await store.send(.endQuarterButtonTapped) {
-        $0.clockPhase = .breakTime
+        $0.clockPhase = .break
         $0.elapsedSeconds = 0
         $0.isShowingLastCentrePassBanner = true
         $0.isTimerRunning = true
@@ -276,7 +276,7 @@ extension SupershotTestSuite {
     @Test
     func halfTimeUsesItsOwnDurationAndDisablesGoals() async throws {
       var state = Self.scoringState()
-      state.clockPhase = .breakTime
+      state.clockPhase = .break
       state.elapsedSeconds = 60
       state.firstBreakDurationSeconds = 120
       state.halfTimeDurationSeconds = 600
@@ -776,7 +776,7 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .breakTime,
+                isInBreak: state.clockPhase == .break,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
                 currentPeriod: state.period,
                 elapsedSeconds: state.elapsedSeconds,

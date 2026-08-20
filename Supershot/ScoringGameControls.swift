@@ -23,7 +23,7 @@ struct ScoringGameControls: View {
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.borderedProminent)
-      } else if clockPhase == .breakTime {
+      } else if clockPhase == .break {
         Button {
           skipBreakTapped()
         } label: {
@@ -81,7 +81,7 @@ struct ScoringGameControls: View {
     canContinueToNextQuarter: true,
     canFinishGame: false,
     canMoveToNextQuarter: false,
-    clockPhase: .breakTime,
+    clockPhase: .break,
     isShowingLastCentrePassBanner: false,
     isTransitioningPeriod: false,
     period: 2,

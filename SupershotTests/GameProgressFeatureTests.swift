@@ -81,7 +81,7 @@ extension SupershotTestSuite {
       )
 
       let state = ScoringFeature.State(snapshot: snapshot)
-      expectNoDifference(state.clockPhase, .breakTime)
+      expectNoDifference(state.clockPhase, .break)
       expectNoDifference(state.currentDurationSeconds, 600)
       expectNoDifference(state.elapsedSeconds, 125)
       expectNoDifference(state.isShowingLastCentrePassBanner, true)

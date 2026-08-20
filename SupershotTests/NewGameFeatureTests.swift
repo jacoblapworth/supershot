@@ -11,6 +11,16 @@ extension SupershotTestSuite {
   @MainActor
   @Suite struct NewGameFeatureTests {
     @Test
+    func newGamesDefaultToEightMinuteQuartersAndOneMinuteBreaks() {
+      let state = NewGameFeature.State()
+
+      #expect(state.periodDuration.totalSeconds == 8 * 60)
+      #expect(state.firstBreakDuration.totalSeconds == 60)
+      #expect(state.halfTimeDuration.totalSeconds == 60)
+      #expect(state.secondBreakDuration.totalSeconds == 60)
+    }
+
+    @Test
     func pickerFiltersExcludedTeams() async {
       let ravens = Team(id: UUID(1), name: "Ravens")
       let swifts = Team(id: UUID(2), name: "Swifts")

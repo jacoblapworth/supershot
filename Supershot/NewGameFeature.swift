@@ -49,16 +49,16 @@ struct NewGameFeature {
   struct State: Equatable {
     var customizesBreaks = false
     var errorMessage: String?
-    var firstBreakDuration = DurationDraft(totalSeconds: 4 * 60)
+    var firstBreakDuration = DurationDraft(totalSeconds: 1 * 60)
     var firstCentrePass: TeamSide?
-    var halfTimeDuration = DurationDraft(totalSeconds: 4 * 60)
+    var halfTimeDuration = DurationDraft(totalSeconds: 1 * 60)
     var isSaving = false
     var leftTeam = TeamSelection(bibColorHex: TeamColorPalette.blue)
     @Presents var picker: TeamPickerFeature.State?
     var pickingTeamSide: TeamSide?
-    var periodDuration = DurationDraft(totalSeconds: 15 * 60)
+    var periodDuration = DurationDraft(totalSeconds: 8 * 60)
     var rightTeam = TeamSelection(bibColorHex: TeamColorPalette.red)
-    var secondBreakDuration = DurationDraft(totalSeconds: 4 * 60)
+    var secondBreakDuration = DurationDraft(totalSeconds: 1 * 60)
 
     var breakDurationsAreValid: Bool {
       firstBreakDuration.totalSeconds != nil

@@ -73,7 +73,7 @@ struct SetupStartBar: View {
 #Preview("Start game") {
   SetupStartBar(
     canStartGame: true,
-    configurationSummary: "15 min quarters · 4 min breaks",
+    configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: nil,
     isSaving: false,
     startGameTapped: {}
@@ -83,7 +83,7 @@ struct SetupStartBar: View {
 #Preview("Start game error") {
   SetupStartBar(
     canStartGame: false,
-    configurationSummary: "15 min quarters · 4 min breaks",
+    configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: "Team names must be unique.",
     isSaving: false,
     startGameTapped: {}
@@ -93,7 +93,7 @@ struct SetupStartBar: View {
 #Preview("Saving game") {
   SetupStartBar(
     canStartGame: false,
-    configurationSummary: "15 min quarters · 4 min breaks",
+    configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: nil,
     isSaving: true,
     startGameTapped: {}

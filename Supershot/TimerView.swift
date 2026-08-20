@@ -73,15 +73,15 @@ struct TimerView: View {
   }
   
   private var isBreakEnded: Bool {
-    clockPhase == .breakTime && isPeriodComplete
+    clockPhase == .break && isPeriodComplete
   }
   
   private var isBreakPaused: Bool {
-    clockPhase == .breakTime && !isTimerRunning && !isPeriodComplete
+    clockPhase == .break && !isTimerRunning && !isPeriodComplete
   }
   
   private var title: String {
-    clockPhase == .breakTime ? "Break after quarter \(period)" : "Quarter \(period)"
+    clockPhase == .break ? "Break after quarter \(period)" : "Quarter \(period)"
   }
   
   private var startQuarterButton: some View {
@@ -114,7 +114,7 @@ struct TimerView: View {
 #Preview("Timer not started") {
   TimerView(
     clockPhase: .quarter,
-    currentDurationSeconds: 900,
+    currentDurationSeconds: 480,
     elapsedSeconds: 0,
     isPeriodComplete: false,
     isShowingLastCentrePassBanner: false,
@@ -130,7 +130,7 @@ struct TimerView: View {
 #Preview("Timer running") {
   TimerView(
     clockPhase: .quarter,
-    currentDurationSeconds: 900,
+    currentDurationSeconds: 480,
     elapsedSeconds: 245,
     isPeriodComplete: false,
     isShowingLastCentrePassBanner: false,
@@ -146,8 +146,8 @@ struct TimerView: View {
 #Preview("Timer complete") {
   TimerView(
     clockPhase: .quarter,
-    currentDurationSeconds: 900,
-    elapsedSeconds: 900,
+    currentDurationSeconds: 480,
+    elapsedSeconds: 480,
     isPeriodComplete: true,
     isShowingLastCentrePassBanner: true,
     isTimerRunning: false,

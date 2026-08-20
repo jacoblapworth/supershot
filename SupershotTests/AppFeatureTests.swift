@@ -395,7 +395,7 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .breakTime,
+                isInBreak: state.clockPhase == .break,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
                 currentPeriod: state.period,
                 elapsedSeconds: state.elapsedSeconds,

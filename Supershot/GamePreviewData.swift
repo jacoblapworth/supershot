@@ -1,29 +1,34 @@
 #if DEBUG
+import Dependencies
 import Foundation
 
 extension GameListItem {
   static let previewInProgress = Self(
     endedAt: nil,
+    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
+    periodDurationSeconds: MockGameData.periodDurationSeconds,
+    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
     startedAt: Date(timeIntervalSince1970: 1_785_659_400),
     teamABibColorHex: "#34C759",
     teamAName: "North London Ravens",
-    teamAScore: 18,
+    teamAScore: 16,
     teamBBibColorHex: "#FF9500",
     teamBName: "Westminster Swifts",
     teamBScore: 16
   )
 
   static let previewCompleted = Self(
-    endedAt: Date(timeIntervalSince1970: 1_785_580_200),
-    firstBreakDurationSeconds: 240,
-    halfTimeDurationSeconds: 600,
+    endedAt: Date(timeIntervalSince1970: 1_785_575_100),
+    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
-    periodDurationSeconds: 900,
-    secondBreakDurationSeconds: 240,
+    periodDurationSeconds: MockGameData.periodDurationSeconds,
+    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     teamAName: "North London Ravens",
-    teamAScore: 42,
+    teamAScore: 38,
     teamBName: "Westminster Swifts",
     teamBScore: 38
   )
@@ -37,106 +42,34 @@ extension Array where Element == GameListItem {
 
 extension CompletedGameDetail {
   static let previewCompleted = Self(
-    endedAt: Date(timeIntervalSince1970: 1_785_580_200),
-    firstBreakDurationSeconds: 240,
-    goalTimeline: GoalTimeline(
-      quarters: [
-        GoalTimelineQuarter(
-          goals: [],
-          period: 4,
-          teamAQuarterScore: 0,
-          teamBQuarterScore: 0
-        ),
-        GoalTimelineQuarter(
-          goals: [
-            GoalTimelineItem(
-              clockSecondsRemaining: 500,
-              id: UUID(),
-              period: 3,
-              points: 1,
-              scoringTeamBibColorHex: TeamColorPalette.red,
-              scoringTeamName: "Westminster Swifts",
-              scoringTeamSide: .teamB,
-              teamAScore: 2,
-              teamBScore: 3
-            ),
-            GoalTimelineItem(
-              clockSecondsRemaining: 600,
-              id: UUID(),
-              period: 3,
-              points: 1,
-              scoringTeamName: "North London Ravens",
-              scoringTeamSide: .teamA,
-              teamAScore: 2,
-              teamBScore: 2
-            ),
-          ],
-          period: 3,
-          teamAQuarterScore: 1,
-          teamBQuarterScore: 1
-        ),
-        GoalTimelineQuarter(
-          goals: [
-            GoalTimelineItem(
-              clockSecondsRemaining: 420,
-              id: UUID(),
-              period: 2,
-              points: 2,
-              scoringTeamBibColorHex: TeamColorPalette.red,
-              scoringTeamName: "Westminster Swifts",
-              scoringTeamSide: .teamB,
-              teamAScore: 1,
-              teamBScore: 2
-            )
-          ],
-          period: 2,
-          teamAQuarterScore: 0,
-          teamBQuarterScore: 2
-        ),
-        GoalTimelineQuarter(
-          goals: [
-            GoalTimelineItem(
-              clockSecondsRemaining: 780,
-              id: UUID(),
-              period: 1,
-              points: 1,
-              scoringTeamName: "North London Ravens",
-              scoringTeamSide: .teamA,
-              teamAScore: 1,
-              teamBScore: 0
-            )
-          ],
-          period: 1,
-          teamAQuarterScore: 1,
-          teamBQuarterScore: 0
-        ),
-      ]
-    ),
-    halfTimeDurationSeconds: 600,
+    endedAt: Date(timeIntervalSince1970: 1_785_575_100),
+    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    goalTimeline: realisticPreviewTimeline,
+    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
-    periodDurationSeconds: 900,
-    secondBreakDurationSeconds: 240,
+    periodDurationSeconds: MockGameData.periodDurationSeconds,
+    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     statistics: CompletedGameStatistics(
       teamA: TeamGameStatistics(
-        averageTimeToGoalSeconds: 18,
+        averageTimeToGoalSeconds: 25,
         centrePass: CentrePassStatistics(
-          conversions: 31,
-          inferredTurnovers: 7,
+          conversions: 20,
+          inferredTurnovers: 18,
           opportunities: 38
         )
       ),
       teamB: TeamGameStatistics(
-        averageTimeToGoalSeconds: 22,
+        averageTimeToGoalSeconds: 25,
         centrePass: CentrePassStatistics(
-          conversions: 29,
-          inferredTurnovers: 8,
-          opportunities: 37
+          conversions: 20,
+          inferredTurnovers: 18,
+          opportunities: 38
         )
       )
     ),
     teamAName: "North London Ravens",
-    teamAScore: 42,
+    teamAScore: 38,
     teamBName: "Westminster Swifts",
     teamBScore: 38
   )
@@ -181,6 +114,50 @@ extension CompletedGameDetail {
     teamBScore: 0
   )
 }
+
+private let realisticPreviewTimeline: GoalTimeline = {
+  var teamAScore = 0
+  var teamBScore = 0
+  var goalsByPeriod: [Int: [GoalTimelineItem]] = [:]
+  let events = MockGameData.goalEvents(throughPeriod: 4)
+
+  for (index, event) in events.enumerated() {
+    if event.teamAScored {
+      teamAScore += 1
+    } else {
+      teamBScore += 1
+    }
+    goalsByPeriod[event.period, default: []].append(
+      GoalTimelineItem(
+        clockSecondsRemaining: MockGameData.periodDurationSeconds - event.elapsedSeconds,
+        id: UUID(300 + index),
+        period: event.period,
+        points: 1,
+        scoringTeamBibColorHex: event.teamAScored
+          ? TeamColorPalette.blue
+          : TeamColorPalette.red,
+        scoringTeamName: event.teamAScored
+          ? "North London Ravens"
+          : "Westminster Swifts",
+        scoringTeamSide: event.teamAScored ? .teamA : .teamB,
+        teamAScore: teamAScore,
+        teamBScore: teamBScore
+      )
+    )
+  }
+
+  return GoalTimeline(
+    quarters: (1...4).reversed().map { period in
+      let goals = goalsByPeriod[period, default: []]
+      return GoalTimelineQuarter(
+        goals: Array(goals.reversed()),
+        period: period,
+        teamAQuarterScore: goals.filter { $0.scoringTeamSide == .teamA }.count,
+        teamBQuarterScore: goals.filter { $0.scoringTeamSide == .teamB }.count
+      )
+    }
+  )
+}()
 
 extension GoalTimeline {
   static let previewEmpty = Self.empty(through: 4)

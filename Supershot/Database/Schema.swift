@@ -98,7 +98,7 @@ extension DependencyValues {
     let database = try SQLiteData.defaultDatabase(configuration: configuration)
     logger.debug(
       """
-      App database:
+      DEBUG: ℹ️ App database:
       open "\(database.path)"
       """
     )
