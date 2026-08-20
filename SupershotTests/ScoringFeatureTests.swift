@@ -390,6 +390,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(2)
+        $0.goalFeedbackTrigger = 1
         $0.teamBScore = 1
       }
 
@@ -419,6 +420,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(2)
+        $0.goalFeedbackTrigger = 1
         $0.teamAScore = 1
       }
 
@@ -516,12 +518,19 @@ extension SupershotTestSuite {
 
     @Test
     func pausedScoringRequiresConfirmationAndPersistsGoal() async throws {
-      let store = Self.makeScoringStore()
+      let goalSoundsPlayed = LockIsolated(0)
+      let store = Self.makeScoringStore(
+        soundEffects: SoundEffectsClient(
+          playGoal: { goalSoundsPlayed.withValue { $0 += 1 } }
+        )
+      )
 
       await store.send(.goalButtonTapped(UUID(1))) {
         $0.confirmationDialog = ConfirmationDialogState<ScoringFeature.ConfirmationDialogAction>.pausedGoalConfirmation
         $0.pendingPausedGoalTeamID = UUID(1)
       }
+      expectNoDifference(store.state.goalFeedbackTrigger, 0)
+      expectNoDifference(goalSoundsPlayed.value, 0)
 
       await store.send(.confirmationDialog(.presented(.recordGoalButtonTapped))) {
         $0.confirmationDialog = nil
@@ -534,6 +543,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(2)
+        $0.goalFeedbackTrigger = 1
         $0.teamAScore = 1
       }
 
@@ -546,13 +556,20 @@ extension SupershotTestSuite {
       expectNoDifference(goals.first?.period, 1)
       expectNoDifference(goals.first?.elapsedSeconds, 0)
       await store.finish()
+      expectNoDifference(goalSoundsPlayed.value, 1)
     }
 
     @Test
     func undoRemovesLatestGoal() async throws {
       var state = Self.scoringState()
       state.isTimerRunning = true
-      let store = Self.makeScoringStore(state: state)
+      let goalSoundsPlayed = LockIsolated(0)
+      let store = Self.makeScoringStore(
+        state: state,
+        soundEffects: SoundEffectsClient(
+          playGoal: { goalSoundsPlayed.withValue { $0 += 1 } }
+        )
+      )
 
       await store.send(.goalButtonTapped(UUID(1)))
       await store.receive {
@@ -561,6 +578,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(2)
+        $0.goalFeedbackTrigger = 1
         $0.teamAScore = 1
       }
 
@@ -570,6 +588,7 @@ extension SupershotTestSuite {
         return true
       } assert: {
         $0.centrePassTeamID = UUID(1)
+        $0.goalFeedbackTrigger = 2
         $0.teamBScore = 1
       }
 
@@ -588,6 +607,7 @@ extension SupershotTestSuite {
       expectNoDifference(goals.count, 1)
       expectNoDifference(goals.first?.teamID, UUID(1))
       await store.finish()
+      expectNoDifference(goalSoundsPlayed.value, 2)
     }
 
     @Test
@@ -616,6 +636,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(1)
+        $0.goalFeedbackTrigger = 1
         $0.teamAScore = 1
       }
 
@@ -630,7 +651,13 @@ extension SupershotTestSuite {
     func failedGoalWriteLeavesScoreAndCentrePassUnchanged() async throws {
       var state = Self.scoringState()
       state.isTimerRunning = true
-      let store = Self.makeScoringStore(state: state)
+      let goalSoundsPlayed = LockIsolated(0)
+      let store = Self.makeScoringStore(
+        state: state,
+        soundEffects: SoundEffectsClient(
+          playGoal: { goalSoundsPlayed.withValue { $0 += 1 } }
+        )
+      )
       try await store.dependencies.defaultDatabase.write { db in
         try Game.find(UUID(3)).delete().execute(db)
       }
@@ -642,8 +669,39 @@ extension SupershotTestSuite {
       }
 
       expectNoDifference(store.state.centrePassTeamID, UUID(1))
+      expectNoDifference(store.state.goalFeedbackTrigger, 0)
       expectNoDifference(store.state.teamAScore, 0)
       expectNoDifference(store.state.canUndo, false)
+      expectNoDifference(goalSoundsPlayed.value, 0)
+    }
+
+    @Test
+    func invalidAndCancelledGoalsDoNotProduceFeedback() async {
+      var state = Self.scoringState()
+      state.isTimerRunning = true
+      let goalSoundsPlayed = LockIsolated(0)
+      let soundEffects = SoundEffectsClient(
+        playGoal: { goalSoundsPlayed.withValue { $0 += 1 } }
+      )
+      let runningStore = Self.makeScoringStore(state: state, soundEffects: soundEffects)
+
+      await runningStore.send(.goalButtonTapped(UUID(99)))
+      await runningStore.finish()
+      expectNoDifference(runningStore.state.goalFeedbackTrigger, 0)
+
+      let pausedStore = Self.makeScoringStore(soundEffects: soundEffects)
+      await pausedStore.send(.goalButtonTapped(UUID(1))) {
+        $0.confirmationDialog = ConfirmationDialogState<ScoringFeature.ConfirmationDialogAction>.pausedGoalConfirmation
+        $0.pendingPausedGoalTeamID = UUID(1)
+      }
+      await pausedStore.send(.confirmationDialog(.dismiss)) {
+        $0.confirmationDialog = nil
+        $0.pendingPausedGoalTeamID = nil
+      }
+      await pausedStore.finish()
+
+      expectNoDifference(pausedStore.state.goalFeedbackTrigger, 0)
+      expectNoDifference(goalSoundsPlayed.value, 0)
     }
 
     @Test
@@ -738,7 +796,8 @@ extension SupershotTestSuite {
         date: Date = Date(timeIntervalSince1970: 1_000),
         clock: TestClock<Duration>? = nil,
         dismiss: DismissEffect? = nil,
-        gameTimer: GameTimerClient? = nil
+        gameTimer: GameTimerClient? = nil,
+        soundEffects: SoundEffectsClient? = nil
       ) -> TestStoreOf<ScoringFeature> {
         let clockStart = clock?.now
         return TestStore(initialState: state) {
@@ -794,6 +853,9 @@ extension SupershotTestSuite {
           }
           if let gameTimer {
             $0.gameTimer = gameTimer
+          }
+          if let soundEffects {
+            $0.soundEffects = soundEffects
           }
         }
       }
