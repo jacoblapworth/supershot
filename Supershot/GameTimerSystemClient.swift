@@ -34,9 +34,9 @@ nonisolated extension GameTimerSystemClient {
 
         try? manager.stop(id: snapshot.game.id)
         try? manager.cancel(id: snapshot.game.id)
-        let title = LocalizedStringResource(
-          "Quarter \(snapshot.game.currentPeriod) ended."
-        )
+        let title: LocalizedStringResource = snapshot.game.isInBreak
+          ? "Break ended."
+          : "Quarter \(snapshot.game.currentPeriod) ended."
         let presentation = AlarmPresentation(
           alert: AlarmPresentation.Alert(title: title)
         )

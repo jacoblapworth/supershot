@@ -145,6 +145,39 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func timerClientSchedulesAlarmWhenBreakStarts() async throws {
+      var state = Self.scoringState()
+      state.clockPhase = .breakTime
+      state.elapsedSeconds = 20
+      state.firstBreakDurationSeconds = 120
+      state.hasTimerStartedThisPeriod = true
+      let seedStore = Self.makeScoringStore(state: state)
+      let database = seedStore.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
+
+      let update = try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        try await client.startOrResume(UUID(3), 1, false)
+      }
+
+      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(
+        update.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_100)
+      )
+      expectNoDifference(
+        events.value,
+        [
+          .activity(Date(timeIntervalSince1970: 1_100)),
+          .alarm(Date(timeIntervalSince1970: 1_100), requestsAuthorization: false),
+        ]
+      )
+    }
+
+    @Test
     func timerClientReconcilesQuarterAndBreakAcrossLargeTimeJumps() async throws {
       var state = Self.scoringState()
       state.firstBreakDurationSeconds = 120
