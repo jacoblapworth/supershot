@@ -657,10 +657,9 @@ struct ScoringFeature {
         .execute(db)
       }
       if timerEndsAt != nil {
-        _ = try? await gameTimer.startOrResume(gameID, currentPeriod, false)
-      } else {
-        await gameTimer.refreshActivity(gameID)
+        await gameTimer.scheduleAlert(gameID)
       }
+      await gameTimer.refreshActivity(gameID)
     }
   }
 

@@ -13,6 +13,7 @@ nonisolated struct GameTimerClient: Sendable {
   var pause: @Sendable (Game.ID, Int?) async throws -> GameSnapshot
   var reconcile: @Sendable (Game.ID) async throws -> GameSnapshot
   var refreshActivity: @Sendable (Game.ID) async -> Void
+  var scheduleAlert: @Sendable (Game.ID) async -> Void
   var startOrResume: @Sendable (Game.ID, Int?, Bool) async throws -> GameTimerUpdate
 }
 
@@ -144,6 +145,16 @@ nonisolated extension GameTimerClient {
         else { return }
         await system.updateActivity(snapshot, true)
       },
+      scheduleAlert: { gameID in
+        @Dependency(\.defaultDatabase) var database
+        guard
+          let snapshot = try? await database.read({ db in
+            try GameSnapshot.fetch(db, gameID: gameID)
+          }),
+          snapshot.game.timerEndsAt != nil
+        else { return }
+        _ = await system.scheduleAlarm(snapshot, false)
+      },
       startOrResume: { gameID, expectedPeriod, requestsAuthorization in
         @Dependency(\.date) var date
         @Dependency(\.defaultDatabase) var database
@@ -175,7 +186,7 @@ nonisolated extension GameTimerClient {
         }
 
         await system.updateActivity(snapshot, true)
-        let alarmAuthorizationDenied = didStart && !snapshot.game.isInBreak
+        let alarmAuthorizationDenied = didStart
           ? await system.scheduleAlarm(snapshot, requestsAuthorization)
           : false
         return GameTimerUpdate(
