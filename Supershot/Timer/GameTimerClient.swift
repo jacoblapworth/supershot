@@ -107,10 +107,10 @@ nonisolated extension GameTimerClient {
         return snapshot
       },
       reconcile: { gameID in
-        @Dependency(\.date) var date
+        @Dependency(\.date.now) var now
         @Dependency(\.defaultDatabase) var database
-        let now = date.now
-        let (didChangePhase, snapshot) = try await database.write { db in
+
+        let snapshot = try await database.write { db in
           guard let storedGame = try Game.find(gameID).fetchOne(db) else {
             throw GameTimerError.gameNotFound
           }
@@ -118,16 +118,7 @@ nonisolated extension GameTimerClient {
           if storedGame != game {
             try persistTimerState(game, in: db)
           }
-          return (
-            storedGame.currentPhaseIndex != game.currentPhaseIndex,
-            try snapshot(db, replacing: game)
-          )
-        }
-        if didChangePhase {
-          await system.cancelAlarm(gameID)
-          if snapshot.game.timerEndsAt != nil {
-            _ = await system.scheduleAlarm(snapshot, false)
-          }
+          return try snapshot(db, replacing: game)
         }
         await system.updateActivity(snapshot, true)
         return snapshot
@@ -234,6 +225,28 @@ nonisolated extension Game {
   }
 }
 
+/// Reconciles a persisted Game's timer-related state against the current time and advances phases as needed.
+///
+/// This function takes a snapshot of a stored `Game` and produces an updated copy that reflects
+/// the passage of time up to `now`. It:
+/// - Recomputes `elapsedSeconds` based on the current phase duration, previously persisted elapsed time,
+///   and any active countdown (`timerEndsAt`), using `GameTimerMath.elapsedSeconds`.
+/// - If the countdown has expired (i.e., `timerEndsAt` is in the past or equal to `now`), it repeatedly:
+///   - Marks the current phase as complete by setting `elapsedSeconds` to the phase duration and clearing `timerEndsAt`.
+///   - Advances the game to the next logical phase via `advanceCompletedPhase(_:boundary:)`, using the boundary time
+///     at which the phase completed (the prior `timerEndsAt`).
+///
+/// The result is an in-memory `Game` value that accurately represents the game's timer progression as of `now`,
+/// without persisting any changes. Callers are responsible for persisting the returned state if desired.
+///
+/// - Parameters:
+///   - storedGame: The persisted `Game` value to reconcile. This value is not mutated.
+///   - now: The current wall-clock time used for reconciliation.
+/// - Returns: A new `Game` whose `elapsedSeconds`, `timerEndsAt`, and `currentPhaseIndex` are updated to reflect
+///   the correct state at `now`, potentially having advanced through one or more completed phases.
+/// - Important: This function is pure and does not perform any database I/O; persistence must be handled by the caller.
+/// - SeeAlso: `GameTimerMath.elapsedSeconds(durationSeconds:persistedElapsedSeconds:timerEndsAt:now:)`,
+///            `advanceCompletedPhase(_:boundary:)`
 private nonisolated func reconciledGame(_ storedGame: Game, now: Date) -> Game {
   var game = storedGame
   game.elapsedSeconds = GameTimerMath.elapsedSeconds(

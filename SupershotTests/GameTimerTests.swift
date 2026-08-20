@@ -177,14 +177,15 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func timerClientReconcilesQuarterAndBreakAcrossLargeTimeJumps() async throws {
+    func timerClientReconcilesWithoutDismissingPhaseAlarms() async throws {
       var state = Self.scoringState()
       state.firstBreakDurationSeconds = 120
       state.timerEndsAt = Date(timeIntervalSince1970: 1_050)
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
       let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_100))
-      let client = GameTimerClient.live(system: .noop)
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
 
       try await withDependencies {
         $0.date = DateGenerator { currentDate.value }
@@ -198,12 +199,18 @@ extension SupershotTestSuite {
           duringBreak.game.timerEndsAt,
           Date(timeIntervalSince1970: 1_170)
         )
+        expectNoDifference(
+          events.value,
+          [.activity(Date(timeIntervalSince1970: 1_170))]
+        )
 
+        events.setValue([])
         currentDate.setValue(Date(timeIntervalSince1970: 1_300))
         let afterBreak = try await client.reconcile(UUID(3))
         expectNoDifference(afterBreak.game.currentPhaseIndex, 2)
         expectNoDifference(afterBreak.game.elapsedSeconds, 0)
         expectNoDifference(afterBreak.game.timerEndsAt, nil)
+        expectNoDifference(events.value, [.activity(nil)])
       }
     }
 
