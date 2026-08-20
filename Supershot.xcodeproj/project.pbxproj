@@ -540,7 +540,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
