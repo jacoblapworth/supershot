@@ -81,7 +81,7 @@ struct TimerView: View {
   }
   
   private var title: String {
-    clockPhase == .breakTime ? "Break after quarter \(period)" : "Quarter \(period)"
+    clockPhase == .breakTime ? "Quarter \(period) break" : "Quarter \(period)"
   }
   
   private var startQuarterButton: some View {
