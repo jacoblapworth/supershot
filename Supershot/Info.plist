@@ -8,10 +8,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>nz.lapworth.Supershot.game</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).game</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>supershot</string>
+				<string>$(APP_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>

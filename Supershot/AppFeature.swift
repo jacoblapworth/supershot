@@ -425,9 +425,9 @@ extension ScoringFeature.State {
       Self.maximumPeriod
     )
     let clockPhase = snapshot.game.isInBreak
-      ? ScoringFeature.ClockPhase.break
+      ? ScoringFeature.ClockPhase.breakTime
       : .quarter
-    let currentDuration = clockPhase == .break
+    let currentDuration = clockPhase == .breakTime
       ? snapshot.game.breakDuration(after: period)
       : snapshot.game.periodDurationSeconds
 

@@ -36,7 +36,7 @@ struct ScoringView: View {
         )
         
         ScoringScoreboardView(
-          isDisabled: store.clockPhase == .break || store.isShowingLastCentrePassBanner,
+          isDisabled: store.clockPhase == .breakTime || store.isShowingLastCentrePassBanner,
           isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
           teamA: store.teamA,
           teamAScore: store.teamAScore,

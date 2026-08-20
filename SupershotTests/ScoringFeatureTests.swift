@@ -776,7 +776,7 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .break,
+                isInBreak: state.clockPhase == .breakTime,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
                 currentPeriod: state.period,
                 elapsedSeconds: state.elapsedSeconds,

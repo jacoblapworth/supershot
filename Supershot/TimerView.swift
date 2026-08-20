@@ -73,15 +73,15 @@ struct TimerView: View {
   }
   
   private var isBreakEnded: Bool {
-    clockPhase == .break && isPeriodComplete
+    clockPhase == .breakTime && isPeriodComplete
   }
   
   private var isBreakPaused: Bool {
-    clockPhase == .break && !isTimerRunning && !isPeriodComplete
+    clockPhase == .breakTime && !isTimerRunning && !isPeriodComplete
   }
   
   private var title: String {
-    clockPhase == .break ? "Break after quarter \(period)" : "Quarter \(period)"
+    clockPhase == .breakTime ? "Break after quarter \(period)" : "Quarter \(period)"
   }
   
   private var startQuarterButton: some View {

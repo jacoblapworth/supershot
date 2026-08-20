@@ -45,7 +45,7 @@ extension ScoringFeature.State {
 
   static var previewBreak: Self {
     var state = previewQuarter
-    state.clockPhase = .break
+    state.clockPhase = .breakTime
     state.elapsedSeconds = state.halfTimeDurationSeconds
     state.hasTimerStartedThisPeriod = true
     state.period = 2
