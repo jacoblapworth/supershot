@@ -7,7 +7,7 @@ import AlarmKit
 import SwiftUI
 #endif
 
-nonisolated extension GameTimerSystemClient {
+nonisolated extension AlarmClient {
   static var live: Self {
     #if os(iOS)
     Self(
