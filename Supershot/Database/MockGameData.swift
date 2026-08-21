@@ -1,9 +1,30 @@
 #if DEBUG
+import Dependencies
 import Foundation
 
 nonisolated enum MockGameData {
   static let breakDurationSeconds = 60
   static let periodDurationSeconds = 8 * 60
+
+  static func periods(
+    gameID: Game.ID,
+    idOffset: Int,
+    count: Int = 4,
+    periodDurationSeconds: Int = periodDurationSeconds,
+    breakDurationSeconds: Int = breakDurationSeconds
+  ) -> [GamePeriod] {
+    (0..<count).map { position in
+      GamePeriod(
+        id: UUID(idOffset + position),
+        gameID: gameID,
+        position: position,
+        durationSeconds: periodDurationSeconds,
+        breakAfterDurationSeconds: position < count - 1
+          ? breakDurationSeconds
+          : nil
+      )
+    }
+  }
 
   struct GoalEvent: Equatable, Sendable {
     let centrePassTeamA: Bool

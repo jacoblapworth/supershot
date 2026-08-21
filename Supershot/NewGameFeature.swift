@@ -351,6 +351,22 @@ struct NewGameFeature {
       team: rightTeam
     )
     let centrePassTeamID = firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
+    let breakDurations = [
+      firstBreakDurationSeconds,
+      halfTimeDurationSeconds,
+      secondBreakDurationSeconds,
+    ]
+    let periods = (0..<4).map { position in
+      GamePeriod(
+        id: uuid(),
+        gameID: gameID,
+        position: position,
+        durationSeconds: periodDurationSeconds,
+        breakAfterDurationSeconds: breakDurations.indices.contains(position)
+          ? breakDurations[position]
+          : nil
+      )
+    }
     let startedAt = now
     let location = state.gameLocation
 
@@ -358,12 +374,9 @@ struct NewGameFeature {
     state.isSaving = true
     return startGameEffect(
       centrePassTeamID: centrePassTeamID,
-      firstBreakDurationSeconds: firstBreakDurationSeconds,
       gameID: gameID,
-      halfTimeDurationSeconds: halfTimeDurationSeconds,
       location: location,
-      periodDurationSeconds: periodDurationSeconds,
-      secondBreakDurationSeconds: secondBreakDurationSeconds,
+      periods: periods,
       startedAt: startedAt,
       teamA: teamA,
       teamB: teamB
@@ -372,12 +385,9 @@ struct NewGameFeature {
 
   private func startGameEffect(
     centrePassTeamID: Team.ID,
-    firstBreakDurationSeconds: Int,
     gameID: Game.ID,
-    halfTimeDurationSeconds: Int,
     location: GameLocation?,
-    periodDurationSeconds: Int,
-    secondBreakDurationSeconds: Int,
+    periods: [GamePeriod],
     startedAt: Date,
     teamA: PreparedTeam,
     teamB: PreparedTeam
@@ -410,10 +420,6 @@ struct NewGameFeature {
               latitude: location?.latitude,
               longitude: location?.longitude,
               pointOfInterestName: location?.pointOfInterestName,
-              periodDurationSeconds: periodDurationSeconds,
-              firstBreakDurationSeconds: firstBreakDurationSeconds,
-              halfTimeDurationSeconds: halfTimeDurationSeconds,
-              secondBreakDurationSeconds: secondBreakDurationSeconds,
               isAwaitingCentrePassConfirmation: false,
               currentPhaseIndex: 0,
               elapsedSeconds: 0,
@@ -421,15 +427,13 @@ struct NewGameFeature {
             )
           }
           .execute(db)
+          try GamePeriod.insert { periods }.execute(db)
         }
 
         return ScoringFeature.State(
           centrePassTeamID: centrePassTeamID,
-          firstBreakDurationSeconds: firstBreakDurationSeconds,
           gameID: gameID,
-          halfTimeDurationSeconds: halfTimeDurationSeconds,
-          periodDurationSeconds: periodDurationSeconds,
-          secondBreakDurationSeconds: secondBreakDurationSeconds,
+          periods: periods,
           startedAt: startedAt,
           teamA: ScoringFeature.Team(
             id: teamA.team.id,

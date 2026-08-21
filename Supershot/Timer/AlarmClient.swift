@@ -11,8 +11,8 @@ nonisolated extension AlarmClient {
   static var live: Self {
     #if os(iOS)
     Self(
-      cancelAlarm: { gameID in
-        cancelAlarms(for: gameID)
+      cancelAlarm: { gameID, phaseCount in
+        cancelAlarms(for: gameID, phaseCount: phaseCount)
       },
       endActivity: { gameID in
         for activity in Activity<GameActivityAttributes>.activities
@@ -34,19 +34,19 @@ nonisolated extension AlarmClient {
           return authorizationState == .denied || requestsAuthorization
         }
 
-        cancelAlarms(for: snapshot.game.id)
+        cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
         var alarms = [
           ScheduledGameAlarm(
             date: timerEndsAt,
-            phase: snapshot.game.currentPhase,
+            phase: snapshot.currentPhase,
             phaseIndex: snapshot.game.currentPhaseIndex
           )
         ]
         if
-          snapshot.game.currentPhase.isQuarter,
-          snapshot.game.currentPhaseIndex + 1 < snapshot.game.phases.count
+          snapshot.currentPhase.isQuarter,
+          snapshot.game.currentPhaseIndex + 1 < snapshot.phases.count
             {
-          let breakPhase = snapshot.game.phases[snapshot.game.currentPhaseIndex + 1]
+          let breakPhase = snapshot.phases[snapshot.game.currentPhaseIndex + 1]
           if breakPhase.durationSeconds > 0 {
             alarms.append(
               ScheduledGameAlarm(
@@ -91,7 +91,7 @@ nonisolated extension AlarmClient {
               configuration: configuration
             )
           } catch {
-            cancelAlarms(for: snapshot.game.id)
+            cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
             return true
           }
         }
@@ -151,8 +151,8 @@ private nonisolated struct ScheduledGameAlarm {
   }
 }
 
-private nonisolated func cancelAlarms(for gameID: Game.ID) {
-  for phaseIndex in 0..<7 {
+private nonisolated func cancelAlarms(for gameID: Game.ID, phaseCount: Int) {
+  for phaseIndex in 0..<phaseCount {
     let id = alarmID(gameID: gameID, phaseIndex: phaseIndex)
     try? AlarmManager.shared.stop(id: id)
     try? AlarmManager.shared.cancel(id: id)
@@ -192,7 +192,7 @@ private nonisolated extension GameActivityAttributes.ContentState {
   init(snapshot: GameSnapshot) {
     self.init(
       centrePassTeamID: snapshot.game.centrePassTeamID ?? snapshot.teamA.id,
-      currentDurationSeconds: snapshot.game.currentPhase.durationSeconds,
+      currentDurationSeconds: snapshot.currentPhase.durationSeconds,
       elapsedSeconds: snapshot.game.elapsedSeconds,
       phaseIndex: snapshot.game.currentPhaseIndex,
       teamAScore: snapshot.teamAScore,

@@ -175,7 +175,7 @@ extension SupershotTestSuite {
       var state = Self.scoringState()
       state.currentPhaseIndex = 1
       state.elapsedSeconds = 20
-      state.firstBreakDurationSeconds = 120
+      state.periods[0].breakAfterDurationSeconds = 120
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
       let events = LockIsolated<[TimerSystemEvent]>([])
@@ -205,7 +205,7 @@ extension SupershotTestSuite {
     @Test
     func timerClientReconcilesWithoutDismissingPhaseAlarms() async throws {
       var state = Self.scoringState()
-      state.firstBreakDurationSeconds = 120
+      state.periods[0].breakAfterDurationSeconds = 120
       state.timerEndsAt = Date(timeIntervalSince1970: 1_050)
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
@@ -325,7 +325,7 @@ extension SupershotTestSuite {
         alarmUnavailable: Bool = false
       ) -> AlarmClient {
         AlarmClient(
-          cancelAlarm: { _ in
+          cancelAlarm: { _, _ in
             events.withValue { $0.append(.cancelAlarm) }
           },
           endActivity: { _ in
@@ -390,10 +390,6 @@ extension SupershotTestSuite {
                 teamAID: UUID(1),
                 teamBID: UUID(2),
                 centrePassTeamID: state.centrePassTeamID,
-                periodDurationSeconds: state.periodDurationSeconds,
-                firstBreakDurationSeconds: state.firstBreakDurationSeconds,
-                halfTimeDurationSeconds: state.halfTimeDurationSeconds,
-                secondBreakDurationSeconds: state.secondBreakDurationSeconds,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
                 currentPhaseIndex: state.currentPhaseIndex,
                 elapsedSeconds: state.elapsedSeconds,
@@ -401,6 +397,7 @@ extension SupershotTestSuite {
               )
             }
             .execute(db)
+            try GamePeriod.insert { state.periods }.execute(db)
           }
           if let clock {
             $0.continuousClock = clock
@@ -419,6 +416,7 @@ extension SupershotTestSuite {
         ScoringFeature.State(
           centrePassTeamID: UUID(1),
           gameID: UUID(3),
+          periods: testGamePeriods(gameID: UUID(3)),
           startedAt: Date(timeIntervalSince1970: 500),
           teamA: ScoringFeature.Team(
             id: UUID(1),

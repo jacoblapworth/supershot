@@ -186,13 +186,18 @@ extension SupershotTestSuite {
         return true
       }
 
-      let game = try await store.dependencies.defaultDatabase.read { db in
-        try Game.fetchOne(db)
+      let (game, periods) = try await store.dependencies.defaultDatabase.read { db in
+        (
+          try Game.fetchOne(db),
+          try GamePeriod.order { $0.position }.fetchAll(db)
+        )
       }
       expectNoDifference(game?.teamAID, ravens.id)
       expectNoDifference(game?.teamBID, swifts.id)
       expectNoDifference(game?.teamABibColorHex, "#AF52DE")
       expectNoDifference(game?.teamBBibColorHex, "#FF2D55")
+      expectNoDifference(periods.map(\.durationSeconds), [480, 480, 480, 480])
+      expectNoDifference(periods.map(\.breakAfterDurationSeconds), [60, 60, 60, nil])
       expectNoDifference(
         game?.location,
         GameLocation(

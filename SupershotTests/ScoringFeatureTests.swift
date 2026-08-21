@@ -12,10 +12,8 @@ extension SupershotTestSuite {
   @Suite struct ScoringFeatureTests {
     @Test
     func gameTimelineIsFourQuartersWithBreaksBetweenThem() {
-      let game = Self.game()
-
       expectNoDifference(
-        game.phases,
+        gamePhases(for: Self.periods()),
         [
           .quarter(number: 1, durationSeconds: 900),
           .breakTime(afterQuarter: 1, durationSeconds: 120),
@@ -26,6 +24,41 @@ extension SupershotTestSuite {
           .quarter(number: 4, durationSeconds: 900),
         ]
       )
+    }
+
+    @Test
+    func twoPeriodGameUsesOneBreakAndFinishesAfterSecondPeriod() async throws {
+      var game = Self.game()
+      game.currentPhaseIndex = 2
+      let periods = testGamePeriods(
+        gameID: game.id,
+        count: 2,
+        durationSeconds: 1_800,
+        breakDurationSeconds: 600
+      )
+      let database = try await Self.seed(game, periods: periods)
+      let client = GameTimerClient.live(system: .noop)
+
+      expectNoDifference(
+        gamePhases(for: periods),
+        [
+          .quarter(number: 1, durationSeconds: 1_800),
+          .breakTime(afterQuarter: 1, durationSeconds: 600),
+          .quarter(number: 2, durationSeconds: 1_800),
+        ]
+      )
+
+      let snapshot = try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        try await client.skip(game.id, 2)
+      }
+
+      expectNoDifference(snapshot.game.currentPhaseIndex, 2)
+      expectNoDifference(snapshot.game.elapsedSeconds, 1_800)
+      expectNoDifference(snapshot.game.timerEndsAt, nil)
+      expectNoDifference(ScoringFeature.State(snapshot: snapshot).canFinishGame, true)
     }
 
     @Test
@@ -42,7 +75,7 @@ extension SupershotTestSuite {
 
       expectNoDifference(snapshot.game.currentPhaseIndex, 1)
       expectNoDifference(
-        snapshot.game.currentPhase,
+        snapshot.currentPhase,
         .breakTime(afterQuarter: 1, durationSeconds: 120)
       )
       expectNoDifference(snapshot.game.elapsedSeconds, 0)
@@ -71,7 +104,7 @@ extension SupershotTestSuite {
 
       expectNoDifference(snapshot.game.currentPhaseIndex, 2)
       expectNoDifference(
-        snapshot.game.currentPhase,
+        snapshot.currentPhase,
         .quarter(number: 2, durationSeconds: 900)
       )
       expectNoDifference(snapshot.game.countdown, GameCountdown())
@@ -80,9 +113,13 @@ extension SupershotTestSuite {
 
     @Test
     func zeroLengthBreakPassesStraightToPausedNextQuarter() async throws {
-      var game = Self.game()
-      game.firstBreakDurationSeconds = 0
-      let database = try await Self.seed(game)
+      let game = Self.game()
+      let periods = testGamePeriods(
+        gameID: game.id,
+        durationSeconds: 900,
+        breakDurations: [0, 300, 120]
+      )
+      let database = try await Self.seed(game, periods: periods)
       let client = GameTimerClient.live(system: .noop)
 
       let snapshot = try await withDependencies {
@@ -160,7 +197,7 @@ extension SupershotTestSuite {
       }
 
       let goal = try await database.read { db in try Goal.fetchOne(db) }
-      expectNoDifference(goal?.quarterNumber, 1)
+      expectNoDifference(goal?.gamePeriodID, testGamePeriodID(gameID: UUID(3), position: 0))
       expectNoDifference(goal?.elapsedSeconds, 300)
     }
 
@@ -205,29 +242,33 @@ extension SupershotTestSuite {
         endedAt: nil,
         teamAID: UUID(1),
         teamBID: UUID(2),
-        centrePassTeamID: UUID(1),
-        periodDurationSeconds: 900,
-        firstBreakDurationSeconds: 120,
-        halfTimeDurationSeconds: 300,
-        secondBreakDurationSeconds: 120
+        centrePassTeamID: UUID(1)
+      )
+    }
+
+    private nonisolated static func periods() -> [GamePeriod] {
+      testGamePeriods(
+        gameID: UUID(3),
+        durationSeconds: 900,
+        breakDurations: [120, 300, 120]
       )
     }
 
     private nonisolated static func state() -> ScoringFeature.State {
       ScoringFeature.State(
         centrePassTeamID: UUID(1),
-        firstBreakDurationSeconds: 120,
         gameID: UUID(3),
-        halfTimeDurationSeconds: 300,
-        periodDurationSeconds: 900,
-        secondBreakDurationSeconds: 120,
+        periods: periods(),
         startedAt: Date(timeIntervalSince1970: 500),
         teamA: ScoringFeature.Team(id: UUID(1), name: "Ravens"),
         teamB: ScoringFeature.Team(id: UUID(2), name: "Swifts")
       )
     }
 
-    private static func seed(_ game: Game) async throws -> any DatabaseWriter {
+    private static func seed(
+      _ game: Game,
+      periods: [GamePeriod] = periods()
+    ) async throws -> any DatabaseWriter {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
       try await database.write { db in
@@ -236,6 +277,7 @@ extension SupershotTestSuite {
           Team(id: UUID(2), name: "Swifts")
           game
         }
+        try GamePeriod.insert { periods }.execute(db)
       }
       return database
     }

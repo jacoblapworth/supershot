@@ -27,7 +27,6 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
-            periodDurationSeconds: 900,
             currentPhaseIndex: 4,
             elapsedSeconds: 42,
             timerEndsAt: nil
@@ -38,16 +37,22 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-3),
             teamBID: UUID(-4),
-            periodDurationSeconds: 600,
             currentPhaseIndex: 2,
             elapsedSeconds: 75,
             timerEndsAt: nil
           )
+        }
+        let periods = [
+          testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
+          testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
+        ].flatMap { $0 }
+        try GamePeriod.insert { periods }.execute(db)
+        try Goal.insert {
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: testGamePeriodID(gameID: UUID(-1), position: 1),
             teamID: UUID(-2),
-            quarterNumber: 2,
             elapsedSeconds: 30,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_100)
@@ -55,13 +60,14 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-2),
             gameID: UUID(-2),
+            gamePeriodID: testGamePeriodID(gameID: UUID(-2), position: 0),
             teamID: UUID(-3),
-            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 2,
             createdAt: Date(timeIntervalSince1970: 2_100)
           )
         }
+        .execute(db)
       }
 
       let snapshots = try await database.read { db in

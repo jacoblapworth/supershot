@@ -13,7 +13,7 @@ struct GameLocationMap: View {
           distance: 800
         )
       ),
-      interactionModes: [.pan, .zoom]
+      interactionModes: []
     ) {
       if let pointOfInterestName = location.pointOfInterestName {
         Marker(pointOfInterestName, coordinate: coordinate)

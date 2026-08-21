@@ -6,11 +6,8 @@ extension GameListItem {
   static let previewInProgress = Self(
     currentQuarter: 3,
     endedAt: nil,
-    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
-    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
-    periodDurationSeconds: MockGameData.periodDurationSeconds,
-    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    periods: MockGameData.periods(gameID: UUID(10), idOffset: 1_000),
     startedAt: Date(timeIntervalSince1970: 1_785_659_400),
     teamABibColorHex: "#34C759",
     teamAName: "North London Ravens",
@@ -22,11 +19,8 @@ extension GameListItem {
 
   static let previewCompleted = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_575_100),
-    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
-    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
-    periodDurationSeconds: MockGameData.periodDurationSeconds,
-    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    periods: MockGameData.periods(gameID: UUID(11), idOffset: 1_010),
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     teamAName: "North London Ravens",
     teamAScore: 38,
@@ -44,13 +38,10 @@ extension Array where Element == GameListItem {
 extension CompletedGameDetail {
   static let previewCompleted = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_575_100),
-    firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
     goalTimeline: realisticPreviewTimeline,
-    halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
     location: LocationClient.previewLocation,
-    periodDurationSeconds: MockGameData.periodDurationSeconds,
-    secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
+    periods: MockGameData.periods(gameID: UUID(12), idOffset: 1_020),
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     statistics: CompletedGameStatistics(
       teamA: TeamGameStatistics(

@@ -9,45 +9,50 @@ struct GamesHomeView: View {
   var gameTapped: (GameListItem) -> Void
   var newGameTapped: () -> Void
   var proPromotionTapped: () -> Void
-
+  
   var body: some View {
     List {
       if showsProPromotion {
-        ProPromotionCard(exploreProTapped: proPromotionTapped)
-          .listRowBackground(Color.clear)
-      }
-
-      if games.isEmpty {
-        ContentUnavailableView {
-          Label("No games yet", systemImage: "sportscourt")
-        } description: {
-          Text("Start a game to keep score and build your history.")
-        } actions: {
-          Button("New Game", action: newGameTapped)
-            .buttonStyle(.borderedProminent)
-            .fontWeight(.medium)
-            .controlSize(.large)
+        Section {
+          ProPromotionCard(exploreProTapped: proPromotionTapped)
+            .listRowBackground(Color.clear)
+            .listRowInsets(.all, 0)
         }
-        .listRowBackground(Color.clear)
-      } else {
-        ForEach(games) { game in
-          Button {
-            gameTapped(game)
-          } label: {
-            GameRow(
-              game: game,
-              isLoading: loadingGameID == game.id
-            )
+      }
+      
+      Section {
+        if games.isEmpty {
+          ContentUnavailableView {
+            Label("No games yet", systemImage: "sportscourt")
+          } description: {
+            Text("Start a game to keep score and build your history.")
+          } actions: {
+            Button("New Game", action: newGameTapped)
+              .buttonStyle(.borderedProminent)
+              .fontWeight(.medium)
+              .controlSize(.large)
           }
-          
-          .buttonStyle(.plain)
-          .alignmentGuide(.listRowSeparatorLeading, computeValue: { _ in
-            return 0
-          })
-          .disabled(loadingGameID != nil || deletingGameID != nil)
-          .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button("Delete", systemImage: "trash", role: .destructive) {
-              deleteGameTapped(game.id)
+          .listRowBackground(Color.clear)
+        } else {
+          ForEach(games) { game in
+            Button {
+              gameTapped(game)
+            } label: {
+              GameRow(
+                game: game,
+                isLoading: loadingGameID == game.id
+              )
+            }
+            
+            .buttonStyle(.plain)
+            .alignmentGuide(.listRowSeparatorLeading, computeValue: { _ in
+              return 0
+            })
+            .disabled(loadingGameID != nil || deletingGameID != nil)
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+              Button("Delete", systemImage: "trash", role: .destructive) {
+                deleteGameTapped(game.id)
+              }
             }
           }
         }

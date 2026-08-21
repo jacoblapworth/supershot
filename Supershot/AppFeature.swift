@@ -540,11 +540,12 @@ extension AlertState where Action == AppFeature.Alert {
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
+    let phases = snapshot.phases
     let currentPhaseIndex = min(
       max(snapshot.game.currentPhaseIndex, 0),
-      snapshot.game.phases.count - 1
+      phases.count - 1
     )
-    let currentDuration = snapshot.game.phases[currentPhaseIndex].durationSeconds
+    let currentDuration = phases[currentPhaseIndex].durationSeconds
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,
@@ -556,12 +557,9 @@ extension ScoringFeature.State {
         max(snapshot.game.elapsedSeconds, 0),
         max(currentDuration, 0)
       ),
-      firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
       gameID: snapshot.game.id,
-      halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
-      periodDurationSeconds: snapshot.game.periodDurationSeconds,
-      secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
+      periods: snapshot.periods,
       startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(
         id: snapshot.teamA.id,

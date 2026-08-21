@@ -6,6 +6,20 @@ struct GoalProgressChartView: View {
   @State private var breakdown = GoalProgressBreakdown.wholeGame
   @State private var selectedMoment: GoalProgressMoment?
 
+  private var orderedPeriods: [GamePeriod] {
+    detail.periods.sorted { $0.position < $1.position }
+  }
+
+  private var breakdownOptions: [GoalProgressBreakdown] {
+    [.wholeGame] + orderedPeriods.map { .period($0.number) }
+  }
+
+  private var periodEndOffsets: [Int] {
+    orderedPeriods.dropLast().reduce(into: []) { offsets, period in
+      offsets.append((offsets.last ?? 0) + period.durationSeconds)
+    }
+  }
+
   private var goals: [GoalTimelineItem] {
     detail.goalTimeline.quarters
       .filter { breakdown.period == nil || $0.period == breakdown.period }
@@ -51,12 +65,14 @@ struct GoalProgressChartView: View {
         }
       }
 
-      let periodElapsedSeconds = max(
-        detail.periodDurationSeconds - goal.clockSecondsRemaining,
-        0
-      )
+      guard let period = orderedPeriods.first(where: { $0.number == goal.period }) else {
+        continue
+      }
+      let periodElapsedSeconds = max(period.durationSeconds - goal.clockSecondsRemaining, 0)
       let elapsedSeconds = breakdown == .wholeGame
-        ? (goal.period - 1) * detail.periodDurationSeconds + periodElapsedSeconds
+        ? orderedPeriods
+          .prefix { $0.position < period.position }
+          .reduce(periodElapsedSeconds) { $0 + $1.durationSeconds }
         : periodElapsedSeconds
       moments.append(
         GoalProgressMoment(
@@ -93,9 +109,12 @@ struct GoalProgressChartView: View {
 
   private var displayedDuration: Int {
     if breakdown == .wholeGame {
-      return detail.periodDurationSeconds * 4
+      return max(orderedPeriods.reduce(0) { $0 + $1.durationSeconds }, 1)
     }
-    return detail.periodDurationSeconds
+    return max(
+      orderedPeriods.first { $0.number == breakdown.period }?.durationSeconds ?? 0,
+      1
+    )
   }
 
   var body: some View {
@@ -106,7 +125,7 @@ struct GoalProgressChartView: View {
         .foregroundStyle(.secondary)
 
       Picker("Breakdown", selection: $breakdown) {
-        ForEach(GoalProgressBreakdown.allCases) { breakdown in
+        ForEach(breakdownOptions) { breakdown in
           Text(breakdown.title).tag(breakdown)
         }
       }
@@ -143,9 +162,9 @@ struct GoalProgressChartView: View {
           }
 
           if breakdown == .wholeGame {
-            ForEach(1..<4, id: \.self) { period in
+            ForEach(periodEndOffsets, id: \.self) { periodEndOffset in
               RuleMark(
-                x: .value("Break", period * detail.periodDurationSeconds)
+                x: .value("Break", periodEndOffset)
               )
               .foregroundStyle(.secondary.opacity(0.7))
               .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
@@ -298,14 +317,14 @@ private enum GoalProgressTeam: String {
   case teamB
 }
 
-private enum GoalProgressBreakdown: CaseIterable, Hashable, Identifiable {
+private enum GoalProgressBreakdown: Hashable, Identifiable {
   case wholeGame
-  case quarter(Int)
+  case period(Int)
 
   var id: Self { self }
 
   var period: Int? {
-    guard case let .quarter(period) = self else { return nil }
+    guard case let .period(period) = self else { return nil }
     return period
   }
 
@@ -313,18 +332,10 @@ private enum GoalProgressBreakdown: CaseIterable, Hashable, Identifiable {
     switch self {
     case .wholeGame:
       "Game"
-    case let .quarter(period):
+    case let .period(period):
       "Q\(period)"
     }
   }
-
-  static let allCases: [Self] = [
-    .wholeGame,
-    .quarter(1),
-    .quarter(2),
-    .quarter(3),
-    .quarter(4),
-  ]
 }
 
 private struct GoalProgress {

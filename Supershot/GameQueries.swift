@@ -4,11 +4,8 @@ import SQLiteData
 nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   var currentQuarter = 1
   let endedAt: Date?
-  var firstBreakDurationSeconds = 0
-  var halfTimeDurationSeconds = 0
   let id: Game.ID
-  var periodDurationSeconds = 15 * 60
-  var secondBreakDurationSeconds = 0
+  var periods: [GamePeriod] = []
   let startedAt: Date
   var teamABibColorHex = TeamColorPalette.blue
   let teamAName: String
@@ -22,12 +19,7 @@ nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   }
 
   var timingSummary: String {
-    gameTimingSummary(
-      periodDurationSeconds: periodDurationSeconds,
-      firstBreakDurationSeconds: firstBreakDurationSeconds,
-      halfTimeDurationSeconds: halfTimeDurationSeconds,
-      secondBreakDurationSeconds: secondBreakDurationSeconds
-    )
+    gameTimingSummary(periods: periods)
   }
 }
 
@@ -42,7 +34,7 @@ nonisolated struct GoalTimeline: Equatable, Sendable {
   var quarters: [GoalTimelineQuarter] = []
 
   static func empty(through period: Int) -> Self {
-    let finalPeriod = min(max(period, 1), 4)
+    let finalPeriod = max(period, 1)
     return Self(
       quarters: (1...finalPeriod).reversed().map {
         GoalTimelineQuarter(
@@ -100,13 +92,10 @@ nonisolated struct CompletedGameStatistics: Equatable, Sendable {
 
 nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let endedAt: Date
-  var firstBreakDurationSeconds = 0
   let goalTimeline: GoalTimeline
-  var halfTimeDurationSeconds = 0
   let id: Game.ID
   var location: GameLocation?
-  var periodDurationSeconds = 15 * 60
-  var secondBreakDurationSeconds = 0
+  var periods: [GamePeriod] = []
   let startedAt: Date
   var statistics = CompletedGameStatistics()
   var teamABibColorHex = TeamColorPalette.blue
@@ -127,20 +116,37 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   }
 
   var timingSummary: String {
-    gameTimingSummary(
-      periodDurationSeconds: periodDurationSeconds,
-      firstBreakDurationSeconds: firstBreakDurationSeconds,
-      halfTimeDurationSeconds: halfTimeDurationSeconds,
-      secondBreakDurationSeconds: secondBreakDurationSeconds
-    )
+    gameTimingSummary(periods: periods)
   }
 }
 
 nonisolated struct GameSnapshot: Equatable, Sendable {
   let game: Game
   let goals: [Goal]
+  let periods: [GamePeriod]
   let teamA: Team
   let teamB: Team
+
+  var phases: [GamePhase] { gamePhases(for: periods) }
+
+  var currentPhase: GamePhase {
+    let phases = phases
+    guard !phases.isEmpty else {
+      return .quarter(number: 1, durationSeconds: 0)
+    }
+    return phases[min(max(game.currentPhaseIndex, 0), phases.count - 1)]
+  }
+
+  var currentPeriod: GamePeriod? {
+    periods.first { $0.number == currentPhase.quarterNumber }
+  }
+
+  var isFinalPeriodComplete: Bool {
+    game.currentPhaseIndex == phases.count - 1
+      && currentPhase.isQuarter
+      && game.elapsedSeconds >= currentPhase.durationSeconds
+      && game.timerEndsAt == nil
+  }
 
   var teamAScore: Int {
     goals
@@ -165,17 +171,41 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
       throw GameQueryError.teamNotFound
     }
 
-    let goals = try Goal
+    let periods = try GamePeriod
       .where { $0.gameID.eq(gameID) }
-      .order { goals in (
-        goals.quarterNumber,
-        goals.elapsedSeconds,
-        goals.createdAt,
-        goals.id
-      ) }
+      .order { ($0.position, $0.id) }
       .fetchAll(db)
+    guard !periods.isEmpty else {
+      throw GameQueryError.periodsNotFound
+    }
 
-    return Self(game: game, goals: goals, teamA: teamA, teamB: teamB)
+    let unsortedGoals = try Goal
+      .where { $0.gameID.eq(gameID) }
+      .fetchAll(db)
+    let positionsByPeriodID = Dictionary(
+      uniqueKeysWithValues: periods.map { ($0.id, $0.position) }
+    )
+    let goals = unsortedGoals.sorted {
+      (
+        positionsByPeriodID[$0.gamePeriodID] ?? .max,
+        $0.elapsedSeconds,
+        $0.createdAt,
+        $0.id
+      ) < (
+        positionsByPeriodID[$1.gamePeriodID] ?? .max,
+        $1.elapsedSeconds,
+        $1.createdAt,
+        $1.id
+      )
+    }
+
+    return Self(
+      game: game,
+      goals: goals,
+      periods: periods,
+      teamA: teamA,
+      teamB: teamB
+    )
   }
 }
 
@@ -189,9 +219,13 @@ nonisolated struct GamesRequest: FetchKeyRequest {
       .order { games in (games.startedAt.desc(), games.id.desc()) }
       .fetchAll(db)
     let goals = try Goal.fetchAll(db)
+    let periods = try GamePeriod
+      .order { ($0.gameID, $0.position, $0.id) }
+      .fetchAll(db)
     let teams = try Team.fetchAll(db)
 
     let goalsByGame = Dictionary(grouping: goals, by: \.gameID)
+    let periodsByGame = Dictionary(grouping: periods, by: \.gameID)
     let teamsByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
 
     return Value(
@@ -202,14 +236,17 @@ nonisolated struct GamesRequest: FetchKeyRequest {
         else { return nil }
 
         let gameGoals = goalsByGame[game.id, default: []]
+        let gamePeriods = periodsByGame[game.id, default: []]
+        let phases = gamePhases(for: gamePeriods)
+        guard !phases.isEmpty else { return nil }
+        let currentPhase = phases[
+          min(max(game.currentPhaseIndex, 0), phases.count - 1)
+        ]
         return GameListItem(
-          currentQuarter: game.currentPhase.quarterNumber,
+          currentQuarter: currentPhase.quarterNumber,
           endedAt: game.endedAt,
-          firstBreakDurationSeconds: game.firstBreakDurationSeconds,
-          halfTimeDurationSeconds: game.halfTimeDurationSeconds,
           id: game.id,
-          periodDurationSeconds: game.periodDurationSeconds,
-          secondBreakDurationSeconds: game.secondBreakDurationSeconds,
+          periods: gamePeriods,
           startedAt: game.startedAt,
           teamABibColorHex: game.teamABibColorHex,
           teamAName: teamA.name,
@@ -310,13 +347,10 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
     return Value(
       detail: CompletedGameDetail(
         endedAt: endedAt,
-        firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
         goalTimeline: timeline,
-        halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
         id: snapshot.game.id,
         location: snapshot.game.location,
-        periodDurationSeconds: snapshot.game.periodDurationSeconds,
-        secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
+        periods: snapshot.periods,
         startedAt: snapshot.game.startedAt,
         statistics: completedGameStatistics(
           goals: snapshot.goals,
@@ -340,20 +374,26 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   var teamAScore = 0
   var teamBScore = 0
 
+  let periodsByID = Dictionary(
+    uniqueKeysWithValues: snapshot.periods.map { ($0.id, $0) }
+  )
+
   for goal in snapshot.goals {
+    guard let period = periodsByID[goal.gamePeriodID] else { continue }
+    let periodNumber = period.number
     let scoringTeamBibColorHex: String
     let scoringTeamName: String
     let scoringTeamSide: GoalTimelineTeamSide
 
     if goal.teamID == snapshot.teamA.id {
       teamAScore += goal.points
-      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamA += goal.points
+      quarterScoresByPeriod[periodNumber, default: (0, 0)].teamA += goal.points
       scoringTeamBibColorHex = snapshot.game.teamABibColorHex
       scoringTeamName = snapshot.teamA.name
       scoringTeamSide = .teamA
     } else if goal.teamID == snapshot.teamB.id {
       teamBScore += goal.points
-      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamB += goal.points
+      quarterScoresByPeriod[periodNumber, default: (0, 0)].teamB += goal.points
       scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
       scoringTeamName = snapshot.teamB.name
       scoringTeamSide = .teamB
@@ -363,14 +403,14 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
       scoringTeamSide = .unknown
     }
 
-    goalsByPeriod[goal.quarterNumber, default: []].append(
+    goalsByPeriod[periodNumber, default: []].append(
       GoalTimelineItem(
         clockSecondsRemaining: max(
-          snapshot.game.periodDurationSeconds - goal.elapsedSeconds,
+          period.durationSeconds - goal.elapsedSeconds,
           0
         ),
         id: goal.id,
-        period: goal.quarterNumber,
+        period: periodNumber,
         points: goal.points,
         scoringTeamBibColorHex: scoringTeamBibColorHex,
         scoringTeamName: scoringTeamName,
@@ -381,12 +421,12 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
     )
   }
 
-  let maximumPeriod = 4
+  let maximumPeriod = snapshot.periods.count
   let playedPeriod = snapshot.game.endedAt == nil
     ? min(
       max(
-        snapshot.game.currentPhase.quarterNumber,
-        snapshot.goals.map(\.quarterNumber).max() ?? 1
+        snapshot.currentPhase.quarterNumber,
+        snapshot.goals.compactMap { periodsByID[$0.gamePeriodID]?.number }.max() ?? 1
       ),
       maximumPeriod
     )
@@ -411,12 +451,15 @@ private nonisolated func completedGameStatistics(
   teamBID: Team.ID
 ) -> CompletedGameStatistics {
   var goalDurationsByTeamID: [Team.ID: [Int]] = [:]
-  var previousGoalElapsedSecondsByPeriod: [Int: Int] = [:]
+  var previousGoalElapsedSecondsByPeriod: [GamePeriod.ID: Int] = [:]
 
   for goal in goals {
-    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.quarterNumber, default: 0]
+    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[
+      goal.gamePeriodID,
+      default: 0
+    ]
     let duration = max(goal.elapsedSeconds - previousElapsedSeconds, 0)
-    previousGoalElapsedSecondsByPeriod[goal.quarterNumber] = goal.elapsedSeconds
+    previousGoalElapsedSecondsByPeriod[goal.gamePeriodID] = goal.elapsedSeconds
 
     if goal.teamID == teamAID || goal.teamID == teamBID {
       goalDurationsByTeamID[goal.teamID, default: []].append(duration)
@@ -455,21 +498,21 @@ private nonisolated func completedGameStatistics(
 }
 
 private nonisolated func gameTimingSummary(
-  periodDurationSeconds: Int,
-  firstBreakDurationSeconds: Int,
-  halfTimeDurationSeconds: Int,
-  secondBreakDurationSeconds: Int
+  periods: [GamePeriod]
 ) -> String {
-  let quarter = formattedDuration(periodDurationSeconds)
-  let breaks = [
-    formattedDuration(firstBreakDurationSeconds),
-    formattedDuration(halfTimeDurationSeconds),
-    formattedDuration(secondBreakDurationSeconds),
-  ]
+  let orderedPeriods = periods.sorted { $0.position < $1.position }
+  guard let firstPeriod = orderedPeriods.first else { return "No periods" }
+  let periodDurations = orderedPeriods.map(\.durationSeconds)
+  let periodSummary = Set(periodDurations).count == 1
+    ? "\(orderedPeriods.count) × \(formattedDuration(firstPeriod.durationSeconds))"
+    : periodDurations.map(formattedDuration).joined(separator: " / ")
+  let breaks = orderedPeriods.compactMap(\.breakAfterDurationSeconds)
+    .map(formattedDuration)
+  guard !breaks.isEmpty else { return periodSummary }
   if Set(breaks).count == 1, let first = breaks.first {
-    return "4 × \(quarter) · \(first) breaks"
+    return "\(periodSummary) · \(first) breaks"
   }
-  return "4 × \(quarter) · breaks \(breaks.joined(separator: " / "))"
+  return "\(periodSummary) · breaks \(breaks.joined(separator: " / "))"
 }
 
 private nonisolated func formattedDuration(_ seconds: Int) -> String {
@@ -479,5 +522,6 @@ private nonisolated func formattedDuration(_ seconds: Int) -> String {
 
 private nonisolated enum GameQueryError: Error {
   case gameNotFound
+  case periodsNotFound
   case teamNotFound
 }
