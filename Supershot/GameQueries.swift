@@ -104,6 +104,7 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let goalTimeline: GoalTimeline
   var halfTimeDurationSeconds = 0
   let id: Game.ID
+  var location: GameLocation?
   var periodDurationSeconds = 15 * 60
   var secondBreakDurationSeconds = 0
   let startedAt: Date
@@ -313,6 +314,7 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         goalTimeline: timeline,
         halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
         id: snapshot.game.id,
+        location: snapshot.game.location,
         periodDurationSeconds: snapshot.game.periodDurationSeconds,
         secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
         startedAt: snapshot.game.startedAt,

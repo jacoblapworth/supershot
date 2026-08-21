@@ -28,6 +28,9 @@ extension SupershotTestSuite {
             endedAt: endedAt,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
+            latitude: 51.556,
+            longitude: -0.2796,
+            pointOfInterestName: "Wembley Arena",
             periodDurationSeconds: 900,
             firstBreakDurationSeconds: 240,
             halfTimeDurationSeconds: 600,
@@ -140,6 +143,11 @@ extension SupershotTestSuite {
           ),
           halfTimeDurationSeconds: 600,
           id: UUID(-1),
+          location: GameLocation(
+            latitude: 51.556,
+            longitude: -0.2796,
+            pointOfInterestName: "Wembley Arena"
+          ),
           periodDurationSeconds: 900,
           secondBreakDurationSeconds: 240,
           startedAt: startedAt,

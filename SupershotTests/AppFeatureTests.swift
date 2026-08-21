@@ -31,7 +31,7 @@ extension SupershotTestSuite {
         guard case .proAccessLoaded(.free) = $0 else { return false }
         return true
       } assert: {
-        $0.hasCheckedAlarmAuthorization = true
+        $0.hasCheckedPermissions = true
         $0.proAccess = .free
       }
       await store.finish()
@@ -40,7 +40,7 @@ extension SupershotTestSuite {
     @Test
     func promotionPresentsPaywallAndProAccessDismissesIt() async {
       var state = AppFeature.State()
-      state.hasCheckedAlarmAuthorization = true
+      state.hasCheckedPermissions = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -69,7 +69,7 @@ extension SupershotTestSuite {
       timer.endPresentation = { _ in events.withValue { $0.append("cleanup") } }
 
       var state = AppFeature.State()
-      state.hasCheckedAlarmAuthorization = true
+      state.hasCheckedPermissions = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()

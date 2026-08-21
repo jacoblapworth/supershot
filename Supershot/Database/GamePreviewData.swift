@@ -48,6 +48,7 @@ extension CompletedGameDetail {
     goalTimeline: realisticPreviewTimeline,
     halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
     id: UUID(),
+    location: LocationClient.previewLocation,
     periodDurationSeconds: MockGameData.periodDurationSeconds,
     secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
