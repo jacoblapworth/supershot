@@ -1,4 +1,5 @@
 import ComposableArchitecture
+import Combine
 import Dependencies
 import SQLiteData
 import SwiftUI
@@ -28,6 +29,10 @@ struct AppView: View {
     .alert($store.scope(state: \.alert, action: \.alert))
     .task { store.send(.task) }
     .onOpenURL { store.send(.deepLinkOpened($0)) }
+    .onReceive(NotificationCenter.default.publisher(for: .openSupershotGame)) {
+      guard let gameURL = $0.object as? URL else { return }
+      store.send(.deepLinkOpened(gameURL))
+    }
   }
 
   private var tabs: some View {
@@ -125,4 +130,3 @@ struct AppView: View {
     }
   )
 }
-
