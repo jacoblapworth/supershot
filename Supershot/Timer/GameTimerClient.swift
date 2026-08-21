@@ -18,7 +18,7 @@ nonisolated struct GameTimerClient: Sendable {
   var startOrResume: @Sendable (Game.ID, Int?, Bool) async throws -> GameTimerUpdate
 }
 
-nonisolated struct GameTimerSystemClient: Sendable {
+nonisolated struct AlarmClient: Sendable {
   var cancelAlarm: @Sendable (Game.ID) async -> Void
   var endActivity: @Sendable (Game.ID) async -> Void
   var scheduleAlarm: @Sendable (GameSnapshot, Bool) async -> Bool
@@ -31,7 +31,7 @@ extension DependencyValues {
     set { self[GameTimerClientKey.self] = newValue }
   }
 
-  nonisolated var gameTimerSystem: GameTimerSystemClient {
+  nonisolated var gameTimerSystem: AlarmClient {
     get { self[GameTimerSystemClientKey.self] }
     set { self[GameTimerSystemClientKey.self] = newValue }
   }
@@ -48,12 +48,12 @@ private nonisolated enum GameTimerClientKey: DependencyKey {
 }
 
 private nonisolated enum GameTimerSystemClientKey: DependencyKey {
-  static var liveValue: GameTimerSystemClient { .live }
-  static var previewValue: GameTimerSystemClient { .noop }
-  static var testValue: GameTimerSystemClient { .noop }
+  static var liveValue: AlarmClient { .live }
+  static var previewValue: AlarmClient { .noop }
+  static var testValue: AlarmClient { .noop }
 }
 
-nonisolated extension GameTimerSystemClient {
+nonisolated extension AlarmClient {
   static let noop = Self(
     cancelAlarm: { _ in },
     endActivity: { _ in },
@@ -63,7 +63,7 @@ nonisolated extension GameTimerSystemClient {
 }
 
 nonisolated extension GameTimerClient {
-  static func live(system: GameTimerSystemClient) -> Self {
+  static func live(system: AlarmClient) -> Self {
     Self(
       cancelAlert: { gameID in
         await system.cancelAlarm(gameID)

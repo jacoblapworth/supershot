@@ -20,11 +20,14 @@ nonisolated extension AlarmClient {
           await activity.end(nil, dismissalPolicy: .immediate)
         }
       },
-      scheduleAlarm: { snapshot, requestsAuthorization in
+      scheduleAlarm: {
+        snapshot,
+        requestsAuthorization in
         guard let timerEndsAt = snapshot.game.timerEndsAt else { return false }
         let manager = AlarmManager.shared
         var authorizationState = manager.authorizationState
-        if authorizationState == .notDetermined, requestsAuthorization {
+        if authorizationState == .notDetermined,
+           requestsAuthorization {
           authorizationState = (try? await manager.requestAuthorization()) ?? authorizationState
         }
         guard authorizationState == .authorized else {
@@ -42,7 +45,7 @@ nonisolated extension AlarmClient {
         if
           snapshot.game.currentPhase.isQuarter,
           snapshot.game.currentPhaseIndex + 1 < snapshot.game.phases.count
-        {
+            {
           let breakPhase = snapshot.game.phases[snapshot.game.currentPhaseIndex + 1]
           if breakPhase.durationSeconds > 0 {
             alarms.append(
@@ -59,7 +62,15 @@ nonisolated extension AlarmClient {
 
         for alarm in alarms {
           let presentation = AlarmPresentation(
-            alert: AlarmPresentation.Alert(title: alarm.title)
+            alert: AlarmPresentation.Alert(
+              title: alarm.title,
+              secondaryButton: AlarmButton(
+                text: "Continue",
+                textColor: .white,
+                systemImageName: "play.fill"
+              ),
+              secondaryButtonBehavior: .custom
+            )
           )
           let attributes = AlarmAttributes(
             presentation: presentation,
@@ -67,11 +78,12 @@ nonisolated extension AlarmClient {
               gameID: snapshot.game.id,
               phaseIndex: alarm.phaseIndex
             ),
-            tintColor: .accentColor
+            tintColor: .green,
           )
           let configuration = AlarmManager.AlarmConfiguration.alarm(
             schedule: .fixed(alarm.date),
-            attributes: attributes
+            attributes: attributes,
+            secondaryIntent: OpenGameIntent(gameID: snapshot.game.id)
           )
           do {
             _ = try await manager.schedule(
