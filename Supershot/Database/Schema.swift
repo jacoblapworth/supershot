@@ -57,6 +57,9 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var teamBID: Team.ID
   var teamBBibColorHex = TeamColorPalette.red
   var centrePassTeamID: Team.ID?
+  var latitude: Double?
+  var longitude: Double?
+  var pointOfInterestName: String?
   var periodDurationSeconds: Int
   var firstBreakDurationSeconds = 0
   var halfTimeDurationSeconds = 0
@@ -87,6 +90,24 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
     set {
       elapsedSeconds = newValue.elapsedSeconds
       timerEndsAt = newValue.endsAt
+    }
+  }
+}
+
+extension Game {
+  nonisolated var location: GameLocation? {
+    get {
+      guard let latitude, let longitude else { return nil }
+      return GameLocation(
+        latitude: latitude,
+        longitude: longitude,
+        pointOfInterestName: pointOfInterestName
+      )
+    }
+    set {
+      latitude = newValue?.latitude
+      longitude = newValue?.longitude
+      pointOfInterestName = newValue?.pointOfInterestName
     }
   }
 }
@@ -174,6 +195,9 @@ extension DependencyValues {
           "teamBID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "teamBBibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#FF3B30',
           "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE CASCADE,
+          "latitude" REAL,
+          "longitude" REAL,
+          "pointOfInterestName" TEXT,
           "periodDurationSeconds" INTEGER NOT NULL,
           "firstBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "halfTimeDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,

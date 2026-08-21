@@ -16,7 +16,11 @@ import RevenueCat
         "RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings."
       )
     }
-    Purchases.configure(withAPIKey: revenueCatAPIKey)
+    
+    Purchases.configure(
+      withAPIKey: revenueCatAPIKey,
+      appUserID: "dev" //TODO: implement ids
+    )
     try! prepareDependencies {
       try $0.bootstrapDatabase()
 #if DEBUG

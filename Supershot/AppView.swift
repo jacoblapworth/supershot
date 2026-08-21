@@ -14,15 +14,15 @@ struct AppView: View {
 
   var body: some View {
     Group {
-      if !store.hasCheckedAlarmAuthorization {
+      if !store.hasCheckedPermissions {
         ProgressView()
           .controlSize(.large)
           .accessibilityLabel("Preparing Supershot")
       } else if let onboardingStore = store.scope(
-        state: \.alarmOnboarding,
-        action: \.alarmOnboarding.presented
+        state: \.permissionsOnboarding,
+        action: \.permissionsOnboarding.presented
       ) {
-        AlarmOnboardingView(store: onboardingStore)
+        PermissionsOnboardingView(store: onboardingStore)
       } else {
         tabs
       }

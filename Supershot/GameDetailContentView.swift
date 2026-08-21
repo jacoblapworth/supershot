@@ -9,6 +9,9 @@ struct GameDetailContentView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: 28) {
         GameOverviewView(detail: detail)
+        if let location = detail.location {
+          GameLocationSection(location: location)
+        }
         GameStatisticsView(detail: detail)
         GoalTimelineView(
           teamABibColorHex: detail.teamABibColorHex,
@@ -23,6 +26,33 @@ struct GameDetailContentView: View {
       }
       .padding()
     }
+  }
+}
+
+private struct GameLocationSection: View {
+  var location: GameLocation
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Label("Location", systemImage: "location.fill")
+        .font(.headline)
+
+      GameLocationMap(location: location)
+
+      Label {
+        if let pointOfInterestName = location.pointOfInterestName {
+          Text(pointOfInterestName)
+        } else {
+          Text("Game location")
+        }
+      } icon: {
+        Image(systemName: "mappin.and.ellipse")
+      }
+      .font(.subheadline.weight(.semibold))
+    }
+    .padding()
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
   }
 }
 

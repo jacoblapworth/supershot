@@ -21,15 +21,15 @@ struct AppFeature {
 
   @ObservableState
   struct State: Equatable {
-    @Presents var alarmOnboarding: AlarmOnboardingFeature.State?
     @Presents var alert: AlertState<Alert>?
     var deletingGameID: Game.ID?
     var deletingTeamID: Team.ID?
-    var hasCheckedAlarmAuthorization = false
+    var hasCheckedPermissions = false
     var hasStartedSubscriptionObservation = false
     var loadingGameID: Game.ID?
     var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
+    @Presents var permissionsOnboarding: PermissionsOnboardingFeature.State?
     var proAccess = ProAccess.unknown
     @Presents var proPaywall: ProPaywallFeature.State?
     var selectedTab = Tab.games
@@ -38,7 +38,6 @@ struct AppFeature {
   }
 
   enum Action {
-    case alarmOnboarding(PresentationAction<AlarmOnboardingFeature.Action>)
     case alert(PresentationAction<Alert>)
     case deepLinkOpened(URL)
     case deleteGameButtonTapped(Game.ID)
@@ -49,6 +48,7 @@ struct AppFeature {
     case newGameButtonTapped
     case newTeamButtonTapped
     case path(StackActionOf<AppPath>)
+    case permissionsOnboarding(PresentationAction<PermissionsOnboardingFeature.Action>)
     case proAccessLoaded(ProAccess)
     case proAccessUpdated(ProAccess)
     case proPaywall(PresentationAction<ProPaywallFeature.Action>)
@@ -70,20 +70,21 @@ struct AppFeature {
   @Dependency(\.alarmAuthorization) var alarmAuthorization
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
+  @Dependency(\.locationClient) var locationClient
   @Dependency(\.proSubscription) var proSubscription
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .alarmOnboarding(.presented(.delegate(.completed))):
-        state.alarmOnboarding = nil
+      case .permissionsOnboarding(.presented(.delegate(.completed))):
+        state.permissionsOnboarding = nil
         guard
           state.proAccess == .pro,
           alarmAuthorization.status() == .authorized
         else { return .none }
         return synchronizePremiumPresentations(schedulesAlerts: true)
 
-      case .alarmOnboarding:
+      case .permissionsOnboarding:
         return .none
 
       case .alert:
@@ -209,7 +210,7 @@ struct AppFeature {
         return .none
 
       case let .proAccessLoaded(access):
-        state.hasCheckedAlarmAuthorization = true
+        state.hasCheckedPermissions = true
         return applyProAccess(access, state: &state)
 
       case let .proAccessUpdated(access):
@@ -360,8 +361,8 @@ struct AppFeature {
     .forEach(\.teamsPath, action: \.teamsPath) {
       AppPath.body
     }
-    .ifLet(\.$alarmOnboarding, action: \.alarmOnboarding) {
-      AlarmOnboardingFeature()
+    .ifLet(\.$permissionsOnboarding, action: \.permissionsOnboarding) {
+      PermissionsOnboardingFeature()
     }
     .ifLet(\.$proPaywall, action: \.proPaywall) {
       ProPaywallFeature()
@@ -389,21 +390,30 @@ struct AppFeature {
 
     switch access {
     case .free:
-      state.alarmOnboarding = nil
+      state.permissionsOnboarding = locationClient.authorizationStatus() == .notDetermined
+        ? PermissionsOnboardingFeature.State(step: .location)
+        : nil
       return cleanUpPremiumPresentations()
 
     case .pro:
       state.proPaywall = nil
-      let authorization = alarmAuthorization.status()
-      state.alarmOnboarding = authorization == .notDetermined
-        ? AlarmOnboardingFeature.State()
-        : nil
+      let alarmAuthorization = alarmAuthorization.status()
+      let needsLocation = locationClient.authorizationStatus() == .notDetermined
+      if alarmAuthorization == .notDetermined {
+        state.permissionsOnboarding = PermissionsOnboardingFeature.State(
+          nextStep: needsLocation ? .location : nil
+        )
+      } else {
+        state.permissionsOnboarding = needsLocation
+          ? PermissionsOnboardingFeature.State(step: .location)
+          : nil
+      }
       return synchronizePremiumPresentations(
-        schedulesAlerts: authorization == .authorized
+        schedulesAlerts: alarmAuthorization == .authorized
       )
 
     case .unknown:
-      state.alarmOnboarding = nil
+      state.permissionsOnboarding = nil
       return .none
     }
   }
