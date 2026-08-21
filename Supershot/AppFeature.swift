@@ -26,9 +26,12 @@ struct AppFeature {
     var deletingGameID: Game.ID?
     var deletingTeamID: Team.ID?
     var hasCheckedAlarmAuthorization = false
+    var hasStartedSubscriptionObservation = false
     var loadingGameID: Game.ID?
     var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
+    var proAccess = ProAccess.unknown
+    @Presents var proPaywall: ProPaywallFeature.State?
     var selectedTab = Tab.games
     @Presents var teamEditor: TeamEditorFeature.State?
     var teamsPath = StackState<AppPath.State>()
@@ -46,7 +49,12 @@ struct AppFeature {
     case newGameButtonTapped
     case newTeamButtonTapped
     case path(StackActionOf<AppPath>)
+    case proAccessLoaded(ProAccess)
+    case proAccessUpdated(ProAccess)
+    case proPaywall(PresentationAction<ProPaywallFeature.Action>)
+    case proPromotionTapped
     case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
+    case sceneBecameActive
     case selectedTabChanged(Tab)
     case task
     case teamEditor(PresentationAction<TeamEditorFeature.Action>)
@@ -62,13 +70,18 @@ struct AppFeature {
   @Dependency(\.alarmAuthorization) var alarmAuthorization
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
+  @Dependency(\.proSubscription) var proSubscription
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
       case .alarmOnboarding(.presented(.delegate(.completed))):
         state.alarmOnboarding = nil
-        return .none
+        guard
+          state.proAccess == .pro,
+          alarmAuthorization.status() == .authorized
+        else { return .none }
+        return synchronizePremiumPresentations(schedulesAlerts: true)
 
       case .alarmOnboarding:
         return .none
@@ -195,6 +208,24 @@ struct AppFeature {
       case .path:
         return .none
 
+      case let .proAccessLoaded(access):
+        state.hasCheckedAlarmAuthorization = true
+        return applyProAccess(access, state: &state)
+
+      case let .proAccessUpdated(access):
+        return applyProAccess(access, state: &state)
+
+      case let .proPaywall(.presented(.delegate(.accessChanged(access)))):
+        return applyProAccess(access, state: &state)
+
+      case .proPaywall:
+        return .none
+
+      case .proPromotionTapped:
+        guard state.proAccess != .pro else { return .none }
+        state.proPaywall = ProPaywallFeature.State()
+        return .none
+
       case let .resumeGameResponse(gameID, .success(snapshot)):
         guard state.loadingGameID == gameID else { return .none }
         let tab = state.loadingGameTab ?? .games
@@ -220,17 +251,35 @@ struct AppFeature {
         state.alert = .gameUnavailable
         return .none
 
+      case .sceneBecameActive:
+        guard state.hasStartedSubscriptionObservation else { return .none }
+        let proSubscription = self.proSubscription
+        return .run { send in
+          guard let access = try? await proSubscription.currentAccess() else { return }
+          await send(.proAccessUpdated(access))
+        }
+
       case let .selectedTabChanged(tab):
         state.selectedTab = tab
         return .none
 
       case .task:
-        guard !state.hasCheckedAlarmAuthorization else { return .none }
-        state.hasCheckedAlarmAuthorization = true
-        if alarmAuthorization.status() == .notDetermined {
-          state.alarmOnboarding = AlarmOnboardingFeature.State()
+        guard !state.hasStartedSubscriptionObservation else { return .none }
+        state.hasStartedSubscriptionObservation = true
+        let proSubscription = self.proSubscription
+        return .run { send in
+          let initialAccess: ProAccess
+          do {
+            initialAccess = try await proSubscription.currentAccess()
+          } catch {
+            initialAccess = .free
+          }
+          await send(.proAccessLoaded(initialAccess))
+
+          for await access in proSubscription.accessUpdates() {
+            await send(.proAccessUpdated(access))
+          }
         }
-        return .none
 
       case .teamEditor(.presented(.delegate(.cancelled))),
         .teamEditor(.presented(.delegate(.saved(_)))):
@@ -314,6 +363,9 @@ struct AppFeature {
     .ifLet(\.$alarmOnboarding, action: \.alarmOnboarding) {
       AlarmOnboardingFeature()
     }
+    .ifLet(\.$proPaywall, action: \.proPaywall) {
+      ProPaywallFeature()
+    }
     .ifLet(\.$teamEditor, action: \.teamEditor) {
       TeamEditorFeature()
     }
@@ -326,6 +378,64 @@ struct AppFeature {
         try await gameTimer.reconcile(gameID)
       }
       await send(.resumeGameResponse(gameID, result))
+    }
+  }
+
+  private func applyProAccess(
+    _ access: ProAccess,
+    state: inout State
+  ) -> Effect<Action> {
+    state.proAccess = access
+
+    switch access {
+    case .free:
+      state.alarmOnboarding = nil
+      return cleanUpPremiumPresentations()
+
+    case .pro:
+      state.proPaywall = nil
+      let authorization = alarmAuthorization.status()
+      state.alarmOnboarding = authorization == .notDetermined
+        ? AlarmOnboardingFeature.State()
+        : nil
+      return synchronizePremiumPresentations(
+        schedulesAlerts: authorization == .authorized
+      )
+
+    case .unknown:
+      state.alarmOnboarding = nil
+      return .none
+    }
+  }
+
+  private func cleanUpPremiumPresentations() -> Effect<Action> {
+    .run { _ in
+      let gameIDs = try await unfinishedGameIDs()
+      for gameID in gameIDs {
+        await gameTimer.endPresentation(gameID)
+      }
+    }
+  }
+
+  private func synchronizePremiumPresentations(
+    schedulesAlerts: Bool
+  ) -> Effect<Action> {
+    .run { _ in
+      let gameIDs = try await unfinishedGameIDs()
+      for gameID in gameIDs {
+        await gameTimer.refreshActivity(gameID)
+        if schedulesAlerts {
+          await gameTimer.scheduleAlert(gameID)
+        }
+      }
+    }
+  }
+
+  private func unfinishedGameIDs() async throws -> [Game.ID] {
+    try await database.read { db in
+      try Game.fetchAll(db)
+        .filter { $0.endedAt == nil }
+        .map(\.id)
     }
   }
 

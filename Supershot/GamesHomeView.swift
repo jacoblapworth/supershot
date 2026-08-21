@@ -4,12 +4,19 @@ struct GamesHomeView: View {
   var deletingGameID: Game.ID?
   var games: [GameListItem]
   var loadingGameID: Game.ID?
+  var showsProPromotion: Bool
   var deleteGameTapped: (Game.ID) -> Void
   var gameTapped: (GameListItem) -> Void
   var newGameTapped: () -> Void
+  var proPromotionTapped: () -> Void
 
   var body: some View {
     List {
+      if showsProPromotion {
+        ProPromotionCard(exploreProTapped: proPromotionTapped)
+          .listRowBackground(Color.clear)
+      }
+
       if games.isEmpty {
         ContentUnavailableView {
           Label("No games yet", systemImage: "sportscourt")
@@ -64,9 +71,11 @@ struct GamesHomeView: View {
       deletingGameID: nil,
       games: [],
       loadingGameID: nil,
+      showsProPromotion: true,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },
-      newGameTapped: {}
+      newGameTapped: {},
+      proPromotionTapped: {}
     )
   }
 }
@@ -77,9 +86,11 @@ struct GamesHomeView: View {
       deletingGameID: nil,
       games: .previewGames,
       loadingGameID: nil,
+      showsProPromotion: true,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },
-      newGameTapped: {}
+      newGameTapped: {},
+      proPromotionTapped: {}
     )
   }
 }
@@ -90,9 +101,11 @@ struct GamesHomeView: View {
       deletingGameID: nil,
       games: .previewGames,
       loadingGameID: GameListItem.previewInProgress.id,
+      showsProPromotion: false,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },
-      newGameTapped: {}
+      newGameTapped: {},
+      proPromotionTapped: {}
     )
   }
 }

@@ -69,6 +69,7 @@ struct TeamPickerView: View {
         }
       }
     }
+#if os(iOS)
     .toolbar(content: {
       DefaultToolbarItem(kind: .search, placement: .bottomBar)
       ToolbarSpacer(.flexible, placement: .bottomBar)
@@ -78,6 +79,15 @@ struct TeamPickerView: View {
         }
       }
     })
+#else
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Button { store.send(.createTeamButtonTapped) } label: {
+          Label("Create", systemImage: "plus.circle.fill")
+        }
+      }
+    }
+#endif
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
       NavigationStack {
         TeamEditorView(store: editorStore)

@@ -40,11 +40,20 @@ extension DependencyValues {
 private nonisolated enum GameTimerClientKey: DependencyKey {
   static var liveValue: GameTimerClient {
     @Dependency(\.gameTimerSystem) var system
-    return GameTimerClient.live(system: system)
+    @Dependency(\.proSubscription) var proSubscription
+    return GameTimerClient.live(
+      system: system,
+      proSubscription: proSubscription
+    )
   }
 
-  static var previewValue: GameTimerClient { GameTimerClient.live(system: .noop) }
-  static var testValue: GameTimerClient { GameTimerClient.live(system: .noop) }
+  static var previewValue: GameTimerClient {
+    GameTimerClient.live(system: .noop, proSubscription: .pro)
+  }
+
+  static var testValue: GameTimerClient {
+    GameTimerClient.live(system: .noop, proSubscription: .pro)
+  }
 }
 
 private nonisolated enum GameTimerSystemClientKey: DependencyKey {
@@ -63,7 +72,10 @@ nonisolated extension AlarmClient {
 }
 
 nonisolated extension GameTimerClient {
-  static func live(system: AlarmClient) -> Self {
+  static func live(
+    system: AlarmClient,
+    proSubscription: ProSubscriptionClient = .pro
+  ) -> Self {
     Self(
       cancelAlert: { gameID in
         await system.cancelAlarm(gameID)
@@ -102,8 +114,12 @@ nonisolated extension GameTimerClient {
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
-        if didPause { await system.cancelAlarm(gameID) }
-        await system.updateActivity(snapshot, true)
+        if await hasActiveProAccess(proSubscription) {
+          if didPause { await system.cancelAlarm(gameID) }
+          await system.updateActivity(snapshot, true)
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
+        }
         return snapshot
       },
       reconcile: { gameID in
@@ -120,7 +136,11 @@ nonisolated extension GameTimerClient {
           }
           return try snapshot(db, replacing: game)
         }
-        await system.updateActivity(snapshot, true)
+        if await hasActiveProAccess(proSubscription) {
+          await system.updateActivity(snapshot, true)
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
+        }
         return snapshot
       },
       refreshActivity: { gameID in
@@ -130,7 +150,11 @@ nonisolated extension GameTimerClient {
             try GameSnapshot.fetch(db, gameID: gameID)
           })
         else { return }
-        await system.updateActivity(snapshot, true)
+        if await hasActiveProAccess(proSubscription) {
+          await system.updateActivity(snapshot, true)
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
+        }
       },
       scheduleAlert: { gameID in
         @Dependency(\.defaultDatabase) var database
@@ -140,7 +164,11 @@ nonisolated extension GameTimerClient {
           }),
           snapshot.game.timerEndsAt != nil
         else { return }
-        _ = await system.scheduleAlarm(snapshot, false)
+        if await hasActiveProAccess(proSubscription) {
+          _ = await system.scheduleAlarm(snapshot, false)
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
+        }
       },
       skip: { gameID, expectedPhaseIndex in
         @Dependency(\.date) var date
@@ -166,13 +194,17 @@ nonisolated extension GameTimerClient {
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
-        if didSkip {
-          await system.cancelAlarm(gameID)
-          if snapshot.game.timerEndsAt != nil {
-            _ = await system.scheduleAlarm(snapshot, false)
+        if await hasActiveProAccess(proSubscription) {
+          if didSkip {
+            await system.cancelAlarm(gameID)
+            if snapshot.game.timerEndsAt != nil {
+              _ = await system.scheduleAlarm(snapshot, false)
+            }
           }
+          await system.updateActivity(snapshot, true)
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
         }
-        await system.updateActivity(snapshot, true)
         return snapshot
       },
       startOrResume: { gameID, expectedPhaseIndex, requestsAuthorization in
@@ -204,10 +236,16 @@ nonisolated extension GameTimerClient {
           return (game.timerEndsAt != nil, try snapshot(db, replacing: game))
         }
 
-        await system.updateActivity(snapshot, true)
-        let alarmAuthorizationDenied = didStart
-          ? await system.scheduleAlarm(snapshot, requestsAuthorization)
-          : false
+        let alarmAuthorizationDenied: Bool
+        if await hasActiveProAccess(proSubscription) {
+          await system.updateActivity(snapshot, true)
+          alarmAuthorizationDenied = didStart
+            ? await system.scheduleAlarm(snapshot, requestsAuthorization)
+            : false
+        } else {
+          await endPremiumPresentation(system: system, gameID: gameID)
+          alarmAuthorizationDenied = false
+        }
         return GameTimerUpdate(
           alarmAuthorizationDenied: alarmAuthorizationDenied,
           snapshot: snapshot
@@ -215,6 +253,20 @@ nonisolated extension GameTimerClient {
       }
     )
   }
+}
+
+private nonisolated func hasActiveProAccess(
+  _ proSubscription: ProSubscriptionClient
+) async -> Bool {
+  (try? await proSubscription.currentAccess()) == .pro
+}
+
+private nonisolated func endPremiumPresentation(
+  system: AlarmClient,
+  gameID: Game.ID
+) async {
+  await system.cancelAlarm(gameID)
+  await system.endActivity(gameID)
 }
 
 nonisolated extension Game {

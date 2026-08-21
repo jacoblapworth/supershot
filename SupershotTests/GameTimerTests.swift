@@ -71,6 +71,32 @@ extension SupershotTestSuite {
         Date(timeIntervalSince1970: 1_775)
       )
     }
+
+    @Test
+    func freeAccessPersistsTimersWithoutCreatingPremiumPresentations() async throws {
+      let seedStore = Self.makeScoringStore()
+      let database = seedStore.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(
+        system: Self.timerSystemClient(events: events),
+        proSubscription: .free
+      )
+
+      let update = try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        try await client.startOrResume(UUID(3), 0, true)
+      }
+
+      expectNoDifference(
+        update.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_900)
+      )
+      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(events.value, [.cancelAlarm, .endActivity])
+    }
+
     @Test
     func timerClientPersistsStartPauseResumeAndIgnoresStaleActions() async throws {
       let seedStore = Self.makeScoringStore()
@@ -297,8 +323,8 @@ extension SupershotTestSuite {
     private nonisolated static func timerSystemClient(
         events: LockIsolated<[TimerSystemEvent]>,
         alarmUnavailable: Bool = false
-      ) -> GameTimerSystemClient {
-        GameTimerSystemClient(
+      ) -> AlarmClient {
+        AlarmClient(
           cancelAlarm: { _ in
             events.withValue { $0.append(.cancelAlarm) }
           },
