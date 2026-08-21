@@ -2,6 +2,7 @@ import Foundation
 import SQLiteData
 
 nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
+  var currentQuarter = 1
   let endedAt: Date?
   var firstBreakDurationSeconds = 0
   var halfTimeDurationSeconds = 0
@@ -201,6 +202,7 @@ nonisolated struct GamesRequest: FetchKeyRequest {
 
         let gameGoals = goalsByGame[game.id, default: []]
         return GameListItem(
+          currentQuarter: game.currentPhase.quarterNumber,
           endedAt: game.endedAt,
           firstBreakDurationSeconds: game.firstBreakDurationSeconds,
           halfTimeDurationSeconds: game.halfTimeDurationSeconds,
