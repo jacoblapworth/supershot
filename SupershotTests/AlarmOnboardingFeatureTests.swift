@@ -25,10 +25,18 @@ extension SupershotTestSuite {
       }
 
       await store.send(.task) {
+        $0.hasStartedSubscriptionObservation = true
+      }
+      await store.receive {
+        guard case .proAccessLoaded(.pro) = $0 else { return false }
+        return true
+      } assert: {
         $0.alarmOnboarding = AlarmOnboardingFeature.State()
         $0.hasCheckedAlarmAuthorization = true
+        $0.proAccess = .pro
       }
       await store.send(.task)
+      await store.finish()
 
       expectNoDifference(statusChecks.value, 1)
     }
@@ -46,8 +54,16 @@ extension SupershotTestSuite {
         }
 
         await store.send(.task) {
-          $0.hasCheckedAlarmAuthorization = true
+          $0.hasStartedSubscriptionObservation = true
         }
+        await store.receive {
+          guard case .proAccessLoaded(.pro) = $0 else { return false }
+          return true
+        } assert: {
+          $0.hasCheckedAlarmAuthorization = true
+          $0.proAccess = .pro
+        }
+        await store.finish()
         expectNoDifference(store.state.alarmOnboarding, nil)
       }
     }

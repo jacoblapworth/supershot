@@ -6,9 +6,17 @@ import SwiftUI
 struct GameDetailView: View {
   @Fetch private var response: GameDetailRequest.Value
   let store: StoreOf<GameDetailFeature>
+  var showsProPromotion: Bool
+  var proPromotionTapped: () -> Void
 
-  init(store: StoreOf<GameDetailFeature>) {
+  init(
+    store: StoreOf<GameDetailFeature>,
+    showsProPromotion: Bool,
+    proPromotionTapped: @escaping () -> Void
+  ) {
     self.store = store
+    self.showsProPromotion = showsProPromotion
+    self.proPromotionTapped = proPromotionTapped
     _response = Fetch(
       wrappedValue: GameDetailRequest.Value(),
       GameDetailRequest(gameID: store.gameID)
@@ -18,7 +26,11 @@ struct GameDetailView: View {
   var body: some View {
     Group {
       if let detail = response.detail {
-        GameDetailContentView(detail: detail)
+        GameDetailContentView(
+          detail: detail,
+          showsProPromotion: showsProPromotion,
+          proPromotionTapped: proPromotionTapped
+        )
       } else if $response.isLoading {
         ProgressView("Loading game…")
       } else {
@@ -55,7 +67,9 @@ struct GameDetailView: View {
         initialState: GameDetailFeature.State(gameID: UUID(10))
       ) {
         GameDetailFeature()
-      }
+      },
+      showsProPromotion: true,
+      proPromotionTapped: {}
     )
   }
 }

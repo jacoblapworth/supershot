@@ -5,7 +5,18 @@ import RevenueCat
 
 @main struct SupershotApp: App {
   init() {
-    Purchases.configure(withAPIKey: "test_zKRQzbkGIeFdTqByFkpdStXjvQI")
+    guard
+      let revenueCatAPIKey = Bundle.main.object(
+        forInfoDictionaryKey: "RevenueCatAPIKey"
+      ) as? String,
+      !revenueCatAPIKey.isEmpty,
+      !revenueCatAPIKey.hasPrefix("$(")
+    else {
+      preconditionFailure(
+        "RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings."
+      )
+    }
+    Purchases.configure(withAPIKey: revenueCatAPIKey)
     try! prepareDependencies {
       try $0.bootstrapDatabase()
 #if DEBUG

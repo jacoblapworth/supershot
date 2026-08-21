@@ -2,6 +2,8 @@ import SwiftUI
 
 struct GameDetailContentView: View {
   var detail: CompletedGameDetail
+  var showsProPromotion: Bool
+  var proPromotionTapped: () -> Void
 
   var body: some View {
     ScrollView {
@@ -15,6 +17,9 @@ struct GameDetailContentView: View {
           teamBName: detail.teamBName,
           timeline: detail.goalTimeline
         )
+        if showsProPromotion {
+          ProPromotionCard(exploreProTapped: proPromotionTapped)
+        }
       }
       .padding()
     }
@@ -22,9 +27,17 @@ struct GameDetailContentView: View {
 }
 
 #Preview("Game detail content") {
-  GameDetailContentView(detail: .previewCompleted)
+  GameDetailContentView(
+    detail: .previewCompleted,
+    showsProPromotion: true,
+    proPromotionTapped: {}
+  )
 }
 
 #Preview("Game without goals") {
-  GameDetailContentView(detail: .previewNoGoals)
+  GameDetailContentView(
+    detail: .previewNoGoals,
+    showsProPromotion: false,
+    proPromotionTapped: {}
+  )
 }
