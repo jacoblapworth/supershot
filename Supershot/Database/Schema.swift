@@ -13,14 +13,14 @@ import SQLiteData
 nonisolated enum GamePhase: Equatable, Hashable, Sendable {
   case quarter(number: Int, durationSeconds: Int)
   case breakTime(afterQuarter: Int, durationSeconds: Int)
-
+  
   var durationSeconds: Int {
     switch self {
     case let .quarter(_, durationSeconds), let .breakTime(_, durationSeconds):
       max(durationSeconds, 0)
     }
   }
-
+  
   var quarterNumber: Int {
     switch self {
     case let .quarter(number, _):
@@ -29,18 +29,21 @@ nonisolated enum GamePhase: Equatable, Hashable, Sendable {
       afterQuarter
     }
   }
-
+  
   var isBreak: Bool {
-    if case .breakTime = self { true } else { false }
+    switch self {
+    case .quarter: false
+    case .breakTime: true
+    }
   }
-
+  
   var isQuarter: Bool { !isBreak }
 }
 
 nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   var elapsedSeconds = 0
   var endsAt: Date?
-
+  
   var isRunning: Bool { endsAt != nil }
 }
 
@@ -62,7 +65,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var currentPhaseIndex = 0
   var elapsedSeconds = 0
   var timerEndsAt: Date? = nil
-
+  
   var phases: [GamePhase] {
     [
       .quarter(number: 1, durationSeconds: periodDurationSeconds),
@@ -74,11 +77,11 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
       .quarter(number: 4, durationSeconds: periodDurationSeconds),
     ]
   }
-
+  
   var currentPhase: GamePhase {
     phases[Swift.min(Swift.max(currentPhaseIndex, 0), phases.count - 1)]
   }
-
+  
   var countdown: GameCountdown {
     get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
     set {
@@ -103,11 +106,11 @@ extension Team {
   ) {
     self.id = id
     self.colorHex = TeamColorPalette.isValid(colorHex)
-      ? colorHex.uppercased()
-      : TeamColorPalette.blue
+    ? colorHex.uppercased()
+    : TeamColorPalette.blue
     self.name = Self.trimmedName(name)
   }
-
+  
   nonisolated static func trimmedName(_ name: String) -> String {
     name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
@@ -137,7 +140,7 @@ extension DependencyValues {
     configuration.prepareDatabase { db in
       db.add(function: $uuid)
     }
-
+    
     let database = try SQLiteData.defaultDatabase(configuration: configuration)
     logger.debug(
       """
@@ -146,11 +149,11 @@ extension DependencyValues {
       """
     )
     var migrator = DatabaseMigrator()
-
+    
 #if DEBUG
     migrator.eraseDatabaseOnSchemaChange = true
 #endif
-
+    
     migrator.registerMigration("Create schema") { db in
       try #sql("""
         CREATE TABLE "teams"(
@@ -160,7 +163,7 @@ extension DependencyValues {
         ) STRICT
         """)
       .execute(db)
-
+      
       try #sql("""
         CREATE TABLE "games"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
@@ -182,7 +185,7 @@ extension DependencyValues {
         ) STRICT
         """)
       .execute(db)
-
+      
       try #sql("""
         CREATE TABLE "goals"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
@@ -225,7 +228,7 @@ extension DependencyValues {
       )
       .execute(db)
     }
-
+    
     try migrator.migrate(database)
     defaultDatabase = database
   }

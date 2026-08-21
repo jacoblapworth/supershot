@@ -4,6 +4,7 @@ import Foundation
 
 extension GameListItem {
   static let previewInProgress = Self(
+    currentQuarter: 3,
     endedAt: nil,
     firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
     halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
