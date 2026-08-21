@@ -28,21 +28,17 @@ struct ScoringFeature {
 
   @ObservableState
   struct State: Equatable {
-    nonisolated static let defaultPeriodDurationSeconds = 15 * 60
     @Presents var alert: AlertState<Alert>?
     var canUndo = false
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
     var elapsedSeconds = 0
-    var firstBreakDurationSeconds = 0
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
-    var halfTimeDurationSeconds = 0
     var hasShownAlarmUnavailableAlert = false
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
-    var periodDurationSeconds = defaultPeriodDurationSeconds
-    var secondBreakDurationSeconds = 0
+    var periods: [GamePeriod]
     let startedAt: Date
     var teamA: Team
     var teamAScore = 0
@@ -51,15 +47,7 @@ struct ScoringFeature {
     var timerEndsAt: Date?
 
     var phases: [GamePhase] {
-      [
-        .quarter(number: 1, durationSeconds: periodDurationSeconds),
-        .breakTime(afterQuarter: 1, durationSeconds: firstBreakDurationSeconds),
-        .quarter(number: 2, durationSeconds: periodDurationSeconds),
-        .breakTime(afterQuarter: 2, durationSeconds: halfTimeDurationSeconds),
-        .quarter(number: 3, durationSeconds: periodDurationSeconds),
-        .breakTime(afterQuarter: 3, durationSeconds: secondBreakDurationSeconds),
-        .quarter(number: 4, durationSeconds: periodDurationSeconds),
-      ]
+      gamePhases(for: periods)
     }
 
     var currentPhase: GamePhase {
@@ -90,7 +78,8 @@ struct ScoringFeature {
     }
 
     var canFinishGame: Bool {
-      currentPhase == .quarter(number: 4, durationSeconds: periodDurationSeconds)
+      currentPhaseIndex == phases.count - 1
+        && currentPhase.isQuarter
         && isPeriodComplete
         && !isTimerRunning
         && !isShowingLastCentrePassBanner
@@ -473,12 +462,12 @@ struct ScoringFeature {
     return .run { send in
       let result = await Result {
         try await database.write { db in
-          guard let game = try Game.find(gameID).fetchOne(db) else {
-            throw ScoringPersistenceError.gameNotFound
-          }
+          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let game = snapshot.game
           guard
             game.currentPhaseIndex == expectedPhaseIndex,
-            case let .quarter(quarterNumber, durationSeconds) = game.currentPhase,
+            case let .quarter(_, durationSeconds) = snapshot.currentPhase,
+            let gamePeriodID = snapshot.currentPeriod?.id,
             let timerEndsAt = game.timerEndsAt,
             timerEndsAt > createdAt
           else {
@@ -503,9 +492,9 @@ struct ScoringFeature {
             Goal(
               id: goalID,
               gameID: gameID,
+              gamePeriodID: gamePeriodID,
               centrePassTeamID: centrePassTeamID,
               teamID: teamID,
-              quarterNumber: quarterNumber,
               elapsedSeconds: elapsedSeconds,
               points: 1,
               createdAt: createdAt

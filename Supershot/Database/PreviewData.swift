@@ -26,10 +26,6 @@ extension DatabaseWriter {
           teamBID: UUID(2),
           teamBBibColorHex: TeamColorPalette.red,
           centrePassTeamID: UUID(1),
-          periodDurationSeconds: MockGameData.periodDurationSeconds,
-          firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
-          halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
-          secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
           currentPhaseIndex: 6,
           elapsedSeconds: MockGameData.periodDurationSeconds,
           timerEndsAt: nil
@@ -43,15 +39,17 @@ extension DatabaseWriter {
           teamBID: UUID(4),
           teamBBibColorHex: "#FF9500",
           centrePassTeamID: UUID(3),
-          periodDurationSeconds: MockGameData.periodDurationSeconds,
-          firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
-          halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
-          secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
           currentPhaseIndex: 2,
           elapsedSeconds: 324,
           timerEndsAt: nil
         )
       }
+
+      try GamePeriod.insert {
+        MockGameData.periods(gameID: UUID(10), idOffset: 1_000)
+        MockGameData.periods(gameID: UUID(11), idOffset: 1_010)
+      }
+      .execute(db)
 
       try insertMockGoals(
         db: db,
@@ -94,9 +92,11 @@ private func insertMockGoals(
       Goal(
         id: UUID(idOffset + index),
         gameID: gameID,
+        gamePeriodID: UUID(
+          (gameID == UUID(10) ? 1_000 : 1_010) + event.period - 1
+        ),
         centrePassTeamID: event.centrePassTeamA ? teamAID : teamBID,
         teamID: event.teamAScored ? teamAID : teamBID,
-        quarterNumber: event.period,
         elapsedSeconds: event.elapsedSeconds,
         points: 1,
         createdAt: startedAt.addingTimeInterval(

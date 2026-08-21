@@ -9,8 +9,6 @@ struct NewGameView: View {
       VStack(spacing: 20) {
         NewGameTeamsView(store: store)
 
-        SetupLocationView(store: store)
-
         if store.leftTeam.team != nil, store.rightTeam.team != nil {
           SetupBibColorsView(
             store: store
@@ -24,6 +22,8 @@ struct NewGameView: View {
         }
 
         SetupTimingView(store: store)
+        
+        SetupLocationView(store: store)
       }
       .padding()
     }

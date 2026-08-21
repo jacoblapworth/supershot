@@ -27,8 +27,7 @@ extension SupershotTestSuite {
             startedAt: olderDate,
             endedAt: Date(timeIntervalSince1970: 1_500),
             teamAID: UUID(-1),
-            teamBID: UUID(-2),
-            periodDurationSeconds: 900
+            teamBID: UUID(-2)
           )
           Game(
             id: UUID(-2),
@@ -37,22 +36,28 @@ extension SupershotTestSuite {
             teamAID: UUID(-3),
             teamABibColorHex: "#34C759",
             teamBID: UUID(-1),
-            teamBBibColorHex: TeamColorPalette.blue,
-            periodDurationSeconds: 600
+            teamBBibColorHex: TeamColorPalette.blue
           )
           Game(
             id: UUID(-3),
             startedAt: Date(timeIntervalSince1970: 3_000),
             endedAt: nil,
             teamAID: UUID(-2),
-            teamBID: UUID(-3),
-            periodDurationSeconds: 900
+            teamBID: UUID(-3)
           )
+        }
+        let periods = [
+          testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
+          testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
+          testGamePeriods(gameID: UUID(-3), durationSeconds: 900),
+        ].flatMap { $0 }
+        try GamePeriod.insert { periods }.execute(db)
+        try Goal.insert {
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: testGamePeriodID(gameID: UUID(-1), position: 0),
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 2,
             createdAt: olderDate
@@ -60,13 +65,14 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-2),
             gameID: UUID(-2),
+            gamePeriodID: testGamePeriodID(gameID: UUID(-2), position: 0),
             teamID: UUID(-3),
-            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: newerDate
           )
         }
+        .execute(db)
       }
 
       let value = try await database.read { db in
@@ -80,7 +86,7 @@ extension SupershotTestSuite {
             GameListItem(
               endedAt: nil,
               id: UUID(-2),
-              periodDurationSeconds: 600,
+              periods: testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
               startedAt: newerDate,
               teamABibColorHex: "#34C759",
               teamAName: "Aces",
@@ -92,6 +98,7 @@ extension SupershotTestSuite {
             GameListItem(
               endedAt: Date(timeIntervalSince1970: 1_500),
               id: UUID(-1),
+              periods: testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
               startedAt: olderDate,
               teamABibColorHex: TeamColorPalette.blue,
               teamAName: "Ravens",

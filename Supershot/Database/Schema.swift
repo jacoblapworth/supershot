@@ -60,30 +60,10 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var latitude: Double?
   var longitude: Double?
   var pointOfInterestName: String?
-  var periodDurationSeconds: Int
-  var firstBreakDurationSeconds = 0
-  var halfTimeDurationSeconds = 0
-  var secondBreakDurationSeconds = 0
   var isAwaitingCentrePassConfirmation = false
   var currentPhaseIndex = 0
   var elapsedSeconds = 0
   var timerEndsAt: Date? = nil
-  
-  var phases: [GamePhase] {
-    [
-      .quarter(number: 1, durationSeconds: periodDurationSeconds),
-      .breakTime(afterQuarter: 1, durationSeconds: firstBreakDurationSeconds),
-      .quarter(number: 2, durationSeconds: periodDurationSeconds),
-      .breakTime(afterQuarter: 2, durationSeconds: halfTimeDurationSeconds),
-      .quarter(number: 3, durationSeconds: periodDurationSeconds),
-      .breakTime(afterQuarter: 3, durationSeconds: secondBreakDurationSeconds),
-      .quarter(number: 4, durationSeconds: periodDurationSeconds),
-    ]
-  }
-  
-  var currentPhase: GamePhase {
-    phases[Swift.min(Swift.max(currentPhaseIndex, 0), phases.count - 1)]
-  }
   
   var countdown: GameCountdown {
     get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
@@ -92,6 +72,39 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
       timerEndsAt = newValue.endsAt
     }
   }
+}
+
+@Table
+nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
+  let id: UUID
+  var gameID: Game.ID
+  var position: Int
+  var durationSeconds: Int
+  var breakAfterDurationSeconds: Int?
+
+  var number: Int { position + 1 }
+}
+
+nonisolated func gamePhases(for periods: [GamePeriod]) -> [GamePhase] {
+  periods
+    .sorted { ($0.position, $0.id) < ($1.position, $1.id) }
+    .flatMap { period in
+      var phases = [
+        GamePhase.quarter(
+          number: period.number,
+          durationSeconds: period.durationSeconds
+        )
+      ]
+      if let breakDurationSeconds = period.breakAfterDurationSeconds {
+        phases.append(
+          .breakTime(
+            afterQuarter: period.number,
+            durationSeconds: breakDurationSeconds
+          )
+        )
+      }
+      return phases
+    }
 }
 
 extension Game {
@@ -141,9 +154,9 @@ extension Team {
 nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
   var gameID: Game.ID
+  var gamePeriodID: GamePeriod.ID
   var centrePassTeamID: Team.ID? = nil
   var teamID: Team.ID
-  var quarterNumber: Int
   var elapsedSeconds: Int
   var points: Int
   var createdAt: Date
@@ -198,10 +211,6 @@ extension DependencyValues {
           "latitude" REAL,
           "longitude" REAL,
           "pointOfInterestName" TEXT,
-          "periodDurationSeconds" INTEGER NOT NULL,
-          "firstBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
-          "halfTimeDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
-          "secondBreakDurationSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "currentPhaseIndex" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
@@ -209,17 +218,34 @@ extension DependencyValues {
         ) STRICT
         """)
       .execute(db)
+
+      try #sql("""
+        CREATE TABLE "gamePeriods"(
+          "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
+          "gameID" TEXT NOT NULL REFERENCES "games"("id") ON DELETE CASCADE,
+          "position" INTEGER NOT NULL CHECK ("position" >= 0),
+          "durationSeconds" INTEGER NOT NULL CHECK ("durationSeconds" > 0),
+          "breakAfterDurationSeconds" INTEGER CHECK (
+            "breakAfterDurationSeconds" >= 0
+          ),
+          UNIQUE("gameID", "position"),
+          UNIQUE("id", "gameID")
+        ) STRICT
+        """)
+      .execute(db)
       
       try #sql("""
         CREATE TABLE "goals"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
-          "gameID" TEXT NOT NULL REFERENCES "games"("id") ON DELETE CASCADE,
+          "gameID" TEXT NOT NULL,
+          "gamePeriodID" TEXT NOT NULL,
           "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE SET NULL,
           "teamID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
-          "quarterNumber" INTEGER NOT NULL,
           "elapsedSeconds" INTEGER NOT NULL,
           "points" INTEGER NOT NULL,
-          "createdAt" TEXT NOT NULL
+          "createdAt" TEXT NOT NULL,
+          FOREIGN KEY("gamePeriodID", "gameID")
+            REFERENCES "gamePeriods"("id", "gameID") ON DELETE CASCADE
         ) STRICT
         """)
       .execute(db)
@@ -234,6 +260,13 @@ extension DependencyValues {
         """
         CREATE INDEX "idx_games_teamBID"
         ON "games"("teamBID")
+        """
+      )
+      .execute(db)
+      try #sql(
+        """
+        CREATE INDEX "idx_gamePeriods_gameID_position"
+        ON "gamePeriods"("gameID", "position")
         """
       )
       .execute(db)

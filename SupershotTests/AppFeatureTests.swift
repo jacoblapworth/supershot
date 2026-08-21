@@ -322,8 +322,8 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(4),
             gameID: UUID(3),
+            gamePeriodID: testGamePeriodID(gameID: UUID(3), position: 0),
             teamID: UUID(1),
-            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -374,8 +374,8 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(4),
             gameID: UUID(3),
+            gamePeriodID: testGamePeriodID(gameID: UUID(3), position: 0),
             teamID: UUID(1),
-            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -423,7 +423,7 @@ extension SupershotTestSuite {
         alarmUnavailable: Bool = false
       ) -> AlarmClient {
         AlarmClient(
-          cancelAlarm: { _ in
+          cancelAlarm: { _, _ in
             events.withValue { $0.append(.cancelAlarm) }
           },
           endActivity: { _ in
@@ -488,10 +488,6 @@ extension SupershotTestSuite {
                 teamAID: UUID(1),
                 teamBID: UUID(2),
                 centrePassTeamID: state.centrePassTeamID,
-                periodDurationSeconds: state.periodDurationSeconds,
-                firstBreakDurationSeconds: state.firstBreakDurationSeconds,
-                halfTimeDurationSeconds: state.halfTimeDurationSeconds,
-                secondBreakDurationSeconds: state.secondBreakDurationSeconds,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
                 currentPhaseIndex: state.currentPhaseIndex,
                 elapsedSeconds: state.elapsedSeconds,
@@ -499,6 +495,7 @@ extension SupershotTestSuite {
               )
             }
             .execute(db)
+            try GamePeriod.insert { state.periods }.execute(db)
           }
           if let clock {
             $0.continuousClock = clock
@@ -517,6 +514,7 @@ extension SupershotTestSuite {
         ScoringFeature.State(
           centrePassTeamID: UUID(1),
           gameID: UUID(3),
+          periods: testGamePeriods(gameID: UUID(3)),
           startedAt: Date(timeIntervalSince1970: 500),
           teamA: ScoringFeature.Team(
             id: UUID(1),

@@ -18,6 +18,11 @@ extension SupershotTestSuite {
 
       let startedAt = Date(timeIntervalSince1970: 1_000)
       let endedAt = Date(timeIntervalSince1970: 2_000)
+      let periods = testGamePeriods(
+        gameID: UUID(-1),
+        durationSeconds: 900,
+        breakDurations: [240, 600, 240]
+      )
       try await database.write { db in
         try db.seed {
           Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
@@ -30,18 +35,18 @@ extension SupershotTestSuite {
             teamBID: UUID(-2),
             latitude: 51.556,
             longitude: -0.2796,
-            pointOfInterestName: "Wembley Arena",
-            periodDurationSeconds: 900,
-            firstBreakDurationSeconds: 240,
-            halfTimeDurationSeconds: 600,
-            secondBreakDurationSeconds: 240
+            pointOfInterestName: "Wembley Arena"
           )
+          periods[0]
+          periods[1]
+          periods[2]
+          periods[3]
           Goal(
             id: UUID(-3),
             gameID: UUID(-1),
+            gamePeriodID: periods[1].id,
             centrePassTeamID: UUID(-2),
             teamID: UUID(-2),
-            quarterNumber: 2,
             elapsedSeconds: 30,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_300)
@@ -49,9 +54,9 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: periods[0].id,
             centrePassTeamID: UUID(-1),
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 100,
             points: 2,
             createdAt: Date(timeIntervalSince1970: 1_100)
@@ -59,9 +64,9 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-2),
             gameID: UUID(-1),
+            gamePeriodID: periods[0].id,
             centrePassTeamID: UUID(-1),
             teamID: UUID(-2),
-            quarterNumber: 1,
             elapsedSeconds: 200,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_200)
@@ -77,7 +82,6 @@ extension SupershotTestSuite {
         value.detail,
         CompletedGameDetail(
           endedAt: endedAt,
-          firstBreakDurationSeconds: 240,
           goalTimeline: GoalTimeline(
             quarters: [
               GoalTimelineQuarter(
@@ -141,15 +145,13 @@ extension SupershotTestSuite {
               ),
             ]
           ),
-          halfTimeDurationSeconds: 600,
           id: UUID(-1),
           location: GameLocation(
             latitude: 51.556,
             longitude: -0.2796,
             pointOfInterestName: "Wembley Arena"
           ),
-          periodDurationSeconds: 900,
-          secondBreakDurationSeconds: 240,
+          periods: periods,
           startedAt: startedAt,
           statistics: CompletedGameStatistics(
             teamA: TeamGameStatistics(
@@ -183,6 +185,7 @@ extension SupershotTestSuite {
     func liveGoalTimelineIncludesEmptyPlayedQuartersAndReflectsGoalChanges() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
+      let periods = testGamePeriods(gameID: UUID(-1), durationSeconds: 900)
 
       try await database.write { db in
         try db.seed {
@@ -194,14 +197,17 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
-            periodDurationSeconds: 900,
             currentPhaseIndex: 4
           )
+          periods[0]
+          periods[1]
+          periods[2]
+          periods[3]
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: periods[0].id,
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 100,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_100)
@@ -222,8 +228,8 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-2),
             gameID: UUID(-1),
+            gamePeriodID: periods[2].id,
             teamID: UUID(-2),
-            quarterNumber: 3,
             elapsedSeconds: 200,
             points: 2,
             createdAt: Date(timeIntervalSince1970: 1_200)
@@ -256,6 +262,7 @@ extension SupershotTestSuite {
     func completedGameDetailKeepsLegacyCentrePassStatisticsUnavailable() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
+      let periods = testGamePeriods(gameID: UUID(-1), durationSeconds: 900)
 
       try await database.write { db in
         try db.seed {
@@ -266,14 +273,17 @@ extension SupershotTestSuite {
             startedAt: Date(timeIntervalSince1970: 1_000),
             endedAt: Date(timeIntervalSince1970: 2_000),
             teamAID: UUID(-1),
-            teamBID: UUID(-2),
-            periodDurationSeconds: 900
+            teamBID: UUID(-2)
           )
+          periods[0]
+          periods[1]
+          periods[2]
+          periods[3]
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: periods[0].id,
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 42,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_042)

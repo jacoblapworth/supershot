@@ -29,10 +29,6 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
-            periodDurationSeconds: 900,
-            firstBreakDurationSeconds: 240,
-            halfTimeDurationSeconds: 600,
-            secondBreakDurationSeconds: 240,
             currentPhaseIndex: 2
           )
           Game(
@@ -42,14 +38,22 @@ extension SupershotTestSuite {
             teamAID: UUID(-3),
             teamABibColorHex: "#34C759",
             teamBID: UUID(-4),
-            teamBBibColorHex: "#FF9500",
-            periodDurationSeconds: 900
+            teamBBibColorHex: "#FF9500"
           )
+        }
+        let firstPeriods = testGamePeriods(
+          gameID: UUID(-1),
+          durationSeconds: 900,
+          breakDurations: [240, 600, 240]
+        )
+        let secondPeriods = testGamePeriods(gameID: UUID(-2), durationSeconds: 900)
+        try GamePeriod.insert { firstPeriods; secondPeriods }.execute(db)
+        try Goal.insert {
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: firstPeriods[0].id,
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 2,
             createdAt: newerDate
@@ -57,13 +61,14 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-2),
             gameID: UUID(-2),
+            gamePeriodID: secondPeriods[0].id,
             teamID: UUID(-4),
-            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: olderDate
           )
         }
+        .execute(db)
       }
 
       let value = try await database.read { db in
@@ -76,11 +81,12 @@ extension SupershotTestSuite {
           GameListItem(
             currentQuarter: 2,
             endedAt: nil,
-            firstBreakDurationSeconds: 240,
-            halfTimeDurationSeconds: 600,
             id: UUID(-1),
-            periodDurationSeconds: 900,
-            secondBreakDurationSeconds: 240,
+            periods: testGamePeriods(
+              gameID: UUID(-1),
+              durationSeconds: 900,
+              breakDurations: [240, 600, 240]
+            ),
             startedAt: newerDate,
             teamABibColorHex: TeamColorPalette.blue,
             teamAName: "Ravens",
@@ -92,6 +98,7 @@ extension SupershotTestSuite {
           GameListItem(
             endedAt: Date(timeIntervalSince1970: 1_500),
             id: UUID(-2),
+            periods: testGamePeriods(gameID: UUID(-2), durationSeconds: 900),
             startedAt: olderDate,
             teamABibColorHex: "#34C759",
             teamAName: "Foxes",
@@ -123,8 +130,7 @@ extension SupershotTestSuite {
             teamAID: UUID(-1),
             teamABibColorHex: "#AF52DE",
             teamBID: UUID(-2),
-            teamBBibColorHex: "#FF9500",
-            periodDurationSeconds: 900
+            teamBBibColorHex: "#FF9500"
           )
           Game(
             id: UUID(-2),
@@ -133,19 +139,24 @@ extension SupershotTestSuite {
             teamAID: UUID(-1),
             teamABibColorHex: "#30B0C7",
             teamBID: UUID(-2),
-            teamBBibColorHex: "#FF2D55",
-            periodDurationSeconds: 900
+            teamBBibColorHex: "#FF2D55"
           )
+        }
+        let firstPeriods = testGamePeriods(gameID: UUID(-1), durationSeconds: 900)
+        let secondPeriods = testGamePeriods(gameID: UUID(-2), durationSeconds: 900)
+        try GamePeriod.insert { firstPeriods; secondPeriods }.execute(db)
+        try Goal.insert {
           Goal(
             id: UUID(-1),
             gameID: UUID(-1),
+            gamePeriodID: firstPeriods[0].id,
             teamID: UUID(-1),
-            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: startedAt
           )
         }
+        .execute(db)
         try Team.find(UUID(-1)).update {
           $0.colorHex = #bind(updatedRavensColorHex)
         }

@@ -25,16 +25,14 @@ extension SupershotTestSuite {
             startedAt: Date(timeIntervalSince1970: 1_000),
             endedAt: nil,
             teamAID: UUID(-1),
-            teamBID: UUID(-2),
-            periodDurationSeconds: 900
+            teamBID: UUID(-2)
           )
           Game(
             id: UUID(-2),
             startedAt: Date(timeIntervalSince1970: 2_000),
             endedAt: Date(timeIntervalSince1970: 3_000),
             teamAID: UUID(-3),
-            teamBID: UUID(-1),
-            periodDurationSeconds: 900
+            teamBID: UUID(-1)
           )
         }
       }

@@ -26,13 +26,17 @@ extension SupershotTestSuite {
             teamAID: UUID(-1),
             teamABibColorHex: "#AF52DE",
             teamBID: UUID(-2),
-            teamBBibColorHex: "#FF9500",
-            periodDurationSeconds: 900,
-            firstBreakDurationSeconds: 240,
-            halfTimeDurationSeconds: 600,
-            secondBreakDurationSeconds: 240
+            teamBBibColorHex: "#FF9500"
           )
         }
+        try GamePeriod.insert {
+          testGamePeriods(
+            gameID: UUID(-1),
+            durationSeconds: 900,
+            breakDurations: [240, 600, 240]
+          )
+        }
+        .execute(db)
       }
 
       let game = try await database.read { db in
@@ -64,16 +68,17 @@ extension SupershotTestSuite {
           teamAID: ravens.id,
           teamBID: swifts.id,
           centrePassTeamID: ravens.id,
-          periodDurationSeconds: 900,
-          firstBreakDurationSeconds: 240,
-          halfTimeDurationSeconds: 600,
-          secondBreakDurationSeconds: 240,
           isAwaitingCentrePassConfirmation: true,
           currentPhaseIndex: 3,
           elapsedSeconds: 125,
           timerEndsAt: nil
         ),
         goals: [],
+        periods: testGamePeriods(
+          gameID: UUID(-3),
+          durationSeconds: 900,
+          breakDurations: [240, 600, 240]
+        ),
         teamA: ravens,
         teamB: swifts
       )

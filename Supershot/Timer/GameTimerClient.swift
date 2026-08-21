@@ -19,7 +19,7 @@ nonisolated struct GameTimerClient: Sendable {
 }
 
 nonisolated struct AlarmClient: Sendable {
-  var cancelAlarm: @Sendable (Game.ID) async -> Void
+  var cancelAlarm: @Sendable (Game.ID, Int) async -> Void
   var endActivity: @Sendable (Game.ID) async -> Void
   var scheduleAlarm: @Sendable (GameSnapshot, Bool) async -> Bool
   var updateActivity: @Sendable (GameSnapshot, Bool) async -> Void
@@ -64,7 +64,7 @@ private nonisolated enum GameTimerSystemClientKey: DependencyKey {
 
 nonisolated extension AlarmClient {
   static let noop = Self(
-    cancelAlarm: { _ in },
+    cancelAlarm: { _, _ in },
     endActivity: { _ in },
     scheduleAlarm: { _, _ in false },
     updateActivity: { _, _ in }
@@ -78,10 +78,10 @@ nonisolated extension GameTimerClient {
   ) -> Self {
     Self(
       cancelAlert: { gameID in
-        await system.cancelAlarm(gameID)
+        await system.cancelAlarm(gameID, await phaseCount(for: gameID))
       },
       endPresentation: { gameID in
-        await system.cancelAlarm(gameID)
+        await system.cancelAlarm(gameID, await phaseCount(for: gameID))
         await system.endActivity(gameID)
       },
       pause: { gameID, expectedPhaseIndex in
@@ -89,10 +89,10 @@ nonisolated extension GameTimerClient {
         @Dependency(\.defaultDatabase) var database
         let now = date.now
         let (didPause, snapshot) = try await database.write { db in
-          guard let storedGame = try Game.find(gameID).fetchOne(db) else {
-            throw GameTimerError.gameNotFound
-          }
-          var game = reconciledGame(storedGame, now: now)
+          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let storedGame = storedSnapshot.game
+          let phases = storedSnapshot.phases
+          var game = reconciledGame(storedGame, phases: phases, now: now)
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex
@@ -105,7 +105,7 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
           game.elapsedSeconds = GameTimerMath.elapsedSeconds(
-            durationSeconds: game.currentPhase.durationSeconds,
+            durationSeconds: currentPhase(game, in: phases).durationSeconds,
             persistedElapsedSeconds: game.elapsedSeconds,
             timerEndsAt: game.timerEndsAt,
             now: now
@@ -115,10 +115,10 @@ nonisolated extension GameTimerClient {
           return (true, try snapshot(db, replacing: game))
         }
         if await hasActiveProAccess(proSubscription) {
-          if didPause { await system.cancelAlarm(gameID) }
+          if didPause { await system.cancelAlarm(gameID, snapshot.phases.count) }
           await system.updateActivity(snapshot, true)
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
         }
         return snapshot
       },
@@ -127,10 +127,13 @@ nonisolated extension GameTimerClient {
         @Dependency(\.defaultDatabase) var database
 
         let snapshot = try await database.write { db in
-          guard let storedGame = try Game.find(gameID).fetchOne(db) else {
-            throw GameTimerError.gameNotFound
-          }
-          let game = reconciledGame(storedGame, now: now)
+          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let storedGame = storedSnapshot.game
+          let game = reconciledGame(
+            storedGame,
+            phases: storedSnapshot.phases,
+            now: now
+          )
           if storedGame != game {
             try persistTimerState(game, in: db)
           }
@@ -139,7 +142,7 @@ nonisolated extension GameTimerClient {
         if await hasActiveProAccess(proSubscription) {
           await system.updateActivity(snapshot, true)
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
         }
         return snapshot
       },
@@ -153,7 +156,7 @@ nonisolated extension GameTimerClient {
         if await hasActiveProAccess(proSubscription) {
           await system.updateActivity(snapshot, true)
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
         }
       },
       scheduleAlert: { gameID in
@@ -167,7 +170,7 @@ nonisolated extension GameTimerClient {
         if await hasActiveProAccess(proSubscription) {
           _ = await system.scheduleAlarm(snapshot, false)
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
         }
       },
       skip: { gameID, expectedPhaseIndex in
@@ -175,35 +178,35 @@ nonisolated extension GameTimerClient {
         @Dependency(\.defaultDatabase) var database
         let now = date.now
         let (didSkip, snapshot) = try await database.write { db in
-          guard let storedGame = try Game.find(gameID).fetchOne(db) else {
-            throw GameTimerError.gameNotFound
-          }
-          var game = reconciledGame(storedGame, now: now)
+          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let storedGame = storedSnapshot.game
+          let phases = storedSnapshot.phases
+          var game = reconciledGame(storedGame, phases: phases, now: now)
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
-            !game.isFinalQuarterComplete
+            !isFinalPeriodComplete(game, phases: phases)
           else {
             if storedGame != game { try persistTimerState(game, in: db) }
             return (false, try snapshot(db, replacing: game))
           }
 
-          game.elapsedSeconds = game.currentPhase.durationSeconds
+          game.elapsedSeconds = currentPhase(game, in: phases).durationSeconds
           game.timerEndsAt = nil
-          advanceCompletedPhase(&game, boundary: now)
+          advanceCompletedPhase(&game, phases: phases, boundary: now)
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
         if await hasActiveProAccess(proSubscription) {
           if didSkip {
-            await system.cancelAlarm(gameID)
+            await system.cancelAlarm(gameID, snapshot.phases.count)
             if snapshot.game.timerEndsAt != nil {
               _ = await system.scheduleAlarm(snapshot, false)
             }
           }
           await system.updateActivity(snapshot, true)
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
         }
         return snapshot
       },
@@ -212,15 +215,16 @@ nonisolated extension GameTimerClient {
         @Dependency(\.defaultDatabase) var database
         let now = date.now
         let (didStart, snapshot) = try await database.write { db in
-          guard let storedGame = try Game.find(gameID).fetchOne(db) else {
-            throw GameTimerError.gameNotFound
-          }
-          var game = reconciledGame(storedGame, now: now)
+          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let storedGame = storedSnapshot.game
+          let phases = storedSnapshot.phases
+          var game = reconciledGame(storedGame, phases: phases, now: now)
+          let phase = currentPhase(game, in: phases)
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
-            game.elapsedSeconds < game.currentPhase.durationSeconds,
-            game.currentPhase.isBreak || !game.isAwaitingCentrePassConfirmation,
+            game.elapsedSeconds < phase.durationSeconds,
+            phase.isBreak || !game.isAwaitingCentrePassConfirmation,
             game.timerEndsAt == nil
           else {
             if storedGame != game { try persistTimerState(game, in: db) }
@@ -228,7 +232,7 @@ nonisolated extension GameTimerClient {
           }
 
           game.timerEndsAt = GameTimerMath.endDate(
-            durationSeconds: game.currentPhase.durationSeconds,
+            durationSeconds: phase.durationSeconds,
             elapsedSeconds: game.elapsedSeconds,
             now: now
           )
@@ -243,7 +247,7 @@ nonisolated extension GameTimerClient {
             ? await system.scheduleAlarm(snapshot, requestsAuthorization)
             : false
         } else {
-          await endPremiumPresentation(system: system, gameID: gameID)
+          await endPremiumPresentation(system: system, snapshot: snapshot)
           alarmAuthorizationDenied = false
         }
         return GameTimerUpdate(
@@ -263,18 +267,20 @@ private nonisolated func hasActiveProAccess(
 
 private nonisolated func endPremiumPresentation(
   system: AlarmClient,
-  gameID: Game.ID
+  snapshot: GameSnapshot
 ) async {
-  await system.cancelAlarm(gameID)
-  await system.endActivity(gameID)
+  await system.cancelAlarm(snapshot.game.id, snapshot.phases.count)
+  await system.endActivity(snapshot.game.id)
 }
 
-nonisolated extension Game {
-  var isFinalQuarterComplete: Bool {
-    currentPhase == .quarter(number: 4, durationSeconds: periodDurationSeconds)
-      && elapsedSeconds >= currentPhase.durationSeconds
-      && timerEndsAt == nil
-  }
+private nonisolated func phaseCount(for gameID: Game.ID) async -> Int {
+  @Dependency(\.defaultDatabase) var database
+  return (try? await database.read { db in
+    let periods = try GamePeriod
+      .where { $0.gameID.eq(gameID) }
+      .fetchAll(db)
+    return gamePhases(for: periods).count
+  }) ?? 0
 }
 
 /// Reconciles a persisted Game's timer-related state against the current time and advances phases as needed.
@@ -299,45 +305,71 @@ nonisolated extension Game {
 /// - Important: This function is pure and does not perform any database I/O; persistence must be handled by the caller.
 /// - SeeAlso: `GameTimerMath.elapsedSeconds(durationSeconds:persistedElapsedSeconds:timerEndsAt:now:)`,
 ///            `advanceCompletedPhase(_:boundary:)`
-private nonisolated func reconciledGame(_ storedGame: Game, now: Date) -> Game {
+private nonisolated func reconciledGame(
+  _ storedGame: Game,
+  phases: [GamePhase],
+  now: Date
+) -> Game {
   var game = storedGame
   game.elapsedSeconds = GameTimerMath.elapsedSeconds(
-    durationSeconds: game.currentPhase.durationSeconds,
+    durationSeconds: currentPhase(game, in: phases).durationSeconds,
     persistedElapsedSeconds: game.elapsedSeconds,
     timerEndsAt: game.timerEndsAt,
     now: now
   )
 
   while let timerEndsAt = game.timerEndsAt, timerEndsAt <= now {
-    game.elapsedSeconds = game.currentPhase.durationSeconds
+    game.elapsedSeconds = currentPhase(game, in: phases).durationSeconds
     game.timerEndsAt = nil
-    advanceCompletedPhase(&game, boundary: timerEndsAt)
+    advanceCompletedPhase(&game, phases: phases, boundary: timerEndsAt)
   }
   return game
 }
 
-private nonisolated func advanceCompletedPhase(_ game: inout Game, boundary: Date) {
-  switch game.currentPhase {
-  case let .quarter(number, _):
-    guard number < 4 else { return }
+private nonisolated func advanceCompletedPhase(
+  _ game: inout Game,
+  phases: [GamePhase],
+  boundary: Date
+) {
+  switch currentPhase(game, in: phases) {
+  case .quarter:
+    guard game.currentPhaseIndex + 1 < phases.count else { return }
     game.isAwaitingCentrePassConfirmation = true
     game.currentPhaseIndex += 1
     game.elapsedSeconds = 0
-    let duration = game.currentPhase.durationSeconds
+    let duration = currentPhase(game, in: phases).durationSeconds
     if duration > 0 {
       game.timerEndsAt = boundary.addingTimeInterval(TimeInterval(duration))
     } else {
-      advanceCompletedPhase(&game, boundary: boundary)
+      advanceCompletedPhase(&game, phases: phases, boundary: boundary)
     }
 
   case .breakTime:
     game.currentPhaseIndex = Swift.min(
       game.currentPhaseIndex + 1,
-      game.phases.count - 1
+      phases.count - 1
     )
     game.elapsedSeconds = 0
     game.timerEndsAt = nil
   }
+}
+
+private nonisolated func currentPhase(
+  _ game: Game,
+  in phases: [GamePhase]
+) -> GamePhase {
+  phases[Swift.min(Swift.max(game.currentPhaseIndex, 0), phases.count - 1)]
+}
+
+private nonisolated func isFinalPeriodComplete(
+  _ game: Game,
+  phases: [GamePhase]
+) -> Bool {
+  let phase = currentPhase(game, in: phases)
+  return game.currentPhaseIndex == phases.count - 1
+    && phase.isQuarter
+    && game.elapsedSeconds >= phase.durationSeconds
+    && game.timerEndsAt == nil
 }
 
 private nonisolated func persistTimerState(_ game: Game, in db: Database) throws {
@@ -358,6 +390,7 @@ private nonisolated func snapshot(
   return GameSnapshot(
     game: game,
     goals: snapshot.goals,
+    periods: snapshot.periods,
     teamA: snapshot.teamA,
     teamB: snapshot.teamB
   )
