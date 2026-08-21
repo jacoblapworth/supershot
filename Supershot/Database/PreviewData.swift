@@ -30,9 +30,9 @@ extension DatabaseWriter {
           firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
           halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
           secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
-          currentPeriod: 4,
+          currentPhaseIndex: 6,
           elapsedSeconds: MockGameData.periodDurationSeconds,
-          hasTimerStartedCurrentPeriod: true
+          timerEndsAt: nil
         )
         Game(
           id: UUID(11),
@@ -47,9 +47,9 @@ extension DatabaseWriter {
           firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
           halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
           secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
-          currentPeriod: 2,
+          currentPhaseIndex: 2,
           elapsedSeconds: 324,
-          hasTimerStartedCurrentPeriod: true
+          timerEndsAt: nil
         )
       }
 
@@ -96,7 +96,7 @@ private func insertMockGoals(
         gameID: gameID,
         centrePassTeamID: event.centrePassTeamA ? teamAID : teamBID,
         teamID: event.teamAScored ? teamAID : teamBID,
-        period: event.period,
+        quarterNumber: event.period,
         elapsedSeconds: event.elapsedSeconds,
         points: 1,
         createdAt: startedAt.addingTimeInterval(

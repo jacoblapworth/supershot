@@ -6,6 +6,13 @@ import SQLiteData
 
 @Reducer
 struct NewGameFeature {
+  nonisolated enum LocationState: Equatable, Sendable {
+    case idle
+    case loaded(GameLocation)
+    case loading
+    case unavailable(canRetry: Bool)
+  }
+
   nonisolated enum TeamSide: Equatable, Hashable, Sendable {
     case teamA
     case teamB
@@ -54,6 +61,7 @@ struct NewGameFeature {
     var halfTimeDuration = DurationDraft(totalSeconds: 1 * 60)
     var isSaving = false
     var leftTeam = TeamSelection(bibColorHex: TeamColorPalette.blue)
+    var location = LocationState.idle
     @Presents var picker: TeamPickerFeature.State?
     var pickingTeamSide: TeamSide?
     var periodDuration = DurationDraft(totalSeconds: 8 * 60)
@@ -110,6 +118,11 @@ struct NewGameFeature {
       return leftID != rightID
     }
 
+    var gameLocation: GameLocation? {
+      guard case let .loaded(location) = location else { return nil }
+      return location
+    }
+
     var teamNameErrorMessage: String? {
       guard leftTeam.team != nil, rightTeam.team != nil else { return nil }
       return hasDifferentSelectedTeams ? nil : "Choose two different teams."
@@ -123,6 +136,8 @@ struct NewGameFeature {
     case delegate(Delegate)
     case firstBreakPresetButtonTapped(Int)
     case halfTimePresetButtonTapped(Int)
+    case locationButtonTapped
+    case locationResponse(Result<GameLocation, any Error>)
     case periodPresetButtonTapped(Int)
     case picker(PresentationAction<TeamPickerFeature.Action>)
     case selectTeamButtonTapped(TeamSide)
@@ -130,6 +145,7 @@ struct NewGameFeature {
     case startGameButtonTapped
     case startGameResponse(Result<ScoringFeature.State, any Error>)
     case swapTeamsButtonTapped
+    case task
     case useFirstBreakForAllButtonTapped
 
     enum Delegate {
@@ -144,6 +160,7 @@ struct NewGameFeature {
 
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
+  @Dependency(\.locationClient) var locationClient
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
@@ -178,6 +195,18 @@ struct NewGameFeature {
 
         case let .halfTimePresetButtonTapped(seconds):
           state.halfTimeDuration = DurationDraft(totalSeconds: seconds)
+          return .none
+
+        case .locationButtonTapped:
+          guard state.location != .loading else { return .none }
+          return loadLocation(state: &state)
+
+        case let .locationResponse(.success(location)):
+          state.location = .loaded(location)
+          return .none
+
+        case .locationResponse(.failure):
+          state.location = .unavailable(canRetry: true)
           return .none
 
         case let .picker(.presented(.delegate(.teamSelected(team)))):
@@ -285,6 +314,10 @@ struct NewGameFeature {
           }
           return .none
 
+        case .task:
+          guard state.location == .idle else { return .none }
+          return loadLocation(state: &state)
+
         case .useFirstBreakForAllButtonTapped:
           state.halfTimeDuration = state.firstBreakDuration
           state.secondBreakDuration = state.firstBreakDuration
@@ -319,6 +352,7 @@ struct NewGameFeature {
     )
     let centrePassTeamID = firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
     let startedAt = now
+    let location = state.gameLocation
 
     state.errorMessage = nil
     state.isSaving = true
@@ -327,6 +361,7 @@ struct NewGameFeature {
       firstBreakDurationSeconds: firstBreakDurationSeconds,
       gameID: gameID,
       halfTimeDurationSeconds: halfTimeDurationSeconds,
+      location: location,
       periodDurationSeconds: periodDurationSeconds,
       secondBreakDurationSeconds: secondBreakDurationSeconds,
       startedAt: startedAt,
@@ -340,6 +375,7 @@ struct NewGameFeature {
     firstBreakDurationSeconds: Int,
     gameID: Game.ID,
     halfTimeDurationSeconds: Int,
+    location: GameLocation?,
     periodDurationSeconds: Int,
     secondBreakDurationSeconds: Int,
     startedAt: Date,
@@ -371,15 +407,17 @@ struct NewGameFeature {
               teamBID: teamB.team.id,
               teamBBibColorHex: teamB.bibColorHex,
               centrePassTeamID: centrePassTeamID,
+              latitude: location?.latitude,
+              longitude: location?.longitude,
+              pointOfInterestName: location?.pointOfInterestName,
               periodDurationSeconds: periodDurationSeconds,
               firstBreakDurationSeconds: firstBreakDurationSeconds,
               halfTimeDurationSeconds: halfTimeDurationSeconds,
               secondBreakDurationSeconds: secondBreakDurationSeconds,
-              isInBreak: false,
               isAwaitingCentrePassConfirmation: false,
-              currentPeriod: 1,
+              currentPhaseIndex: 0,
               elapsedSeconds: 0,
-              hasTimerStartedCurrentPeriod: false
+              timerEndsAt: nil
             )
           }
           .execute(db)
@@ -407,6 +445,28 @@ struct NewGameFeature {
       }
       await send(.startGameResponse(result))
     }
+  }
+
+  private func loadLocation(state: inout State) -> Effect<Action> {
+    guard locationClient.authorizationStatus() == .authorized else {
+      state.location = .unavailable(canRetry: false)
+      return .none
+    }
+    state.location = .loading
+    return .run { send in
+      await send(
+        .locationResponse(
+          await Result {
+            try await locationClient.currentLocation()
+          }
+        )
+      )
+    }
+    .cancellable(id: CancelID.location, cancelInFlight: true)
+  }
+
+  private nonisolated enum CancelID {
+    case location
   }
 }
 

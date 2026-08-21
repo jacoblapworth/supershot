@@ -34,9 +34,9 @@ struct ScoringView: View {
           skipBreakTapped: { store.send(.skipBreakButtonTapped) },
           startTimerTapped: { store.send(.startTimerButtonTapped) }
         )
-        
+
         ScoringScoreboardView(
-          isDisabled: store.clockPhase == .breakTime || store.isShowingLastCentrePassBanner,
+          isDisabled: !store.canScoreGoal,
           isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
           teamA: store.teamA,
           teamAScore: store.teamAScore,
@@ -49,7 +49,7 @@ struct ScoringView: View {
           LastCentrePassBanner(
             centrePassTeam: store.centrePassTeam,
             isTransitioningPeriod: store.isTransitioningPeriod,
-            period: store.period,
+            period: store.lastCompletedQuarterNumber,
             lastCentrePassNotTakenTapped: {
               store.send(.lastCentrePassNotTakenButtonTapped)
             },
@@ -66,19 +66,13 @@ struct ScoringView: View {
             centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
           )
         }
-
-
         ScoringGameControls(
-          canContinueToNextQuarter: false,
           canFinishGame: store.canFinishGame,
           canMoveToNextQuarter: store.canMoveToNextQuarter,
           clockPhase: store.clockPhase,
           isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
           isTransitioningPeriod: store.isTransitioningPeriod,
           period: store.period,
-          continueToNextQuarterTapped: {
-            store.send(.continueToNextQuarterButtonTapped)
-          },
           endQuarterTapped: { store.send(.endQuarterButtonTapped) },
           finishGameTapped: { store.send(.finishGameButtonTapped) },
           skipBreakTapped: { store.send(.skipBreakButtonTapped) }
@@ -94,11 +88,6 @@ struct ScoringView: View {
       }
       .padding()
     }
-//    .navigationTitle(
-//      store.clockPhase == .breakTime
-//        ? "Break after quarter \(store.period)"
-//        : "Quarter \(store.period)"
-//    )
     .navigationBarBackButtonHidden()
     .toolbar {
       #if os(macOS)
@@ -122,7 +111,6 @@ struct ScoringView: View {
       }
     }
     .alert($store.scope(state: \.alert, action: \.alert))
-    .confirmationDialog($store.scope(state: \.confirmationDialog, action: \.confirmationDialog))
     #if os(iOS)
     .sensoryFeedback(.success, trigger: store.goalFeedbackTrigger)
     #endif

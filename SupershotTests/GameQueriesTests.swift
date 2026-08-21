@@ -32,7 +32,8 @@ extension SupershotTestSuite {
             periodDurationSeconds: 900,
             firstBreakDurationSeconds: 240,
             halfTimeDurationSeconds: 600,
-            secondBreakDurationSeconds: 240
+            secondBreakDurationSeconds: 240,
+            currentPhaseIndex: 2
           )
           Game(
             id: UUID(-2),
@@ -48,7 +49,7 @@ extension SupershotTestSuite {
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 2,
             createdAt: newerDate
@@ -57,7 +58,7 @@ extension SupershotTestSuite {
             id: UUID(-2),
             gameID: UUID(-2),
             teamID: UUID(-4),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: olderDate
@@ -73,6 +74,7 @@ extension SupershotTestSuite {
         value.games,
         [
           GameListItem(
+            currentQuarter: 2,
             endedAt: nil,
             firstBreakDurationSeconds: 240,
             halfTimeDurationSeconds: 600,
@@ -138,7 +140,7 @@ extension SupershotTestSuite {
             id: UUID(-1),
             gameID: UUID(-1),
             teamID: UUID(-1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 20,
             points: 1,
             createdAt: startedAt

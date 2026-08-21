@@ -9,6 +9,8 @@ struct NewGameView: View {
       VStack(spacing: 20) {
         NewGameTeamsView(store: store)
 
+        SetupLocationView(store: store)
+
         if store.leftTeam.team != nil, store.rightTeam.team != nil {
           SetupBibColorsView(
             store: store
@@ -26,6 +28,7 @@ struct NewGameView: View {
       .padding()
     }
     .navigationTitle("New game")
+    .task { store.send(.task) }
     .safeAreaInset(edge: .bottom) {
       SetupStartBar(
         canStartGame: store.canStartGame,

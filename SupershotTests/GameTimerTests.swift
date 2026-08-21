@@ -71,6 +71,32 @@ extension SupershotTestSuite {
         Date(timeIntervalSince1970: 1_775)
       )
     }
+
+    @Test
+    func freeAccessPersistsTimersWithoutCreatingPremiumPresentations() async throws {
+      let seedStore = Self.makeScoringStore()
+      let database = seedStore.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(
+        system: Self.timerSystemClient(events: events),
+        proSubscription: .free
+      )
+
+      let update = try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        try await client.startOrResume(UUID(3), 0, true)
+      }
+
+      expectNoDifference(
+        update.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_900)
+      )
+      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(events.value, [.cancelAlarm, .endActivity])
+    }
+
     @Test
     func timerClientPersistsStartPauseResumeAndIgnoresStaleActions() async throws {
       let seedStore = Self.makeScoringStore()
@@ -83,7 +109,7 @@ extension SupershotTestSuite {
         $0.date = DateGenerator { currentDate.value }
         $0.defaultDatabase = database
       } operation: {
-        let started = try await client.startOrResume(UUID(3), 1, true)
+        let started = try await client.startOrResume(UUID(3), 0, true)
         expectNoDifference(started.snapshot.game.elapsedSeconds, 0)
         expectNoDifference(
           started.snapshot.game.timerEndsAt,
@@ -98,14 +124,14 @@ extension SupershotTestSuite {
         )
 
         events.setValue([])
-        _ = try await client.startOrResume(UUID(3), 1, false)
+        _ = try await client.startOrResume(UUID(3), 0, false)
         expectNoDifference(
           events.value,
           [.activity(Date(timeIntervalSince1970: 1_900))]
         )
 
         events.setValue([])
-        let stalePause = try await client.pause(UUID(3), 2)
+        let stalePause = try await client.pause(UUID(3), 1)
         expectNoDifference(
           stalePause.game.timerEndsAt,
           Date(timeIntervalSince1970: 1_900)
@@ -123,13 +149,13 @@ extension SupershotTestSuite {
         expectNoDifference(relaunchedState.isTimerRunning, true)
 
         events.setValue([])
-        let paused = try await client.pause(UUID(3), 1)
+        let paused = try await client.pause(UUID(3), 0)
         expectNoDifference(paused.game.elapsedSeconds, 500)
         expectNoDifference(paused.game.timerEndsAt, nil)
         expectNoDifference(events.value, [.cancelAlarm, .activity(nil)])
 
         events.setValue([])
-        let resumed = try await client.startOrResume(UUID(3), 1, false)
+        let resumed = try await client.startOrResume(UUID(3), 0, false)
         expectNoDifference(
           resumed.snapshot.game.timerEndsAt,
           Date(timeIntervalSince1970: 1_900)
@@ -145,35 +171,72 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func timerClientReconcilesQuarterAndBreakAcrossLargeTimeJumps() async throws {
+    func timerClientSchedulesAlarmWhenBreakStarts() async throws {
+      var state = Self.scoringState()
+      state.currentPhaseIndex = 1
+      state.elapsedSeconds = 20
+      state.firstBreakDurationSeconds = 120
+      let seedStore = Self.makeScoringStore(state: state)
+      let database = seedStore.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
+
+      let update = try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        try await client.startOrResume(UUID(3), 1, false)
+      }
+
+      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(
+        update.snapshot.game.timerEndsAt,
+        Date(timeIntervalSince1970: 1_100)
+      )
+      expectNoDifference(
+        events.value,
+        [
+          .activity(Date(timeIntervalSince1970: 1_100)),
+          .alarm(Date(timeIntervalSince1970: 1_100), requestsAuthorization: false),
+        ]
+      )
+    }
+
+    @Test
+    func timerClientReconcilesWithoutDismissingPhaseAlarms() async throws {
       var state = Self.scoringState()
       state.firstBreakDurationSeconds = 120
-      state.hasTimerStartedThisPeriod = true
-      state.isTimerRunning = true
       state.timerEndsAt = Date(timeIntervalSince1970: 1_050)
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
       let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_100))
-      let client = GameTimerClient.live(system: .noop)
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
 
       try await withDependencies {
         $0.date = DateGenerator { currentDate.value }
         $0.defaultDatabase = database
       } operation: {
         let duringBreak = try await client.reconcile(UUID(3))
-        expectNoDifference(duringBreak.game.isInBreak, true)
+        expectNoDifference(duringBreak.game.currentPhaseIndex, 1)
         expectNoDifference(duringBreak.game.isAwaitingCentrePassConfirmation, true)
         expectNoDifference(duringBreak.game.elapsedSeconds, 50)
         expectNoDifference(
           duringBreak.game.timerEndsAt,
           Date(timeIntervalSince1970: 1_170)
         )
+        expectNoDifference(
+          events.value,
+          [.activity(Date(timeIntervalSince1970: 1_170))]
+        )
 
+        events.setValue([])
         currentDate.setValue(Date(timeIntervalSince1970: 1_300))
         let afterBreak = try await client.reconcile(UUID(3))
-        expectNoDifference(afterBreak.game.isInBreak, true)
-        expectNoDifference(afterBreak.game.elapsedSeconds, 120)
+        expectNoDifference(afterBreak.game.currentPhaseIndex, 2)
+        expectNoDifference(afterBreak.game.elapsedSeconds, 0)
         expectNoDifference(afterBreak.game.timerEndsAt, nil)
+        expectNoDifference(events.value, [.activity(nil)])
       }
     }
 
@@ -190,7 +253,7 @@ extension SupershotTestSuite {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
       } operation: {
-        try await client.startOrResume(UUID(3), 1, true)
+        try await client.startOrResume(UUID(3), 0, true)
       }
 
       expectNoDifference(update.alarmAuthorizationDenied, true)
@@ -217,8 +280,6 @@ extension SupershotTestSuite {
       let store = Self.makeScoringStore(clock: clock, gameTimer: gameTimer)
 
       await store.send(.startTimerButtonTapped) {
-        $0.hasTimerStartedThisPeriod = true
-        $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       }
       await store.receive {
@@ -233,7 +294,6 @@ extension SupershotTestSuite {
       }
 
       await store.send(.pauseTimerButtonTapped) {
-        $0.isTimerRunning = false
         $0.timerEndsAt = nil
       }
       await store.receive {
@@ -242,7 +302,6 @@ extension SupershotTestSuite {
       }
 
       await store.send(.startTimerButtonTapped) {
-        $0.isTimerRunning = true
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       }
       await store.receive {
@@ -252,7 +311,6 @@ extension SupershotTestSuite {
       expectNoDifference(store.state.alert, nil)
 
       await store.send(.pauseTimerButtonTapped) {
-        $0.isTimerRunning = false
         $0.timerEndsAt = nil
       }
       await store.receive {
@@ -265,8 +323,8 @@ extension SupershotTestSuite {
     private nonisolated static func timerSystemClient(
         events: LockIsolated<[TimerSystemEvent]>,
         alarmUnavailable: Bool = false
-      ) -> GameTimerSystemClient {
-        GameTimerSystemClient(
+      ) -> AlarmClient {
+        AlarmClient(
           cancelAlarm: { _ in
             events.withValue { $0.append(.cancelAlarm) }
           },
@@ -336,11 +394,9 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .breakTime,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
-                currentPeriod: state.period,
+                currentPhaseIndex: state.currentPhaseIndex,
                 elapsedSeconds: state.elapsedSeconds,
-                hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod,
                 timerEndsAt: state.timerEndsAt
               )
             }

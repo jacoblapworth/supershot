@@ -19,10 +19,10 @@ extension ScoringFeature.State {
   static var previewQuarter: Self {
     Self(
       centrePassTeamID: ScoringFeature.Team.previewRavens.id,
+      currentPhaseIndex: 2,
       firstBreakDurationSeconds: MockGameData.breakDurationSeconds,
       gameID: UUID(11),
       halfTimeDurationSeconds: MockGameData.breakDurationSeconds,
-      period: 2,
       periodDurationSeconds: MockGameData.periodDurationSeconds,
       secondBreakDurationSeconds: MockGameData.breakDurationSeconds,
       startedAt: Date(),
@@ -36,7 +36,6 @@ extension ScoringFeature.State {
     var state = previewQuarter
     state.canUndo = true
     state.elapsedSeconds = state.periodDurationSeconds
-    state.hasTimerStartedThisPeriod = true
     state.isShowingLastCentrePassBanner = true
     state.teamAScore = 38
     state.teamBScore = 38
@@ -45,10 +44,8 @@ extension ScoringFeature.State {
 
   static var previewBreak: Self {
     var state = previewQuarter
-    state.clockPhase = .breakTime
+    state.currentPhaseIndex = 3
     state.elapsedSeconds = state.halfTimeDurationSeconds
-    state.hasTimerStartedThisPeriod = true
-    state.period = 2
     state.teamAScore = 19
     state.teamBScore = 19
     return state

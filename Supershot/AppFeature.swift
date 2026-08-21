@@ -21,21 +21,23 @@ struct AppFeature {
 
   @ObservableState
   struct State: Equatable {
-    @Presents var alarmOnboarding: AlarmOnboardingFeature.State?
     @Presents var alert: AlertState<Alert>?
     var deletingGameID: Game.ID?
     var deletingTeamID: Team.ID?
-    var hasCheckedAlarmAuthorization = false
+    var hasCheckedPermissions = false
+    var hasStartedSubscriptionObservation = false
     var loadingGameID: Game.ID?
     var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
+    @Presents var permissionsOnboarding: PermissionsOnboardingFeature.State?
+    var proAccess = ProAccess.unknown
+    @Presents var proPaywall: ProPaywallFeature.State?
     var selectedTab = Tab.games
     @Presents var teamEditor: TeamEditorFeature.State?
     var teamsPath = StackState<AppPath.State>()
   }
 
   enum Action {
-    case alarmOnboarding(PresentationAction<AlarmOnboardingFeature.Action>)
     case alert(PresentationAction<Alert>)
     case deepLinkOpened(URL)
     case deleteGameButtonTapped(Game.ID)
@@ -46,7 +48,13 @@ struct AppFeature {
     case newGameButtonTapped
     case newTeamButtonTapped
     case path(StackActionOf<AppPath>)
+    case permissionsOnboarding(PresentationAction<PermissionsOnboardingFeature.Action>)
+    case proAccessLoaded(ProAccess)
+    case proAccessUpdated(ProAccess)
+    case proPaywall(PresentationAction<ProPaywallFeature.Action>)
+    case proPromotionTapped
     case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
+    case sceneBecameActive
     case selectedTabChanged(Tab)
     case task
     case teamEditor(PresentationAction<TeamEditorFeature.Action>)
@@ -62,15 +70,21 @@ struct AppFeature {
   @Dependency(\.alarmAuthorization) var alarmAuthorization
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
+  @Dependency(\.locationClient) var locationClient
+  @Dependency(\.proSubscription) var proSubscription
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .alarmOnboarding(.presented(.delegate(.completed))):
-        state.alarmOnboarding = nil
-        return .none
+      case .permissionsOnboarding(.presented(.delegate(.completed))):
+        state.permissionsOnboarding = nil
+        guard
+          state.proAccess == .pro,
+          alarmAuthorization.status() == .authorized
+        else { return .none }
+        return synchronizePremiumPresentations(schedulesAlerts: true)
 
-      case .alarmOnboarding:
+      case .permissionsOnboarding:
         return .none
 
       case .alert:
@@ -195,6 +209,24 @@ struct AppFeature {
       case .path:
         return .none
 
+      case let .proAccessLoaded(access):
+        state.hasCheckedPermissions = true
+        return applyProAccess(access, state: &state)
+
+      case let .proAccessUpdated(access):
+        return applyProAccess(access, state: &state)
+
+      case let .proPaywall(.presented(.delegate(.accessChanged(access)))):
+        return applyProAccess(access, state: &state)
+
+      case .proPaywall:
+        return .none
+
+      case .proPromotionTapped:
+        guard state.proAccess != .pro else { return .none }
+        state.proPaywall = ProPaywallFeature.State()
+        return .none
+
       case let .resumeGameResponse(gameID, .success(snapshot)):
         guard state.loadingGameID == gameID else { return .none }
         let tab = state.loadingGameTab ?? .games
@@ -220,17 +252,35 @@ struct AppFeature {
         state.alert = .gameUnavailable
         return .none
 
+      case .sceneBecameActive:
+        guard state.hasStartedSubscriptionObservation else { return .none }
+        let proSubscription = self.proSubscription
+        return .run { send in
+          guard let access = try? await proSubscription.currentAccess() else { return }
+          await send(.proAccessUpdated(access))
+        }
+
       case let .selectedTabChanged(tab):
         state.selectedTab = tab
         return .none
 
       case .task:
-        guard !state.hasCheckedAlarmAuthorization else { return .none }
-        state.hasCheckedAlarmAuthorization = true
-        if alarmAuthorization.status() == .notDetermined {
-          state.alarmOnboarding = AlarmOnboardingFeature.State()
+        guard !state.hasStartedSubscriptionObservation else { return .none }
+        state.hasStartedSubscriptionObservation = true
+        let proSubscription = self.proSubscription
+        return .run { send in
+          let initialAccess: ProAccess
+          do {
+            initialAccess = try await proSubscription.currentAccess()
+          } catch {
+            initialAccess = .free
+          }
+          await send(.proAccessLoaded(initialAccess))
+
+          for await access in proSubscription.accessUpdates() {
+            await send(.proAccessUpdated(access))
+          }
         }
-        return .none
 
       case .teamEditor(.presented(.delegate(.cancelled))),
         .teamEditor(.presented(.delegate(.saved(_)))):
@@ -311,8 +361,11 @@ struct AppFeature {
     .forEach(\.teamsPath, action: \.teamsPath) {
       AppPath.body
     }
-    .ifLet(\.$alarmOnboarding, action: \.alarmOnboarding) {
-      AlarmOnboardingFeature()
+    .ifLet(\.$permissionsOnboarding, action: \.permissionsOnboarding) {
+      PermissionsOnboardingFeature()
+    }
+    .ifLet(\.$proPaywall, action: \.proPaywall) {
+      ProPaywallFeature()
     }
     .ifLet(\.$teamEditor, action: \.teamEditor) {
       TeamEditorFeature()
@@ -326,6 +379,73 @@ struct AppFeature {
         try await gameTimer.reconcile(gameID)
       }
       await send(.resumeGameResponse(gameID, result))
+    }
+  }
+
+  private func applyProAccess(
+    _ access: ProAccess,
+    state: inout State
+  ) -> Effect<Action> {
+    state.proAccess = access
+
+    switch access {
+    case .free:
+      state.permissionsOnboarding = locationClient.authorizationStatus() == .notDetermined
+        ? PermissionsOnboardingFeature.State(step: .location)
+        : nil
+      return cleanUpPremiumPresentations()
+
+    case .pro:
+      state.proPaywall = nil
+      let alarmAuthorization = alarmAuthorization.status()
+      let needsLocation = locationClient.authorizationStatus() == .notDetermined
+      if alarmAuthorization == .notDetermined {
+        state.permissionsOnboarding = PermissionsOnboardingFeature.State(
+          nextStep: needsLocation ? .location : nil
+        )
+      } else {
+        state.permissionsOnboarding = needsLocation
+          ? PermissionsOnboardingFeature.State(step: .location)
+          : nil
+      }
+      return synchronizePremiumPresentations(
+        schedulesAlerts: alarmAuthorization == .authorized
+      )
+
+    case .unknown:
+      state.permissionsOnboarding = nil
+      return .none
+    }
+  }
+
+  private func cleanUpPremiumPresentations() -> Effect<Action> {
+    .run { _ in
+      let gameIDs = try await unfinishedGameIDs()
+      for gameID in gameIDs {
+        await gameTimer.endPresentation(gameID)
+      }
+    }
+  }
+
+  private func synchronizePremiumPresentations(
+    schedulesAlerts: Bool
+  ) -> Effect<Action> {
+    .run { _ in
+      let gameIDs = try await unfinishedGameIDs()
+      for gameID in gameIDs {
+        await gameTimer.refreshActivity(gameID)
+        if schedulesAlerts {
+          await gameTimer.scheduleAlert(gameID)
+        }
+      }
+    }
+  }
+
+  private func unfinishedGameIDs() async throws -> [Game.ID] {
+    try await database.read { db in
+      try Game.fetchAll(db)
+        .filter { $0.endedAt == nil }
+        .map(\.id)
     }
   }
 
@@ -420,23 +540,18 @@ extension AlertState where Action == AppFeature.Alert {
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
-    let period = min(
-      max(snapshot.game.currentPeriod, 1),
-      Self.maximumPeriod
+    let currentPhaseIndex = min(
+      max(snapshot.game.currentPhaseIndex, 0),
+      snapshot.game.phases.count - 1
     )
-    let clockPhase = snapshot.game.isInBreak
-      ? ScoringFeature.ClockPhase.breakTime
-      : .quarter
-    let currentDuration = clockPhase == .breakTime
-      ? snapshot.game.breakDuration(after: period)
-      : snapshot.game.periodDurationSeconds
+    let currentDuration = snapshot.game.phases[currentPhaseIndex].durationSeconds
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,
       centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
         ? snapshot.teamB.id
         : snapshot.teamA.id,
-      clockPhase: clockPhase,
+      currentPhaseIndex: currentPhaseIndex,
       elapsedSeconds: min(
         max(snapshot.game.elapsedSeconds, 0),
         max(currentDuration, 0)
@@ -444,10 +559,7 @@ extension ScoringFeature.State {
       firstBreakDurationSeconds: snapshot.game.firstBreakDurationSeconds,
       gameID: snapshot.game.id,
       halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
-      hasTimerStartedThisPeriod: snapshot.game.hasTimerStartedCurrentPeriod,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
-      isTimerRunning: snapshot.game.timerEndsAt != nil,
-      period: period,
       periodDurationSeconds: snapshot.game.periodDurationSeconds,
       secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
       startedAt: snapshot.game.startedAt,

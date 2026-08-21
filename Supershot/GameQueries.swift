@@ -2,6 +2,7 @@ import Foundation
 import SQLiteData
 
 nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
+  var currentQuarter = 1
   let endedAt: Date?
   var firstBreakDurationSeconds = 0
   var halfTimeDurationSeconds = 0
@@ -103,6 +104,7 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let goalTimeline: GoalTimeline
   var halfTimeDurationSeconds = 0
   let id: Game.ID
+  var location: GameLocation?
   var periodDurationSeconds = 15 * 60
   var secondBreakDurationSeconds = 0
   let startedAt: Date
@@ -166,7 +168,7 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
     let goals = try Goal
       .where { $0.gameID.eq(gameID) }
       .order { goals in (
-        goals.period,
+        goals.quarterNumber,
         goals.elapsedSeconds,
         goals.createdAt,
         goals.id
@@ -201,6 +203,7 @@ nonisolated struct GamesRequest: FetchKeyRequest {
 
         let gameGoals = goalsByGame[game.id, default: []]
         return GameListItem(
+          currentQuarter: game.currentPhase.quarterNumber,
           endedAt: game.endedAt,
           firstBreakDurationSeconds: game.firstBreakDurationSeconds,
           halfTimeDurationSeconds: game.halfTimeDurationSeconds,
@@ -311,6 +314,7 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
         goalTimeline: timeline,
         halfTimeDurationSeconds: snapshot.game.halfTimeDurationSeconds,
         id: snapshot.game.id,
+        location: snapshot.game.location,
         periodDurationSeconds: snapshot.game.periodDurationSeconds,
         secondBreakDurationSeconds: snapshot.game.secondBreakDurationSeconds,
         startedAt: snapshot.game.startedAt,
@@ -343,13 +347,13 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
 
     if goal.teamID == snapshot.teamA.id {
       teamAScore += goal.points
-      quarterScoresByPeriod[goal.period, default: (0, 0)].teamA += goal.points
+      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamA += goal.points
       scoringTeamBibColorHex = snapshot.game.teamABibColorHex
       scoringTeamName = snapshot.teamA.name
       scoringTeamSide = .teamA
     } else if goal.teamID == snapshot.teamB.id {
       teamBScore += goal.points
-      quarterScoresByPeriod[goal.period, default: (0, 0)].teamB += goal.points
+      quarterScoresByPeriod[goal.quarterNumber, default: (0, 0)].teamB += goal.points
       scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
       scoringTeamName = snapshot.teamB.name
       scoringTeamSide = .teamB
@@ -359,14 +363,14 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
       scoringTeamSide = .unknown
     }
 
-    goalsByPeriod[goal.period, default: []].append(
+    goalsByPeriod[goal.quarterNumber, default: []].append(
       GoalTimelineItem(
         clockSecondsRemaining: max(
           snapshot.game.periodDurationSeconds - goal.elapsedSeconds,
           0
         ),
         id: goal.id,
-        period: goal.period,
+        period: goal.quarterNumber,
         points: goal.points,
         scoringTeamBibColorHex: scoringTeamBibColorHex,
         scoringTeamName: scoringTeamName,
@@ -381,8 +385,8 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   let playedPeriod = snapshot.game.endedAt == nil
     ? min(
       max(
-        snapshot.game.currentPeriod,
-        snapshot.goals.map(\.period).max() ?? 1
+        snapshot.game.currentPhase.quarterNumber,
+        snapshot.goals.map(\.quarterNumber).max() ?? 1
       ),
       maximumPeriod
     )
@@ -410,9 +414,9 @@ private nonisolated func completedGameStatistics(
   var previousGoalElapsedSecondsByPeriod: [Int: Int] = [:]
 
   for goal in goals {
-    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.period, default: 0]
+    let previousElapsedSeconds = previousGoalElapsedSecondsByPeriod[goal.quarterNumber, default: 0]
     let duration = max(goal.elapsedSeconds - previousElapsedSeconds, 0)
-    previousGoalElapsedSecondsByPeriod[goal.period] = goal.elapsedSeconds
+    previousGoalElapsedSecondsByPeriod[goal.quarterNumber] = goal.elapsedSeconds
 
     if goal.teamID == teamAID || goal.teamID == teamBID {
       goalDurationsByTeamID[goal.teamID, default: []].append(duration)

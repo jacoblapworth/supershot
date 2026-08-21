@@ -37,7 +37,10 @@ struct TimerView: View {
                 }
               }
             }
-            .disabled(isPeriodComplete)
+            .disabled(
+              isPeriodComplete
+                || (clockPhase == .quarter && isShowingLastCentrePassBanner)
+            )
           }
         }
         
@@ -81,7 +84,7 @@ struct TimerView: View {
   }
   
   private var title: String {
-    clockPhase == .breakTime ? "Break after quarter \(period)" : "Quarter \(period)"
+    clockPhase == .breakTime ? "Quarter \(period) break" : "Quarter \(period)"
   }
   
   private var startQuarterButton: some View {
@@ -96,6 +99,7 @@ struct TimerView: View {
     .controlSize(.large)
     .fontWeight(.medium)
     .tint(.green)
+    .disabled(clockPhase == .quarter && isShowingLastCentrePassBanner)
   }
   
   private var timeRemainingSeconds: Int {

@@ -38,9 +38,8 @@ extension SupershotTestSuite {
       let game = try await database.read { db in
         try Game.find(UUID(-1)).fetchOne(db)
       }
-      expectNoDifference(game?.currentPeriod, 1)
+      expectNoDifference(game?.currentPhaseIndex, 0)
       expectNoDifference(game?.elapsedSeconds, 0)
-      expectNoDifference(game?.hasTimerStartedCurrentPeriod, false)
       expectNoDifference(game?.isAwaitingCentrePassConfirmation, false)
       expectNoDifference(game?.centrePassTeamID, nil)
 
@@ -69,11 +68,10 @@ extension SupershotTestSuite {
           firstBreakDurationSeconds: 240,
           halfTimeDurationSeconds: 600,
           secondBreakDurationSeconds: 240,
-          isInBreak: true,
           isAwaitingCentrePassConfirmation: true,
-          currentPeriod: 2,
+          currentPhaseIndex: 3,
           elapsedSeconds: 125,
-          hasTimerStartedCurrentPeriod: true
+          timerEndsAt: nil
         ),
         goals: [],
         teamA: ravens,
@@ -81,7 +79,7 @@ extension SupershotTestSuite {
       )
 
       let state = ScoringFeature.State(snapshot: snapshot)
-      expectNoDifference(state.clockPhase, .break)
+      expectNoDifference(state.clockPhase, .breakTime)
       expectNoDifference(state.currentDurationSeconds, 600)
       expectNoDifference(state.elapsedSeconds, 125)
       expectNoDifference(state.isShowingLastCentrePassBanner, true)

@@ -13,6 +13,105 @@ extension SupershotTestSuite {
   @MainActor
   @Suite struct AppFeatureTests {
     @Test
+    func failedSubscriptionLookupFallsBackToFree() async {
+      let store = TestStore(initialState: AppFeature.State()) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.proSubscription = ProSubscriptionClient(
+          accessUpdates: { AsyncStream { $0.finish() } },
+          currentAccess: { throw SubscriptionTestError.unavailable }
+        )
+      }
+
+      await store.send(.task) {
+        $0.hasStartedSubscriptionObservation = true
+      }
+      await store.receive {
+        guard case .proAccessLoaded(.free) = $0 else { return false }
+        return true
+      } assert: {
+        $0.hasCheckedPermissions = true
+        $0.proAccess = .free
+      }
+      await store.finish()
+    }
+
+    @Test
+    func promotionPresentsPaywallAndProAccessDismissesIt() async {
+      var state = AppFeature.State()
+      state.hasCheckedPermissions = true
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+      }
+
+      await store.send(.proPromotionTapped) {
+        $0.proPaywall = ProPaywallFeature.State()
+      }
+      await store.send(.proAccessUpdated(.pro)) {
+        $0.proAccess = .pro
+        $0.proPaywall = nil
+      }
+      await store.finish()
+    }
+
+    @Test
+    func entitlementTransitionsSynchronizePremiumPresentations() async {
+      let seedStore = Self.makeAppScoringStore()
+      let database = seedStore.dependencies.defaultDatabase
+      let events = LockIsolated<[String]>([])
+      var timer = GameTimerClient.live(system: .noop)
+      timer.refreshActivity = { _ in events.withValue { $0.append("activity") } }
+      timer.scheduleAlert = { _ in events.withValue { $0.append("alarm") } }
+      timer.endPresentation = { _ in events.withValue { $0.append("cleanup") } }
+
+      var state = AppFeature.State()
+      state.hasCheckedPermissions = true
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        $0.alarmAuthorization = .authorized
+        $0.defaultDatabase = database
+        $0.gameTimer = timer
+      }
+
+      await store.send(.proAccessUpdated(.pro)) {
+        $0.proAccess = .pro
+      }
+      await store.finish()
+      expectNoDifference(events.value, ["activity", "alarm"])
+
+      events.setValue([])
+      await store.send(.proAccessUpdated(.free)) {
+        $0.proAccess = .free
+      }
+      await store.finish()
+      expectNoDifference(events.value, ["cleanup"])
+    }
+
+    @Test
+    func paywallReportsPurchaseAndRestoreAccess() async {
+      let store = TestStore(initialState: ProPaywallFeature.State()) {
+        ProPaywallFeature()
+      }
+
+      await store.send(.customerInfoUpdated(.free))
+      await store.receive {
+        guard case .delegate(.accessChanged(.free)) = $0 else { return false }
+        return true
+      }
+      await store.send(.customerInfoUpdated(.pro))
+      await store.receive {
+        guard case .delegate(.accessChanged(.pro)) = $0 else { return false }
+        return true
+      }
+    }
+
+    @Test
     func finishingGameReplacesScoringWithDetailRoute() async {
       var state = AppFeature.State()
       state.path.append(.scoring(Self.appScoringState()))
@@ -42,8 +141,6 @@ extension SupershotTestSuite {
     @Test
     func gameDeepLinkReconcilesAndRestoresRunningScoringRoute() async {
       var scoring = Self.appScoringState()
-      scoring.hasTimerStartedThisPeriod = true
-      scoring.isTimerRunning = true
       scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       let seedStore = Self.makeAppScoringStore(state: scoring)
       let database = seedStore.dependencies.defaultDatabase
@@ -226,7 +323,7 @@ extension SupershotTestSuite {
             id: UUID(4),
             gameID: UUID(3),
             teamID: UUID(1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -278,7 +375,7 @@ extension SupershotTestSuite {
             id: UUID(4),
             gameID: UUID(3),
             teamID: UUID(1),
-            period: 1,
+            quarterNumber: 1,
             elapsedSeconds: 10,
             points: 1,
             createdAt: Date(timeIntervalSince1970: 1_000)
@@ -324,8 +421,8 @@ extension SupershotTestSuite {
     private nonisolated static func timerSystemClient(
         events: LockIsolated<[TimerSystemEvent]>,
         alarmUnavailable: Bool = false
-      ) -> GameTimerSystemClient {
-        GameTimerSystemClient(
+      ) -> AlarmClient {
+        AlarmClient(
           cancelAlarm: { _ in
             events.withValue { $0.append(.cancelAlarm) }
           },
@@ -395,11 +492,9 @@ extension SupershotTestSuite {
                 firstBreakDurationSeconds: state.firstBreakDurationSeconds,
                 halfTimeDurationSeconds: state.halfTimeDurationSeconds,
                 secondBreakDurationSeconds: state.secondBreakDurationSeconds,
-                isInBreak: state.clockPhase == .breakTime,
                 isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
-                currentPeriod: state.period,
+                currentPhaseIndex: state.currentPhaseIndex,
                 elapsedSeconds: state.elapsedSeconds,
-                hasTimerStartedCurrentPeriod: state.hasTimerStartedThisPeriod,
                 timerEndsAt: state.timerEndsAt
               )
             }
@@ -443,4 +538,8 @@ private nonisolated enum TimerSystemEvent: Equatable, Sendable {
   case alarm(Date?, requestsAuthorization: Bool)
   case cancelAlarm
   case endActivity
+}
+
+private nonisolated enum SubscriptionTestError: Error {
+  case unavailable
 }

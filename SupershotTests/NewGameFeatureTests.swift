@@ -89,11 +89,72 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func setupLoadsAuthorizedCurrentLocation() async {
+      let location = GameLocation(
+        latitude: 51.556,
+        longitude: -0.2796,
+        pointOfInterestName: "Wembley Arena"
+      )
+      let store = TestStore(initialState: NewGameFeature.State()) {
+        NewGameFeature()
+      } withDependencies: {
+        $0.locationClient = LocationClient(
+          authorizationStatus: { .authorized },
+          currentLocation: { location },
+          requestAuthorization: { .authorized }
+        )
+      }
+
+      await store.send(.task) {
+        $0.location = .loading
+      }
+      await store.receive {
+        guard case let .locationResponse(.success(receivedLocation)) = $0 else {
+          return false
+        }
+        return receivedLocation == location
+      } assert: {
+        $0.location = .loaded(location)
+      }
+    }
+
+    @Test
+    func setupLocationFailureDoesNotPreventGameConfiguration() async {
+      let store = TestStore(initialState: NewGameFeature.State()) {
+        NewGameFeature()
+      } withDependencies: {
+        $0.locationClient = LocationClient(
+          authorizationStatus: { .authorized },
+          currentLocation: { throw LocationClientError.locationUnavailable },
+          requestAuthorization: { .authorized }
+        )
+      }
+
+      await store.send(.task) {
+        $0.location = .loading
+      }
+      await store.receive {
+        guard case .locationResponse(.failure) = $0 else { return false }
+        return true
+      } assert: {
+        $0.location = .unavailable(canRetry: true)
+      }
+      #expect(!store.state.isSaving)
+    }
+
+    @Test
     func startGameUsesPersistedTeamsAndGameSpecificBibColors() async throws {
       let ravens = Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
       let swifts = Team(id: UUID(2), name: "Swifts", colorHex: TeamColorPalette.red)
       var state = NewGameFeature.State()
       state.firstCentrePass = .teamB
+      state.location = .loaded(
+        GameLocation(
+          latitude: 51.556,
+          longitude: -0.2796,
+          pointOfInterestName: "Wembley Arena"
+        )
+      )
       state.leftTeam = .init(bibColorHex: "#AF52DE")
       state.leftTeam.team = ravens
       state.rightTeam = .init(bibColorHex: "#FF2D55")
@@ -132,6 +193,14 @@ extension SupershotTestSuite {
       expectNoDifference(game?.teamBID, swifts.id)
       expectNoDifference(game?.teamABibColorHex, "#AF52DE")
       expectNoDifference(game?.teamBBibColorHex, "#FF2D55")
+      expectNoDifference(
+        game?.location,
+        GameLocation(
+          latitude: 51.556,
+          longitude: -0.2796,
+          pointOfInterestName: "Wembley Arena"
+        )
+      )
     }
   }
 }

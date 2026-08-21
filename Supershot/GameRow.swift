@@ -40,10 +40,15 @@ struct GameRow: View {
           ProgressView()
             .controlSize(.small)
         } else {
-          Label(
-            game.isCompleted ? "Final" : "In progress",
-            systemImage: game.isCompleted ? "checkmark.circle.fill" : "clock.fill"
-          )
+          Label {
+            if game.isCompleted {
+              Text("Final")
+            } else {
+              Text("Q\(game.currentQuarter)")
+            }
+          } icon: {
+            Image(systemName: game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
+          }
           .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
         }
       }
@@ -62,7 +67,7 @@ struct GameRow: View {
   
   private var accessibilityText: String {
     let date = game.startedAt.formatted(date: .abbreviated, time: .shortened)
-    let status = game.isCompleted ? "Final" : "In progress"
+    let status = game.isCompleted ? "Final" : "Q\(game.currentQuarter)"
     return "\(date), \(game.teamAName) \(game.teamAScore), "
     + "\(game.teamBName) \(game.teamBScore), \(status), \(game.timingSummary)"
   }
@@ -110,6 +115,16 @@ private struct TeamScore: View {
       maxWidth: .infinity,
       alignment: alignment == .leading ? .leading : .trailing
     )
+  }
+}
+
+
+#Preview("List") {
+  List {
+    GameRow(game: .previewInProgress, isLoading: false)
+      .padding()
+    GameRow(game: .previewCompleted, isLoading: false)
+      .padding()
   }
 }
 
