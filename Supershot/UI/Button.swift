@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct PrimaryButtonStyle: ButtonStyle {
+  @Environment(\.isEnabled) private var isEnabled: Bool
   private var cornerRadius: CGFloat = 12
   
   func makeBody(configuration: Configuration) -> some View {
@@ -16,7 +17,7 @@ struct PrimaryButtonStyle: ButtonStyle {
       .bold()
       .frame(maxWidth: .infinity)
       .foregroundStyle(.white)
-      .background(Color.accentColor)
+      .background(isEnabled ? Color.accentColor : Color.gray)
       .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
       .overlay {
         RoundedRectangle(cornerRadius: cornerRadius)
@@ -32,8 +33,15 @@ extension ButtonStyle where Self == PrimaryButtonStyle {
 }
 
 #Preview {
-  Button(action: {}) {
-    Label("Label", systemImage: "plus.circle.fill")
+  VStack {
+    Button(action: {}) {
+      Label("Label", systemImage: "plus.circle.fill")
+    }
+    .buttonStyle(.myAppPrimaryButton)
+    Button(action: {}) {
+      Label("Disabled", systemImage: "plus.circle.fill")
+    }
+    .buttonStyle(.myAppPrimaryButton)
+    .disabled(true)
   }
-  .buttonStyle(.myAppPrimaryButton)
 }
