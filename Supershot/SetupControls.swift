@@ -53,7 +53,7 @@ struct SetupStartBar: View {
             .frame(maxWidth: .infinity)
         }
       }
-      .buttonStyle(.borderedProminent)
+      .buttonStyle(.myAppPrimaryButton)
       .disabled(!canStartGame)
     }
     .padding()
