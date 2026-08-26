@@ -19,7 +19,7 @@ import RevenueCat
     
     Purchases.configure(
       withAPIKey: revenueCatAPIKey,
-      appUserID: "dev" //TODO: implement ids
+      appUserID: "dev" as String //TODO: implement ids
     )
     try! prepareDependencies {
       try $0.bootstrapDatabase()

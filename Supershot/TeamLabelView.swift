@@ -8,11 +8,32 @@
 import SwiftUI
 
 struct TeamLabelView: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+  var name: String
+  var color: Color
+  var alignment: HorizontalAlignment = .leading
+  
+  private var avatar: some View {
+    AvatarView(label: name)
+      .controlSize(.mini)
+  }
+  
+  var body: some View {
+    HStack(alignment: .center, spacing: 6) {
+      if alignment == .leading { avatar }
+      Text(name)
+        .font(.caption)
+        .lineLimit(1)
+        .multilineTextAlignment(.center)
+        .foregroundStyle(.secondary)
+      if alignment == .trailing { avatar }
     }
+    .controlSize(.small)
+  }
 }
 
 #Preview {
-    TeamLabelView()
+  TeamLabelView(
+    name: "Team One",
+    color: .blue,
+  )
 }

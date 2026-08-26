@@ -5,9 +5,7 @@ struct GameRow: View {
   var isLoading: Bool
   
   var body: some View {
-    VStack(spacing: 14) {
-      
-      
+    VStack(spacing: 8) {
       HStack(alignment: .center, spacing: 12) {
         TeamScore(
           alignment: .leading,
@@ -16,11 +14,6 @@ struct GameRow: View {
           score: game.teamAScore,
           scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
         )
-        
-        //        Text("–")
-        //          .font(.title2.bold())
-        //          .foregroundStyle(.secondary)
-        
         TeamScore(
           alignment: .trailing,
           colorHex: game.teamBBibColorHex,
@@ -81,35 +74,33 @@ private struct TeamScore: View {
   var scoreColor: Color
   
   private var team: some View {
-    VStack(alignment: .center, spacing: 4) {
-      AvatarView(label: name)
-//      Circle()
-//        .fill(Color(teamHex: colorHex))
-//        .frame(width: 32, height: 32)
-//        .accessibilityHidden(true)
+    HStack(alignment: .center, spacing: 4) {
+      if alignment == .leading {
+        AvatarView(label: name)
+      }
       Text(name)
         .font(.caption)
-        .lineLimit(3)
+        .lineLimit(1)
         .multilineTextAlignment(.center)
         .foregroundStyle(.secondary)
+      if alignment == .trailing {
+        AvatarView(label: name)
+      }
     }
-    .frame(maxWidth: 100)
+    .controlSize(.small)
   }
   
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
-      HStack(alignment: .top, spacing: 8) {
-        if alignment == .leading {
-          team
-        }
-        Text("\(score)")
-          .font(.system(.largeTitle, design: .rounded, weight: .bold))
-          .monospacedDigit()
-          .foregroundStyle(scoreColor)
-        if alignment == .trailing {
-          team
-        }
-      }
+      
+      
+      team
+      Text("\(score)")
+        .font(.system(size: 62, weight: .bold))
+        .fontWidth(.compressed)
+        .monospacedDigit()
+        .foregroundStyle(scoreColor)
+      
     }
     .frame(
       maxWidth: .infinity,
