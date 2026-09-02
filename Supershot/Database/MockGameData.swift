@@ -1,4 +1,3 @@
-#if DEBUG
 import Dependencies
 import Foundation
 
@@ -73,4 +72,3 @@ nonisolated enum MockGameData {
     return events
   }
 }
-#endif

@@ -1,4 +1,3 @@
-#if DEBUG
 import Dependencies
 import Foundation
 
@@ -155,4 +154,3 @@ private let realisticPreviewTimeline: GoalTimeline = {
 extension GoalTimeline {
   static let previewEmpty = Self.empty(through: 4)
 }
-#endif

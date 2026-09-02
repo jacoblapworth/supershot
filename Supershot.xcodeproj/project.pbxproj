@@ -56,6 +56,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1297B650304839E60041BCEC /* Exceptions for "Supershot" folder in "SupershotTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Database/MockGameData.swift,
+			);
+			target = 12B00006301F000000000001 /* SupershotTests */;
+		};
 		12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -85,6 +92,7 @@
 			exceptions = (
 				12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */,
 				12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */,
+				1297B650304839E60041BCEC /* Exceptions for "Supershot" folder in "SupershotTests" target */,
 			);
 			path = Supershot;
 			sourceTree = "<group>";
@@ -543,7 +551,7 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot uses your location to record where games are played.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;

@@ -1,4 +1,3 @@
-#if DEBUG
 import ComposableArchitecture
 import Foundation
 
@@ -71,4 +70,4 @@ func setupPreviewStore(_ state: NewGameFeature.State) -> StoreOf<NewGameFeature>
     NewGameFeature()
   }
 }
-#endif
+
