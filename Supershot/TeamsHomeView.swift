@@ -3,7 +3,6 @@ import SwiftUI
 
 struct TeamsHomeView: View {
   var deleteTeamTapped: (Team.ID) -> Void
-  var deletingTeamID: Team.ID?
   var newTeamTapped: () -> Void
   var teamTapped: (TeamListItem) -> Void
   var teams: [TeamListItem]
@@ -25,7 +24,6 @@ struct TeamsHomeView: View {
             TeamRow(team: team)
           }
           .buttonStyle(.plain)
-          .disabled(deletingTeamID != nil)
           .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Delete", systemImage: "trash", role: .destructive) {
               deleteTeamTapped(team.id)
@@ -40,7 +38,6 @@ struct TeamsHomeView: View {
         Button(action: newTeamTapped) {
           Label("New team", systemImage: "plus")
         }
-        .disabled(deletingTeamID != nil)
       }
     }
   }
@@ -81,7 +78,6 @@ private struct TeamRow: View {
   NavigationStack {
     TeamsHomeView(
       deleteTeamTapped: { _ in },
-      deletingTeamID: nil,
       newTeamTapped: {},
       teamTapped: { _ in },
       teams: []
@@ -93,7 +89,6 @@ private struct TeamRow: View {
   NavigationStack {
     TeamsHomeView(
       deleteTeamTapped: { _ in },
-      deletingTeamID: nil,
       newTeamTapped: {},
       teamTapped: { _ in },
       teams: [

@@ -6,17 +6,14 @@ import SwiftUI
 struct TeamDetailView: View {
   @Fetch private var response: TeamDetailRequest.Value
   @Bindable var store: StoreOf<TeamDetailFeature>
-  var deletingGameID: Game.ID?
-  var loadingGameID: Game.ID?
+  var isResumingGame: Bool
 
   init(
     store: StoreOf<TeamDetailFeature>,
-    deletingGameID: Game.ID?,
-    loadingGameID: Game.ID?
+    isResumingGame: Bool
   ) {
     self.store = store
-    self.deletingGameID = deletingGameID
-    self.loadingGameID = loadingGameID
+    self.isResumingGame = isResumingGame
     _response = Fetch(
       wrappedValue: TeamDetailRequest.Value(),
       TeamDetailRequest(teamID: store.teamID)
@@ -98,7 +95,7 @@ struct TeamDetailView: View {
               GameRow(game: game)
             }
             .buttonStyle(.plain)
-            .disabled(loadingGameID != nil || deletingGameID != nil)
+            .disabled(isResumingGame)
           }
         }
       }
@@ -124,8 +121,7 @@ private struct TeamDetailLoadingView: View {
       ) {
         TeamDetailFeature()
       },
-      deletingGameID: nil,
-      loadingGameID: nil
+      isResumingGame: false
     )
   }
 }
@@ -147,8 +143,7 @@ private struct TeamDetailLoadingView: View {
       ) {
         TeamDetailFeature()
       },
-      deletingGameID: nil,
-      loadingGameID: nil
+      isResumingGame: false
     )
   }
 }
@@ -164,8 +159,7 @@ private struct TeamDetailLoadingView: View {
       ) {
         TeamDetailFeature()
       },
-      deletingGameID: nil,
-      loadingGameID: nil
+      isResumingGame: false
     )
   }
 }

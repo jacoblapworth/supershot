@@ -161,8 +161,8 @@ extension SupershotTestSuite {
         .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
       )
       await store.receive {
-        guard case .resumeGameResponse(UUID(3), .success) = $0 else { return false }
-        return true
+        guard case let .resumeGameResponse(request, .success) = $0 else { return false }
+        return request.gameID == UUID(3)
       }
 
       expectNoDifference(store.state.path.count, 1)
@@ -255,16 +255,18 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
 
       await store.send(.teamGameRowTapped(game)) {
-        $0.loadingGameID = game.id
-        $0.loadingGameTab = .teams
+        $0.pendingGameResume = AppFeature.PendingGameResume(
+          gameID: game.id,
+          requestID: UUID(0),
+          tab: .teams
+        )
       }
       await store.receive {
-        guard case .resumeGameResponse(game.id, .success) = $0 else { return false }
-        return true
+        guard case let .resumeGameResponse(request, .success) = $0 else { return false }
+        return request.gameID == game.id
       }
 
-      expectNoDifference(store.state.loadingGameID, nil)
-      expectNoDifference(store.state.loadingGameTab, nil)
+      expectNoDifference(store.state.pendingGameResume, nil)
       expectNoDifference(store.state.path.count, 0)
       expectNoDifference(store.state.teamsPath.count, 2)
       guard case let .scoring(scoring) = store.state.teamsPath[1] else {
@@ -290,6 +292,32 @@ extension SupershotTestSuite {
         return
       }
       expectNoDifference(detail.gameID, game.id)
+    }
+
+    @Test
+    func staleResumeResponseIsIgnored() async {
+      let currentRequest = AppFeature.PendingGameResume(
+        gameID: UUID(3),
+        requestID: UUID(2),
+        tab: .teams
+      )
+      var state = AppFeature.State()
+      state.pendingGameResume = currentRequest
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      }
+      let staleRequest = AppFeature.PendingGameResume(
+        gameID: UUID(3),
+        requestID: UUID(1),
+        tab: .games
+      )
+
+      await store.send(
+        .resumeGameResponse(
+          staleRequest,
+          .failure(SubscriptionTestError.unavailable)
+        )
+      )
     }
 
     @Test
@@ -343,17 +371,8 @@ extension SupershotTestSuite {
         $0.alarmClient = Self.timerSystemClient(events: events)
       }
 
-      await store.send(.deleteGameButtonTapped(UUID(3))) {
-        $0.deletingGameID = UUID(3)
-      }
-      await store.receive {
-        guard case let .deleteGameResponse(gameID, .success) = $0 else {
-          return false
-        }
-        return gameID == UUID(3)
-      } assert: {
-        $0.deletingGameID = nil
-      }
+      await store.send(.deleteGameButtonTapped(UUID(3)))
+      await store.finish()
 
       let values = try await database.read { db in
         (
@@ -394,17 +413,8 @@ extension SupershotTestSuite {
         $0.defaultDatabase = database
       }
 
-      await store.send(.deleteTeamButtonTapped(UUID(1))) {
-        $0.deletingTeamID = UUID(1)
-      }
-      await store.receive {
-        guard case let .deleteTeamResponse(teamID, .success) = $0 else {
-          return false
-        }
-        return teamID == UUID(1)
-      } assert: {
-        $0.deletingTeamID = nil
-      }
+      await store.send(.deleteTeamButtonTapped(UUID(1)))
+      await store.finish()
 
       let values = try await database.read { db in
         (

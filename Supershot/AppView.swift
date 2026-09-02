@@ -69,9 +69,8 @@ struct AppView: View {
   private var gamesNavigation: some View {
     NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
       GamesHomeView(
-        deletingGameID: store.deletingGameID,
         games: gamesResponse.games,
-        loadingGameID: store.loadingGameTab == .games ? store.loadingGameID : nil,
+        isResumingGame: store.pendingGameResume?.tab == .games,
         showsProPromotion: store.proAccess == .free,
         deleteGameTapped: { store.send(.deleteGameButtonTapped($0)) },
         gameTapped: { store.send(.gameRowTapped($0)) },
@@ -99,8 +98,7 @@ struct AppView: View {
       case .teamDetail(let teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,
-          deletingGameID: store.deletingGameID,
-          loadingGameID: store.loadingGameTab == .games ? store.loadingGameID : nil
+          isResumingGame: store.pendingGameResume?.tab == .games
         )
       }
     }
@@ -110,7 +108,6 @@ struct AppView: View {
     NavigationStack(path: $store.scope(state: \.teamsPath, action: \.teamsPath)) {
       TeamsHomeView(
         deleteTeamTapped: { store.send(.deleteTeamButtonTapped($0)) },
-        deletingTeamID: store.deletingTeamID,
         newTeamTapped: { store.send(.newTeamButtonTapped) },
         teamTapped: { store.send(.teamRowTapped($0)) },
         teams: teamsResponse.teams
@@ -136,8 +133,7 @@ struct AppView: View {
       case .teamDetail(let teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,
-          deletingGameID: store.deletingGameID,
-          loadingGameID: store.loadingGameTab == .teams ? store.loadingGameID : nil
+          isResumingGame: store.pendingGameResume?.tab == .teams
         )
       }
     }
