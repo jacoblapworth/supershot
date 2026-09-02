@@ -572,7 +572,7 @@
 				PRODUCT_MODULE_NAME = Supershot;
 				PRODUCT_NAME = "Supershot Netball";
 				REGISTER_APP_GROUPS = YES;
-				REVENUECAT_API_KEY = "";
+				REVENUECAT_API_KEY = appl_PhPnELcHTLyGZQTHSvoJfvLPQEi;
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";

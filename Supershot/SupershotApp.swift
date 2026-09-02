@@ -18,9 +18,13 @@ import RevenueCat
     }
     
     Purchases.configure(
-      withAPIKey: revenueCatAPIKey,
-      appUserID: "dev" as String //TODO: implement ids
+      withAPIKey: revenueCatAPIKey
     )
+    #if DEBUG
+    Purchases.shared.logIn("dev") { _,_,_  in
+      
+    }
+    #endif
     try! prepareDependencies {
       try $0.bootstrapDatabase()
 #if DEBUG
