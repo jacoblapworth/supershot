@@ -1,9 +1,8 @@
 import SwiftUI
 
 struct GamesHomeView: View {
-  var deletingGameID: Game.ID?
   var games: [GameListItem]
-  var loadingGameID: Game.ID?
+  var isResumingGame: Bool
   var showsProPromotion: Bool
   var deleteGameTapped: (Game.ID) -> Void
   var gameTapped: (GameListItem) -> Void
@@ -47,7 +46,7 @@ struct GamesHomeView: View {
             .alignmentGuide(.listRowSeparatorLeading, computeValue: { _ in
               return 0
             })
-            .disabled(loadingGameID != nil || deletingGameID != nil)
+            .disabled(isResumingGame)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
               Button("Delete", systemImage: "trash", role: .destructive) {
                 deleteGameTapped(game.id)
@@ -63,7 +62,7 @@ struct GamesHomeView: View {
         Button(action: newGameTapped) {
           Label("New game", systemImage: "plus")
         }
-        .disabled(loadingGameID != nil || deletingGameID != nil)
+        .disabled(isResumingGame)
       }
     }
   }
@@ -72,9 +71,8 @@ struct GamesHomeView: View {
 #Preview("Empty games") {
   NavigationStack {
     GamesHomeView(
-      deletingGameID: nil,
       games: [],
-      loadingGameID: nil,
+      isResumingGame: false,
       showsProPromotion: true,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },
@@ -87,9 +85,8 @@ struct GamesHomeView: View {
 #Preview("Game history") {
   NavigationStack {
     GamesHomeView(
-      deletingGameID: nil,
       games: .previewGames,
-      loadingGameID: nil,
+      isResumingGame: false,
       showsProPromotion: true,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },
@@ -102,9 +99,8 @@ struct GamesHomeView: View {
 #Preview("Loading game") {
   NavigationStack {
     GamesHomeView(
-      deletingGameID: nil,
       games: .previewGames,
-      loadingGameID: GameListItem.previewInProgress.id,
+      isResumingGame: true,
       showsProPromotion: false,
       deleteGameTapped: { _ in },
       gameTapped: { _ in },

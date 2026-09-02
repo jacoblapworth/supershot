@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import IssueReporting
 import SQLiteData
 
 @Reducer
@@ -14,6 +15,12 @@ extension AppPath.State: Equatable {}
 
 @Reducer
 struct AppFeature {
+  struct PendingGameResume: Equatable, Sendable {
+    let gameID: Game.ID
+    let requestID: UUID
+    let tab: Tab
+  }
+
   enum Tab: Equatable, Hashable, Sendable {
     case games
     case settings
@@ -23,13 +30,10 @@ struct AppFeature {
   @ObservableState
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
-    var deletingGameID: Game.ID?
-    var deletingTeamID: Team.ID?
     var hasCheckedPermissions = false
     var hasStartedSubscriptionObservation = false
-    var loadingGameID: Game.ID?
-    var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
+    var pendingGameResume: PendingGameResume?
     @Presents var permissionsOnboarding: PermissionsOnboardingFeature.State?
     var proAccess = SubscriptionEntitlement.unknown
     @Presents var proPaywall: ProPaywallFeature.State?
@@ -42,9 +46,7 @@ struct AppFeature {
     case alert(PresentationAction<Alert>)
     case deepLinkOpened(URL)
     case deleteGameButtonTapped(Game.ID)
-    case deleteGameResponse(Game.ID, Result<Void, any Error>)
     case deleteTeamButtonTapped(Team.ID)
-    case deleteTeamResponse(Team.ID, Result<Void, any Error>)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
     case newTeamButtonTapped
@@ -54,7 +56,7 @@ struct AppFeature {
     case proAccessUpdated(SubscriptionEntitlement)
     case proPaywall(PresentationAction<ProPaywallFeature.Action>)
     case proPromotionTapped
-    case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
+    case resumeGameResponse(PendingGameResume, Result<GameSnapshot, any Error>)
     case sceneBecameActive
     case selectedTabChanged(Tab)
     case task
@@ -68,11 +70,16 @@ struct AppFeature {
     case dismissButtonTapped
   }
 
+  private nonisolated enum CancelID: Hashable, Sendable {
+    case resumeGame
+  }
+
   @Dependency(\.alarmAuthorization) var alarmAuthorization
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
   @Dependency(\.locationClient) var locationClient
   @Dependency(\.proSubscription) var proSubscription
+  @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -114,59 +121,16 @@ struct AppFeature {
           )
         }
         state.alert = nil
-        state.loadingGameID = gameID
-        state.loadingGameTab = .games
         state.selectedTab = .games
-        return resumeGameEffect(gameID: gameID)
+        return resumeGame(gameID: gameID, tab: .games, state: &state)
 
       case let .deleteGameButtonTapped(gameID):
-        guard
-          state.deletingGameID == nil,
-          state.deletingTeamID == nil,
-          state.loadingGameID == nil
-        else {
-          return .none
-        }
-        state.alert = nil
-        state.deletingGameID = gameID
         return deleteGameEffect(gameID: gameID)
 
-      case let .deleteGameResponse(gameID, .success):
-        guard state.deletingGameID == gameID else { return .none }
-        state.deletingGameID = nil
-        return .none
-
-      case let .deleteGameResponse(gameID, .failure):
-        guard state.deletingGameID == gameID else { return .none }
-        state.deletingGameID = nil
-        state.alert = .gameDeletionFailed
-        return .none
-
       case let .deleteTeamButtonTapped(teamID):
-        guard
-          state.deletingGameID == nil,
-          state.deletingTeamID == nil,
-          state.loadingGameID == nil
-        else {
-          return .none
-        }
-        state.alert = nil
-        state.deletingTeamID = teamID
         return deleteTeamEffect(teamID: teamID)
 
-      case let .deleteTeamResponse(teamID, .success):
-        guard state.deletingTeamID == teamID else { return .none }
-        state.deletingTeamID = nil
-        return .none
-
-      case let .deleteTeamResponse(teamID, .failure):
-        guard state.deletingTeamID == teamID else { return .none }
-        state.deletingTeamID = nil
-        state.alert = .teamDeletionFailed
-        return .none
-
       case let .gameRowTapped(game):
-        guard state.deletingGameID == nil, state.deletingTeamID == nil else { return .none }
         guard !game.isCompleted else {
           state.path.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -175,9 +139,7 @@ struct AppFeature {
         }
 
         state.alert = nil
-        state.loadingGameID = game.id
-        state.loadingGameTab = .games
-        return resumeGameEffect(gameID: game.id)
+        return resumeGame(gameID: game.id, tab: .games, state: &state)
 
       case .newGameButtonTapped:
         state.path.append(.setup(NewGameFeature.State()))
@@ -228,28 +190,29 @@ struct AppFeature {
         state.proPaywall = ProPaywallFeature.State()
         return .none
 
-      case let .resumeGameResponse(gameID, .success(snapshot)):
-        guard state.loadingGameID == gameID else { return .none }
-        let tab = state.loadingGameTab ?? .games
-        state.loadingGameID = nil
-        state.loadingGameTab = nil
+      case let .resumeGameResponse(request, .success(snapshot)):
+        guard state.pendingGameResume == request else { return .none }
+        state.pendingGameResume = nil
 
         guard snapshot.game.endedAt == nil else {
           append(
-            .gameDetail(GameDetailFeature.State(gameID: gameID)),
-            to: tab,
+            .gameDetail(GameDetailFeature.State(gameID: request.gameID)),
+            to: request.tab,
             state: &state
           )
           return .none
         }
 
-        append(.scoring(ScoringFeature.State(snapshot: snapshot)), to: tab, state: &state)
+        append(
+          .scoring(ScoringFeature.State(snapshot: snapshot)),
+          to: request.tab,
+          state: &state
+        )
         return .none
 
-      case let .resumeGameResponse(gameID, .failure):
-        guard state.loadingGameID == gameID else { return .none }
-        state.loadingGameID = nil
-        state.loadingGameTab = nil
+      case let .resumeGameResponse(request, .failure):
+        guard state.pendingGameResume == request else { return .none }
+        state.pendingGameResume = nil
         state.alert = .gameUnavailable
         return .none
 
@@ -292,7 +255,6 @@ struct AppFeature {
         return .none
 
       case let .teamGameRowTapped(game):
-        guard state.deletingGameID == nil, state.deletingTeamID == nil else { return .none }
         guard !game.isCompleted else {
           state.teamsPath.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -301,9 +263,7 @@ struct AppFeature {
         }
 
         state.alert = nil
-        state.loadingGameID = game.id
-        state.loadingGameTab = .teams
-        return resumeGameEffect(gameID: game.id)
+        return resumeGame(gameID: game.id, tab: .teams, state: &state)
 
       case let .teamRowTapped(team):
         state.teamsPath.append(
@@ -324,13 +284,6 @@ struct AppFeature {
       case let .teamsPath(
         .element(id: id, action: .teamDetail(.delegate(.deleteTeamButtonTapped)))
       ):
-        guard
-          state.deletingGameID == nil,
-          state.deletingTeamID == nil,
-          state.loadingGameID == nil
-        else {
-          return .none
-        }
         guard case let .teamDetail(teamDetail) = state.teamsPath[id: id] else {
           return .none
         }
@@ -374,13 +327,28 @@ struct AppFeature {
     .ifLet(\.$alert, action: \.alert)
   }
 
-  private func resumeGameEffect(gameID: Game.ID) -> Effect<Action> {
+  private func resumeGame(
+    gameID: Game.ID,
+    tab: Tab,
+    state: inout State
+  ) -> Effect<Action> {
+    let request = PendingGameResume(
+      gameID: gameID,
+      requestID: uuid(),
+      tab: tab
+    )
+    state.pendingGameResume = request
+    return resumeGameEffect(request: request)
+  }
+
+  private func resumeGameEffect(request: PendingGameResume) -> Effect<Action> {
     .run { send in
       let result = await Result {
-        try await gameTimer.reconcile(gameID)
+        try await gameTimer.reconcile(request.gameID)
       }
-      await send(.resumeGameResponse(gameID, result))
+      await send(.resumeGameResponse(request, result))
     }
+    .cancellable(id: CancelID.resumeGame, cancelInFlight: true)
   }
 
   private func applyProAccess(
@@ -467,34 +435,34 @@ struct AppFeature {
   }
 
   private func deleteGameEffect(gameID: Game.ID) -> Effect<Action> {
-    .run { send in
-      await gameTimer.endPresentation(gameID)
-      let result = await Result {
+    .run { _ in
+      let didDelete = await withErrorReporting {
         try await database.write { db in
           try Game.find(gameID).delete().execute(db)
         }
+        return true
+      } ?? false
+      if didDelete {
+        await gameTimer.endPresentation(gameID)
       }
-      await send(.deleteGameResponse(gameID, result))
     }
   }
 
   private func deleteTeamEffect(teamID: Team.ID) -> Effect<Action> {
-    .run { send in
-      let result = await Result {
-        let gameIDs = try await database.read { db in
-          try Game
+    .run { _ in
+      let gameIDs = await withErrorReporting {
+        try await database.write { db in
+          let gameIDs = try Game
             .where { $0.teamAID.eq(teamID) || $0.teamBID.eq(teamID) }
             .fetchAll(db)
             .map(\.id)
-        }
-        for gameID in gameIDs {
-          await gameTimer.endPresentation(gameID)
-        }
-        try await database.write { db in
           try Team.find(teamID).delete().execute(db)
+          return gameIDs
         }
       }
-      await send(.deleteTeamResponse(teamID, result))
+      for gameID in gameIDs ?? [] {
+        await gameTimer.endPresentation(gameID)
+      }
     }
   }
 
@@ -514,30 +482,6 @@ extension AlertState where Action == AppFeature.Alert {
       }
     } message: {
       TextState("This unfinished game could not be opened.")
-    }
-  }
-
-  static var gameDeletionFailed: Self {
-    Self {
-      TextState("Couldn’t delete game")
-    } actions: {
-      ButtonState(role: .cancel, action: .dismissButtonTapped) {
-        TextState("OK")
-      }
-    } message: {
-      TextState("Try again.")
-    }
-  }
-
-  static var teamDeletionFailed: Self {
-    Self {
-      TextState("Couldn’t delete team")
-    } actions: {
-      ButtonState(role: .cancel, action: .dismissButtonTapped) {
-        TextState("OK")
-      }
-    } message: {
-      TextState("Try again.")
     }
   }
 }
