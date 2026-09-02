@@ -9,21 +9,23 @@ import Foundation
 import Dependencies
 import OSLog
 import SQLiteData
+import CasePaths
 
+/// Phase of a game
 nonisolated enum GamePhase: Equatable, Hashable, Sendable {
-  case quarter(number: Int, durationSeconds: Int)
-  case breakTime(afterQuarter: Int, durationSeconds: Int)
+  case period(number: Int, durationSeconds: Int)
+  case breakTime(afterPeriod: Int, durationSeconds: Int)
   
   var durationSeconds: Int {
     switch self {
-    case let .quarter(_, durationSeconds), let .breakTime(_, durationSeconds):
+    case let .period(_, durationSeconds), let .breakTime(_, durationSeconds):
       max(durationSeconds, 0)
     }
   }
   
-  var quarterNumber: Int {
+  var periodNumber: Int {
     switch self {
-    case let .quarter(number, _):
+    case let .period(number, _):
       number
     case let .breakTime(afterQuarter, _):
       afterQuarter
@@ -32,7 +34,7 @@ nonisolated enum GamePhase: Equatable, Hashable, Sendable {
   
   var isBreak: Bool {
     switch self {
-    case .quarter: false
+    case .period: false
     case .breakTime: true
     }
   }
@@ -74,6 +76,19 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   }
 }
 
+//@Table
+//struct Phase {
+//  let id: UUID
+//  var kind: Kind
+//  var duration: Int
+//  
+//  @Selection
+//  enum Kind {
+//    case period
+//    case rest
+//  }
+//}
+
 @Table
 nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
@@ -82,6 +97,7 @@ nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
   var durationSeconds: Int
   var breakAfterDurationSeconds: Int?
 
+  /// User facing number presentation
   var number: Int { position + 1 }
 }
 
@@ -90,7 +106,7 @@ nonisolated func gamePhases(for periods: [GamePeriod]) -> [GamePhase] {
     .sorted { ($0.position, $0.id) < ($1.position, $1.id) }
     .flatMap { period in
       var phases = [
-        GamePhase.quarter(
+        GamePhase.period(
           number: period.number,
           durationSeconds: period.durationSeconds
         )
@@ -98,7 +114,7 @@ nonisolated func gamePhases(for periods: [GamePeriod]) -> [GamePhase] {
       if let breakDurationSeconds = period.breakAfterDurationSeconds {
         phases.append(
           .breakTime(
-            afterQuarter: period.number,
+            afterPeriod: period.number,
             durationSeconds: breakDurationSeconds
           )
         )
@@ -158,7 +174,7 @@ nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   var centrePassTeamID: Team.ID? = nil
   var teamID: Team.ID
   var elapsedSeconds: Int
-  var points: Int
+  var points: Int = 1
   var createdAt: Date
 }
 

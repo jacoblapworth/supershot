@@ -1,23 +1,28 @@
 import Dependencies
 import RevenueCat
 
-nonisolated enum ProAccess: Equatable, Sendable {
+nonisolated enum SubscriptionEntitlement: Equatable, Sendable {
   case free
   case pro
   case unknown
 
-  static let entitlementIdentifier = "pro"
+  static let entitlementIdentifier = "Supershot Pro"
 
   init(customerInfo: CustomerInfo) {
+    print(customerInfo)
     self = customerInfo.entitlements[Self.entitlementIdentifier]?.isActive == true
       ? .pro
       : .free
   }
+  
+  var isPro: Bool {
+    self == .pro
+  }
 }
 
 nonisolated struct ProSubscriptionClient: Sendable {
-  var accessUpdates: @Sendable () -> AsyncStream<ProAccess>
-  var currentAccess: @Sendable () async throws -> ProAccess
+  var accessUpdates: @Sendable () -> AsyncStream<SubscriptionEntitlement>
+  var currentAccess: @Sendable () async throws -> SubscriptionEntitlement
 }
 
 extension DependencyValues {
@@ -45,7 +50,7 @@ nonisolated extension ProSubscriptionClient {
         AsyncStream { continuation in
           let task = Task {
             for await customerInfo in Purchases.shared.customerInfoStream {
-              continuation.yield(ProAccess(customerInfo: customerInfo))
+              continuation.yield(SubscriptionEntitlement(customerInfo: customerInfo))
             }
             continuation.finish()
           }
@@ -53,7 +58,7 @@ nonisolated extension ProSubscriptionClient {
         }
       },
       currentAccess: {
-        ProAccess(customerInfo: try await Purchases.shared.customerInfo())
+        SubscriptionEntitlement(customerInfo: try await Purchases.shared.customerInfo())
       }
     )
   }

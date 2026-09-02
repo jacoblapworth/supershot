@@ -16,6 +16,7 @@ extension AppPath.State: Equatable {}
 struct AppFeature {
   enum Tab: Equatable, Hashable, Sendable {
     case games
+    case settings
     case teams
   }
 
@@ -30,7 +31,7 @@ struct AppFeature {
     var loadingGameTab: Tab?
     var path = StackState<AppPath.State>()
     @Presents var permissionsOnboarding: PermissionsOnboardingFeature.State?
-    var proAccess = ProAccess.unknown
+    var proAccess = SubscriptionEntitlement.unknown
     @Presents var proPaywall: ProPaywallFeature.State?
     var selectedTab = Tab.games
     @Presents var teamEditor: TeamEditorFeature.State?
@@ -49,8 +50,8 @@ struct AppFeature {
     case newTeamButtonTapped
     case path(StackActionOf<AppPath>)
     case permissionsOnboarding(PresentationAction<PermissionsOnboardingFeature.Action>)
-    case proAccessLoaded(ProAccess)
-    case proAccessUpdated(ProAccess)
+    case proAccessLoaded(SubscriptionEntitlement)
+    case proAccessUpdated(SubscriptionEntitlement)
     case proPaywall(PresentationAction<ProPaywallFeature.Action>)
     case proPromotionTapped
     case resumeGameResponse(Game.ID, Result<GameSnapshot, any Error>)
@@ -269,7 +270,7 @@ struct AppFeature {
         state.hasStartedSubscriptionObservation = true
         let proSubscription = self.proSubscription
         return .run { send in
-          let initialAccess: ProAccess
+          let initialAccess: SubscriptionEntitlement
           do {
             initialAccess = try await proSubscription.currentAccess()
           } catch {
@@ -383,7 +384,7 @@ struct AppFeature {
   }
 
   private func applyProAccess(
-    _ access: ProAccess,
+    _ access: SubscriptionEntitlement,
     state: inout State
   ) -> Effect<Action> {
     state.proAccess = access
@@ -435,7 +436,7 @@ struct AppFeature {
       for gameID in gameIDs {
         await gameTimer.refreshActivity(gameID)
         if schedulesAlerts {
-          await gameTimer.scheduleAlert(gameID)
+          await gameTimer.scheduleAlarm(gameID)
         }
       }
     }
@@ -456,6 +457,9 @@ struct AppFeature {
   ) {
     switch tab {
     case .games:
+      state.path.append(destination)
+    case .settings:
+      state.selectedTab = .games
       state.path.append(destination)
     case .teams:
       state.teamsPath.append(destination)

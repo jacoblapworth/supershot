@@ -8,10 +8,14 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+internal import AlarmKit
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct AppFeatureTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct AppFeatureTests {
     @Test
     func failedSubscriptionLookupFallsBackToFree() async {
       let store = TestStore(initialState: AppFeature.State()) {
@@ -63,9 +67,9 @@ extension SupershotTestSuite {
       let seedStore = Self.makeAppScoringStore()
       let database = seedStore.dependencies.defaultDatabase
       let events = LockIsolated<[String]>([])
-      var timer = GameTimerClient.live(system: .noop)
+      var timer = GameTimerClient.live
       timer.refreshActivity = { _ in events.withValue { $0.append("activity") } }
-      timer.scheduleAlert = { _ in events.withValue { $0.append("alarm") } }
+      timer.scheduleAlarm = { _ in events.withValue { $0.append("alarm") } }
       timer.endPresentation = { _ in events.withValue { $0.append("cleanup") } }
 
       var state = AppFeature.State()
@@ -149,7 +153,7 @@ extension SupershotTestSuite {
       } withDependencies: {
         $0.date.now = Date(timeIntervalSince1970: 1_100)
         $0.defaultDatabase = database
-        $0.gameTimer = .live(system: .noop)
+        $0.gameTimer = .live
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
@@ -246,7 +250,7 @@ extension SupershotTestSuite {
       } withDependencies: {
         $0.date.now = Date(timeIntervalSince1970: 1_100)
         $0.defaultDatabase = database
-        $0.gameTimer = .live(system: .noop)
+        $0.gameTimer = .live
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
@@ -298,7 +302,7 @@ extension SupershotTestSuite {
         AppFeature()
       } withDependencies: {
         $0.defaultDatabase = seedStore.dependencies.defaultDatabase
-        $0.gameTimer = .live(system: .noop)
+        $0.gameTimer = .live
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
@@ -336,7 +340,7 @@ extension SupershotTestSuite {
         AppFeature()
       } withDependencies: {
         $0.defaultDatabase = database
-        $0.gameTimer = .live(system: Self.timerSystemClient(events: events))
+        $0.alarmClient = Self.timerSystemClient(events: events)
       }
 
       await store.send(.deleteGameButtonTapped(UUID(3))) {
@@ -388,7 +392,6 @@ extension SupershotTestSuite {
         AppFeature()
       } withDependencies: {
         $0.defaultDatabase = database
-        $0.gameTimer = .live(system: Self.timerSystemClient(events: events))
       }
 
       await store.send(.deleteTeamButtonTapped(UUID(1))) {
@@ -423,12 +426,7 @@ extension SupershotTestSuite {
         alarmUnavailable: Bool = false
       ) -> AlarmClient {
         AlarmClient(
-          cancelAlarm: { _, _ in
-            events.withValue { $0.append(.cancelAlarm) }
-          },
-          endActivity: { _ in
-            events.withValue { $0.append(.endActivity) }
-          },
+          authorise: { .authorized },
           scheduleAlarm: { snapshot, requestsAuthorization in
             events.withValue {
               $0.append(
@@ -444,6 +442,12 @@ extension SupershotTestSuite {
             events.withValue {
               $0.append(.activity(snapshot.game.timerEndsAt))
             }
+          },
+          cancelAlarm: { _, _ in
+            events.withValue { $0.append(.cancelAlarm) }
+          },
+          endActivity: { _ in
+            events.withValue { $0.append(.endActivity) }
           }
         )
       }

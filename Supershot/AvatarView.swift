@@ -4,7 +4,7 @@ public struct AvatarView: View {
   // MARK: - Public API
   public let label: String
 //  public var size: CGFloat
-  public var backgroundColor: Color?
+  public var color: Color?
   
   @Environment(\.controlSize) private var controlSize
   
@@ -20,15 +20,15 @@ public struct AvatarView: View {
   }
   
   // MARK: - Init
-  public init(label: String, backgroundColor: Color? = nil) {
+  public init(label: String, color: Color? = nil) {
     self.label = label
-    self.backgroundColor = backgroundColor
+    self.color = color
   }
   
   // MARK: - Body
   public var body: some View {
     let initials = AvatarView.makeInitials(from: label)
-    let bg = backgroundColor ?? AvatarView.color(for: label)
+    let bg = color ?? AvatarView.color(for: label)
     
     Text(initials)
       .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))

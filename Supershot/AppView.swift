@@ -54,6 +54,15 @@ struct AppView: View {
       Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
         teamsNavigation
       }
+      Tab("Settings", systemImage: "gearshape", value: AppFeature.Tab.settings) {
+        NavigationStack {
+          SettingsView(
+            proAccess: store.proAccess,
+            proAccessUpdated: { store.send(.proAccessUpdated($0)) },
+            proPromotionTapped: { store.send(.proPromotionTapped) }
+          )
+        }
+      }
     }
   }
 

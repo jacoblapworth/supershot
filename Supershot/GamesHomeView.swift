@@ -39,8 +39,7 @@ struct GamesHomeView: View {
               gameTapped(game)
             } label: {
               GameRow(
-                game: game,
-                isLoading: loadingGameID == game.id
+                game: game
               )
             }
             

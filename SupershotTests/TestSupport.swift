@@ -46,9 +46,10 @@ nonisolated func testGamePeriods(
   breakDurationSeconds: Int = 0,
   breakDurations: [Int]? = nil
 ) -> [GamePeriod] {
-  (0..<count).map { position in
+  @Dependency(\.uuid) var uuid
+  return (0..<count).map { position in
     GamePeriod(
-      id: testGamePeriodID(gameID: gameID, position: position),
+      id: uuid(),
       gameID: gameID,
       position: position,
       durationSeconds: durationSeconds,
