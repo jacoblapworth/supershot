@@ -51,6 +51,7 @@
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Supershot Netball.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Supershot Netball.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WhatToTest.en-NZ.txt"; sourceTree = "<group>"; };
 		12B00003301F000000000001 /* SupershotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SupershotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		12C000033020000000000001 /* SupershotWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SupershotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -80,7 +81,7 @@
 		12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AvatarView.swift,
+				UI/AvatarView.swift,
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
 		};
@@ -149,6 +150,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				1297BAC4304878FE0041BCEC /* TestFlight */,
 				000000000000000000000010 /* Supershot */,
 				12C000043020000000000001 /* SupershotShared */,
 				12C000053020000000000001 /* SupershotWidgets */,
@@ -166,6 +168,14 @@
 				12B00003301F000000000001 /* SupershotTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1297BAC4304878FE0041BCEC /* TestFlight */ = {
+			isa = PBXGroup;
+			children = (
+				1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */,
+			);
+			path = TestFlight;
 			sourceTree = "<group>";
 		};
 		12A4C60E301E295200094D7C /* Frameworks */ = {
@@ -504,8 +514,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot uses your location to record where games are played.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot saves the location of your games.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -551,9 +562,10 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
+				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot uses your location to record where games are played.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot saves the location of your games.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
