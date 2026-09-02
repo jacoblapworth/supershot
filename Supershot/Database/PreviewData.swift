@@ -1,4 +1,3 @@
-#if DEBUG
 import Dependencies
 import Foundation
 import GRDB
@@ -107,4 +106,3 @@ private func insertMockGoals(
     .execute(db)
   }
 }
-#endif

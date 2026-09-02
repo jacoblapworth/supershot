@@ -1,4 +1,3 @@
-#if DEBUG
 import ComposableArchitecture
 import Foundation
 
@@ -57,4 +56,3 @@ func scoringPreviewStore(
     ScoringFeature()
   }
 }
-#endif
