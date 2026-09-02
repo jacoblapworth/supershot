@@ -13,7 +13,7 @@ struct TeamLabelView: View {
   var alignment: HorizontalAlignment = .leading
   
   private var avatar: some View {
-    AvatarView(label: name)
+    AvatarView(label: name, color: color)
       .controlSize(.mini)
   }
   

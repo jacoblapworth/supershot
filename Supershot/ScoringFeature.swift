@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Sharing
 import SQLiteData
 
 @Reducer
@@ -29,6 +30,7 @@ struct ScoringFeature {
   @ObservableState
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
+    @Shared(.hapticsEnabled) var hapticsEnabled
     var canUndo = false
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
@@ -39,6 +41,7 @@ struct ScoringFeature {
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
     var periods: [GamePeriod]
+    @Shared(.soundEffectsEnabled) var soundEffectsEnabled
     let startedAt: Date
     var teamA: Team
     var teamAScore = 0
@@ -66,7 +69,7 @@ struct ScoringFeature {
       currentPhase.isBreak ? .breakTime : .quarter
     }
 
-    var period: Int { currentPhase.quarterNumber }
+    var period: Int { currentPhase.periodNumber }
     var isTimerRunning: Bool { countdown.isRunning }
     var currentDurationSeconds: Int { currentPhase.durationSeconds }
     var isPeriodComplete: Bool { elapsedSeconds >= currentDurationSeconds }
@@ -218,8 +221,11 @@ struct ScoringFeature {
       case let .goalResponse(.success(snapshot)):
         apply(snapshot, to: &state)
         state.goalFeedbackTrigger += 1
+        let soundEffect: Effect<Action> = state.soundEffectsEnabled
+          ? .run { _ in await soundEffects.playGoal() }
+          : .none
         return .merge(
-          .run { _ in await soundEffects.playGoal() },
+          soundEffect,
           refreshActivityEffect(gameID: state.gameID)
         )
 
@@ -285,7 +291,7 @@ struct ScoringFeature {
           state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
         else { return .none }
         let requestsAuthorization = state.currentPhaseIndex == 0 && state.elapsedSeconds == 0
-        state.timerEndsAt = GameTimerMath.endDate(
+        state.timerEndsAt = GameTimerClient.endDate(
           durationSeconds: state.currentDurationSeconds,
           elapsedSeconds: state.elapsedSeconds,
           now: now
@@ -466,14 +472,14 @@ struct ScoringFeature {
           let game = snapshot.game
           guard
             game.currentPhaseIndex == expectedPhaseIndex,
-            case let .quarter(_, durationSeconds) = snapshot.currentPhase,
+            case let .period(_, durationSeconds) = snapshot.currentPhase,
             let gamePeriodID = snapshot.currentPeriod?.id,
             let timerEndsAt = game.timerEndsAt,
             timerEndsAt > createdAt
           else {
             throw ScoringPersistenceError.goalUnavailable
           }
-          let elapsedSeconds = GameTimerMath.elapsedSeconds(
+          let elapsedSeconds = GameTimerClient.elapsedSeconds(
             durationSeconds: durationSeconds,
             persistedElapsedSeconds: game.elapsedSeconds,
             timerEndsAt: timerEndsAt,
@@ -634,7 +640,7 @@ struct ScoringFeature {
   }
 
   private func synchronizeTimer(state: inout State, now: Date) {
-    state.elapsedSeconds = GameTimerMath.elapsedSeconds(
+    state.elapsedSeconds = GameTimerClient.elapsedSeconds(
       durationSeconds: state.currentDurationSeconds,
       persistedElapsedSeconds: state.elapsedSeconds,
       timerEndsAt: state.timerEndsAt,

@@ -120,6 +120,16 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   }
 }
 
+/// A nonisolated, immutable snapshot of all state needed to reason about a single game at a point in time.
+///
+/// GameSnapshot aggregates the core records for a game so that higher–level
+/// queries, computed properties, and presentation logic can be performed without
+/// repeatedly hitting the database. It bundles the `Game` row itself, the
+/// participating `Team`s, all `GamePeriod`s (quarters and breaks), and every
+/// `Goal` that has been recorded for the game. From those inputs it derives
+/// useful, read‑only facts such as the current phase, current period, whether the
+/// final period has completed, and each team’s total score.
+///
 nonisolated struct GameSnapshot: Equatable, Sendable {
   let game: Game
   let goals: [Goal]
@@ -132,13 +142,13 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
   var currentPhase: GamePhase {
     let phases = phases
     guard !phases.isEmpty else {
-      return .quarter(number: 1, durationSeconds: 0)
+      return .period(number: 1, durationSeconds: 0)
     }
     return phases[min(max(game.currentPhaseIndex, 0), phases.count - 1)]
   }
 
   var currentPeriod: GamePeriod? {
-    periods.first { $0.number == currentPhase.quarterNumber }
+    periods.first { $0.number == currentPhase.periodNumber }
   }
 
   var isFinalPeriodComplete: Bool {
@@ -243,7 +253,7 @@ nonisolated struct GamesRequest: FetchKeyRequest {
           min(max(game.currentPhaseIndex, 0), phases.count - 1)
         ]
         return GameListItem(
-          currentQuarter: currentPhase.quarterNumber,
+          currentQuarter: currentPhase.periodNumber,
           endedAt: game.endedAt,
           id: game.id,
           periods: gamePeriods,
@@ -425,7 +435,7 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   let playedPeriod = snapshot.game.endedAt == nil
     ? min(
       max(
-        snapshot.currentPhase.quarterNumber,
+        snapshot.currentPhase.periodNumber,
         snapshot.goals.compactMap { periodsByID[$0.gamePeriodID]?.number }.max() ?? 1
       ),
       maximumPeriod

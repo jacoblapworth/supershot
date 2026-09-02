@@ -6,22 +6,25 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct ScoringFeatureTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct ScoringFeatureTests {
     @Test
     func gameTimelineIsFourQuartersWithBreaksBetweenThem() {
       expectNoDifference(
         gamePhases(for: Self.periods()),
         [
-          .quarter(number: 1, durationSeconds: 900),
-          .breakTime(afterQuarter: 1, durationSeconds: 120),
-          .quarter(number: 2, durationSeconds: 900),
-          .breakTime(afterQuarter: 2, durationSeconds: 300),
-          .quarter(number: 3, durationSeconds: 900),
-          .breakTime(afterQuarter: 3, durationSeconds: 120),
-          .quarter(number: 4, durationSeconds: 900),
+          .period(number: 1, durationSeconds: 900),
+          .breakTime(afterPeriod: 1, durationSeconds: 120),
+          .period(number: 2, durationSeconds: 900),
+          .breakTime(afterPeriod: 2, durationSeconds: 300),
+          .period(number: 3, durationSeconds: 900),
+          .breakTime(afterPeriod: 3, durationSeconds: 120),
+          .period(number: 4, durationSeconds: 900),
         ]
       )
     }
@@ -37,14 +40,14 @@ extension SupershotTestSuite {
         breakDurationSeconds: 600
       )
       let database = try await Self.seed(game, periods: periods)
-      let client = GameTimerClient.live(system: .noop)
+      let client = GameTimerClient.live
 
       expectNoDifference(
         gamePhases(for: periods),
         [
-          .quarter(number: 1, durationSeconds: 1_800),
-          .breakTime(afterQuarter: 1, durationSeconds: 600),
-          .quarter(number: 2, durationSeconds: 1_800),
+          .period(number: 1, durationSeconds: 1_800),
+          .breakTime(afterPeriod: 1, durationSeconds: 600),
+          .period(number: 2, durationSeconds: 1_800),
         ]
       )
 
@@ -64,7 +67,7 @@ extension SupershotTestSuite {
     @Test
     func skippingQuarterStartsItsBreakAndRequestsLastCentrePass() async throws {
       let database = try await Self.seed(Self.game())
-      let client = GameTimerClient.live(system: .noop)
+      let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
@@ -76,7 +79,7 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.currentPhaseIndex, 1)
       expectNoDifference(
         snapshot.currentPhase,
-        .breakTime(afterQuarter: 1, durationSeconds: 120)
+        .breakTime(afterPeriod: 1, durationSeconds: 120)
       )
       expectNoDifference(snapshot.game.elapsedSeconds, 0)
       expectNoDifference(
@@ -93,7 +96,7 @@ extension SupershotTestSuite {
       game.isAwaitingCentrePassConfirmation = true
       game.timerEndsAt = Date(timeIntervalSince1970: 1_100)
       let database = try await Self.seed(game)
-      let client = GameTimerClient.live(system: .noop)
+      let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
@@ -105,7 +108,7 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.currentPhaseIndex, 2)
       expectNoDifference(
         snapshot.currentPhase,
-        .quarter(number: 2, durationSeconds: 900)
+        .period(number: 2, durationSeconds: 900)
       )
       expectNoDifference(snapshot.game.countdown, GameCountdown())
       expectNoDifference(snapshot.game.isAwaitingCentrePassConfirmation, true)
@@ -120,13 +123,13 @@ extension SupershotTestSuite {
         breakDurations: [0, 300, 120]
       )
       let database = try await Self.seed(game, periods: periods)
-      let client = GameTimerClient.live(system: .noop)
 
       let snapshot = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
       } operation: {
-        try await client.skip(UUID(3), 0)
+        @Dependency(\.gameTimer) var client
+        return try await client.skip(UUID(3), 0)
       }
 
       expectNoDifference(snapshot.game.currentPhaseIndex, 2)
@@ -139,7 +142,7 @@ extension SupershotTestSuite {
       var game = Self.game()
       game.timerEndsAt = Date(timeIntervalSince1970: 1_050)
       let database = try await Self.seed(game)
-      let client = GameTimerClient.live(system: .noop)
+      let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_300)
@@ -202,6 +205,43 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func disabledGoalSoundsDoNotPlay() async {
+      let soundPlayed = LockIsolated(false)
+      var state = Self.state()
+      state.$soundEffectsEnabled.withLock { $0 = false }
+      var gameTimer = GameTimerClient.live
+      gameTimer.refreshActivity = { _ in }
+      let store = TestStore(initialState: state) {
+        ScoringFeature()
+      } withDependencies: {
+        $0.gameTimer = gameTimer
+        $0.soundEffects = SoundEffectsClient(
+          playGoal: { soundPlayed.setValue(true) }
+        )
+      }
+
+      await store.send(
+        .goalResponse(
+          .success(
+            ScoringFeature.ScoreSnapshot(
+              canUndo: true,
+              centrePassTeamID: UUID(2),
+              teamAScore: 1
+            )
+          )
+        )
+      ) {
+        $0.canUndo = true
+        $0.centrePassTeamID = UUID(2)
+        $0.goalFeedbackTrigger = 1
+        $0.teamAScore = 1
+      }
+      await store.finish()
+
+      expectNoDifference(soundPlayed.value, false)
+    }
+
+    @Test
     func pendingCentrePassBlocksNextQuarterStart() async {
       var quarter = Self.state()
       quarter.currentPhaseIndex = 2
@@ -219,7 +259,7 @@ extension SupershotTestSuite {
       var game = Self.game()
       game.currentPhaseIndex = 6
       let database = try await Self.seed(game)
-      let client = GameTimerClient.live(system: .noop)
+      let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)

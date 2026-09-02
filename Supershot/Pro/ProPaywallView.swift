@@ -8,10 +8,10 @@ struct ProPaywallView: View {
   var body: some View {
     PaywallView(displayCloseButton: true)
       .onPurchaseCompleted {
-        store.send(.customerInfoUpdated(ProAccess(customerInfo: $0)))
+        store.send(.customerInfoUpdated(SubscriptionEntitlement(customerInfo: $0)))
       }
       .onRestoreCompleted {
-        store.send(.customerInfoUpdated(ProAccess(customerInfo: $0)))
+        store.send(.customerInfoUpdated(SubscriptionEntitlement(customerInfo: $0)))
       }
   }
 }

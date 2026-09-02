@@ -1,4 +1,5 @@
 import Dependencies
+import DependenciesMacros
 import Foundation
 
 #if os(iOS)
@@ -7,22 +8,38 @@ import AlarmKit
 import SwiftUI
 #endif
 
+nonisolated struct AlarmClient: Sendable {
+  var authorise: @Sendable () async throws -> AlarmManager.AuthorizationState
+  var scheduleAlarm: @Sendable (GameSnapshot, Bool) async -> Bool
+  var updateActivity: @Sendable (GameSnapshot, Bool) async -> Void
+  var cancelAlarm: @Sendable (Game.ID, Int) async -> Void
+  var endActivity: @Sendable (Game.ID) async -> Void
+}
+
+extension DependencyValues {
+  @DependencyEntry(
+    liveValue: AlarmClient.live,
+    previewValue: AlarmClient.noop
+  )
+  nonisolated var alarmClient: AlarmClient = .noop
+}
+
+nonisolated extension AlarmClient {
+  static let noop = Self(
+    authorise: { .authorized },
+    scheduleAlarm: { _, _ in false },
+    updateActivity: { _, _ in },
+    cancelAlarm: { _, _ in },
+    endActivity: { _ in }
+  )
+}
+
 nonisolated extension AlarmClient {
   static var live: Self {
     #if os(iOS)
     Self(
-      cancelAlarm: { gameID, phaseCount in
-        cancelAlarms(for: gameID, phaseCount: phaseCount)
-      },
-      endActivity: { gameID in
-        for activity in Activity<GameActivityAttributes>.activities
-        where activity.attributes.gameID == gameID {
-          await activity.end(nil, dismissalPolicy: .immediate)
-        }
-      },
-      scheduleAlarm: {
-        snapshot,
-        requestsAuthorization in
+      authorise: { try await AlarmManager.shared.requestAuthorization() },
+      scheduleAlarm: { snapshot, requestsAuthorization in
         guard let timerEndsAt = snapshot.game.timerEndsAt else { return false }
         let manager = AlarmManager.shared
         var authorizationState = manager.authorizationState
@@ -122,6 +139,15 @@ nonisolated extension AlarmClient {
             pushType: nil
           )
         }
+      },
+      cancelAlarm: { gameID, phaseCount in
+        cancelAlarms(for: gameID, phaseCount: phaseCount)
+      },
+      endActivity: { gameID in
+        for activity in Activity<GameActivityAttributes>.activities
+              where activity.attributes.gameID == gameID {
+          await activity.end(nil, dismissalPolicy: .immediate)
+        }
       }
     )
     #else
@@ -143,7 +169,7 @@ private nonisolated struct ScheduledGameAlarm {
 
   var title: LocalizedStringResource {
     switch phase {
-    case let .quarter(number, _):
+    case let .period(number, _):
       "Quarter \(number) ended."
     case .breakTime:
       "Break ended."

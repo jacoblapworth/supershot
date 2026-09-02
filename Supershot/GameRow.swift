@@ -2,7 +2,6 @@ import SwiftUI
 
 struct GameRow: View {
   var game: GameListItem
-  var isLoading: Bool
   
   var body: some View {
     VStack(spacing: 8) {
@@ -29,26 +28,21 @@ struct GameRow: View {
         
         Spacer(minLength: 8)
         
-        if isLoading {
-          ProgressView()
-            .controlSize(.small)
-        } else {
-          Label {
-            if game.isCompleted {
-              Text("Final")
-            } else {
-              Text("Q\(game.currentQuarter)")
-            }
-          } icon: {
-            Image(systemName: game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
+        Label {
+          if game.isCompleted {
+            Text("Final")
+          } else {
+            Text("Q\(game.currentQuarter)")
           }
-          .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
+        } icon: {
+          Image(systemName: game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
         }
+        .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
+        
       }
       .font(.caption.weight(.semibold))
     }
-    .padding(.vertical, 8)
-    //    .contentShape(Rectangle())
+    //    .padding(.vertical, 8)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
   }
@@ -92,8 +86,6 @@ private struct TeamScore: View {
   
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
-      
-      
       team
       Text("\(score)")
         .font(.system(size: 62, weight: .bold))
@@ -112,24 +104,24 @@ private struct TeamScore: View {
 
 #Preview("List") {
   List {
-    GameRow(game: .previewInProgress, isLoading: false)
+    GameRow(game: .previewInProgress)
       .padding()
-    GameRow(game: .previewCompleted, isLoading: false)
+    GameRow(game: .previewCompleted)
       .padding()
   }
 }
 
 #Preview("In-progress game") {
-  GameRow(game: .previewInProgress, isLoading: false)
+  GameRow(game: .previewInProgress)
     .padding()
 }
 
 #Preview("Completed game row") {
-  GameRow(game: .previewCompleted, isLoading: false)
+  GameRow(game: .previewCompleted)
     .padding()
 }
 
 #Preview("Loading game row") {
-  GameRow(game: .previewInProgress, isLoading: true)
+  GameRow(game: .previewInProgress)
     .padding()
 }

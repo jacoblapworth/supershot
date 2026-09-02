@@ -95,10 +95,7 @@ struct TeamDetailView: View {
             Button {
               store.send(.gameRowTapped(game))
             } label: {
-              GameRow(
-                game: game,
-                isLoading: loadingGameID == game.id
-              )
+              GameRow(game: game)
             }
             .buttonStyle(.plain)
             .disabled(loadingGameID != nil || deletingGameID != nil)

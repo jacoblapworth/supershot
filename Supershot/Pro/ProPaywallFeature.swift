@@ -6,11 +6,11 @@ struct ProPaywallFeature {
   struct State: Equatable {}
 
   enum Action {
-    case customerInfoUpdated(ProAccess)
+    case customerInfoUpdated(SubscriptionEntitlement)
     case delegate(Delegate)
 
     enum Delegate {
-      case accessChanged(ProAccess)
+      case accessChanged(SubscriptionEntitlement)
     }
   }
 

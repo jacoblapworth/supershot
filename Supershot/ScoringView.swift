@@ -112,7 +112,11 @@ struct ScoringView: View {
     }
     .alert($store.scope(state: \.alert, action: \.alert))
     #if os(iOS)
-    .sensoryFeedback(.success, trigger: store.goalFeedbackTrigger)
+    .sensoryFeedback(
+      .success,
+      trigger: store.goalFeedbackTrigger,
+      condition: { _, _ in store.hapticsEnabled }
+    )
     #endif
     .task {
       guard scenePhase == .active else { return }

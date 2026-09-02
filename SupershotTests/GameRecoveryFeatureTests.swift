@@ -6,10 +6,13 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct GameRecoveryFeatureTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameRecoveryFeatureTests {
     @Test
     func multipleUnfinishedGamesRehydrateIndependentlyAndPaused() async throws {
       @Dependency(\.defaultDatabase) var database

@@ -6,11 +6,16 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct GameQueriesTests {
-    @Test
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameQueriesTests {
+    @Test(.dependencies {
+      $0.uuid = .incrementing
+    })
     func gameListIsNewestFirstWithScoresAndStatuses() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

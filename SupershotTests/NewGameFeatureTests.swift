@@ -21,6 +21,20 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func newGamesUseSavedDefaultTimes() {
+      @Dependency(\.defaultAppStorage) var defaults
+      defaults.set(12 * 60, forKey: "defaultPeriodDurationSeconds")
+      defaults.set(2 * 60, forKey: "defaultBreakDurationSeconds")
+
+      let state = NewGameFeature.State()
+
+      expectNoDifference(state.periodDuration.totalSeconds, 12 * 60)
+      expectNoDifference(state.firstBreakDuration.totalSeconds, 2 * 60)
+      expectNoDifference(state.halfTimeDuration.totalSeconds, 2 * 60)
+      expectNoDifference(state.secondBreakDuration.totalSeconds, 2 * 60)
+    }
+
+    @Test
     func pickerFiltersExcludedTeams() async {
       let ravens = Team(id: UUID(1), name: "Ravens")
       let swifts = Team(id: UUID(2), name: "Swifts")

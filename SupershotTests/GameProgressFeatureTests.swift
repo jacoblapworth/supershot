@@ -6,10 +6,13 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct GameProgressFeatureTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameProgressFeatureTests {
     @Test
     func resumableProgressFieldsHaveSafeDefaults() async throws {
       @Dependency(\.defaultDatabase) var database

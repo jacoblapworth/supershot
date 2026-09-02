@@ -1,4 +1,5 @@
 import Dependencies
+import DependenciesMacros
 
 #if os(iOS)
 import AlarmKit
@@ -16,24 +17,11 @@ nonisolated struct AlarmAuthorizationClient: Sendable {
 }
 
 extension DependencyValues {
-  nonisolated var alarmAuthorization: AlarmAuthorizationClient {
-    get { self[AlarmAuthorizationClientKey.self] }
-    set { self[AlarmAuthorizationClientKey.self] = newValue }
-  }
-}
-
-private nonisolated enum AlarmAuthorizationClientKey: DependencyKey {
-  static var liveValue: AlarmAuthorizationClient {
-    .live
-  }
-
-  static var previewValue: AlarmAuthorizationClient {
-    .authorized
-  }
-
-  static var testValue: AlarmAuthorizationClient {
-    .authorized
-  }
+  @DependencyEntry(
+    liveValue: AlarmAuthorizationClient.live,
+    previewValue: AlarmAuthorizationClient.authorized
+  )
+  var alarmAuthorization: AlarmAuthorizationClient = .authorized
 }
 
 nonisolated extension AlarmAuthorizationClient {

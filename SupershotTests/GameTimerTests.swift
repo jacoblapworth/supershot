@@ -9,16 +9,20 @@ import SQLiteData
 import Testing
 
 @testable import Supershot
+internal import AlarmKit
+import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct GameTimerTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameTimerTests {
     @Test
     func timerMathUsesCeilingAndClampsInvalidValues() {
       let now = Date(timeIntervalSince1970: 1_000)
 
       expectNoDifference(
-        GameTimerMath.elapsedSeconds(
+        GameTimerClient.elapsedSeconds(
           durationSeconds: 900,
           persistedElapsedSeconds: 0,
           timerEndsAt: now.addingTimeInterval(0.001),
@@ -27,7 +31,7 @@ extension SupershotTestSuite {
         899
       )
       expectNoDifference(
-        GameTimerMath.elapsedSeconds(
+        GameTimerClient.elapsedSeconds(
           durationSeconds: 900,
           persistedElapsedSeconds: 0,
           timerEndsAt: now,
@@ -36,7 +40,7 @@ extension SupershotTestSuite {
         900
       )
       expectNoDifference(
-        GameTimerMath.elapsedSeconds(
+        GameTimerClient.elapsedSeconds(
           durationSeconds: 900,
           persistedElapsedSeconds: 0,
           timerEndsAt: now.addingTimeInterval(10_000),
@@ -45,7 +49,7 @@ extension SupershotTestSuite {
         0
       )
       expectNoDifference(
-        GameTimerMath.elapsedSeconds(
+        GameTimerClient.elapsedSeconds(
           durationSeconds: 900,
           persistedElapsedSeconds: 1_000,
           timerEndsAt: nil,
@@ -54,7 +58,7 @@ extension SupershotTestSuite {
         900
       )
       expectNoDifference(
-        GameTimerMath.elapsedSeconds(
+        GameTimerClient.elapsedSeconds(
           durationSeconds: 900,
           persistedElapsedSeconds: -20,
           timerEndsAt: nil,
@@ -63,7 +67,7 @@ extension SupershotTestSuite {
         0
       )
       expectNoDifference(
-        GameTimerMath.endDate(
+        GameTimerClient.endDate(
           durationSeconds: 900,
           elapsedSeconds: 125,
           now: now
@@ -77,10 +81,7 @@ extension SupershotTestSuite {
       let seedStore = Self.makeScoringStore()
       let database = seedStore.dependencies.defaultDatabase
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let client = GameTimerClient.live(
-        system: Self.timerSystemClient(events: events),
-        proSubscription: .free
-      )
+      let client = GameTimerClient.live
 
       let update = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
@@ -103,12 +104,13 @@ extension SupershotTestSuite {
       let database = seedStore.dependencies.defaultDatabase
       let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_000))
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
 
       try await withDependencies {
         $0.date = DateGenerator { currentDate.value }
         $0.defaultDatabase = database
+        $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
+        @Dependency(\.gameTimer) var client
         let started = try await client.startOrResume(UUID(3), 0, true)
         expectNoDifference(started.snapshot.game.elapsedSeconds, 0)
         expectNoDifference(
@@ -179,13 +181,14 @@ extension SupershotTestSuite {
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
 
       let update = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
+        $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
-        try await client.startOrResume(UUID(3), 1, false)
+        @Dependency(\.gameTimer) var client
+        return try await client.startOrResume(UUID(3), 1, false)
       }
 
       expectNoDifference(update.alarmAuthorizationDenied, false)
@@ -211,12 +214,13 @@ extension SupershotTestSuite {
       let database = seedStore.dependencies.defaultDatabase
       let currentDate = LockIsolated(Date(timeIntervalSince1970: 1_100))
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let client = GameTimerClient.live(system: Self.timerSystemClient(events: events))
 
       try await withDependencies {
         $0.date = DateGenerator { currentDate.value }
         $0.defaultDatabase = database
+        $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
+        @Dependency(\.gameTimer) var client
         let duringBreak = try await client.reconcile(UUID(3))
         expectNoDifference(duringBreak.game.currentPhaseIndex, 1)
         expectNoDifference(duringBreak.game.isAwaitingCentrePassConfirmation, true)
@@ -245,15 +249,14 @@ extension SupershotTestSuite {
       let seedStore = Self.makeScoringStore()
       let database = seedStore.dependencies.defaultDatabase
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let client = GameTimerClient.live(
-        system: Self.timerSystemClient(events: events, alarmUnavailable: true)
-      )
 
       let update = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
+        $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
-        try await client.startOrResume(UUID(3), 0, true)
+        @Dependency(\.gameTimer) var client
+        return try await client.startOrResume(UUID(3), 0, true)
       }
 
       expectNoDifference(update.alarmAuthorizationDenied, true)
@@ -274,10 +277,7 @@ extension SupershotTestSuite {
     func alarmUnavailableExplanationAppearsOnlyOncePerScoringSession() async {
       let clock = TestClock()
       let events = LockIsolated<[TimerSystemEvent]>([])
-      let gameTimer = GameTimerClient.live(
-        system: Self.timerSystemClient(events: events, alarmUnavailable: true)
-      )
-      let store = Self.makeScoringStore(clock: clock, gameTimer: gameTimer)
+      let store = Self.makeScoringStore(clock: clock)
 
       await store.send(.startTimerButtonTapped) {
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
@@ -320,17 +320,12 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    private nonisolated static func timerSystemClient(
+    private nonisolated static func alarmClient(
         events: LockIsolated<[TimerSystemEvent]>,
         alarmUnavailable: Bool = false
       ) -> AlarmClient {
         AlarmClient(
-          cancelAlarm: { _, _ in
-            events.withValue { $0.append(.cancelAlarm) }
-          },
-          endActivity: { _ in
-            events.withValue { $0.append(.endActivity) }
-          },
+          authorise: { .authorized },
           scheduleAlarm: { snapshot, requestsAuthorization in
             events.withValue {
               $0.append(
@@ -346,6 +341,12 @@ extension SupershotTestSuite {
             events.withValue {
               $0.append(.activity(snapshot.game.timerEndsAt))
             }
+          },
+          cancelAlarm: { _, _ in
+            events.withValue { $0.append(.cancelAlarm) }
+          },
+          endActivity: { _ in
+            events.withValue { $0.append(.endActivity) }
           }
         )
       }

@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import Foundation
+import Sharing
 import SQLiteData
 
 
@@ -67,6 +68,17 @@ struct NewGameFeature {
     var periodDuration = DurationDraft(totalSeconds: 8 * 60)
     var rightTeam = TeamSelection(bibColorHex: TeamColorPalette.red)
     var secondBreakDuration = DurationDraft(totalSeconds: 1 * 60)
+
+    init() {
+      @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
+      @Shared(.defaultPeriodDurationSeconds) var defaultPeriodDurationSeconds
+
+      let defaultBreak = DurationDraft(totalSeconds: defaultBreakDurationSeconds)
+      firstBreakDuration = defaultBreak
+      halfTimeDuration = defaultBreak
+      periodDuration = DurationDraft(totalSeconds: defaultPeriodDurationSeconds)
+      secondBreakDuration = defaultBreak
+    }
 
     var breakDurationsAreValid: Bool {
       firstBreakDuration.totalSeconds != nil
