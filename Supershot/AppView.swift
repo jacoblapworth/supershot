@@ -6,10 +6,6 @@ import SwiftUI
 
 struct AppView: View {
   @Environment(\.scenePhase) private var scenePhase
-  @Fetch(GamesRequest(), animation: .default)
-  private var gamesResponse = GamesRequest.Value()
-  @Fetch(TeamsRequest(), animation: .default)
-  private var teamsResponse = TeamsRequest.Value()
   @Bindable var store: StoreOf<AppFeature>
 
   var body: some View {
@@ -27,7 +23,6 @@ struct AppView: View {
         tabs
       }
     }
-    .alert($store.scope(state: \.alert, action: \.alert))
     .sheet(item: $store.scope(state: \.proPaywall, action: \.proPaywall)) { paywallStore in
       ProPaywallView(store: paywallStore)
     }
@@ -49,97 +44,22 @@ struct AppView: View {
   private var tabs: some View {
     TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
       Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
-        gamesNavigation
+        GamesHomeView(
+          proAccess: store.proAccess,
+          store: store.scope(state: \.games, action: \.games)
+        )
       }
       Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
-        teamsNavigation
+        TeamsHomeView(
+          proAccess: store.proAccess,
+          store: store.scope(state: \.teams, action: \.teams)
+        )
       }
       Tab("Settings", systemImage: "gearshape", value: AppFeature.Tab.settings) {
-        NavigationStack {
-          SettingsView(
-            proAccess: store.proAccess,
-            proAccessUpdated: { store.send(.proAccessUpdated($0)) },
-            proPromotionTapped: { store.send(.proPromotionTapped) }
-          )
-        }
-      }
-    }
-  }
-
-  private var gamesNavigation: some View {
-    NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
-      GamesHomeView(
-        games: gamesResponse.games,
-        isResumingGame: store.pendingGameResume?.tab == .games,
-        showsProPromotion: store.proAccess == .free,
-        deleteGameTapped: { store.send(.deleteGameButtonTapped($0)) },
-        gameTapped: { store.send(.gameRowTapped($0)) },
-        newGameTapped: { store.send(.newGameButtonTapped) },
-        proPromotionTapped: { store.send(.proPromotionTapped) }
-      )
-    } destination: { pathStore in
-      switch pathStore.case {
-      case .gameDetail(let gameDetailStore):
-        GameDetailView(
-          store: gameDetailStore,
-          showsProPromotion: store.proAccess == .free,
-          proPromotionTapped: { store.send(.proPromotionTapped) }
+        SettingsView(
+          proAccess: store.proAccess,
+          store: store.scope(state: \.settings, action: \.settings)
         )
-      case .scoring(let scoringStore):
-        ScoringView(store: scoringStore)
-#if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
-#endif
-      case .setup(let setupStore):
-        NewGameView(store: setupStore)
-#if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
-#endif
-      case .teamDetail(let teamDetailStore):
-        TeamDetailView(
-          store: teamDetailStore,
-          isResumingGame: store.pendingGameResume?.tab == .games
-        )
-      }
-    }
-  }
-
-  private var teamsNavigation: some View {
-    NavigationStack(path: $store.scope(state: \.teamsPath, action: \.teamsPath)) {
-      TeamsHomeView(
-        deleteTeamTapped: { store.send(.deleteTeamButtonTapped($0)) },
-        newTeamTapped: { store.send(.newTeamButtonTapped) },
-        teamTapped: { store.send(.teamRowTapped($0)) },
-        teams: teamsResponse.teams
-      )
-    } destination: { pathStore in
-      switch pathStore.case {
-      case .gameDetail(let gameDetailStore):
-        GameDetailView(
-          store: gameDetailStore,
-          showsProPromotion: store.proAccess == .free,
-          proPromotionTapped: { store.send(.proPromotionTapped) }
-        )
-      case .scoring(let scoringStore):
-        ScoringView(store: scoringStore)
-#if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
-#endif
-      case .setup(let setupStore):
-        NewGameView(store: setupStore)
-#if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
-#endif
-      case .teamDetail(let teamDetailStore):
-        TeamDetailView(
-          store: teamDetailStore,
-          isResumingGame: store.pendingGameResume?.tab == .teams
-        )
-      }
-    }
-    .sheet(item: $store.scope(state: \.teamEditor, action: \.teamEditor)) { editorStore in
-      NavigationStack {
-        TeamEditorView(store: editorStore)
       }
     }
   }
