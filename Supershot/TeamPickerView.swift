@@ -51,9 +51,9 @@ struct TeamPickerView: View {
         ContentUnavailableView {
           Label("No matching teams", systemImage: "magnifyingglass")
         } description: {
-          Text("Create a team named “\(Team.trimmedName(store.searchText))”.")
+          Text("Create a team named “\(store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))”.")
         } actions: {
-          Button("Create “\(Team.trimmedName(store.searchText))”", systemImage: "plus.circle.fill") {
+          Button("Create “\(store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))”", systemImage: "plus.circle.fill") {
             store.send(.createTeamButtonTapped)
           }
           .buttonBorderShape(.roundedRectangle(radius: 12))

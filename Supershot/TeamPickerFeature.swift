@@ -19,7 +19,7 @@ struct TeamPickerFeature {
     }
 
     var filteredTeams: [Team] {
-      let query = Team.trimmedName(searchText)
+      let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
       return availableTeams.filter { team in
         !excludedTeamIDs.contains(team.id)
           && (query.isEmpty

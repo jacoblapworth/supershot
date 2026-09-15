@@ -45,7 +45,6 @@ nonisolated enum GamePhase: Equatable, Hashable, Sendable {
 nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   var elapsedSeconds = 0
   var endsAt: Date?
-  
   var isRunning: Bool { endsAt != nil }
 }
 
@@ -158,11 +157,7 @@ extension Team {
     self.colorHex = TeamColorPalette.isValid(colorHex)
     ? colorHex.uppercased()
     : TeamColorPalette.blue
-    self.name = Self.trimmedName(name)
-  }
-  
-  nonisolated static func trimmedName(_ name: String) -> String {
-    name.trimmingCharacters(in: .whitespacesAndNewlines)
+    self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 
@@ -178,20 +173,9 @@ nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   var createdAt: Date
 }
 
-@DatabaseFunction
-nonisolated func uuid() -> UUID {
-  @Dependency(\.uuid) var uuid
-  return uuid()
-}
-
 extension DependencyValues {
   nonisolated mutating func bootstrapDatabase() throws {
-    var configuration = Configuration()
-    configuration.prepareDatabase { db in
-      db.add(function: $uuid)
-    }
-    
-    let database = try SQLiteData.defaultDatabase(configuration: configuration)
+    let database = try SQLiteData.defaultDatabase()
     logger.debug(
       """
       DEBUG: ℹ️ App database:

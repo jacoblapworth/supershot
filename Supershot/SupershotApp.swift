@@ -4,6 +4,8 @@ import ComposableArchitecture
 import RevenueCat
 
 @main struct SupershotApp: App {
+  @Dependency(\.context) var context
+  
   init() {
     guard
       let revenueCatAPIKey = Bundle.main.object(
@@ -25,6 +27,10 @@ import RevenueCat
 #endif
     try! prepareDependencies {
       try $0.bootstrapDatabase()
+//      try $0.defaultSyncEngine = SyncEngine.init(
+//        for: $0.defaultDatabase,
+//        tables: Team.self, Game.self, GamePeriod.self, Goal.self
+//      )
 #if DEBUG
       try $0.defaultDatabase.seedDebugExamplesIfNeeded()
 #endif

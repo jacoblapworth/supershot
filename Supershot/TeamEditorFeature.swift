@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import SQLiteData
+import Foundation
 
 @Reducer
 struct TeamEditorFeature {
@@ -42,7 +43,7 @@ struct TeamEditorFeature {
     }
 
     var canSave: Bool {
-      let trimmedName = Team.trimmedName(name)
+      let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
       return !trimmedName.isEmpty
         && TeamColorPalette.isValid(colorHex)
         && !isSaving
@@ -94,7 +95,7 @@ struct TeamEditorFeature {
 
       case .saveButtonTapped:
         guard !state.isSaving else { return .none }
-        let name = Team.trimmedName(state.name)
+        let name = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
           state.errorMessage = "Enter a team name."
           return .none
