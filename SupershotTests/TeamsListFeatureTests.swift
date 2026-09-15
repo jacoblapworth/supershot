@@ -1,3 +1,4 @@
+import SwiftUI
 import CustomDump
 import Dependencies
 import Foundation
@@ -17,8 +18,8 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Team(id: UUID(-3), name: "Aces", colorHex: "#34C759")
           Game(
             id: UUID(-1),
@@ -45,19 +46,19 @@ extension SupershotTestSuite {
         value.teams,
         [
           TeamListItem(
-            colorHex: "#34C759",
+            color: Color(hex: "#34C759"),
             gameCount: 1,
             id: UUID(-3),
             name: "Aces"
           ),
           TeamListItem(
-            colorHex: TeamColorPalette.blue,
+            color: ColorPalette.blue,
             gameCount: 2,
             id: UUID(-1),
             name: "Ravens"
           ),
           TeamListItem(
-            colorHex: TeamColorPalette.red,
+            color: ColorPalette.red,
             gameCount: 1,
             id: UUID(-2),
             name: "Swifts"

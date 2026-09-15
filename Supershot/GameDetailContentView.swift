@@ -14,9 +14,9 @@ struct GameDetailContentView: View {
         }
         GameStatisticsView(detail: detail)
         GoalTimelineView(
-          teamABibColorHex: detail.teamABibColorHex,
+          teamABibColor: detail.teamABibColor,
           teamAName: detail.teamAName,
-          teamBBibColorHex: detail.teamBBibColorHex,
+          teamBBibColor: detail.teamBBibColor,
           teamBName: detail.teamBName,
           timeline: detail.goalTimeline
         )

@@ -1,3 +1,4 @@
+import SwiftUI
 import CustomDump
 import Dependencies
 import Foundation
@@ -24,8 +25,8 @@ extension SupershotTestSuite {
       let newerDate = Date(timeIntervalSince1970: 2_000)
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Team(id: UUID(-3), name: "Foxes", colorHex: "#34C759")
           Team(id: UUID(-4), name: "Owls", colorHex: "#FF9500")
           Game(
@@ -93,10 +94,10 @@ extension SupershotTestSuite {
               breakDurations: [240, 600, 240]
             ),
             startedAt: newerDate,
-            teamABibColorHex: TeamColorPalette.blue,
+            teamABibColor: ColorPalette.blue,
             teamAName: "Ravens",
             teamAScore: 2,
-            teamBBibColorHex: TeamColorPalette.red,
+            teamBBibColor: ColorPalette.red,
             teamBName: "Swifts",
             teamBScore: 0
           ),
@@ -105,10 +106,10 @@ extension SupershotTestSuite {
             id: UUID(-2),
             periods: testGamePeriods(gameID: UUID(-2), durationSeconds: 900),
             startedAt: olderDate,
-            teamABibColorHex: "#34C759",
+            teamABibColor: Color(hex: "#34C759"),
             teamAName: "Foxes",
             teamAScore: 0,
-            teamBBibColorHex: "#FF9500",
+            teamBBibColor: Color(hex: "#FF9500"),
             teamBName: "Owls",
             teamBScore: 1
           ),
@@ -126,8 +127,8 @@ extension SupershotTestSuite {
       let updatedSwiftsColorHex = "#FF2D55"
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
             startedAt: startedAt,
@@ -180,14 +181,14 @@ extension SupershotTestSuite {
         )
       }
 
-      expectNoDifference(values.0.games.map(\.teamABibColorHex), ["#30B0C7", "#AF52DE"])
-      expectNoDifference(values.0.games.map(\.teamBBibColorHex), ["#FF2D55", "#FF9500"])
-      expectNoDifference(values.1.teams.map(\.colorHex), ["#34C759", "#FF2D55"])
-      expectNoDifference(values.2.detail?.teamABibColorHex, "#AF52DE")
-      expectNoDifference(values.2.detail?.teamBBibColorHex, "#FF9500")
+      expectNoDifference(values.0.games.map(\.teamABibColor), [ColorPalette.teal, ColorPalette.purple])
+      expectNoDifference(values.0.games.map(\.teamBBibColor), [ColorPalette.pink, ColorPalette.orange])
+      expectNoDifference(values.1.teams.map(\.color), [ColorPalette.green, ColorPalette.pink])
+      expectNoDifference(values.2.detail?.teamABibColor, ColorPalette.purple)
+      expectNoDifference(values.2.detail?.teamBBibColor, ColorPalette.orange)
       expectNoDifference(
-        values.2.detail?.goalTimeline.quarters.last?.goals.first?.scoringTeamBibColorHex,
-        "#AF52DE"
+        values.2.detail?.goalTimeline.quarters.last?.goals.first?.scoringTeamBibColor,
+        ColorPalette.purple
       )
     }
   }

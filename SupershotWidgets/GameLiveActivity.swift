@@ -14,7 +14,7 @@ struct GameLiveActivity: Widget {
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
           teamScore(
-            colorHex: context.attributes.teamAColorHex,
+            color: context.attributes.teamAColor,
             centrePassDirection: .leading,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
             name: context.attributes.teamAName,
@@ -23,7 +23,7 @@ struct GameLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.trailing) {
           teamScore(
-            colorHex: context.attributes.teamBColorHex,
+            color: context.attributes.teamBColor,
             centrePassDirection: .trailing,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
             name: context.attributes.teamBName,
@@ -71,7 +71,7 @@ struct GameLiveActivity: Widget {
   }
 
   private func teamScore(
-    colorHex: String,
+    color: Color,
     centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
@@ -92,7 +92,7 @@ struct GameLiveActivity: Widget {
       Text("\(score)")
         .font(.title.bold())
         .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .foregroundStyle(color)
     }
     .frame(maxWidth: 92)
   }
@@ -124,7 +124,7 @@ private struct SmallActivityGameView: View {
     VStack(spacing: 6) {
       HStack(spacing: 8) {
         team(
-          colorHex: context.attributes.teamAColorHex,
+          color: context.attributes.teamAColor,
           centrePassDirection: .leading,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
@@ -134,7 +134,7 @@ private struct SmallActivityGameView: View {
           .font(.headline.weight(.bold))
           .foregroundStyle(.secondary)
         team(
-          colorHex: context.attributes.teamBColorHex,
+          color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
@@ -153,7 +153,7 @@ private struct SmallActivityGameView: View {
   }
 
   private func team(
-    colorHex: String,
+    color: Color,
     centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
@@ -176,7 +176,7 @@ private struct SmallActivityGameView: View {
       Text("\(score)")
         .font(.title2.bold())
         .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .foregroundStyle(color)
     }
     .frame(maxWidth: .infinity)
   }
@@ -189,7 +189,7 @@ private struct LockScreenGameView: View {
     VStack(spacing: 12) {
       HStack(alignment: .firstTextBaseline) {
         team(
-          colorHex: context.attributes.teamAColorHex,
+          color: context.attributes.teamAColor,
           centrePassDirection: .leading,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
@@ -200,7 +200,7 @@ private struct LockScreenGameView: View {
           .font(.title2.bold())
           .foregroundStyle(.secondary)
         team(
-          colorHex: context.attributes.teamBColorHex,
+          color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
@@ -231,7 +231,7 @@ private struct LockScreenGameView: View {
   }
 
   private func team(
-    colorHex: String,
+    color: Color,
     centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
@@ -254,7 +254,7 @@ private struct LockScreenGameView: View {
       Text("\(score)")
         .font(.system(.title, design: .rounded, weight: .bold))
         .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .foregroundStyle(color)
     }
     .frame(
       maxWidth: .infinity,
@@ -401,18 +401,6 @@ private extension GameActivityAttributes.ContentState {
 private extension Int {
   var formattedClock: String {
     "\(self / 60):\(String(format: "%02d", self % 60))"
-  }
-}
-
-private extension Color {
-  init(teamHex: String) {
-    let value = teamHex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-    let rgb = UInt64(value, radix: 16) ?? 0x007AFF
-    self.init(
-      red: Double((rgb >> 16) & 0xff) / 255,
-      green: Double((rgb >> 8) & 0xff) / 255,
-      blue: Double(rgb & 0xff) / 255
-    )
   }
 }
 

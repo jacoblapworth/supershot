@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
@@ -70,7 +71,7 @@ extension SupershotTestSuite {
 
     @Test
     func selectingTeamExcludesTheOpponent() async {
-      let ravens = Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
+      let ravens = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
       var state = NewGameFeature.State()
       state.rightTeam.team = ravens
       let store = TestStore(initialState: state) {
@@ -95,7 +96,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.picker(.presented(.delegate(.teamSelected(foxes))))) {
-        $0.leftTeam.bibColorHex = "#34C759"
+        $0.leftTeam.bibColor = Color(hex: "#34C759")
         $0.leftTeam.team = foxes
         $0.picker = nil
         $0.pickingTeamSide = nil
@@ -158,8 +159,8 @@ extension SupershotTestSuite {
 
     @Test
     func startGameUsesPersistedTeamsAndGameSpecificBibColors() async throws {
-      let ravens = Team(id: UUID(1), name: "Ravens", colorHex: TeamColorPalette.blue)
-      let swifts = Team(id: UUID(2), name: "Swifts", colorHex: TeamColorPalette.red)
+      let ravens = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+      let swifts = Team(id: UUID(2), name: "Swifts", colorHex: ColorPalette.red.hex())
       var state = NewGameFeature.State()
       state.firstCentrePass = .teamB
       state.location = .loaded(
@@ -169,9 +170,9 @@ extension SupershotTestSuite {
           pointOfInterestName: "Wembley Arena"
         )
       )
-      state.leftTeam = .init(bibColorHex: "#AF52DE")
+      state.leftTeam = .init(bibColor: Color(hex: "#AF52DE"))
       state.leftTeam.team = ravens
-      state.rightTeam = .init(bibColorHex: "#FF2D55")
+      state.rightTeam = .init(bibColor: Color(hex: "#FF2D55"))
       state.rightTeam.team = swifts
       let startedAt = Date(timeIntervalSince1970: 1_000)
       let store = TestStore(initialState: state) {

@@ -1,3 +1,4 @@
+import SwiftUI
 import CustomDump
 import Dependencies
 import Foundation
@@ -22,8 +23,8 @@ extension SupershotTestSuite {
       let newerDate = Date(timeIntervalSince1970: 2_000)
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Team(id: UUID(-3), name: "Aces", colorHex: "#34C759")
           Game(
             id: UUID(-1),
@@ -39,7 +40,7 @@ extension SupershotTestSuite {
             teamAID: UUID(-3),
             teamABibColorHex: "#34C759",
             teamBID: UUID(-1),
-            teamBBibColorHex: TeamColorPalette.blue
+            teamBBibColorHex: ColorPalette.blue.hex()
           )
           Game(
             id: UUID(-3),
@@ -91,10 +92,10 @@ extension SupershotTestSuite {
               id: UUID(-2),
               periods: testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
               startedAt: newerDate,
-              teamABibColorHex: "#34C759",
+              teamABibColor: Color(hex: "#34C759"),
               teamAName: "Aces",
               teamAScore: 1,
-              teamBBibColorHex: TeamColorPalette.blue,
+              teamBBibColor: ColorPalette.blue,
               teamBName: "Ravens",
               teamBScore: 0
             ),
@@ -103,10 +104,10 @@ extension SupershotTestSuite {
               id: UUID(-1),
               periods: testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
               startedAt: olderDate,
-              teamABibColorHex: TeamColorPalette.blue,
+              teamABibColor: ColorPalette.blue,
               teamAName: "Ravens",
               teamAScore: 2,
-              teamBBibColorHex: TeamColorPalette.red,
+              teamBBibColor: ColorPalette.red,
               teamBName: "Swifts",
               teamBScore: 0
             ),
@@ -114,7 +115,7 @@ extension SupershotTestSuite {
           team: Team(
             id: UUID(-1),
             name: "Ravens",
-            colorHex: TeamColorPalette.blue
+            colorHex: ColorPalette.blue.hex()
           )
         )
       )

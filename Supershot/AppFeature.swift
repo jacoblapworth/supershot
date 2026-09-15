@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import Foundation
 import SQLiteData
@@ -250,13 +251,13 @@ extension ScoringFeature.State {
       startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(
         id: snapshot.teamA.id,
-        bibColorHex: snapshot.game.teamABibColorHex,
+        bibColor: snapshot.game.teamABibColor,
         name: snapshot.teamA.name
       ),
       teamAScore: snapshot.teamAScore,
       teamB: ScoringFeature.Team(
         id: snapshot.teamB.id,
-        bibColorHex: snapshot.game.teamBBibColorHex,
+        bibColor: snapshot.game.teamBBibColor,
         name: snapshot.teamB.name
       ),
       teamBScore: snapshot.teamBScore,

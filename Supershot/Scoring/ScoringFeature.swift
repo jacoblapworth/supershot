@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import Foundation
 import Sharing
@@ -23,7 +24,7 @@ struct ScoringFeature {
 
   struct Team: Equatable, Identifiable, Sendable {
     let id: UUID
-    var bibColorHex = TeamColorPalette.blue
+    var bibColor = ColorPalette.blue
     var name: String
   }
 

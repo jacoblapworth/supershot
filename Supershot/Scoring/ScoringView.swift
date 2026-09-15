@@ -42,8 +42,7 @@ struct ScoringView: View {
             teamA: store.teamA,
             teamAScore: store.teamAScore,
             teamB: store.teamB,
-            teamBScore: store.teamBScore,
-            goalTapped: { store.send(.goalButtonTapped($0)) }
+            teamBScore: store.teamBScore
           )
           
           if store.isShowingLastCentrePassBanner {
@@ -80,81 +79,52 @@ struct ScoringView: View {
           )
           
           GoalTimelineView(
-            teamABibColorHex: store.teamA.bibColorHex,
+            teamABibColor: store.teamA.bibColor,
             teamAName: store.teamA.name,
-            teamBBibColorHex: store.teamB.bibColorHex,
+            teamBBibColor: store.teamB.bibColor,
             teamBName: store.teamB.name,
             timeline: timelineResponse.timeline
           )
         }
         .padding()
       }
-      .safeAreaBar(edge: .bottom, content: {
+      VStack {
+        Spacer()
         HStack(spacing: 8) {
-          Button(action: {}) {
+          Button(action: { store.send(.goalButtonTapped(store.teamA.id))
+          }) {
             Label("Goal", systemImage: "plus.circle.fill")
           }
-          Button(action: {}) {
+          Button(action: { store.send(.goalButtonTapped(store.teamB.id))
+          }) {
             Label("Goal", systemImage: "plus.circle.fill")
           }
         }
         .buttonSizing(.flexible)
         .buttonStyle(.myAppPrimaryButton)
-        .padding(8)
+        .padding(16)
         .frame(maxWidth: .infinity)
-        .glassEffect(in: .containerRelative)
+        .padding(.vertical, 30)
+//        .glassEffect(.regular, in: .containerRelative)
+        .glassEffect(.regular, in: ConcentricRectangle(
+                      corners: .concentric,
+                      isUniform: true
+                    )
+        )
+
 //        .background {
 //          ConcentricRectangle(
 //            corners: .concentric,
-//            isUniform: true
+//            isUniform: false
 //          )
-//          .ignoresSafeArea()
 //          .glassEffect()
+//          .ignoresSafeArea()
+        
 //        }
+      
         .padding(8)
-      })
-//      VStack {
-//        Spacer()
-//        HStack(spacing: 8) {
-//          Button(action: {}) {
-//            Label("Goal", systemImage: "plus.circle.fill")
-//          }
-//          Button(action: {}) {
-//            Label("Goal", systemImage: "plus.circle.fill")
-//          }
-//        }
-//        .buttonSizing(.flexible)
-//        .buttonStyle(.myAppPrimaryButton)
-//        .padding(8)
-//        .frame(maxWidth: .infinity)
-//        //        .background(content: {
-//        //          ConcentricRectangle(
-//        //            corners: .concentric,
-//        //            isUniform: true)
-//        //          .fill(.thinMaterial)
-//        //        })
-//        //        .cornerRadius(24)
-//        //        .background(.thinMaterial)
-//        //        .glassEffect(.regular, in: .containerRelative)
-//        .background(content: {
-//          ConcentricRectangle(
-//            corners: .concentric,
-//            isUniform: true
-//          )
-//  
-//          .ignoresSafeArea()
-//          .glassEffect()
-//        })
-//        //        .background(in:
-//        //                      ConcentricRectangle(
-//        //                        corners: .concentric,
-//        //                        isUniform: true
-//        //                      ),
-//        //                    fillStyle: )
-//        
-//        .padding(8)
-//      }
-//      .ignoresSafeArea()
+      }
+      .ignoresSafeArea()
     }
     .navigationBarBackButtonHidden()
     .toolbar {

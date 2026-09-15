@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
@@ -13,7 +14,7 @@ extension SupershotTestSuite {
   @Suite struct TeamEditorFeatureTests {
     @Test
     func teamEditorTrimsAndPersistsNameAndColor() async throws {
-      let team = Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
+      let team = Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
       let store = TestStore(initialState: TeamEditorFeature.State(team: team)) {
         TeamEditorFeature()
       } withDependencies: {
@@ -27,8 +28,8 @@ extension SupershotTestSuite {
       await store.send(.binding(.set(\.name, "  Falcons  "))) {
         $0.name = "  Falcons  "
       }
-      await store.send(.paletteColorButtonTapped("#34c759")) {
-        $0.colorHex = "#34C759"
+      await store.send(.binding(.set(\.color, Color(hex: "#34c759")))) {
+        $0.color = Color(hex: "#34C759")
       }
       await store.send(.saveButtonTapped) {
         $0.errorMessage = nil
@@ -68,8 +69,8 @@ extension SupershotTestSuite {
       await store.send(.binding(.set(\.name, "  Falcons  "))) {
         $0.name = "  Falcons  "
       }
-      await store.send(.paletteColorButtonTapped("#34c759")) {
-        $0.colorHex = "#34C759"
+      await store.send(.binding(.set(\.color, Color(hex: "#34c759")))) {
+        $0.color = Color(hex: "#34C759")
       }
       await store.send(.saveButtonTapped) {
         $0.errorMessage = nil

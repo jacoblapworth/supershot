@@ -7,7 +7,6 @@ struct ScoringScoreboardView: View {
   var teamAScore: Int
   var teamB: ScoringFeature.Team
   var teamBScore: Int
-  var goalTapped: (UUID) -> Void
 
   var body: some View {
     HStack(spacing: 12) {
@@ -26,21 +25,19 @@ struct ScoringScoreboardView: View {
     score: Int
   ) -> some View {
     ScoreButton(
-      colorHex: team.bibColorHex,
+      color: team.bibColor,
       isDisabled: isDisabled,
       name: team.name,
-      score: score,
-      action: { goalTapped(team.id) }
+      score: score
     )
   }
 }
 
 private struct ScoreButton: View {
-  var colorHex: String
+  var color: Color
   var isDisabled: Bool
   var name: String
   var score: Int
-  var action: () -> Void
 
   var body: some View {
     VStack {
@@ -59,20 +56,14 @@ private struct ScoreButton: View {
         }
         .frame(maxWidth: .infinity, minHeight: 180)
         .background(
-          Color(teamHex: colorHex).opacity(0.12),
+          color.opacity(0.12),
           in: RoundedRectangle(cornerRadius: 12)
         )
         .overlay {
           RoundedRectangle(cornerRadius: 12)
-            .stroke(Color(teamHex: colorHex), lineWidth: 2)
+            .stroke(color, lineWidth: 2)
         }
       .opacity(isDisabled ? 0.65 : 1)
-      Button(action: action) {
-        Label("Goal", systemImage: "plus.circle.fill")
-      }
-      .buttonStyle(.myAppPrimaryButton)
-      .buttonSizing(.flexible)
-      .disabled(isDisabled)
     }
   }
 }
@@ -84,8 +75,7 @@ private struct ScoreButton: View {
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
-    teamBScore: 16,
-    goalTapped: { _ in }
+    teamBScore: 16
   )
   .padding()
 }
@@ -97,8 +87,7 @@ private struct ScoreButton: View {
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
-    teamBScore: 16,
-    goalTapped: { _ in }
+    teamBScore: 16
   )
   .padding()
 }

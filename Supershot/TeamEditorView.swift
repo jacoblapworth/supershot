@@ -12,10 +12,9 @@ struct TeamEditorView: View {
           .textFieldStyle(.roundedBorder)
           .focused($focus, equals: .name)
           .disabled(store.isSaving)
-        TeamColorPicker(
-          colorHex: $store.colorHex,
-          title: "Team color",
-          paletteColorTapped: { store.send(.paletteColorButtonTapped($0)) }
+        PaletteColorPicker(
+          color: $store.color,
+          title: "Team color"
         )
           .disabled(store.isSaving)
       }

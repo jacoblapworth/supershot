@@ -84,7 +84,7 @@ private struct TeamRow: View {
   var body: some View {
     HStack(spacing: 14) {
       Circle()
-        .fill(Color(teamHex: team.colorHex))
+        .fill(team.color)
         .frame(width: 22, height: 22)
         .accessibilityHidden(true)
 

@@ -16,7 +16,7 @@ struct GameOverviewView: View {
       HStack(alignment: .top, spacing: 16) {
         GameDetailScore(
           alignment: .leading,
-          colorHex: detail.teamABibColorHex,
+          color: detail.teamABibColor,
           name: detail.teamAName,
           score: detail.teamAScore
         )
@@ -28,7 +28,7 @@ struct GameOverviewView: View {
 
         GameDetailScore(
           alignment: .trailing,
-          colorHex: detail.teamBBibColorHex,
+          color: detail.teamBBibColor,
           name: detail.teamBName,
           score: detail.teamBScore
         )
@@ -36,9 +36,9 @@ struct GameOverviewView: View {
 
       QuarterScoreBreakdown(
         quarters: detail.goalTimeline.quarters,
-        teamABibColorHex: detail.teamABibColorHex,
+        teamABibColor: detail.teamABibColor,
         teamAName: detail.teamAName,
-        teamBBibColorHex: detail.teamBBibColorHex,
+        teamBBibColor: detail.teamBBibColor,
         teamBName: detail.teamBName
       )
 
@@ -66,9 +66,9 @@ struct GameOverviewView: View {
 
 private struct QuarterScoreBreakdown: View {
   var quarters: [GoalTimelineQuarter]
-  var teamABibColorHex: String
+  var teamABibColor: Color
   var teamAName: String
-  var teamBBibColorHex: String
+  var teamBBibColor: Color
   var teamBName: String
 
   var body: some View {
@@ -79,10 +79,10 @@ private struct QuarterScoreBreakdown: View {
 
       VStack(spacing: 6) {
         HStack(spacing: 12) {
-          teamName(teamAName, colorHex: teamABibColorHex, alignment: .leading)
+          teamName(teamAName, color: teamABibColor, alignment: .leading)
           Text("Quarter")
             .frame(width: 64)
-          teamName(teamBName, colorHex: teamBBibColorHex, alignment: .trailing)
+          teamName(teamBName, color: teamBBibColor, alignment: .trailing)
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
@@ -113,7 +113,7 @@ private struct QuarterScoreBreakdown: View {
 
   private func teamName(
     _ name: String,
-    colorHex: String,
+    color: Color,
     alignment: Alignment
   ) -> some View {
     HStack(spacing: 5) {
@@ -121,7 +121,7 @@ private struct QuarterScoreBreakdown: View {
         Spacer(minLength: 0)
       }
       Circle()
-        .fill(Color(teamHex: colorHex))
+        .fill(color)
         .frame(width: 8, height: 8)
         .accessibilityHidden(true)
       Text(name)
@@ -136,14 +136,14 @@ private struct QuarterScoreBreakdown: View {
 
 private struct GameDetailScore: View {
   var alignment: HorizontalAlignment
-  var colorHex: String
+  var color: Color
   var name: String
   var score: Int
 
   var body: some View {
     VStack(alignment: alignment, spacing: 8) {
       Capsule()
-        .fill(Color(teamHex: colorHex))
+        .fill(color)
         .frame(width: 36, height: 6)
         .accessibilityHidden(true)
 

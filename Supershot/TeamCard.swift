@@ -17,7 +17,7 @@ struct TeamCard: View {
     VStack(spacing: 10) {
       if let team {
         Circle()
-          .fill(Color(teamHex: team.colorHex))
+          .fill(team.color)
           .frame(width: 30, height: 30)
           .overlay {
             Circle().stroke(.white.opacity(0.8), lineWidth: 2)
@@ -50,12 +50,12 @@ struct TeamCard: View {
     .frame(maxWidth: .infinity, minHeight: 150)
     .padding(10)
     .glassEffect({
-      let material: Glass = (team?.colorHex).map { .regular.tint(Color(teamHex: $0)) } ?? .regular
+      let material: Glass = (team?.color).map { .regular.tint($0) } ?? .regular
       return material
     }(), in: RoundedRectangle(cornerRadius: 12))
 //    .background(
 //      //      .regularMaterial,
-//      //      (team?.colorHex).map { Color(teamHex: $0).opacity(0.09) } ?? Color(UIColor.secondarySystemBackground),
+//      //      (team?.color).map { $0.opacity(0.09) } ?? Color(UIColor.secondarySystemBackground),
 //      in: RoundedRectangle(cornerRadius: 12)
 //    )
 //    .glassEffect(in: RoundedRectangle(cornerRadius: 12))

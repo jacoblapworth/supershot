@@ -84,7 +84,7 @@ nonisolated extension AlarmClient {
               secondaryButton: AlarmButton(
                 text: "Continue",
                 textColor: .white,
-                systemImageName: "play.fill"
+                systemImageName: "arrow.forward"
               ),
               secondaryButtonBehavior: .custom
             )
@@ -100,7 +100,10 @@ nonisolated extension AlarmClient {
           let configuration = AlarmManager.AlarmConfiguration.alarm(
             schedule: .fixed(alarm.date),
             attributes: attributes,
-            secondaryIntent: OpenGameIntent(gameID: snapshot.game.id)
+            secondaryIntent: OpenGameIntent(
+              gameID: snapshot.game.id,
+              alarmID: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex)
+            )
           )
           do {
             _ = try await manager.schedule(

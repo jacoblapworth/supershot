@@ -246,9 +246,9 @@ struct GoalProgressChartView: View {
   private func color(for team: GoalProgressTeam) -> Color {
     switch team {
     case .teamA:
-      Color(teamHex: detail.teamABibColorHex)
+      detail.teamABibColor
     case .teamB:
-      Color(teamHex: detail.teamBBibColorHex)
+      detail.teamBBibColor
     }
   }
 
@@ -289,8 +289,8 @@ private struct GoalProgressLegend: View {
 
   var body: some View {
     HStack(spacing: 16) {
-      label(detail.teamAName, colorHex: detail.teamABibColorHex)
-      label(detail.teamBName, colorHex: detail.teamBBibColorHex)
+      label(detail.teamAName, color: detail.teamABibColor)
+      label(detail.teamBName, color: detail.teamBBibColor)
     }
     .font(.caption.weight(.medium))
     .accessibilityElement(children: .ignore)
@@ -300,10 +300,10 @@ private struct GoalProgressLegend: View {
     )
   }
 
-  private func label(_ name: String, colorHex: String) -> some View {
+  private func label(_ name: String, color: Color) -> some View {
     HStack(spacing: 5) {
       Circle()
-        .fill(Color(teamHex: colorHex))
+        .fill(color)
         .frame(width: 8, height: 8)
         .accessibilityHidden(true)
       Text(name)

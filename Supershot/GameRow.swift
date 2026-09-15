@@ -8,14 +8,14 @@ struct GameRow: View {
       HStack(alignment: .center, spacing: 12) {
         TeamScore(
           alignment: .leading,
-          colorHex: game.teamABibColorHex,
+          color: game.teamABibColor,
           name: game.teamAName,
           score: game.teamAScore,
           scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
         )
         TeamScore(
           alignment: .trailing,
-          colorHex: game.teamBBibColorHex,
+          color: game.teamBBibColor,
           name: game.teamBName,
           score: game.teamBScore,
           scoreColor: scoreColor(for: game.teamBScore, opponentScore: game.teamAScore)
@@ -42,7 +42,14 @@ struct GameRow: View {
       }
       .font(.caption.weight(.semibold))
     }
-    //    .padding(.vertical, 8)
+    .padding()
+    .background {
+      LinearGradient(colors: [
+        game.teamABibColor,
+        game.teamBBibColor
+      ], startPoint: .leading, endPoint: .trailing)
+    }
+    .contentShape(.rect)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
   }
@@ -62,7 +69,7 @@ struct GameRow: View {
 
 private struct TeamScore: View {
   var alignment: HorizontalAlignment
-  var colorHex: String
+  var color: Color
   var name: String
   var score: Int
   var scoreColor: Color

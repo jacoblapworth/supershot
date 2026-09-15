@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import DependenciesTestSupport
@@ -39,7 +40,7 @@ extension SupershotTestSuite {
     @Test
     func teamSelectionAndCreationStayWithinTeamsTab() async {
       let team = TeamListItem(
-        colorHex: TeamColorPalette.blue,
+        color: ColorPalette.blue,
         gameCount: 2,
         id: UUID(1),
         name: "Ravens"

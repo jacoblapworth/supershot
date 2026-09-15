@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
@@ -294,12 +295,12 @@ extension SupershotTestSuite {
           startedAt: Date(timeIntervalSince1970: 500),
           teamA: ScoringFeature.Team(
             id: UUID(1),
-            bibColorHex: TeamColorPalette.blue,
+            bibColor: ColorPalette.blue,
             name: "Ravens"
           ),
           teamB: ScoringFeature.Team(
             id: UUID(2),
-            bibColorHex: TeamColorPalette.red,
+            bibColor: ColorPalette.red,
             name: "Swifts"
           )
         )

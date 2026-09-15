@@ -69,7 +69,9 @@ struct GamesHomeView: View {
             } label: {
               GameRow(game: game)
             }
+            
             .buttonStyle(.plain)
+            .listRowInsets(.all, 0)
             .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .disabled(store.pendingGameResume != nil)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {

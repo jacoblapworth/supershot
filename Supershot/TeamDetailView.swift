@@ -63,7 +63,7 @@ struct TeamDetailView: View {
       Section {
         HStack(spacing: 16) {
           Circle()
-            .fill(Color(teamHex: team.colorHex))
+            .fill(team.color)
             .frame(width: 44, height: 44)
             .accessibilityHidden(true)
 

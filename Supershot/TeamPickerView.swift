@@ -105,7 +105,7 @@ private struct TeamSelectionRow: View {
     Button(action: selected) {
       HStack(spacing: 12) {
         Circle()
-          .fill(Color(teamHex: team.colorHex))
+          .fill(team.color)
           .frame(width: 18, height: 18)
           .accessibilityHidden(true)
         Text(team.name)

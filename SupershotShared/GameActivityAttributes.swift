@@ -1,6 +1,7 @@
 #if os(iOS)
 import ActivityKit
 import Foundation
+import SwiftUI
 
 nonisolated struct GameActivityAttributes: ActivityAttributes {
   nonisolated struct ContentState: Codable, Hashable, Sendable {
@@ -20,5 +21,10 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
   var teamBID: UUID
   var teamBColorHex: String
   var teamBName: String
+}
+
+nonisolated extension GameActivityAttributes {
+  var teamAColor: Color { Color(hex: teamAColorHex) }
+  var teamBColor: Color { Color(hex: teamBColorHex) }
 }
 #endif

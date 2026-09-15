@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct GoalTimelineView: View {
-  var teamABibColorHex: String
+  var teamABibColor: Color
   var teamAName: String
-  var teamBBibColorHex: String
+  var teamBBibColor: Color
   var teamBName: String
   var timeline: GoalTimeline
 
@@ -14,9 +14,9 @@ struct GoalTimelineView: View {
         .frame(maxWidth: .infinity)
 
       GoalTimelineLegend(
-        teamABibColorHex: teamABibColorHex,
+        teamABibColor: teamABibColor,
         teamAName: teamAName,
-        teamBBibColorHex: teamBBibColorHex,
+        teamBBibColor: teamBBibColor,
         teamBName: teamBName
       )
 
@@ -24,9 +24,9 @@ struct GoalTimelineView: View {
         ForEach(timeline.quarters) { quarter in
           GoalTimelineQuarterView(
             quarter: quarter,
-            teamABibColorHex: teamABibColorHex,
+            teamABibColor: teamABibColor,
             teamAName: teamAName,
-            teamBBibColorHex: teamBBibColorHex,
+            teamBBibColor: teamBBibColor,
             teamBName: teamBName
           )
         }
@@ -37,15 +37,15 @@ struct GoalTimelineView: View {
 }
 
 private struct GoalTimelineLegend: View {
-  var teamABibColorHex: String
+  var teamABibColor: Color
   var teamAName: String
-  var teamBBibColorHex: String
+  var teamBBibColor: Color
   var teamBName: String
 
   var body: some View {
     HStack(alignment: .top, spacing: 16) {
       HStack(alignment: .top, spacing: 8) {
-        teamColor(teamABibColorHex)
+        teamColor(teamABibColor)
         VStack(alignment: .leading, spacing: 2) {
           Text(teamAName)
             .font(.subheadline.weight(.semibold))
@@ -67,7 +67,7 @@ private struct GoalTimelineLegend: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-        teamColor(teamBBibColorHex)
+        teamColor(teamBBibColor)
       }
       .frame(maxWidth: .infinity, alignment: .trailing)
     }
@@ -78,9 +78,9 @@ private struct GoalTimelineLegend: View {
     )
   }
 
-  private func teamColor(_ colorHex: String) -> some View {
+  private func teamColor(_ color: Color) -> some View {
     Circle()
-      .fill(Color(teamHex: colorHex))
+      .fill(color)
       .frame(width: 12, height: 12)
       .padding(.top, 3)
       .accessibilityHidden(true)
@@ -89,18 +89,18 @@ private struct GoalTimelineLegend: View {
 
 private struct GoalTimelineQuarterView: View {
   var quarter: GoalTimelineQuarter
-  var teamABibColorHex: String
+  var teamABibColor: Color
   var teamAName: String
-  var teamBBibColorHex: String
+  var teamBBibColor: Color
   var teamBName: String
 
   var body: some View {
     VStack(spacing: 12) {
       GoalTimelineQuarterHeader(
         quarter: quarter,
-        teamABibColorHex: teamABibColorHex,
+        teamABibColor: teamABibColor,
         teamAName: teamAName,
-        teamBBibColorHex: teamBBibColorHex,
+        teamBBibColor: teamBBibColor,
         teamBName: teamBName
       )
 
@@ -135,14 +135,14 @@ private struct GoalTimelineQuarterView: View {
 
 private struct GoalTimelineQuarterHeader: View {
   var quarter: GoalTimelineQuarter
-  var teamABibColorHex: String
+  var teamABibColor: Color
   var teamAName: String
-  var teamBBibColorHex: String
+  var teamBBibColor: Color
   var teamBName: String
 
   var body: some View {
     HStack(spacing: 12) {
-      score(quarter.teamAQuarterScore, colorHex: teamABibColorHex)
+      score(quarter.teamAQuarterScore, color: teamABibColor)
 
       Spacer(minLength: 0)
 
@@ -156,7 +156,7 @@ private struct GoalTimelineQuarterHeader: View {
 
       Spacer(minLength: 0)
 
-      score(quarter.teamBQuarterScore, colorHex: teamBBibColorHex)
+      score(quarter.teamBQuarterScore, color: teamBBibColor)
     }
     .padding(12)
     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
@@ -167,19 +167,19 @@ private struct GoalTimelineQuarterHeader: View {
     )
   }
 
-  private func score(_ score: Int, colorHex: String) -> some View {
+  private func score(_ score: Int, color: Color) -> some View {
     Text("\(score)")
       .font(.title3.bold())
       .monospacedDigit()
-      .foregroundStyle(Color(teamHex: colorHex))
+      .foregroundStyle(color)
       .frame(minWidth: 38, minHeight: 34)
       .background(
-        Color(teamHex: colorHex).opacity(0.12),
+        color.opacity(0.12),
         in: RoundedRectangle(cornerRadius: 9)
       )
       .overlay {
         RoundedRectangle(cornerRadius: 9)
-          .stroke(Color(teamHex: colorHex).opacity(0.45))
+          .stroke(color.opacity(0.45))
       }
   }
 }
@@ -254,24 +254,24 @@ private struct GoalTimelineRow: View {
       alignment: goal.scoringTeamSide == .teamA ? .trailing : .leading
     )
     .background(
-      Color(teamHex: goal.scoringTeamBibColorHex).opacity(0.12),
+      goal.scoringTeamBibColor.opacity(0.12),
       in: RoundedRectangle(cornerRadius: 12)
     )
     .overlay {
       RoundedRectangle(cornerRadius: 12)
-        .stroke(Color(teamHex: goal.scoringTeamBibColorHex).opacity(0.5))
+        .stroke(goal.scoringTeamBibColor.opacity(0.5))
     }
   }
 
   private var marker: some View {
     Image(systemName: "volleyball.fill")
       .font(.caption.weight(.semibold))
-      .foregroundStyle(Color(teamHex: goal.scoringTeamBibColorHex))
+      .foregroundStyle(goal.scoringTeamBibColor)
       .frame(width: 28, height: 28)
       .background(.background, in: Circle())
       .overlay {
         Circle()
-          .stroke(Color(teamHex: goal.scoringTeamBibColorHex).opacity(0.5))
+          .stroke(goal.scoringTeamBibColor.opacity(0.5))
       }
       .accessibilityHidden(true)
   }
@@ -286,9 +286,9 @@ private struct GoalTimelineRow: View {
 #Preview("Goal timeline") {
   let detail = CompletedGameDetail.previewCompleted
   GoalTimelineView(
-    teamABibColorHex: detail.teamABibColorHex,
+    teamABibColor: detail.teamABibColor,
     teamAName: detail.teamAName,
-    teamBBibColorHex: detail.teamBBibColorHex,
+    teamBBibColor: detail.teamBBibColor,
     teamBName: detail.teamBName,
     timeline: detail.goalTimeline
   )
@@ -298,9 +298,9 @@ private struct GoalTimelineRow: View {
 #Preview("Empty goal timeline") {
   let detail = CompletedGameDetail.previewNoGoals
   GoalTimelineView(
-    teamABibColorHex: detail.teamABibColorHex,
+    teamABibColor: detail.teamABibColor,
     teamAName: detail.teamAName,
-    teamBBibColorHex: detail.teamBBibColorHex,
+    teamBBibColor: detail.teamBBibColor,
     teamBName: detail.teamBName,
     timeline: detail.goalTimeline
   )
@@ -311,9 +311,9 @@ private struct GoalTimelineRow: View {
   let detail = CompletedGameDetail.previewCompleted
   ScrollView {
     GoalTimelineView(
-      teamABibColorHex: detail.teamABibColorHex,
+      teamABibColor: detail.teamABibColor,
       teamAName: detail.teamAName,
-      teamBBibColorHex: detail.teamBBibColorHex,
+      teamBBibColor: detail.teamBBibColor,
       teamBName: detail.teamBName,
       timeline: detail.goalTimeline
     )

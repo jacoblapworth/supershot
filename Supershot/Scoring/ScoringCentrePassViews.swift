@@ -32,7 +32,7 @@ struct CentrePassControl: View {
 
   private func centrePassButton(team: ScoringFeature.Team) -> some View {
     CentrePassButton(
-      colorHex: team.bibColorHex,
+      color: team.bibColor,
       isSelected: centrePassTeamID == team.id,
       name: team.name,
       action: { centrePassTeamTapped(team.id) }
@@ -41,7 +41,7 @@ struct CentrePassControl: View {
 }
 
 private struct CentrePassButton: View {
-  var colorHex: String
+  var color: Color
   var isSelected: Bool
   var name: String
   var action: () -> Void
@@ -59,13 +59,13 @@ private struct CentrePassButton: View {
       .padding(.horizontal, 8)
       .foregroundStyle(Color.primary)
       .background(
-        isSelected ? Color(teamHex: colorHex).opacity(0.2) : Color.clear,
+        isSelected ? color.opacity(0.2) : Color.clear,
         in: RoundedRectangle(cornerRadius: 8)
       )
       .overlay {
         RoundedRectangle(cornerRadius: 8)
           .stroke(
-            isSelected ? Color(teamHex: colorHex) : Color.secondary.opacity(0.4),
+            isSelected ? color : Color.secondary.opacity(0.4),
             lineWidth: isSelected ? 2 : 1
           )
       }

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import Dependencies
 import OSLog
 import SQLiteData
@@ -54,9 +55,9 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var startedAt: Date
   var endedAt: Date?
   var teamAID: Team.ID
-  var teamABibColorHex = TeamColorPalette.blue
+  var teamABibColorHex = ColorPalette.blue.hex()
   var teamBID: Team.ID
-  var teamBBibColorHex = TeamColorPalette.red
+  var teamBBibColorHex = ColorPalette.red.hex()
   var centrePassTeamID: Team.ID?
   var latitude: Double?
   var longitude: Double?
@@ -151,12 +152,12 @@ extension Team {
   nonisolated init(
     id: UUID,
     name: String,
-    colorHex: String = TeamColorPalette.blue
+    colorHex: String = ColorPalette.blue.hex()
   ) {
     self.id = id
-    self.colorHex = TeamColorPalette.isValid(colorHex)
+    self.colorHex = Color.isValidHex(colorHex)
     ? colorHex.uppercased()
-    : TeamColorPalette.blue
+    : ColorPalette.blue.hex()
     self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
@@ -292,3 +293,12 @@ extension DependencyValues {
 }
 
 nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")
+
+nonisolated extension Team {
+  var color: Color { Color(hex: colorHex) }
+}
+
+nonisolated extension Game {
+  var teamABibColor: Color { Color(hex: teamABibColorHex) }
+  var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
+}
