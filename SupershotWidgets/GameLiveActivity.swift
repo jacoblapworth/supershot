@@ -50,6 +50,7 @@ struct GameLiveActivity: Widget {
       } compactLeading: {
         Text(context.state.isInBreak ? "B" : "Q\(context.state.period)")
           .font(.caption.bold())
+          .background(in: Circle())
       } compactTrailing: {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.caption.monospacedDigit())

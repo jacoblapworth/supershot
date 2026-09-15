@@ -90,37 +90,39 @@ struct ScoringView: View {
       }
       VStack {
         Spacer()
-        HStack(spacing: 8) {
-          Button(action: { store.send(.goalButtonTapped(store.teamA.id))
-          }) {
-            Label("Goal", systemImage: "plus.circle.fill")
-          }
-          Button(action: { store.send(.goalButtonTapped(store.teamB.id))
-          }) {
-            Label("Goal", systemImage: "plus.circle.fill")
+        HStack(spacing: 16) {
+          if store.canScoreGoal {
+            Button(action: { store.send(.goalButtonTapped(store.teamA.id)) }) {
+              Label("Goal", systemImage: "plus.circle.fill")
+                .fontWeight(.medium)
+                .padding(8)
+            }
+            Button(action: { store.send(.goalButtonTapped(store.teamB.id)) }) {
+              Label("Goal", systemImage: "plus.circle.fill")
+                .fontWeight(.medium)
+                .padding(8)
+            }
+          } else {
+            Button(action: {}) {
+              Label("Start Quarter", systemImage: "play.fill")
+                .fontWeight(.medium)
+                .padding(8)
+            }
+            .tint(.green)
           }
         }
+        .buttonStyle(.glassProminent)
         .buttonSizing(.flexible)
-        .buttonStyle(.myAppPrimaryButton)
         .padding(16)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 30)
-//        .glassEffect(.regular, in: .containerRelative)
-        .glassEffect(.regular, in: ConcentricRectangle(
-                      corners: .concentric,
-                      isUniform: true
-                    )
+        .padding(.bottom, 40)
+        .glassEffect(
+          .regular,
+          in: ConcentricRectangle(
+            corners: .concentric,
+            isUniform: true
+          )
         )
-
-//        .background {
-//          ConcentricRectangle(
-//            corners: .concentric,
-//            isUniform: false
-//          )
-//          .glassEffect()
-//          .ignoresSafeArea()
-        
-//        }
       
         .padding(8)
       }

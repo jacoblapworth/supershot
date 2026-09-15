@@ -458,7 +458,7 @@ struct ScoringFeature {
     }
   }
 
-  private func insertGoalEffect(state: State, teamID: Team.ID) -> Effect<Action> {
+  private func insertGoalEffect(state: State, teamID: Team.ID, points: Int = 1) -> Effect<Action> {
     let createdAt = now
     let expectedPhaseIndex = state.currentPhaseIndex
     let gameID = state.gameID
@@ -503,7 +503,7 @@ struct ScoringFeature {
               centrePassTeamID: centrePassTeamID,
               teamID: teamID,
               elapsedSeconds: elapsedSeconds,
-              points: 1,
+              points: points,
               createdAt: createdAt
             )
           }
