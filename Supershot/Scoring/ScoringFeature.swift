@@ -31,6 +31,7 @@ struct ScoringFeature {
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
     @Shared(.hapticsEnabled) var hapticsEnabled
+    @Shared(.soundEffectsEnabled) var soundEffectsEnabled
     var canUndo = false
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
@@ -41,7 +42,6 @@ struct ScoringFeature {
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
     var periods: [GamePeriod]
-    @Shared(.soundEffectsEnabled) var soundEffectsEnabled
     let startedAt: Date
     var teamA: Team
     var teamAScore = 0

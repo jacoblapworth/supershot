@@ -7,7 +7,7 @@ struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Fetch private var timelineResponse: GoalTimelineRequest.Value
   @Bindable var store: StoreOf<ScoringFeature>
-
+  
   init(store: StoreOf<ScoringFeature>) {
     self.store = store
     _timelineResponse = Fetch(
@@ -18,88 +18,156 @@ struct ScoringView: View {
       animation: .default
     )
   }
-
+  
   var body: some View {
-    ScrollView {
-      VStack(spacing: 20) {
-        TimerView(
-          clockPhase: store.clockPhase,
-          currentDurationSeconds: store.currentDurationSeconds,
-          elapsedSeconds: store.elapsedSeconds,
-          isPeriodComplete: store.isPeriodComplete,
-          isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
-          isTimerRunning: store.isTimerRunning,
-          period: store.period,
-          pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
-          skipBreakTapped: { store.send(.skipBreakButtonTapped) },
-          startTimerTapped: { store.send(.startTimerButtonTapped) }
-        )
-
-        ScoringScoreboardView(
-          isDisabled: !store.canScoreGoal,
-          isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
-          teamA: store.teamA,
-          teamAScore: store.teamAScore,
-          teamB: store.teamB,
-          teamBScore: store.teamBScore,
-          goalTapped: { store.send(.goalButtonTapped($0)) }
-        )
-
-        if store.isShowingLastCentrePassBanner {
-          LastCentrePassBanner(
-            centrePassTeam: store.centrePassTeam,
-            isTransitioningPeriod: store.isTransitioningPeriod,
-            period: store.lastCompletedQuarterNumber,
-            lastCentrePassNotTakenTapped: {
-              store.send(.lastCentrePassNotTakenButtonTapped)
-            },
-            lastCentrePassTakenTapped: {
-              store.send(.lastCentrePassTakenButtonTapped)
-            }
+    ZStack {
+      ScrollView {
+        VStack(spacing: 20) {
+          TimerView(
+            clockPhase: store.clockPhase,
+            currentDurationSeconds: store.currentDurationSeconds,
+            elapsedSeconds: store.elapsedSeconds,
+            isPeriodComplete: store.isPeriodComplete,
+            isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
+            isTimerRunning: store.isTimerRunning,
+            period: store.period,
+            pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
+            skipBreakTapped: { store.send(.skipBreakButtonTapped) },
+            startTimerTapped: { store.send(.startTimerButtonTapped) }
           )
-        } else if store.clockPhase == .quarter {
-          CentrePassControl(
-            centrePassTeamID: store.centrePassTeamID,
+          
+          ScoringScoreboardView(
+            isDisabled: !store.canScoreGoal,
             isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
             teamA: store.teamA,
+            teamAScore: store.teamAScore,
             teamB: store.teamB,
-            centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
+            teamBScore: store.teamBScore,
+            goalTapped: { store.send(.goalButtonTapped($0)) }
+          )
+          
+          if store.isShowingLastCentrePassBanner {
+            LastCentrePassBanner(
+              centrePassTeam: store.centrePassTeam,
+              isTransitioningPeriod: store.isTransitioningPeriod,
+              period: store.lastCompletedQuarterNumber,
+              lastCentrePassNotTakenTapped: {
+                store.send(.lastCentrePassNotTakenButtonTapped)
+              },
+              lastCentrePassTakenTapped: {
+                store.send(.lastCentrePassTakenButtonTapped)
+              }
+            )
+          } else if store.clockPhase == .quarter {
+            CentrePassControl(
+              centrePassTeamID: store.centrePassTeamID,
+              isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
+              teamA: store.teamA,
+              teamB: store.teamB,
+              centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
+            )
+          }
+          ScoringGameControls(
+            canFinishGame: store.canFinishGame,
+            canMoveToNextQuarter: store.canMoveToNextQuarter,
+            clockPhase: store.clockPhase,
+            isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
+            isTransitioningPeriod: store.isTransitioningPeriod,
+            period: store.period,
+            endQuarterTapped: { store.send(.endQuarterButtonTapped) },
+            finishGameTapped: { store.send(.finishGameButtonTapped) },
+            skipBreakTapped: { store.send(.skipBreakButtonTapped) }
+          )
+          
+          GoalTimelineView(
+            teamABibColorHex: store.teamA.bibColorHex,
+            teamAName: store.teamA.name,
+            teamBBibColorHex: store.teamB.bibColorHex,
+            teamBName: store.teamB.name,
+            timeline: timelineResponse.timeline
           )
         }
-        ScoringGameControls(
-          canFinishGame: store.canFinishGame,
-          canMoveToNextQuarter: store.canMoveToNextQuarter,
-          clockPhase: store.clockPhase,
-          isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
-          isTransitioningPeriod: store.isTransitioningPeriod,
-          period: store.period,
-          endQuarterTapped: { store.send(.endQuarterButtonTapped) },
-          finishGameTapped: { store.send(.finishGameButtonTapped) },
-          skipBreakTapped: { store.send(.skipBreakButtonTapped) }
-        )
-
-        GoalTimelineView(
-          teamABibColorHex: store.teamA.bibColorHex,
-          teamAName: store.teamA.name,
-          teamBBibColorHex: store.teamB.bibColorHex,
-          teamBName: store.teamB.name,
-          timeline: timelineResponse.timeline
-        )
+        .padding()
       }
-      .padding()
+      .safeAreaBar(edge: .bottom, content: {
+        HStack(spacing: 8) {
+          Button(action: {}) {
+            Label("Goal", systemImage: "plus.circle.fill")
+          }
+          Button(action: {}) {
+            Label("Goal", systemImage: "plus.circle.fill")
+          }
+        }
+        .buttonSizing(.flexible)
+        .buttonStyle(.myAppPrimaryButton)
+        .padding(8)
+        .frame(maxWidth: .infinity)
+        .glassEffect(in: .containerRelative)
+//        .background {
+//          ConcentricRectangle(
+//            corners: .concentric,
+//            isUniform: true
+//          )
+//          .ignoresSafeArea()
+//          .glassEffect()
+//        }
+        .padding(8)
+      })
+//      VStack {
+//        Spacer()
+//        HStack(spacing: 8) {
+//          Button(action: {}) {
+//            Label("Goal", systemImage: "plus.circle.fill")
+//          }
+//          Button(action: {}) {
+//            Label("Goal", systemImage: "plus.circle.fill")
+//          }
+//        }
+//        .buttonSizing(.flexible)
+//        .buttonStyle(.myAppPrimaryButton)
+//        .padding(8)
+//        .frame(maxWidth: .infinity)
+//        //        .background(content: {
+//        //          ConcentricRectangle(
+//        //            corners: .concentric,
+//        //            isUniform: true)
+//        //          .fill(.thinMaterial)
+//        //        })
+//        //        .cornerRadius(24)
+//        //        .background(.thinMaterial)
+//        //        .glassEffect(.regular, in: .containerRelative)
+//        .background(content: {
+//          ConcentricRectangle(
+//            corners: .concentric,
+//            isUniform: true
+//          )
+//  
+//          .ignoresSafeArea()
+//          .glassEffect()
+//        })
+//        //        .background(in:
+//        //                      ConcentricRectangle(
+//        //                        corners: .concentric,
+//        //                        isUniform: true
+//        //                      ),
+//        //                    fillStyle: )
+//        
+//        .padding(8)
+//      }
+//      .ignoresSafeArea()
     }
     .navigationBarBackButtonHidden()
     .toolbar {
-      #if os(macOS)
+#if os(macOS)
       ToolbarItem(placement: .navigation) {
         gamesButton
       }
-      #else
+#else
       ToolbarItem(placement: .topBarLeading) {
         gamesButton
       }
-      #endif
-
+#endif
+      
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.undoButtonTapped)
@@ -110,21 +178,38 @@ struct ScoringView: View {
         .accessibilityLabel("Undo last goal")
       }
     }
+    //        .sheet(isPresented: .constant(true), content: {
+    //          HStack {
+    //            Button(action: {}) {
+    //              Label("Goal", systemImage: "plus.circle.fill")
+    //            }
+    //            Button(action: {}) {
+    //              Label("Goal", systemImage: "plus.circle.fill")
+    //            }
+    //          }
+    //          .padding()
+    //          .buttonSizing(.flexible)
+    //          .buttonStyle(.myAppPrimaryButton)
+    //          .presentationDetents([.height(200)])
+    //          .presentationBackground(.ultraThinMaterial)
+    //          .presentationBackgroundInteraction(.enabled)
+    //          .presentationSizing(.fitted)
+    //        })
     .alert($store.scope(state: \.alert, action: \.alert))
-    #if os(iOS)
+#if os(iOS)
     .sensoryFeedback(
       .success,
       trigger: store.goalFeedbackTrigger,
       condition: { _, _ in store.hapticsEnabled }
     )
-    #endif
+#endif
     .task {
       guard scenePhase == .active else { return }
       store.send(.sceneBecameActive)
     }
     .onChange(of: scenePhase, scenePhaseChanged)
   }
-
+  
   private var gamesButton: some View {
     Button {
       store.send(.closeButtonTapped)
@@ -132,7 +217,7 @@ struct ScoringView: View {
       Label("Games", systemImage: "chevron.left")
     }
   }
-
+  
   private func scenePhaseChanged(
     _ oldValue: ScenePhase,
     _ newValue: ScenePhase

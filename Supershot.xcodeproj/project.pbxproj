@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 100;
+	objectVersion = 90;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,6 +18,7 @@
 		12B00001301F000000000001 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60C301E25CB00094D7C /* DependenciesTestSupport */; };
 		12B00002301F000000000001 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = 12B0000D301F000000000001 /* CustomDump */; };
 		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		12C147E43059644E008F9513 /* LazyState in Frameworks */ = {isa = PBXBuildFile; productRef = 12C147E33059644E008F9513 /* LazyState */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,6 +118,7 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				12C147E43059644E008F9513 /* LazyState in Frameworks */,
 				12715897300D144600B14CCB /* Sharing in Frameworks */,
 				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
 				121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */,
@@ -211,6 +213,7 @@
 				12A4C613301E296700094D7C /* SwiftUINavigation */,
 				121C048F302213DA00ED9B54 /* RevenueCat */,
 				121C0491302213DA00ED9B54 /* RevenueCatUI */,
+				12C147E33059644E008F9513 /* LazyState */,
 			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Supershot Netball.app */;
@@ -299,6 +302,7 @@
 				12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */,
 				121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -788,7 +792,6 @@
 				minimumVersion = 2.9.1;
 			};
 			traits = (
-				CasePaths,
 			);
 		};
 		12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */ = {
@@ -799,8 +802,6 @@
 				minimumVersion = 1.8.2;
 			};
 			traits = (
-				CasePaths,
-				LazyInitializableByDefault,
 			);
 		};
 		12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
@@ -817,6 +818,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.6.1;
+			};
+		};
+		12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swiftui-lazy-state";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -871,6 +880,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */;
 			productName = CustomDump;
+		};
+		12C147E33059644E008F9513 /* LazyState */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */;
+			productName = LazyState;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

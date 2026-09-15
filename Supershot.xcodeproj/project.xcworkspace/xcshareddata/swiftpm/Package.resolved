@@ -1,5 +1,5 @@
 {
-  "originHash" : "c33eddfe642b6b3c77cd1df882e829cd2f3975ff45030fa3ced0cee0d7ed37aa",
+  "originHash" : "1eb0ac61ec17babafbaba9e7fa6941f786ec5b1ba7b67e5bf27b9477196bde0c",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -161,6 +161,15 @@
       "state" : {
         "revision" : "79e4b74a295b6eb74a8b585e3a39d29e70c1dbd1",
         "version" : "603.0.2"
+      }
+    },
+    {
+      "identity" : "swiftui-lazy-state",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pointfreeco/swiftui-lazy-state",
+      "state" : {
+        "revision" : "7cad85dca592cd605f15db2279cdb9efe96aea50",
+        "version" : "1.0.0"
       }
     },
     {
