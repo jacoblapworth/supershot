@@ -226,7 +226,8 @@ private nonisolated extension GameActivityAttributes.ContentState {
       phaseIndex: snapshot.game.currentPhaseIndex,
       teamAScore: snapshot.teamAScore,
       teamBScore: snapshot.teamBScore,
-      timerEndsAt: snapshot.game.timerEndsAt
+      timerEndsAt: snapshot.game.timerEndsAt,
+      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation
     )
   }
 }

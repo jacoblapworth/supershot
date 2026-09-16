@@ -317,6 +317,10 @@ struct ScoringFeature {
         )
 
       case let .timerReconcileResponse(.success(snapshot)):
+        state.teamAScore = snapshot.teamAScore
+        state.teamBScore = snapshot.teamBScore
+        state.canUndo = !snapshot.goals.isEmpty
+        state.centrePassTeamID = snapshot.game.centrePassTeamID ?? snapshot.teamA.id
         applyTimer(snapshot.game, to: &state)
         guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
         return timerEffect()
@@ -463,68 +467,13 @@ struct ScoringFeature {
     let expectedPhaseIndex = state.currentPhaseIndex
     let gameID = state.gameID
     let goalID = uuid()
-    let teamAID = state.teamA.id
-    let teamBID = state.teamB.id
-
     return .run { send in
       let result = await Result {
         try await database.write { db in
-          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = snapshot.game
-          guard
-            game.currentPhaseIndex == expectedPhaseIndex,
-            case let .period(_, durationSeconds) = snapshot.currentPhase,
-            let gamePeriodID = snapshot.currentPeriod?.id,
-            let timerEndsAt = game.timerEndsAt,
-            timerEndsAt > createdAt
-          else {
-            throw ScoringPersistenceError.goalUnavailable
-          }
-          let elapsedSeconds = GameTimerClient.elapsedSeconds(
-            durationSeconds: durationSeconds,
-            persistedElapsedSeconds: game.elapsedSeconds,
-            timerEndsAt: timerEndsAt,
-            now: createdAt
-          )
-          guard elapsedSeconds < durationSeconds else {
-            throw ScoringPersistenceError.goalUnavailable
-          }
-
-          let centrePassTeamID = resolvedCentrePassTeamID(
-            game.centrePassTeamID,
-            teamAID: teamAID,
-            teamBID: teamBID
-          )
-          try Goal.insert {
-            Goal(
-              id: goalID,
-              gameID: gameID,
-              gamePeriodID: gamePeriodID,
-              centrePassTeamID: centrePassTeamID,
-              teamID: teamID,
-              elapsedSeconds: elapsedSeconds,
-              points: points,
-              createdAt: createdAt
-            )
-          }
-          .execute(db)
-
-          try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(
-              opposingTeamID(
-                centrePassTeamID,
-                teamAID: teamAID,
-                teamBID: teamBID
-              )
-            )
-          }
-          .execute(db)
-
-          return try ScoreSnapshot.fetch(
-            db,
-            gameID: gameID,
-            teamAID: teamAID,
-            teamBID: teamBID
+          try Self.insertGoal(
+            db, gameID: gameID, teamID: teamID,
+            expectedPhaseIndex: expectedPhaseIndex, goalID: goalID,
+            createdAt: createdAt, points: points
           )
         }
       }
@@ -737,4 +686,79 @@ private nonisolated func resolvedCentrePassTeamID(
   teamBID: Team.ID
 ) -> Team.ID {
   teamID == teamBID ? teamBID : teamAID
+}
+
+extension ScoringFeature {
+  nonisolated static func insertGoal(
+    _ db: Database,
+    gameID: UUID,
+    teamID: UUID,
+    expectedPhaseIndex: Int,
+    goalID: UUID,
+    createdAt: Date,
+    points: Int = 1
+  ) throws -> ScoreSnapshot {
+    let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+    let game = snapshot.game
+    let teamAID = snapshot.teamA.id
+    let teamBID = snapshot.teamB.id
+    guard
+      game.endedAt == nil,
+      !game.isAwaitingCentrePassConfirmation,
+      teamID == teamAID || teamID == teamBID,
+      game.currentPhaseIndex == expectedPhaseIndex,
+      case let .period(_, durationSeconds) = snapshot.currentPhase,
+      let gamePeriodID = snapshot.currentPeriod?.id,
+      let timerEndsAt = game.timerEndsAt,
+      timerEndsAt > createdAt
+    else {
+      throw ScoringPersistenceError.goalUnavailable
+    }
+    let elapsedSeconds = GameTimerClient.elapsedSeconds(
+      durationSeconds: durationSeconds,
+      persistedElapsedSeconds: game.elapsedSeconds,
+      timerEndsAt: timerEndsAt,
+      now: createdAt
+    )
+    guard elapsedSeconds < durationSeconds else {
+      throw ScoringPersistenceError.goalUnavailable
+    }
+
+    let centrePassTeamID = resolvedCentrePassTeamID(
+      game.centrePassTeamID,
+      teamAID: teamAID,
+      teamBID: teamBID
+    )
+    try Goal.insert {
+      Goal(
+        id: goalID,
+        gameID: gameID,
+        gamePeriodID: gamePeriodID,
+        centrePassTeamID: centrePassTeamID,
+        teamID: teamID,
+        elapsedSeconds: elapsedSeconds,
+        points: points,
+        createdAt: createdAt
+      )
+    }
+    .execute(db)
+
+    try Game.find(gameID).update {
+      $0.centrePassTeamID = #bind(
+        opposingTeamID(
+          centrePassTeamID,
+          teamAID: teamAID,
+          teamBID: teamBID
+        )
+      )
+    }
+    .execute(db)
+
+    return try ScoreSnapshot.fetch(
+      db,
+      gameID: gameID,
+      teamAID: teamAID,
+      teamBID: teamBID
+    )
+  }
 }

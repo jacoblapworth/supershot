@@ -37,14 +37,11 @@ struct GameLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           HStack(spacing: 14) {
+            GoalControl(context: context, isTeamA: true)
             TimerText(state: context.state, isStale: context.isStale)
               .font(.title2.bold())
               .frame(maxWidth: .infinity, alignment: .leading)
-            TimerControl(
-              attributes: context.attributes,
-              isStale: context.isStale,
-              state: context.state
-            )
+            GoalControl(context: context, isTeamA: false)
           }
         }
       } compactLeading: {
@@ -131,9 +128,6 @@ private struct SmallActivityGameView: View {
           name: context.attributes.teamAName,
           score: context.state.teamAScore
         )
-        Text("–")
-          .font(.headline.weight(.bold))
-          .foregroundStyle(.secondary)
         team(
           color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
@@ -197,9 +191,6 @@ private struct LockScreenGameView: View {
           score: context.state.teamAScore,
           alignment: .leading
         )
-        Text("–")
-          .font(.title2.bold())
-          .foregroundStyle(.secondary)
         team(
           color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
@@ -210,23 +201,37 @@ private struct LockScreenGameView: View {
         )
       }
 
-      Divider()
-
-      HStack(spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
+      HStack {
+        GoalControl(context: context, isTeamA: true)
+        Spacer()
+        VStack(alignment: .center, spacing: 0) {
           Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
           TimerText(state: context.state, isStale: context.isStale)
             .font(.title.bold())
         }
-        Spacer(minLength: 8)
-        TimerControl(
-          attributes: context.attributes,
-          isStale: context.isStale,
-          state: context.state
-        )
+        Spacer()
+        GoalControl(context: context, isTeamA: false)
       }
+
+//      Divider()
+//
+//      HStack(spacing: 12) {
+//        VStack(alignment: .leading, spacing: 2) {
+//          Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
+//            .font(.caption.weight(.semibold))
+//            .foregroundStyle(.secondary)
+//          TimerText(state: context.state, isStale: context.isStale)
+//            .font(.title.bold())
+//        }
+//        Spacer(minLength: 8)
+//        TimerControl(
+//          attributes: context.attributes,
+//          isStale: context.isStale,
+//          state: context.state
+//        )
+//      }
     }
     .foregroundStyle(.white)
   }
@@ -298,6 +303,34 @@ private struct TimerText: View {
       Text(state.remainingSeconds.formattedClock)
         .monospacedDigit()
     }
+  }
+}
+
+private struct GoalControl: View {
+  let context: ActivityViewContext<GameActivityAttributes>
+  var isTeamA: Bool
+
+  var body: some View {
+    Button(intent: ScoreGoalIntent(
+      gameID: context.attributes.gameID,
+      teamID: isTeamA ? context.attributes.teamAID : context.attributes.teamBID,
+      expectedPhaseIndex: context.state.phaseIndex
+    )) {
+      Label("Goal", systemImage: "plus")
+        .font(.title3.bold())
+        .labelStyle(.iconOnly)
+        .frame(minWidth: 80, minHeight: 32)
+    }
+    .buttonStyle(.borderedProminent)
+    .tint(isTeamA ? context.attributes.teamAColor : context.attributes.teamBColor)
+    .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
+    .disabled(
+      context.isStale
+        || context.state.isComplete
+        || context.state.isInBreak
+        || context.state.timerEndsAt == nil
+        || context.state.isAwaitingCentrePassConfirmation
+    )
   }
 }
 

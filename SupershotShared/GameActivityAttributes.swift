@@ -12,6 +12,7 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
     var teamAScore: Int
     var teamBScore: Int
     var timerEndsAt: Date?
+    var isAwaitingCentrePassConfirmation = false
   }
 
   var gameID: UUID
