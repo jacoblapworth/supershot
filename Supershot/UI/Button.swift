@@ -17,13 +17,14 @@ struct PrimaryButtonStyle: ButtonStyle {
       .bold()
       .frame(maxWidth: .infinity)
       .foregroundStyle(.white)
-      .background(isEnabled ? Color.accentColor : Color.gray)
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-      .overlay {
+      .background {
         RoundedRectangle(cornerRadius: cornerRadius)
+          .fill(isEnabled ? Color.accentColor : Color.gray)
           .stroke(Color.secondary, lineWidth: 0.5)
       }
-      .scaleEffect(configuration.isPressed ? 0.9 : 1)
+//      .glassEffect(.regular.interactive(), in: .buttonBorder)
+//      .scaleEffect(configuration.isPressed ? 0.9 : 1)
+//      .glassEffect()
       .animation(.smooth, value: configuration.isPressed)
   }
 }

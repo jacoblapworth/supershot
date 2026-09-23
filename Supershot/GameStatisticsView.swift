@@ -11,12 +11,12 @@ struct GameStatisticsView: View {
       VStack(spacing: 16) {
         HStack(alignment: .top, spacing: 16) {
           TeamStatisticsHeader(
-            colorHex: detail.teamABibColorHex,
+            color: detail.teamABibColor,
             name: detail.teamAName
           )
 
           TeamStatisticsHeader(
-            colorHex: detail.teamBBibColorHex,
+            color: detail.teamBBibColor,
             isTrailing: true,
             name: detail.teamBName
           )
@@ -130,7 +130,7 @@ private struct StatisticComparisonRow: View {
 }
 
 private struct TeamStatisticsHeader: View {
-  var colorHex: String
+  var color: Color
   var isTrailing = false
   var name: String
 
@@ -141,7 +141,7 @@ private struct TeamStatisticsHeader: View {
       }
 
       Circle()
-        .fill(Color(teamHex: colorHex))
+        .fill(color)
         .frame(width: 10, height: 10)
         .accessibilityHidden(true)
 

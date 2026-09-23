@@ -1,5 +1,7 @@
+import SwiftUI
 import ComposableArchitecture
 import SQLiteData
+import Foundation
 
 @Reducer
 struct TeamEditorFeature {
@@ -11,29 +13,29 @@ struct TeamEditorFeature {
     }
 
     var focus: Field? = .name
-    var colorHex: String
+    var color: Color
     var errorMessage: String?
     var isSaving = false
     var name: String
     var mode: Mode
-    let originalColorHex: String
+    let originalColor: Color
     let originalName: String
 
     init(team: Team) {
       focus = .name
-      colorHex = team.colorHex
+      color = team.color
       name = team.name
       mode = .editing(team.id)
-      originalColorHex = team.colorHex
+      originalColor = team.color
       originalName = team.name
     }
 
     init() {
       focus = .name
-      colorHex = TeamColorPalette.blue
+      color = ColorPalette.blue
       name = ""
       mode = .creating
-      originalColorHex = TeamColorPalette.blue
+      originalColor = ColorPalette.blue
       originalName = ""
     }
 
@@ -42,11 +44,10 @@ struct TeamEditorFeature {
     }
 
     var canSave: Bool {
-      let trimmedName = Team.trimmedName(name)
+      let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
       return !trimmedName.isEmpty
-        && TeamColorPalette.isValid(colorHex)
         && !isSaving
-        && (isCreating || trimmedName != originalName || colorHex != originalColorHex)
+        && (isCreating || trimmedName != originalName || color != originalColor)
     }
   }
 
@@ -54,7 +55,6 @@ struct TeamEditorFeature {
     case binding(BindingAction<State>)
     case cancelButtonTapped
     case delegate(Delegate)
-    case paletteColorButtonTapped(String)
     case saveButtonTapped
     case saveResponse(Result<Team, any Error>)
 
@@ -86,24 +86,14 @@ struct TeamEditorFeature {
       case .delegate:
         return .none
 
-      case let .paletteColorButtonTapped(colorHex):
-        guard TeamColorPalette.isValid(colorHex) else { return .none }
-        state.colorHex = colorHex.uppercased()
-        state.errorMessage = nil
-        return .none
-
       case .saveButtonTapped:
         guard !state.isSaving else { return .none }
-        let name = Team.trimmedName(state.name)
+        let name = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
           state.errorMessage = "Enter a team name."
           return .none
         }
-        guard TeamColorPalette.isValid(state.colorHex) else {
-          state.errorMessage = "Choose a valid team color."
-          return .none
-        }
-        guard state.isCreating || name != state.originalName || state.colorHex != state.originalColorHex else {
+        guard state.isCreating || name != state.originalName || state.color != state.originalColor else {
           return .none
         }
 
@@ -115,7 +105,7 @@ struct TeamEditorFeature {
             return uuid()
           }(),
           name: name,
-          colorHex: state.colorHex
+          colorHex: state.color.hex()
         )
         let isCreating = state.isCreating
         state.errorMessage = nil

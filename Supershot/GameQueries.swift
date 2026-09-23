@@ -1,5 +1,6 @@
 import Foundation
 import SQLiteData
+import SwiftUI
 
 nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   var currentQuarter = 1
@@ -7,10 +8,10 @@ nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   let id: Game.ID
   var periods: [GamePeriod] = []
   let startedAt: Date
-  var teamABibColorHex = TeamColorPalette.blue
+  var teamABibColor: Color = ColorPalette.blue
   let teamAName: String
   let teamAScore: Int
-  var teamBBibColorHex = TeamColorPalette.red
+  var teamBBibColor: Color = ColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
@@ -24,7 +25,7 @@ nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
 }
 
 nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
-  let colorHex: String
+  let color: Color
   let gameCount: Int
   let id: Team.ID
   let name: String
@@ -67,7 +68,7 @@ nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   let id: Goal.ID
   let period: Int
   let points: Int
-  var scoringTeamBibColorHex = TeamColorPalette.blue
+  var scoringTeamBibColor = ColorPalette.blue
   let scoringTeamName: String
   let scoringTeamSide: GoalTimelineTeamSide
   let teamAScore: Int
@@ -98,10 +99,10 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   var periods: [GamePeriod] = []
   let startedAt: Date
   var statistics = CompletedGameStatistics()
-  var teamABibColorHex = TeamColorPalette.blue
+  var teamABibColor = ColorPalette.blue
   let teamAName: String
   let teamAScore: Int
-  var teamBBibColorHex = TeamColorPalette.red
+  var teamBBibColor = ColorPalette.red
   let teamBName: String
   let teamBScore: Int
 
@@ -258,12 +259,12 @@ nonisolated struct GamesRequest: FetchKeyRequest {
           id: game.id,
           periods: gamePeriods,
           startedAt: game.startedAt,
-          teamABibColorHex: game.teamABibColorHex,
+          teamABibColor: game.teamABibColor,
           teamAName: teamA.name,
           teamAScore: gameGoals
             .filter { $0.teamID == teamA.id }
             .reduce(0) { $0 + $1.points },
-          teamBBibColorHex: game.teamBBibColorHex,
+          teamBBibColor: game.teamBBibColor,
           teamBName: teamB.name,
           teamBScore: gameGoals
             .filter { $0.teamID == teamB.id }
@@ -293,7 +294,7 @@ nonisolated struct TeamsRequest: FetchKeyRequest {
     return Value(
       teams: teams.map { team in
         TeamListItem(
-          colorHex: team.colorHex,
+          color: team.color,
           gameCount: gameCounts[team.id, default: 0],
           id: team.id,
           name: team.name
@@ -367,10 +368,10 @@ nonisolated struct GameDetailRequest: FetchKeyRequest {
           teamAID: snapshot.teamA.id,
           teamBID: snapshot.teamB.id
         ),
-        teamABibColorHex: snapshot.game.teamABibColorHex,
+        teamABibColor: snapshot.game.teamABibColor,
         teamAName: snapshot.teamA.name,
         teamAScore: snapshot.teamAScore,
-        teamBBibColorHex: snapshot.game.teamBBibColorHex,
+        teamBBibColor: snapshot.game.teamBBibColor,
         teamBName: snapshot.teamB.name,
         teamBScore: snapshot.teamBScore
       )
@@ -391,24 +392,24 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   for goal in snapshot.goals {
     guard let period = periodsByID[goal.gamePeriodID] else { continue }
     let periodNumber = period.number
-    let scoringTeamBibColorHex: String
+    let scoringTeamBibColor: Color
     let scoringTeamName: String
     let scoringTeamSide: GoalTimelineTeamSide
 
     if goal.teamID == snapshot.teamA.id {
       teamAScore += goal.points
       quarterScoresByPeriod[periodNumber, default: (0, 0)].teamA += goal.points
-      scoringTeamBibColorHex = snapshot.game.teamABibColorHex
+      scoringTeamBibColor = snapshot.game.teamABibColor
       scoringTeamName = snapshot.teamA.name
       scoringTeamSide = .teamA
     } else if goal.teamID == snapshot.teamB.id {
       teamBScore += goal.points
       quarterScoresByPeriod[periodNumber, default: (0, 0)].teamB += goal.points
-      scoringTeamBibColorHex = snapshot.game.teamBBibColorHex
+      scoringTeamBibColor = snapshot.game.teamBBibColor
       scoringTeamName = snapshot.teamB.name
       scoringTeamSide = .teamB
     } else {
-      scoringTeamBibColorHex = TeamColorPalette.blue
+      scoringTeamBibColor = ColorPalette.blue
       scoringTeamName = "Unknown team"
       scoringTeamSide = .unknown
     }
@@ -422,7 +423,7 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
         id: goal.id,
         period: periodNumber,
         points: goal.points,
-        scoringTeamBibColorHex: scoringTeamBibColorHex,
+        scoringTeamBibColor: scoringTeamBibColor,
         scoringTeamName: scoringTeamName,
         scoringTeamSide: scoringTeamSide,
         teamAScore: teamAScore,

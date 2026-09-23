@@ -1,3 +1,4 @@
+import SwiftUI
 import CustomDump
 import Dependencies
 import Foundation
@@ -20,8 +21,8 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
             startedAt: Date(timeIntervalSince1970: 1_000),
@@ -55,14 +56,14 @@ extension SupershotTestSuite {
       }
       let state = ScoringFeature.State(snapshot: snapshot)
       expectNoDifference(state.centrePassTeamID, UUID(-1))
-      expectNoDifference(state.teamA.bibColorHex, "#AF52DE")
-      expectNoDifference(state.teamB.bibColorHex, "#FF9500")
+      expectNoDifference(state.teamA.bibColor, Color(hex: "#AF52DE"))
+      expectNoDifference(state.teamB.bibColor, Color(hex: "#FF9500"))
     }
 
     @Test
     func breakSnapshotRehydratesPausedInTheCompletedQuartersOrder() {
-      let ravens = Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-      let swifts = Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+      let ravens = Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+      let swifts = Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
       let snapshot = GameSnapshot(
         game: Game(
           id: UUID(-3),
@@ -91,7 +92,7 @@ extension SupershotTestSuite {
       expectNoDifference(state.currentDurationSeconds, 600)
       expectNoDifference(state.elapsedSeconds, 125)
       expectNoDifference(state.isShowingLastCentrePassBanner, true)
-      expectNoDifference(state.isShowingOriginalTeamOrder, false)
+      expectNoDifference(state.swapTeamOrder, false)
       expectNoDifference(state.isTimerRunning, false)
     }
 

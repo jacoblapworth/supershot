@@ -4,6 +4,8 @@ import ComposableArchitecture
 import RevenueCat
 
 @main struct SupershotApp: App {
+  @Dependency(\.context) var context
+  
   init() {
     guard
       let revenueCatAPIKey = Bundle.main.object(
@@ -11,7 +13,7 @@ import RevenueCat
       ) as? String,
       !revenueCatAPIKey.isEmpty,
       !revenueCatAPIKey.hasPrefix("$(")
-    else {
+        else {
       preconditionFailure(
         "RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings."
       )
@@ -20,19 +22,21 @@ import RevenueCat
     Purchases.configure(
       withAPIKey: revenueCatAPIKey
     )
-    #if DEBUG
-    Purchases.shared.logIn("dev") { _,_,_  in
-      
-    }
-    #endif
+#if DEBUG
+    Purchases.shared.logIn("dev") { _,_,_  in }
+#endif
     try! prepareDependencies {
       try $0.bootstrapDatabase()
+//      try $0.defaultSyncEngine = SyncEngine.init(
+//        for: $0.defaultDatabase,
+//        tables: Team.self, Game.self, GamePeriod.self, Goal.self
+//      )
 #if DEBUG
       try $0.defaultDatabase.seedDebugExamplesIfNeeded()
 #endif
     }
   }
-
+  
   var body: some Scene {
     WindowGroup {
       AppView(

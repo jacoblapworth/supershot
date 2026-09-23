@@ -1,3 +1,4 @@
+import SwiftUI
 import Dependencies
 import Foundation
 import GRDB
@@ -12,8 +13,8 @@ extension DatabaseWriter {
       let inProgressStartedAt = Date(timeIntervalSince1970: 1_785_659_400)
 
       try db.seed {
-        Team(id: UUID(1), name: "North London Ravens", colorHex: TeamColorPalette.blue)
-        Team(id: UUID(2), name: "Westminster Swifts", colorHex: TeamColorPalette.red)
+        Team(id: UUID(1), name: "North London Ravens", colorHex: ColorPalette.blue.hex())
+        Team(id: UUID(2), name: "Westminster Swifts", colorHex: ColorPalette.red.hex())
         Team(id: UUID(3), name: "Hackney Foxes", colorHex: "#34C759")
         Team(id: UUID(4), name: "Camden Owls", colorHex: "#FF9500")
         Game(
@@ -21,9 +22,9 @@ extension DatabaseWriter {
           startedAt: completedStartedAt,
           endedAt: completedStartedAt.addingTimeInterval(35 * 60),
           teamAID: UUID(1),
-          teamABibColorHex: TeamColorPalette.blue,
+          teamABibColorHex: ColorPalette.blue.hex(),
           teamBID: UUID(2),
-          teamBBibColorHex: TeamColorPalette.red,
+          teamBBibColorHex: ColorPalette.red.hex(),
           centrePassTeamID: UUID(1),
           currentPhaseIndex: 6,
           elapsedSeconds: MockGameData.periodDurationSeconds,

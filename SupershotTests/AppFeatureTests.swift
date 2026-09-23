@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
@@ -63,6 +64,35 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func childDelegatesUpdateGlobalPremiumState() async {
+      var state = AppFeature.State()
+      state.hasCheckedPermissions = true
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+      }
+
+      await store.send(.games(.delegate(.proPromotionTapped)))
+      await store.receive {
+        guard case .proPromotionTapped = $0 else { return false }
+        return true
+      } assert: {
+        $0.proPaywall = ProPaywallFeature.State()
+      }
+      await store.send(.settings(.delegate(.proAccessChanged(.pro))))
+      await store.receive {
+        guard case .proAccessUpdated(.pro) = $0 else { return false }
+        return true
+      } assert: {
+        $0.proAccess = .pro
+        $0.proPaywall = nil
+      }
+      await store.finish()
+    }
+
+    @Test
     func entitlementTransitionsSynchronizePremiumPresentations() async {
       let seedStore = Self.makeAppScoringStore()
       let database = seedStore.dependencies.defaultDatabase
@@ -116,33 +146,6 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func finishingGameReplacesScoringWithDetailRoute() async {
-      var state = AppFeature.State()
-      state.path.append(.scoring(Self.appScoringState()))
-      let scoringID = state.path.ids[0]
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      }
-      store.exhaustivity = .off(showSkippedAssertions: false)
-
-      await store.send(
-        .path(
-          .element(
-            id: scoringID,
-            action: .scoring(.delegate(.gameFinished(UUID(3))))
-          )
-        )
-      )
-
-      expectNoDifference(store.state.path.count, 1)
-      guard case let .gameDetail(detail) = store.state.path[0] else {
-        Issue.record("Expected the completed game detail route")
-        return
-      }
-      expectNoDifference(detail.gameID, UUID(3))
-    }
-
-    @Test
     func gameDeepLinkReconcilesAndRestoresRunningScoringRoute() async {
       var scoring = Self.appScoringState()
       scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
@@ -161,12 +164,14 @@ extension SupershotTestSuite {
         .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
       )
       await store.receive {
-        guard case let .resumeGameResponse(request, .success) = $0 else { return false }
+        guard case let .games(.resumeGameResponse(request, .success)) = $0 else {
+          return false
+        }
         return request.gameID == UUID(3)
       }
 
-      expectNoDifference(store.state.path.count, 1)
-      guard case let .scoring(restored) = store.state.path[0] else {
+      expectNoDifference(store.state.games.path.count, 1)
+      guard case let .scoring(restored) = store.state.games.path[0] else {
         Issue.record("Expected the running scoring route")
         return
       }
@@ -181,8 +186,8 @@ extension SupershotTestSuite {
     @Test
     func tabsRetainIndependentNavigationHistories() async {
       var state = AppFeature.State()
-      state.path.append(.setup(NewGameFeature.State()))
-      state.teamsPath.append(
+      state.games.path.append(.setup(NewGameFeature.State()))
+      state.teams.path.append(
         .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
       )
       let store = TestStore(initialState: state) {
@@ -193,131 +198,8 @@ extension SupershotTestSuite {
         $0.selectedTab = .teams
       }
 
-      expectNoDifference(store.state.path.count, 1)
-      expectNoDifference(store.state.teamsPath.count, 1)
-    }
-
-    @Test
-    func completedTeamGameOpensDetailInTeamsStack() async {
-      let game = GameListItem(
-        endedAt: Date(timeIntervalSince1970: 2_000),
-        id: UUID(3),
-        startedAt: Date(timeIntervalSince1970: 1_000),
-        teamAName: "Ravens",
-        teamAScore: 12,
-        teamBName: "Swifts",
-        teamBScore: 10
-      )
-      var state = AppFeature.State()
-      state.selectedTab = .teams
-      state.teamsPath.append(
-        .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
-      )
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      }
-
-      await store.send(.teamGameRowTapped(game)) {
-        $0.teamsPath.append(
-          .gameDetail(GameDetailFeature.State(gameID: game.id))
-        )
-      }
-
-      expectNoDifference(store.state.path.count, 0)
-      expectNoDifference(store.state.teamsPath.count, 2)
-    }
-
-    @Test
-    func unfinishedTeamGameResumesAndFinishesInTeamsStack() async {
-      let seedStore = Self.makeAppScoringStore()
-      let database = seedStore.dependencies.defaultDatabase
-      let game = GameListItem(
-        endedAt: nil,
-        id: UUID(3),
-        startedAt: Date(timeIntervalSince1970: 500),
-        teamAName: "Ravens",
-        teamAScore: 0,
-        teamBName: "Swifts",
-        teamBScore: 0
-      )
-      var state = AppFeature.State()
-      state.selectedTab = .teams
-      state.teamsPath.append(
-        .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
-      )
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_100)
-        $0.defaultDatabase = database
-        $0.gameTimer = .live
-      }
-      store.exhaustivity = .off(showSkippedAssertions: false)
-
-      await store.send(.teamGameRowTapped(game)) {
-        $0.pendingGameResume = AppFeature.PendingGameResume(
-          gameID: game.id,
-          requestID: UUID(0),
-          tab: .teams
-        )
-      }
-      await store.receive {
-        guard case let .resumeGameResponse(request, .success) = $0 else { return false }
-        return request.gameID == game.id
-      }
-
-      expectNoDifference(store.state.pendingGameResume, nil)
-      expectNoDifference(store.state.path.count, 0)
-      expectNoDifference(store.state.teamsPath.count, 2)
-      guard case let .scoring(scoring) = store.state.teamsPath[1] else {
-        Issue.record("Expected scoring to resume in the Teams stack")
-        return
-      }
-      expectNoDifference(scoring.gameID, game.id)
-
-      let scoringID = store.state.teamsPath.ids[1]
-      await store.send(
-        .teamsPath(
-          .element(
-            id: scoringID,
-            action: .scoring(.delegate(.gameFinished(game.id)))
-          )
-        )
-      )
-
-      expectNoDifference(store.state.path.count, 0)
-      expectNoDifference(store.state.teamsPath.count, 2)
-      guard case let .gameDetail(detail) = store.state.teamsPath[1] else {
-        Issue.record("Expected scoring to finish in the Teams stack")
-        return
-      }
-      expectNoDifference(detail.gameID, game.id)
-    }
-
-    @Test
-    func staleResumeResponseIsIgnored() async {
-      let currentRequest = AppFeature.PendingGameResume(
-        gameID: UUID(3),
-        requestID: UUID(2),
-        tab: .teams
-      )
-      var state = AppFeature.State()
-      state.pendingGameResume = currentRequest
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      }
-      let staleRequest = AppFeature.PendingGameResume(
-        gameID: UUID(3),
-        requestID: UUID(1),
-        tab: .games
-      )
-
-      await store.send(
-        .resumeGameResponse(
-          staleRequest,
-          .failure(SubscriptionTestError.unavailable)
-        )
-      )
+      expectNoDifference(store.state.games.path.count, 1)
+      expectNoDifference(store.state.teams.path.count, 1)
     }
 
     @Test
@@ -325,7 +207,7 @@ extension SupershotTestSuite {
       let scoring = Self.appScoringState()
       let seedStore = Self.makeAppScoringStore(state: scoring)
       var state = AppFeature.State()
-      state.teamsPath.append(.scoring(scoring))
+      state.teams.path.append(.scoring(scoring))
       let store = TestStore(initialState: state) {
         AppFeature()
       } withDependencies: {
@@ -340,128 +222,9 @@ extension SupershotTestSuite {
         $0.selectedTab = .teams
       }
 
-      expectNoDifference(store.state.path.count, 0)
-      expectNoDifference(store.state.teamsPath.count, 1)
+      expectNoDifference(store.state.games.path.count, 0)
+      expectNoDifference(store.state.teams.path.count, 1)
     }
-
-    @Test
-    func deletingGameRemovesGoalsRetainsTeamsAndEndsPresentation() async throws {
-      let seedStore = Self.makeAppScoringStore()
-      let database = seedStore.dependencies.defaultDatabase
-      let events = LockIsolated<[TimerSystemEvent]>([])
-      try await database.write { db in
-        try Goal.insert {
-          Goal(
-            id: UUID(4),
-            gameID: UUID(3),
-            gamePeriodID: testGamePeriodID(gameID: UUID(3), position: 0),
-            teamID: UUID(1),
-            elapsedSeconds: 10,
-            points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_000)
-          )
-        }
-        .execute(db)
-      }
-
-      let store = TestStore(initialState: AppFeature.State()) {
-        AppFeature()
-      } withDependencies: {
-        $0.defaultDatabase = database
-        $0.alarmClient = Self.timerSystemClient(events: events)
-      }
-
-      await store.send(.deleteGameButtonTapped(UUID(3)))
-      await store.finish()
-
-      let values = try await database.read { db in
-        (
-          try Game.find(UUID(3)).fetchOne(db),
-          try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
-          try Team.fetchAll(db)
-        )
-      }
-      expectNoDifference(values.0, nil)
-      expectNoDifference(values.1, [])
-      expectNoDifference(values.2.count, 2)
-      expectNoDifference(events.value, [.cancelAlarm, .endActivity])
-    }
-
-    @Test
-    func deletingTeamRemovesItsGamesAndGoalsAndEndsPresentations() async throws {
-      let seedStore = Self.makeAppScoringStore()
-      let database = seedStore.dependencies.defaultDatabase
-      let events = LockIsolated<[TimerSystemEvent]>([])
-      try await database.write { db in
-        try Goal.insert {
-          Goal(
-            id: UUID(4),
-            gameID: UUID(3),
-            gamePeriodID: testGamePeriodID(gameID: UUID(3), position: 0),
-            teamID: UUID(1),
-            elapsedSeconds: 10,
-            points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_000)
-          )
-        }
-        .execute(db)
-      }
-
-      let store = TestStore(initialState: AppFeature.State()) {
-        AppFeature()
-      } withDependencies: {
-        $0.defaultDatabase = database
-      }
-
-      await store.send(.deleteTeamButtonTapped(UUID(1)))
-      await store.finish()
-
-      let values = try await database.read { db in
-        (
-          try Team.find(UUID(1)).fetchOne(db),
-          try Game.find(UUID(3)).fetchOne(db),
-          try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
-          try Team.find(UUID(2)).fetchOne(db)
-        )
-      }
-      expectNoDifference(values.0, nil)
-      expectNoDifference(values.1, nil)
-      expectNoDifference(values.2, [])
-      expectNoDifference(values.3?.name, "Swifts")
-      expectNoDifference(events.value, [.cancelAlarm, .endActivity])
-    }
-
-    private nonisolated static func timerSystemClient(
-        events: LockIsolated<[TimerSystemEvent]>,
-        alarmUnavailable: Bool = false
-      ) -> AlarmClient {
-        AlarmClient(
-          authorise: { .authorized },
-          scheduleAlarm: { snapshot, requestsAuthorization in
-            events.withValue {
-              $0.append(
-                .alarm(
-                  snapshot.game.timerEndsAt,
-                  requestsAuthorization: requestsAuthorization
-                )
-              )
-            }
-            return alarmUnavailable
-          },
-          updateActivity: { snapshot, _ in
-            events.withValue {
-              $0.append(.activity(snapshot.game.timerEndsAt))
-            }
-          },
-          cancelAlarm: { _, _ in
-            events.withValue { $0.append(.cancelAlarm) }
-          },
-          endActivity: { _ in
-            events.withValue { $0.append(.endActivity) }
-          }
-        )
-      }
-
 
     private static func makeAppScoringStore(
         state: ScoringFeature.State = appScoringState(),
@@ -532,24 +295,17 @@ extension SupershotTestSuite {
           startedAt: Date(timeIntervalSince1970: 500),
           teamA: ScoringFeature.Team(
             id: UUID(1),
-            bibColorHex: TeamColorPalette.blue,
+            bibColor: ColorPalette.blue,
             name: "Ravens"
           ),
           teamB: ScoringFeature.Team(
             id: UUID(2),
-            bibColorHex: TeamColorPalette.red,
+            bibColor: ColorPalette.red,
             name: "Swifts"
           )
         )
       }
   }
-}
-
-private nonisolated enum TimerSystemEvent: Equatable, Sendable {
-  case activity(Date?)
-  case alarm(Date?, requestsAuthorization: Bool)
-  case cancelAlarm
-  case endActivity
 }
 
 private nonisolated enum SubscriptionTestError: Error {

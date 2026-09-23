@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 100;
+	objectVersion = 90;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -18,6 +18,7 @@
 		12B00001301F000000000001 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60C301E25CB00094D7C /* DependenciesTestSupport */; };
 		12B00002301F000000000001 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = 12B0000D301F000000000001 /* CustomDump */; };
 		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		12C147E43059644E008F9513 /* LazyState in Frameworks */ = {isa = PBXBuildFile; productRef = 12C147E33059644E008F9513 /* LazyState */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,23 +52,36 @@
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Supershot Netball.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Supershot Netball.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WhatToTest.en-NZ.txt"; sourceTree = "<group>"; };
 		12B00003301F000000000001 /* SupershotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SupershotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		12C000033020000000000001 /* SupershotWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SupershotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		1297B650304839E60041BCEC /* Exceptions for "Supershot" folder in "SupershotTests" target */ = {
+		12347D08305ABFB20091C4D3 /* Exceptions for "SupershotShared" folder in "SupershotWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Database/MockGameData.swift,
+				Intents/CreateGameIntent.swift,
+				Intents/GameEntities.swift,
+				Intents/SupershotShortcuts.swift,
 			);
-			target = 12B00006301F000000000001 /* SupershotTests */;
+			target = 12C000073020000000000001 /* SupershotWidgets */;
+		};
+		12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				GamePhaseLabel.swift,
+			);
+			target = 000000000000000100000000 /* Supershot */;
 		};
 		12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
+			platformFiltersByRelativePath = {
+				LaunchScreen.storyboard = (ios, );
+			};
 			target = 000000000000000100000000 /* Supershot */;
 		};
 		12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */ = {
@@ -80,7 +94,8 @@
 		12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AvatarView.swift,
+				Database/Models.swift,
+				UI/AvatarView.swift,
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
 		};
@@ -92,7 +107,6 @@
 			exceptions = (
 				12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */,
 				12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */,
-				1297B650304839E60041BCEC /* Exceptions for "Supershot" folder in "SupershotTests" target */,
 			);
 			path = Supershot;
 			sourceTree = "<group>";
@@ -104,12 +118,16 @@
 		};
 		12C000043020000000000001 /* SupershotShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				12347D08305ABFB20091C4D3 /* Exceptions for "SupershotShared" folder in "SupershotWidgets" target */,
+			);
 			path = SupershotShared;
 			sourceTree = "<group>";
 		};
 		12C000053020000000000001 /* SupershotWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */,
 				12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */,
 			);
 			path = SupershotWidgets;
@@ -121,6 +139,7 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				12C147E43059644E008F9513 /* LazyState in Frameworks */,
 				12715897300D144600B14CCB /* Sharing in Frameworks */,
 				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
 				121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */,
@@ -149,6 +168,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				1297BAC4304878FE0041BCEC /* TestFlight */,
 				000000000000000000000010 /* Supershot */,
 				12C000043020000000000001 /* SupershotShared */,
 				12C000053020000000000001 /* SupershotWidgets */,
@@ -166,6 +186,14 @@
 				12B00003301F000000000001 /* SupershotTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		1297BAC4304878FE0041BCEC /* TestFlight */ = {
+			isa = PBXGroup;
+			children = (
+				1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */,
+			);
+			path = TestFlight;
 			sourceTree = "<group>";
 		};
 		12A4C60E301E295200094D7C /* Frameworks */ = {
@@ -206,6 +234,7 @@
 				12A4C613301E296700094D7C /* SwiftUINavigation */,
 				121C048F302213DA00ED9B54 /* RevenueCat */,
 				121C0491302213DA00ED9B54 /* RevenueCatUI */,
+				12C147E33059644E008F9513 /* LazyState */,
 			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Supershot Netball.app */;
@@ -294,6 +323,7 @@
 				12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */,
 				121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -495,6 +525,7 @@
 			buildSettings = {
 				APP_URL_SCHEME = "supershot-dev";
 				ASSETCATALOG_COMPILER_APPICON_NAME = "SupershotCourt-Dev";
+				CODE_SIGN_ENTITLEMENTS = Supershot/Supershot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 82882Y54S7;
@@ -504,8 +535,9 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot uses your location to record where games are played.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot saves the location of your games.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -513,6 +545,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -543,6 +576,7 @@
 			buildSettings = {
 				APP_URL_SCHEME = supershot;
 				ASSETCATALOG_COMPILER_APPICON_NAME = SupershotCourt;
+				CODE_SIGN_ENTITLEMENTS = Supershot/Supershot.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 82882Y54S7;
@@ -551,9 +585,10 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
+				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot uses your location to record where games are played.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Supershot saves the location of your games.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
@@ -561,6 +596,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UILaunchScreen_Generation[sdk=iphonesimulator*]" = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -777,7 +813,6 @@
 				minimumVersion = 2.9.1;
 			};
 			traits = (
-				CasePaths,
 			);
 		};
 		12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */ = {
@@ -788,8 +823,6 @@
 				minimumVersion = 1.8.2;
 			};
 			traits = (
-				CasePaths,
-				LazyInitializableByDefault,
 			);
 		};
 		12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */ = {
@@ -806,6 +839,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.6.1;
+			};
+		};
+		12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swiftui-lazy-state";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
@@ -860,6 +901,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */;
 			productName = CustomDump;
+		};
+		12C147E33059644E008F9513 /* LazyState */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */;
+			productName = LazyState;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

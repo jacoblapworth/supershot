@@ -9,18 +9,16 @@ struct SetupBibColorsView: View {
       Label("Bib colors", systemImage: "tshirt.fill")
         .font(.headline)
 
-      TeamColorPicker(
-      colorHex: $store.leftTeam.bibColorHex,
-      title: "\(store.leftTeam.team?.name ?? "Left team") bib",
-      paletteColorTapped: { store.leftTeam.bibColorHex = $0 }
+      PaletteColorPicker(
+        color: $store.leftTeam.bibColor,
+        title: "\(store.leftTeam.team?.name ?? "Left team") bib"
       )
 
       Divider()
 
-      TeamColorPicker(
-      colorHex: $store.rightTeam.bibColorHex,
-      title: "\(store.rightTeam.team?.name ?? "Right team") bib",
-      paletteColorTapped: { store.rightTeam.bibColorHex = $0 }
+      PaletteColorPicker(
+        color: $store.rightTeam.bibColor,
+        title: "\(store.rightTeam.team?.name ?? "Right team") bib"
       )
     }
     .setupCardStyle()

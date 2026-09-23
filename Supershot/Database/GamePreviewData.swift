@@ -1,3 +1,4 @@
+import SwiftUI
 import Dependencies
 import Foundation
 
@@ -8,10 +9,10 @@ extension GameListItem {
     id: UUID(),
     periods: MockGameData.periods(gameID: UUID(10), idOffset: 1_000),
     startedAt: Date(timeIntervalSince1970: 1_785_659_400),
-    teamABibColorHex: "#34C759",
+    teamABibColor: ColorPalette.green,
     teamAName: "North London Ravens",
     teamAScore: 16,
-    teamBBibColorHex: "#FF9500",
+    teamBBibColor: ColorPalette.orange,
     teamBName: "Westminster Swifts",
     teamBScore: 16
   )
@@ -125,9 +126,9 @@ private let realisticPreviewTimeline: GoalTimeline = {
         id: UUID(300 + index),
         period: event.period,
         points: 1,
-        scoringTeamBibColorHex: event.teamAScored
-          ? TeamColorPalette.blue
-          : TeamColorPalette.red,
+        scoringTeamBibColor: event.teamAScored
+          ? ColorPalette.blue
+          : ColorPalette.red,
         scoringTeamName: event.teamAScored
           ? "North London Ravens"
           : "Westminster Swifts",

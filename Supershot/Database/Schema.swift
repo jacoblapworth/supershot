@@ -6,46 +6,15 @@
 //
 
 import Foundation
+import SwiftUI
 import Dependencies
 import OSLog
 import SQLiteData
 import CasePaths
 
-/// Phase of a game
-nonisolated enum GamePhase: Equatable, Hashable, Sendable {
-  case period(number: Int, durationSeconds: Int)
-  case breakTime(afterPeriod: Int, durationSeconds: Int)
-  
-  var durationSeconds: Int {
-    switch self {
-    case let .period(_, durationSeconds), let .breakTime(_, durationSeconds):
-      max(durationSeconds, 0)
-    }
-  }
-  
-  var periodNumber: Int {
-    switch self {
-    case let .period(number, _):
-      number
-    case let .breakTime(afterQuarter, _):
-      afterQuarter
-    }
-  }
-  
-  var isBreak: Bool {
-    switch self {
-    case .period: false
-    case .breakTime: true
-    }
-  }
-  
-  var isQuarter: Bool { !isBreak }
-}
-
 nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   var elapsedSeconds = 0
   var endsAt: Date?
-  
   var isRunning: Bool { endsAt != nil }
 }
 
@@ -55,9 +24,9 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var startedAt: Date
   var endedAt: Date?
   var teamAID: Team.ID
-  var teamABibColorHex = TeamColorPalette.blue
+  var teamABibColorHex = ColorPalette.blue.hex()
   var teamBID: Team.ID
-  var teamBBibColorHex = TeamColorPalette.red
+  var teamBBibColorHex = ColorPalette.red.hex()
   var centrePassTeamID: Team.ID?
   var latitude: Double?
   var longitude: Double?
@@ -152,17 +121,13 @@ extension Team {
   nonisolated init(
     id: UUID,
     name: String,
-    colorHex: String = TeamColorPalette.blue
+    colorHex: String = ColorPalette.blue.hex()
   ) {
     self.id = id
-    self.colorHex = TeamColorPalette.isValid(colorHex)
+    self.colorHex = Color.isValidHex(colorHex)
     ? colorHex.uppercased()
-    : TeamColorPalette.blue
-    self.name = Self.trimmedName(name)
-  }
-  
-  nonisolated static func trimmedName(_ name: String) -> String {
-    name.trimmingCharacters(in: .whitespacesAndNewlines)
+    : ColorPalette.blue.hex()
+    self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 
@@ -178,20 +143,9 @@ nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   var createdAt: Date
 }
 
-@DatabaseFunction
-nonisolated func uuid() -> UUID {
-  @Dependency(\.uuid) var uuid
-  return uuid()
-}
-
 extension DependencyValues {
   nonisolated mutating func bootstrapDatabase() throws {
-    var configuration = Configuration()
-    configuration.prepareDatabase { db in
-      db.add(function: $uuid)
-    }
-    
-    let database = try SQLiteData.defaultDatabase(configuration: configuration)
+    let database = try SQLiteData.defaultDatabase()
     logger.debug(
       """
       DEBUG: ℹ️ App database:
@@ -308,3 +262,12 @@ extension DependencyValues {
 }
 
 nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")
+
+nonisolated extension Team {
+  var color: Color { Color(hex: colorHex) }
+}
+
+nonisolated extension Game {
+  var teamABibColor: Color { Color(hex: teamABibColorHex) }
+  var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
+}

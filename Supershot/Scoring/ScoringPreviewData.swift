@@ -1,15 +1,16 @@
+import SwiftUI
 import ComposableArchitecture
 import Foundation
 
 extension ScoringFeature.Team {
   static let previewRavens = Self(
     id: UUID(3),
-    bibColorHex: "#34C759",
+    bibColor: ColorPalette.green,
     name: "Foxes"
   )
   static let previewSwifts = Self(
     id: UUID(4),
-    bibColorHex: "#FF9500",
+    bibColor: ColorPalette.orange,
     name: "Owls"
   )
 }

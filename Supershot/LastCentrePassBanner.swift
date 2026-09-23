@@ -22,7 +22,7 @@ struct LastCentrePassBanner: View {
 
       HStack(spacing: 8) {
         Circle()
-          .fill(Color(teamHex: centrePassTeam.bibColorHex))
+          .fill(centrePassTeam.bibColor)
           .frame(width: 12, height: 12)
           .accessibilityHidden(true)
         Text("Did **\(centrePassTeam.name)** take the last centre pass?")

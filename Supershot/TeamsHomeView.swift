@@ -1,15 +1,48 @@
+import ComposableArchitecture
 import Dependencies
+import SQLiteData
 import SwiftUI
 
 struct TeamsHomeView: View {
-  var deleteTeamTapped: (Team.ID) -> Void
-  var newTeamTapped: () -> Void
-  var teamTapped: (TeamListItem) -> Void
-  var teams: [TeamListItem]
+  let proAccess: SubscriptionEntitlement
+  @Bindable var store: StoreOf<TeamsFeature>
+  @Fetch(TeamsRequest(), animation: .default)
+  private var teamsResponse = TeamsRequest.Value()
 
   var body: some View {
+    NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+      teamsList
+    } destination: { pathStore in
+      switch pathStore.case {
+      case .gameDetail(let gameDetailStore):
+        GameDetailView(
+          store: gameDetailStore,
+          showsProPromotion: proAccess == .free,
+          proPromotionTapped: { store.send(.proPromotionTapped) }
+        )
+      case .scoring(let scoringStore):
+        ScoringView(store: scoringStore)
+#if os(iOS)
+          .toolbarVisibility(.hidden, for: .tabBar)
+#endif
+      case .teamDetail(let teamDetailStore):
+        TeamDetailView(
+          store: teamDetailStore,
+          isResumingGame: store.pendingGameResume != nil
+        )
+      }
+    }
+    .alert($store.scope(state: \.alert, action: \.alert))
+    .sheet(item: $store.scope(state: \.teamEditor, action: \.teamEditor)) { editorStore in
+      NavigationStack {
+        TeamEditorView(store: editorStore)
+      }
+    }
+  }
+
+  private var teamsList: some View {
     List {
-      if teams.isEmpty {
+      if teamsResponse.teams.isEmpty {
         ContentUnavailableView(
           "No teams yet",
           systemImage: "person.2",
@@ -17,16 +50,16 @@ struct TeamsHomeView: View {
         )
         .listRowBackground(Color.clear)
       } else {
-        ForEach(teams) { team in
+        ForEach(teamsResponse.teams) { team in
           Button {
-            teamTapped(team)
+            store.send(.teamRowTapped(team))
           } label: {
             TeamRow(team: team)
           }
           .buttonStyle(.plain)
           .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Delete", systemImage: "trash", role: .destructive) {
-              deleteTeamTapped(team.id)
+              store.send(.deleteTeamButtonTapped(team.id))
             }
           }
         }
@@ -35,7 +68,9 @@ struct TeamsHomeView: View {
     .navigationTitle("Teams")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        Button(action: newTeamTapped) {
+        Button {
+          store.send(.newTeamButtonTapped)
+        } label: {
           Label("New team", systemImage: "plus")
         }
       }
@@ -49,7 +84,7 @@ private struct TeamRow: View {
   var body: some View {
     HStack(spacing: 14) {
       Circle()
-        .fill(Color(teamHex: team.colorHex))
+        .fill(team.color)
         .frame(width: 22, height: 22)
         .accessibilityHidden(true)
 
@@ -74,37 +109,15 @@ private struct TeamRow: View {
   }
 }
 
-#Preview("Empty teams") {
-  NavigationStack {
-    TeamsHomeView(
-      deleteTeamTapped: { _ in },
-      newTeamTapped: {},
-      teamTapped: { _ in },
-      teams: []
-    )
-  }
-}
-
 #Preview("Teams") {
-  NavigationStack {
-    TeamsHomeView(
-      deleteTeamTapped: { _ in },
-      newTeamTapped: {},
-      teamTapped: { _ in },
-      teams: [
-        TeamListItem(
-          colorHex: TeamColorPalette.blue,
-          gameCount: 4,
-          id: UUID(1),
-          name: "North London Ravens"
-        ),
-        TeamListItem(
-          colorHex: TeamColorPalette.red,
-          gameCount: 1,
-          id: UUID(2),
-          name: "Westminster Swifts"
-        ),
-      ]
-    )
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
+  TeamsHomeView(
+    proAccess: .free,
+    store: Store(initialState: TeamsFeature.State()) {
+      TeamsFeature()
+    }
+  )
 }

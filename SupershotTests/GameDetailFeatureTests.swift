@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
@@ -28,8 +29,8 @@ extension SupershotTestSuite {
       )
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
             startedAt: startedAt,
@@ -106,7 +107,7 @@ extension SupershotTestSuite {
                     id: UUID(-3),
                     period: 2,
                     points: 1,
-                    scoringTeamBibColorHex: TeamColorPalette.red,
+                    scoringTeamBibColor: ColorPalette.red,
                     scoringTeamName: "Swifts",
                     scoringTeamSide: .teamB,
                     teamAScore: 2,
@@ -124,7 +125,7 @@ extension SupershotTestSuite {
                     id: UUID(-2),
                     period: 1,
                     points: 1,
-                    scoringTeamBibColorHex: TeamColorPalette.red,
+                    scoringTeamBibColor: ColorPalette.red,
                     scoringTeamName: "Swifts",
                     scoringTeamSide: .teamB,
                     teamAScore: 2,
@@ -135,7 +136,7 @@ extension SupershotTestSuite {
                     id: UUID(-1),
                     period: 1,
                     points: 2,
-                    scoringTeamBibColorHex: TeamColorPalette.blue,
+                    scoringTeamBibColor: ColorPalette.blue,
                     scoringTeamName: "Ravens",
                     scoringTeamSide: .teamA,
                     teamAScore: 2,
@@ -174,10 +175,10 @@ extension SupershotTestSuite {
               )
             )
           ),
-          teamABibColorHex: TeamColorPalette.blue,
+          teamABibColor: ColorPalette.blue,
           teamAName: "Ravens",
           teamAScore: 2,
-          teamBBibColorHex: TeamColorPalette.red,
+          teamBBibColor: ColorPalette.red,
           teamBName: "Swifts",
           teamBScore: 2
         )
@@ -192,8 +193,8 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try db.seed {
-          Team(id: UUID(-1), name: "Ravens", colorHex: TeamColorPalette.blue)
-          Team(id: UUID(-2), name: "Swifts", colorHex: TeamColorPalette.red)
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
             startedAt: Date(timeIntervalSince1970: 1_000),

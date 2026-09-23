@@ -1,55 +1,82 @@
+import ComposableArchitecture
+import Dependencies
+import SQLiteData
 import SwiftUI
 
 struct GamesHomeView: View {
-  var games: [GameListItem]
-  var isResumingGame: Bool
-  var showsProPromotion: Bool
-  var deleteGameTapped: (Game.ID) -> Void
-  var gameTapped: (GameListItem) -> Void
-  var newGameTapped: () -> Void
-  var proPromotionTapped: () -> Void
-  
+  @Fetch(GamesRequest(), animation: .default)
+  private var gamesResponse = GamesRequest.Value()
+  let proAccess: SubscriptionEntitlement
+  @Bindable var store: StoreOf<GamesFeature>
+
   var body: some View {
+    NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
+      gamesList
+    } destination: { pathStore in
+      switch pathStore.case {
+      case .gameDetail(let gameDetailStore):
+        GameDetailView(
+          store: gameDetailStore,
+          showsProPromotion: proAccess == .free,
+          proPromotionTapped: { store.send(.proPromotionTapped) }
+        )
+      case .scoring(let scoringStore):
+        ScoringView(store: scoringStore)
+#if os(iOS)
+          .toolbarVisibility(.hidden, for: .tabBar)
+#endif
+      case .setup(let setupStore):
+        NewGameView(store: setupStore)
+#if os(iOS)
+          .toolbarVisibility(.hidden, for: .tabBar)
+#endif
+      }
+    }
+    .alert($store.scope(state: \.alert, action: \.alert))
+  }
+
+  private var gamesList: some View {
     List {
-      if showsProPromotion {
+      if proAccess == .free {
         Section {
-          ProPromotionCard(exploreProTapped: proPromotionTapped)
-            .listRowBackground(Color.clear)
-            .listRowInsets(.all, 0)
+          ProPromotionCard(
+            exploreProTapped: { store.send(.proPromotionTapped) }
+          )
+          .listRowBackground(Color.clear)
+          .listRowInsets(.all, 0)
         }
       }
-      
+
       Section {
-        if games.isEmpty {
+        if gamesResponse.games.isEmpty {
           ContentUnavailableView {
             Label("No games yet", systemImage: "sportscourt")
           } description: {
             Text("Start a game to keep score and build your history.")
           } actions: {
-            Button("New Game", action: newGameTapped)
-              .buttonStyle(.borderedProminent)
-              .fontWeight(.medium)
-              .controlSize(.large)
+            Button("New Game") {
+              store.send(.newGameButtonTapped)
+            }
+            .buttonStyle(.borderedProminent)
+            .fontWeight(.medium)
+            .controlSize(.large)
           }
           .listRowBackground(Color.clear)
         } else {
-          ForEach(games) { game in
+          ForEach(gamesResponse.games) { game in
             Button {
-              gameTapped(game)
+              store.send(.gameRowTapped(game))
             } label: {
-              GameRow(
-                game: game
-              )
+              GameRow(game: game)
             }
             
             .buttonStyle(.plain)
-            .alignmentGuide(.listRowSeparatorLeading, computeValue: { _ in
-              return 0
-            })
-            .disabled(isResumingGame)
+            .listRowInsets(.all, 0)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+            .disabled(store.pendingGameResume != nil)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
               Button("Delete", systemImage: "trash", role: .destructive) {
-                deleteGameTapped(game.id)
+                store.send(.deleteGameButtonTapped(game.id))
               }
             }
           }
@@ -59,53 +86,26 @@ struct GamesHomeView: View {
     .navigationTitle("Games")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
-        Button(action: newGameTapped) {
+        Button {
+          store.send(.newGameButtonTapped)
+        } label: {
           Label("New game", systemImage: "plus")
         }
-        .disabled(isResumingGame)
+        .disabled(store.pendingGameResume != nil)
       }
     }
   }
 }
 
-#Preview("Empty games") {
-  NavigationStack {
-    GamesHomeView(
-      games: [],
-      isResumingGame: false,
-      showsProPromotion: true,
-      deleteGameTapped: { _ in },
-      gameTapped: { _ in },
-      newGameTapped: {},
-      proPromotionTapped: {}
-    )
+#Preview("Games") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
-}
-
-#Preview("Game history") {
-  NavigationStack {
-    GamesHomeView(
-      games: .previewGames,
-      isResumingGame: false,
-      showsProPromotion: true,
-      deleteGameTapped: { _ in },
-      gameTapped: { _ in },
-      newGameTapped: {},
-      proPromotionTapped: {}
-    )
-  }
-}
-
-#Preview("Loading game") {
-  NavigationStack {
-    GamesHomeView(
-      games: .previewGames,
-      isResumingGame: true,
-      showsProPromotion: false,
-      deleteGameTapped: { _ in },
-      gameTapped: { _ in },
-      newGameTapped: {},
-      proPromotionTapped: {}
-    )
-  }
+  GamesHomeView(
+    proAccess: .free,
+    store: Store(initialState: GamesFeature.State()) {
+      GamesFeature()
+    }
+  )
 }

@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import Foundation
 
@@ -5,12 +6,12 @@ extension Team {
   static let previewRavens = Self(
     id: UUID(),
     name: "North London Ravens",
-    colorHex: TeamColorPalette.blue
+    colorHex: ColorPalette.blue.hex()
   )
   static let previewSwifts = Self(
     id: UUID(),
     name: "Westminster Swifts",
-    colorHex: TeamColorPalette.red
+    colorHex: ColorPalette.red.hex()
   )
   static let previewFoxes = Self(
     id: UUID(),

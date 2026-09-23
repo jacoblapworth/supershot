@@ -1,3 +1,4 @@
+import ComposableArchitecture
 import RevenueCatUI
 import Sharing
 import SwiftUI
@@ -5,36 +6,41 @@ import RevenueCat
 
 struct SettingsView: View {
   let proAccess: SubscriptionEntitlement
-  var proAccessUpdated: (SubscriptionEntitlement) -> Void
-  var proPromotionTapped: () -> Void
+  @Bindable var store: StoreOf<SettingsFeature>
   
-#if os(iOS)
-  @State private var isCustomerCenterPresented = false
-#else
+#if !os(iOS)
   @Environment(\.openURL) private var openURL
 #endif
   
   var body: some View {
+    NavigationStack {
 #if os(iOS)
-    SettingsContent(
-      proAccess: proAccess,
-      manageSubscriptionTapped: { isCustomerCenterPresented = true },
-      proPromotionTapped: proPromotionTapped
-    )
-    .presentCustomerCenter(
-      isPresented: $isCustomerCenterPresented,
-      restoreCompleted: { proAccessUpdated(SubscriptionEntitlement(customerInfo: $0)) },
-      onDismiss: { isCustomerCenterPresented = false }
-    )
+      SettingsContent(
+        proAccess: proAccess,
+        manageSubscriptionTapped: { store.send(.manageSubscriptionButtonTapped) },
+        proPromotionTapped: { store.send(.proPromotionTapped) }
+      )
+      .presentCustomerCenter(
+        isPresented: $store.isCustomerCenterPresented.sending(
+          \.customerCenterPresentationChanged
+        ),
+        restoreCompleted: {
+          store.send(
+            .customerInfoUpdated(SubscriptionEntitlement(customerInfo: $0))
+          )
+        },
+        onDismiss: { store.send(.customerCenterPresentationChanged(false)) }
+      )
 #else
-    SettingsContent(
-      proAccess: proAccess,
-      manageSubscriptionTapped: {
-        openURL(URL(string: "https://apps.apple.com/account/subscriptions")!)
-      },
-      proPromotionTapped: proPromotionTapped
-    )
+      SettingsContent(
+        proAccess: proAccess,
+        manageSubscriptionTapped: {
+          openURL(URL(string: "https://apps.apple.com/account/subscriptions")!)
+        },
+        proPromotionTapped: { store.send(.proPromotionTapped) }
+      )
 #endif
+    }
   }
 }
 
@@ -168,8 +174,9 @@ private struct GameDefaultsSettingsSection: View {
   NavigationStack {
     SettingsView(
       proAccess: .free,
-      proAccessUpdated: { _ in },
-      proPromotionTapped: {}
+      store: Store(initialState: SettingsFeature.State()) {
+        SettingsFeature()
+      }
     )
   }
 }
@@ -178,8 +185,9 @@ private struct GameDefaultsSettingsSection: View {
   NavigationStack {
     SettingsView(
       proAccess: .pro,
-      proAccessUpdated: { _ in },
-      proPromotionTapped: {}
+      store: Store(initialState: SettingsFeature.State()) {
+        SettingsFeature()
+      }
     )
   }
 }

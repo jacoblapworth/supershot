@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CentrePassControl: View {
   var centrePassTeamID: UUID
-  var isShowingOriginalTeamOrder: Bool
+  var swapTeamOrder: Bool = false
   var teamA: ScoringFeature.Team
   var teamB: ScoringFeature.Team
   var centrePassTeamTapped: (UUID) -> Void
@@ -13,13 +13,11 @@ struct CentrePassControl: View {
         .font(.headline)
 
       HStack(spacing: 12) {
-        if isShowingOriginalTeamOrder {
+        Group {
           centrePassButton(team: teamA)
           centrePassButton(team: teamB)
-        } else {
-          centrePassButton(team: teamB)
-          centrePassButton(team: teamA)
         }
+        .reversed(swapTeamOrder)
       }
 
       Text("Tap a team to correct the next centre pass.")
@@ -27,12 +25,12 @@ struct CentrePassControl: View {
         .foregroundStyle(.secondary)
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    .background(.thinMaterial, in: .containerRelative)
   }
 
   private func centrePassButton(team: ScoringFeature.Team) -> some View {
     CentrePassButton(
-      colorHex: team.bibColorHex,
+      color: team.bibColor,
       isSelected: centrePassTeamID == team.id,
       name: team.name,
       action: { centrePassTeamTapped(team.id) }
@@ -41,7 +39,7 @@ struct CentrePassControl: View {
 }
 
 private struct CentrePassButton: View {
-  var colorHex: String
+  var color: Color
   var isSelected: Bool
   var name: String
   var action: () -> Void
@@ -59,13 +57,13 @@ private struct CentrePassButton: View {
       .padding(.horizontal, 8)
       .foregroundStyle(Color.primary)
       .background(
-        isSelected ? Color(teamHex: colorHex).opacity(0.2) : Color.clear,
+        isSelected ? color.opacity(0.2) : Color.clear,
         in: RoundedRectangle(cornerRadius: 8)
       )
       .overlay {
         RoundedRectangle(cornerRadius: 8)
           .stroke(
-            isSelected ? Color(teamHex: colorHex) : Color.secondary.opacity(0.4),
+            isSelected ? color : Color.secondary.opacity(0.4),
             lineWidth: isSelected ? 2 : 1
           )
       }
@@ -79,7 +77,7 @@ private struct CentrePassButton: View {
 #Preview("Centre pass") {
   CentrePassControl(
     centrePassTeamID: ScoringFeature.Team.previewRavens.id,
-    isShowingOriginalTeamOrder: true,
+    swapTeamOrder: true,
     teamA: .previewRavens,
     teamB: .previewSwifts,
     centrePassTeamTapped: { _ in }

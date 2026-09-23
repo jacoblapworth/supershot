@@ -1,3 +1,4 @@
+import SwiftUI
 import ComposableArchitecture
 import Foundation
 import Sharing
@@ -45,11 +46,11 @@ struct NewGameFeature {
   }
 
   nonisolated struct TeamSelection: Equatable, Sendable {
-    var bibColorHex: String
+    var bibColor: Color
     var team: Team?
 
-    init(bibColorHex: String) {
-      self.bibColorHex = bibColorHex
+    init(bibColor: Color) {
+      self.bibColor = bibColor
     }
   }
 
@@ -61,12 +62,12 @@ struct NewGameFeature {
     var firstCentrePass: TeamSide?
     var halfTimeDuration = DurationDraft(totalSeconds: 1 * 60)
     var isSaving = false
-    var leftTeam = TeamSelection(bibColorHex: TeamColorPalette.blue)
+    var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     var location = LocationState.idle
     @Presents var picker: TeamPickerFeature.State?
     var pickingTeamSide: TeamSide?
     var periodDuration = DurationDraft(totalSeconds: 8 * 60)
-    var rightTeam = TeamSelection(bibColorHex: TeamColorPalette.red)
+    var rightTeam = TeamSelection(bibColor: ColorPalette.red)
     var secondBreakDuration = DurationDraft(totalSeconds: 1 * 60)
 
     init() {
@@ -89,8 +90,6 @@ struct NewGameFeature {
     var canStartGame: Bool {
       leftTeam.team != nil
         && rightTeam.team != nil
-        && TeamColorPalette.isValid(leftTeam.bibColorHex)
-        && TeamColorPalette.isValid(rightTeam.bibColorHex)
         && firstCentrePass != nil
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
@@ -166,7 +165,7 @@ struct NewGameFeature {
   }
 
   private struct PreparedTeam: Sendable {
-    let bibColorHex: String
+    let bibColor: Color
     let team: Team
   }
 
@@ -226,10 +225,10 @@ struct NewGameFeature {
           switch pickingTeamSide {
           case .teamA:
             state.leftTeam.team = team
-            state.leftTeam.bibColorHex = team.colorHex
+            state.leftTeam.bibColor = team.color
           case .teamB:
             state.rightTeam.team = team
-            state.rightTeam.bibColorHex = team.colorHex
+            state.rightTeam.bibColor = team.color
           }
           state.picker = nil
           state.pickingTeamSide = nil
@@ -281,13 +280,6 @@ struct NewGameFeature {
           }
           guard state.hasDifferentSelectedTeams else {
             state.errorMessage = state.teamNameErrorMessage ?? "Choose two different teams."
-            return .none
-          }
-          guard
-            TeamColorPalette.isValid(state.leftTeam.bibColorHex),
-            TeamColorPalette.isValid(state.rightTeam.bibColorHex)
-          else {
-            state.errorMessage = "Choose a valid bib color for both teams."
             return .none
           }
           guard state.firstCentrePass != nil else {
@@ -355,11 +347,11 @@ struct NewGameFeature {
 
     let gameID = uuid()
     let teamA = PreparedTeam(
-      bibColorHex: state.leftTeam.bibColorHex,
+      bibColor: state.leftTeam.bibColor,
       team: leftTeam
     )
     let teamB = PreparedTeam(
-      bibColorHex: state.rightTeam.bibColorHex,
+      bibColor: state.rightTeam.bibColor,
       team: rightTeam
     )
     let centrePassTeamID = firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
@@ -425,9 +417,9 @@ struct NewGameFeature {
               startedAt: startedAt,
               endedAt: nil,
               teamAID: teamA.team.id,
-              teamABibColorHex: teamA.bibColorHex,
+              teamABibColorHex: teamA.bibColor.hex(),
               teamBID: teamB.team.id,
-              teamBBibColorHex: teamB.bibColorHex,
+              teamBBibColorHex: teamB.bibColor.hex(),
               centrePassTeamID: centrePassTeamID,
               latitude: location?.latitude,
               longitude: location?.longitude,
@@ -449,12 +441,12 @@ struct NewGameFeature {
           startedAt: startedAt,
           teamA: ScoringFeature.Team(
             id: teamA.team.id,
-            bibColorHex: teamA.bibColorHex,
+            bibColor: teamA.bibColor,
             name: teamA.team.name
           ),
           teamB: ScoringFeature.Team(
             id: teamB.team.id,
-            bibColorHex: teamB.bibColorHex,
+            bibColor: teamB.bibColor,
             name: teamB.team.name
           )
         )

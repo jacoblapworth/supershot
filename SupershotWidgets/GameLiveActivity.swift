@@ -14,7 +14,7 @@ struct GameLiveActivity: Widget {
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
           teamScore(
-            colorHex: context.attributes.teamAColorHex,
+            color: context.attributes.teamAColor,
             centrePassDirection: .leading,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
             name: context.attributes.teamAName,
@@ -23,7 +23,7 @@ struct GameLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.trailing) {
           teamScore(
-            colorHex: context.attributes.teamBColorHex,
+            color: context.attributes.teamBColor,
             centrePassDirection: .trailing,
             isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
             name: context.attributes.teamBName,
@@ -37,19 +37,19 @@ struct GameLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           HStack(spacing: 14) {
+            GoalButton(context: context, isTeamA: true)
             TimerText(state: context.state, isStale: context.isStale)
               .font(.title2.bold())
               .frame(maxWidth: .infinity, alignment: .leading)
-            TimerControl(
-              attributes: context.attributes,
-              isStale: context.isStale,
-              state: context.state
-            )
+            GoalButton(context: context, isTeamA: false)
           }
         }
       } compactLeading: {
         Text(context.state.isInBreak ? "B" : "Q\(context.state.period)")
           .font(.caption.bold())
+          .foregroundStyle(.black)
+          .padding(4)
+          .background(.white, in: .capsule)
       } compactTrailing: {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.caption.monospacedDigit())
@@ -71,7 +71,7 @@ struct GameLiveActivity: Widget {
   }
 
   private func teamScore(
-    colorHex: String,
+    color: Color,
     centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
@@ -92,11 +92,13 @@ struct GameLiveActivity: Widget {
       Text("\(score)")
         .font(.title.bold())
         .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .foregroundStyle(color)
     }
     .frame(maxWidth: 92)
   }
 }
+
+
 
 private struct ActivityGameView: View {
   let context: ActivityViewContext<GameActivityAttributes>
@@ -124,17 +126,14 @@ private struct SmallActivityGameView: View {
     VStack(spacing: 6) {
       HStack(spacing: 8) {
         team(
-          colorHex: context.attributes.teamAColorHex,
+          color: context.attributes.teamAColor,
           centrePassDirection: .leading,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
           score: context.state.teamAScore
         )
-        Text("–")
-          .font(.headline.weight(.bold))
-          .foregroundStyle(.secondary)
         team(
-          colorHex: context.attributes.teamBColorHex,
+          color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
           isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
@@ -153,7 +152,7 @@ private struct SmallActivityGameView: View {
   }
 
   private func team(
-    colorHex: String,
+    color: Color,
     centrePassDirection: Edge,
     isCentrePassTeam: Bool,
     name: String,
@@ -176,7 +175,7 @@ private struct SmallActivityGameView: View {
       Text("\(score)")
         .font(.title2.bold())
         .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .foregroundStyle(color)
     }
     .frame(maxWidth: .infinity)
   }
@@ -186,75 +185,75 @@ private struct LockScreenGameView: View {
   let context: ActivityViewContext<GameActivityAttributes>
 
   var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: 8) {
       HStack(alignment: .firstTextBaseline) {
-        team(
-          colorHex: context.attributes.teamAColorHex,
+        Score(
+          color: context.attributes.teamAColor,
           centrePassDirection: .leading,
-          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamAID,
+          hasCentrePass: context.state.centrePassTeamID == context.attributes.teamAID,
           name: context.attributes.teamAName,
           score: context.state.teamAScore,
           alignment: .leading
         )
-        Text("–")
-          .font(.title2.bold())
-          .foregroundStyle(.secondary)
-        team(
-          colorHex: context.attributes.teamBColorHex,
+        Score(
+          color: context.attributes.teamBColor,
           centrePassDirection: .trailing,
-          isCentrePassTeam: context.state.centrePassTeamID == context.attributes.teamBID,
+          hasCentrePass: context.state.centrePassTeamID == context.attributes.teamBID,
           name: context.attributes.teamBName,
           score: context.state.teamBScore,
           alignment: .trailing
         )
       }
-
-      Divider()
-
-      HStack(spacing: 12) {
-        VStack(alignment: .leading, spacing: 2) {
-          Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-          TimerText(state: context.state, isStale: context.isStale)
-            .font(.title.bold())
+      if context.state.isInBreak {
+        HStack {
+          VStack(alignment: .center, spacing: 0) {
+            Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
+              .font(.caption.weight(.semibold))
+              .foregroundStyle(.secondary)
+            TimerText(state: context.state, isStale: context.isStale)
+              .font(.title.bold())
+          }
+          Spacer()
+          TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
         }
-        Spacer(minLength: 8)
-        TimerControl(
-          attributes: context.attributes,
-          isStale: context.isStale,
-          state: context.state
-        )
+      } else {
+        GoalControls(context: context)
       }
     }
     .foregroundStyle(.white)
   }
+}
 
-  private func team(
-    colorHex: String,
-    centrePassDirection: Edge,
-    isCentrePassTeam: Bool,
-    name: String,
-    score: Int,
-    alignment: HorizontalAlignment
-  ) -> some View {
-    VStack(alignment: alignment, spacing: 3) {
+private struct Score: View {
+  var color: Color
+  var centrePassDirection: Edge
+  var hasCentrePass: Bool
+  var name: String
+  var score: Int
+  var alignment: HorizontalAlignment
+  
+  var body: some View {
+    VStack(alignment: alignment, spacing: 0) {
       HStack(spacing: 4) {
-        if isCentrePassTeam, centrePassDirection == .trailing {
+        if hasCentrePass, centrePassDirection == .trailing {
           CentrePassIndicator(direction: centrePassDirection)
         }
         Text(name)
           .lineLimit(2)
+          .truncationMode(.middle)
           .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-        if isCentrePassTeam, centrePassDirection == .leading {
+        if hasCentrePass, centrePassDirection == .leading {
           CentrePassIndicator(direction: centrePassDirection)
         }
       }
-      .font(.headline)
+      .font(.subheadline)
       Text("\(score)")
-        .font(.system(.title, design: .rounded, weight: .bold))
-        .monospacedDigit()
-        .foregroundStyle(Color(teamHex: colorHex))
+        .font(.largeTitle)
+        .fontWeight(.bold)
+      //        .fontWidth(.condensed)
+      //        .font(.system(.largeTitle, design: .monospaced, weight: .bold))
+      //        .monospacedDigit()
+        .foregroundStyle(color)
     }
     .frame(
       maxWidth: .infinity,
@@ -292,10 +291,62 @@ private struct TimerText: View {
         countsDown: true,
         showsHours: false
       )
+      .multilineTextAlignment(.center)
+      .contentTransition(.numericText(countsDown: true))
       .monospacedDigit()
     } else {
       Text(state.remainingSeconds.formattedClock)
         .monospacedDigit()
+        .contentTransition(.numericText(countsDown: true))
+    }
+  }
+}
+
+
+
+private struct GoalButton: View {
+  let context: ActivityViewContext<GameActivityAttributes>
+  var isTeamA: Bool
+
+  var body: some View {
+    Button(intent: ScoreGoalIntent(
+      gameID: context.attributes.gameID,
+      teamID: isTeamA ? context.attributes.teamAID : context.attributes.teamBID,
+      expectedPhaseIndex: context.state.phaseIndex
+    )) {
+      Label("Goal", systemImage: "plus")
+        .font(.title3.bold())
+        .labelStyle(.iconOnly)
+        .frame(minWidth: 80, minHeight: 32)
+    }
+    .buttonStyle(.glassProminent)
+    .tint(isTeamA ? context.attributes.teamAColor : context.attributes.teamBColor)
+    .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
+    .disabled(
+      context.isStale
+        || context.state.isComplete
+        || context.state.isInBreak
+        || context.state.timerEndsAt == nil
+        || context.state.isAwaitingCentrePassConfirmation
+    )
+  }
+}
+
+private struct GoalControls: View {
+  let context: ActivityViewContext<GameActivityAttributes>
+  var body: some View {
+    HStack {
+      GoalButton(context: context, isTeamA: true)
+      Spacer()
+      VStack(alignment: .center, spacing: 0) {
+        Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
+          .font(.caption.weight(.semibold))
+          .foregroundStyle(.secondary)
+        TimerText(state: context.state, isStale: context.isStale)
+          .font(.title.bold())
+      }
+      Spacer()
+      GoalButton(context: context, isTeamA: false)
     }
   }
 }
@@ -404,22 +455,11 @@ private extension Int {
   }
 }
 
-private extension Color {
-  init(teamHex: String) {
-    let value = teamHex.trimmingCharacters(in: CharacterSet(charactersIn: "#"))
-    let rgb = UInt64(value, radix: 16) ?? 0x007AFF
-    self.init(
-      red: Double((rgb >> 16) & 0xff) / 255,
-      green: Double((rgb >> 8) & 0xff) / 255,
-      blue: Double(rgb & 0xff) / 255
-    )
-  }
-}
-
 #Preview("Running", as: .content, using: GameActivityAttributes.preview) {
   GameLiveActivity()
 } contentStates: {
   GameActivityAttributes.ContentState.runningPreview
+  GameActivityAttributes.ContentState.pausedPreview
 }
 
 #Preview("Paused", as: .content, using: GameActivityAttributes.preview) {
