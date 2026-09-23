@@ -5,6 +5,15 @@
 //  Created by J on 16/09/2026.
 //
 
+#if os(iOS)
+import AlarmKit
+import AppIntents
+import Foundation
+
+#if !WIDGET_EXTENSION
+import Dependencies
+import SQLiteData
+#endif
 
 struct OpenGameIntent: LiveActivityIntent {
   static var allowedExecutionTargets: IntentExecutionTargets { .main }
@@ -38,3 +47,5 @@ struct OpenGameIntent: LiveActivityIntent {
     return .result()
   }
 }
+
+#endif

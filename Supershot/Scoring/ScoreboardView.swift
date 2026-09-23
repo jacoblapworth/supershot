@@ -1,19 +1,19 @@
 import SwiftUI
 
 struct ScoreboardView: View {
-  var isShowingOriginalTeamOrder: Bool
   var teamA: ScoringFeature.Team
   var teamAScore: Int
   var teamB: ScoringFeature.Team
   var teamBScore: Int
+  var swapTeamOrder: Bool = false
   
   var body: some View {
     HStack(spacing: 12) {
       Group {
-        TeamScore(name: teamA.name, color: teamA.bibColor, score: teamAScore, alignment: isShowingOriginalTeamOrder ? .leading : .trailing)
-        TeamScore(name: teamB.name, color: teamB.bibColor, score: teamBScore, alignment: isShowingOriginalTeamOrder ? .trailing : .leading)
+        TeamScore(name: teamA.name, color: teamA.bibColor, score: teamAScore, alignment: swapTeamOrder ? .leading : .trailing)
+        TeamScore(name: teamB.name, color: teamB.bibColor, score: teamBScore, alignment: swapTeamOrder ? .trailing : .leading)
       }
-      .reversed(!isShowingOriginalTeamOrder)
+      .reversed(!swapTeamOrder)
     }
   }
 }
@@ -23,6 +23,8 @@ private struct TeamScore: View {
   var color: Color
   var score: Int
   var alignment: HorizontalAlignment = .leading
+
+  @Environment(\.isEnabled) var isEnabled
   private var frameAlignment: Alignment {
     switch alignment {
     case .trailing: .trailing
@@ -30,7 +32,6 @@ private struct TeamScore: View {
     }
   }
   
-  @Environment(\.isEnabled) var isEnabled
   
   var body: some View {
     VStack(alignment: alignment, spacing: 0) {
@@ -56,24 +57,22 @@ private struct TeamScore: View {
 
 #Preview("Scoreboard") {
   ScoreboardView(
-    isDisabled: false,
-    isShowingOriginalTeamOrder: true,
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
-    teamBScore: 16
+    teamBScore: 16,
+    swapTeamOrder: true
   )
   .padding()
 }
 
 #Preview("Scoreboard disabled") {
   ScoreboardView(
-    isDisabled: true,
-    isShowingOriginalTeamOrder: false,
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
     teamBScore: 16
   )
+  .disabled(true)
   .padding()
 }

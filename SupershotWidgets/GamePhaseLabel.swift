@@ -8,11 +8,38 @@
 import SwiftUI
 
 struct GamePhaseLabel: View {
-    var body: some View {
-        Text(/*@START_MENU_TOKEN@*/"Hello, World!"/*@END_MENU_TOKEN@*/)
+  enum Size {
+    case short
+    case long
+  }
+  
+  var phase: GamePhase
+  var size: Size = .long
+  
+  private var label: String {
+    switch phase {
+    case .period(let number, _):
+      switch size {
+      case .short:
+        return "Q\(number)"
+      case .long:
+        return "Quarter \(number)"
+      }
+    case .breakTime:
+      switch size {
+      case .short:
+        return "B"
+      case .long:
+        return "Break"
+      }
     }
+  }
+  
+  var body: some View {
+    Text(label)
+  }
 }
 
 #Preview {
-    GamePhaseLabel()
+  GamePhaseLabel(phase: .period(number: 1, durationSeconds: 60))
 }

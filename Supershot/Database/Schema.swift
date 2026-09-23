@@ -12,37 +12,6 @@ import OSLog
 import SQLiteData
 import CasePaths
 
-/// Phase of a game
-nonisolated enum GamePhase: Equatable, Hashable, Sendable {
-  case period(number: Int, durationSeconds: Int)
-  case breakTime(afterPeriod: Int, durationSeconds: Int)
-  
-  var durationSeconds: Int {
-    switch self {
-    case let .period(_, durationSeconds), let .breakTime(_, durationSeconds):
-      max(durationSeconds, 0)
-    }
-  }
-  
-  var periodNumber: Int {
-    switch self {
-    case let .period(number, _):
-      number
-    case let .breakTime(afterQuarter, _):
-      afterQuarter
-    }
-  }
-  
-  var isBreak: Bool {
-    switch self {
-    case .period: false
-    case .breakTime: true
-    }
-  }
-  
-  var isQuarter: Bool { !isBreak }
-}
-
 nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   var elapsedSeconds = 0
   var endsAt: Date?

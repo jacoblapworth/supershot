@@ -92,7 +92,7 @@ extension SupershotTestSuite {
       expectNoDifference(state.currentDurationSeconds, 600)
       expectNoDifference(state.elapsedSeconds, 125)
       expectNoDifference(state.isShowingLastCentrePassBanner, true)
-      expectNoDifference(state.isShowingOriginalTeamOrder, false)
+      expectNoDifference(state.swapTeamOrder, false)
       expectNoDifference(state.isTimerRunning, false)
     }
 

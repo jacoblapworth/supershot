@@ -1,13 +1,26 @@
+//
+//  ScoreGoalIntent.swift
+//  Supershot
+//
+//  Created by J on 16/09/2026.
+//
+
+
+#if os(iOS)
 import AlarmKit
 import AppIntents
 import Foundation
+
+#if !WIDGET_EXTENSION
 import Dependencies
 import SQLiteData
+#endif
 
 struct ScoreGoalIntent: LiveActivityIntent {
   static var allowedExecutionTargets: IntentExecutionTargets { [.main, .widgetKitExtension, .appIntentsExtension] }
   static var isDiscoverable: Bool { false }
   static var supportedModes: IntentModes { .background }
+  static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
   static var title: LocalizedStringResource { "Score a goal" }
 
   @Parameter(title: "Game") var gameID: String
@@ -50,3 +63,13 @@ struct ScoreGoalIntent: LiveActivityIntent {
     return .result()
   }
 }
+
+private enum GoalScoringIntentError: Error, CustomLocalizedStringResourceConvertible {
+  case unavailable
+  
+  var localizedStringResource: LocalizedStringResource {
+    "The goal could not be recorded. Open the game to check the score and timer."
+  }
+}
+
+#endif

@@ -58,6 +58,22 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		12347D08305ABFB20091C4D3 /* Exceptions for "SupershotShared" folder in "SupershotWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Intents/CreateGameIntent.swift,
+				Intents/GameEntities.swift,
+				Intents/SupershotShortcuts.swift,
+			);
+			target = 12C000073020000000000001 /* SupershotWidgets */;
+		};
+		12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				GamePhaseLabel.swift,
+			);
+			target = 000000000000000100000000 /* Supershot */;
+		};
 		12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -78,6 +94,7 @@
 		12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Database/Models.swift,
 				UI/AvatarView.swift,
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
@@ -101,12 +118,16 @@
 		};
 		12C000043020000000000001 /* SupershotShared */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				12347D08305ABFB20091C4D3 /* Exceptions for "SupershotShared" folder in "SupershotWidgets" target */,
+			);
 			path = SupershotShared;
 			sourceTree = "<group>";
 		};
 		12C000053020000000000001 /* SupershotWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */,
 				12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */,
 			);
 			path = SupershotWidgets;

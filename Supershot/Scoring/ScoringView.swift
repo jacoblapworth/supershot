@@ -20,9 +20,10 @@ struct ScoringView: View {
   }
   
   var body: some View {
-    ZStack {
-      ScrollView {
-        VStack(spacing: 20) {
+    ScrollView {
+      VStack(spacing: 20) {
+        
+        VStack {
           TimerView(
             clockPhase: store.clockPhase,
             currentDurationSeconds: store.currentDurationSeconds,
@@ -36,97 +37,44 @@ struct ScoringView: View {
             startTimerTapped: { store.send(.startTimerButtonTapped) }
           )
           
-          ScoringScoreboardView(
-            isDisabled: !store.canScoreGoal,
-            isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
+          ScoreboardView(
             teamA: store.teamA,
             teamAScore: store.teamAScore,
             teamB: store.teamB,
-            teamBScore: store.teamBScore
+            teamBScore: store.teamBScore,
+            swapTeamOrder: store.swapTeamOrder
           )
           
-          if store.isShowingLastCentrePassBanner {
-            LastCentrePassBanner(
-              centrePassTeam: store.centrePassTeam,
-              isTransitioningPeriod: store.isTransitioningPeriod,
-              period: store.lastCompletedQuarterNumber,
-              lastCentrePassNotTakenTapped: {
-                store.send(.lastCentrePassNotTakenButtonTapped)
-              },
-              lastCentrePassTakenTapped: {
-                store.send(.lastCentrePassTakenButtonTapped)
-              }
-            )
-          } else if store.clockPhase == .quarter {
-            CentrePassControl(
-              centrePassTeamID: store.centrePassTeamID,
-              isShowingOriginalTeamOrder: store.isShowingOriginalTeamOrder,
-              teamA: store.teamA,
-              teamB: store.teamB,
-              centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
-            )
-          }
-          ScoringGameControls(
-            canFinishGame: store.canFinishGame,
-            canMoveToNextQuarter: store.canMoveToNextQuarter,
-            clockPhase: store.clockPhase,
-            isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
+        }
+        .background {
+          LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
+            .ignoresSafeArea()
+        }
+        
+        if store.isShowingLastCentrePassBanner {
+          LastCentrePassBanner(
+            centrePassTeam: store.centrePassTeam,
             isTransitioningPeriod: store.isTransitioningPeriod,
-            period: store.period,
-            endQuarterTapped: { store.send(.endQuarterButtonTapped) },
-            finishGameTapped: { store.send(.finishGameButtonTapped) },
-            skipBreakTapped: { store.send(.skipBreakButtonTapped) }
-          )
-          
-          GoalTimelineView(
-            teamABibColor: store.teamA.bibColor,
-            teamAName: store.teamA.name,
-            teamBBibColor: store.teamB.bibColor,
-            teamBName: store.teamB.name,
-            timeline: timelineResponse.timeline
+            period: store.lastCompletedQuarterNumber,
+            lastCentrePassNotTakenTapped: {
+              store.send(.lastCentrePassNotTakenButtonTapped)
+            },
+            lastCentrePassTakenTapped: {
+              store.send(.lastCentrePassTakenButtonTapped)
+            }
           )
         }
-        .padding()
-      }
-      VStack {
-        Spacer()
-        HStack(spacing: 16) {
-          if store.canScoreGoal {
-            Button(action: { store.send(.goalButtonTapped(store.teamA.id)) }) {
-              Label("Goal", systemImage: "plus.circle.fill")
-                .fontWeight(.medium)
-                .padding(8)
-            }
-            Button(action: { store.send(.goalButtonTapped(store.teamB.id)) }) {
-              Label("Goal", systemImage: "plus.circle.fill")
-                .fontWeight(.medium)
-                .padding(8)
-            }
-          } else {
-            Button(action: {}) {
-              Label("Start Quarter", systemImage: "play.fill")
-                .fontWeight(.medium)
-                .padding(8)
-            }
-            .tint(.green)
-          }
-        }
-        .buttonStyle(.glassProminent)
-        .buttonSizing(.flexible)
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .padding(.bottom, 40)
-        .glassEffect(
-          .regular,
-          in: ConcentricRectangle(
-            corners: .concentric,
-            isUniform: true
-          )
+        
+        GoalTimelineView(
+          teamABibColor: store.teamA.bibColor,
+          teamAName: store.teamA.name,
+          teamBBibColor: store.teamB.bibColor,
+          teamBName: store.teamB.name,
+          timeline: timelineResponse.timeline
         )
-      
-        .padding(8)
       }
-      .ignoresSafeArea()
+      .padding()
+      
     }
     .navigationBarBackButtonHidden()
     .toolbar {
@@ -149,24 +97,91 @@ struct ScoringView: View {
         .disabled(!store.canUndo || store.isShowingLastCentrePassBanner)
         .accessibilityLabel("Undo last goal")
       }
+      
+      ToolbarItem(placement: .primaryAction) {
+        
+        Menu {
+          Button {
+            
+          } label: {
+            Label("Swap teams", systemImage: "arrow.left.arrow.right")
+          }
+          
+          Button {
+            
+          } label: {
+            Label("Change centre pass", systemImage: "arrow.left.circle.fill")
+          }
+          
+        } label: {
+          Label("Options", systemImage: "ellipsis")
+        }
+      }
+      
     }
-    //        .sheet(isPresented: .constant(true), content: {
-    //          HStack {
-    //            Button(action: {}) {
-    //              Label("Goal", systemImage: "plus.circle.fill")
-    //            }
-    //            Button(action: {}) {
-    //              Label("Goal", systemImage: "plus.circle.fill")
-    //            }
-    //          }
-    //          .padding()
-    //          .buttonSizing(.flexible)
-    //          .buttonStyle(.myAppPrimaryButton)
-    //          .presentationDetents([.height(200)])
-    //          .presentationBackground(.ultraThinMaterial)
-    //          .presentationBackgroundInteraction(.enabled)
-    //          .presentationSizing(.fitted)
-    //        })
+    //    .background {
+    //      LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)
+    //        .ignoresSafeArea()
+    //    }
+    .sheet(isPresented: .constant(true), content: {
+      ScrollView {
+        VStack(alignment: .leading, spacing: 12) {
+          if store.canScoreGoal {
+            HStack(spacing: 16) {
+              Group {
+                Button(action: { store.send(.goalButtonTapped(store.teamA.id)) }) {
+                  Label("Goal", systemImage: "plus")
+                    .padding(8)
+                }
+                .tint(store.teamA.bibColor)
+                Button(action: { store.send(.goalButtonTapped(store.teamB.id)) }) {
+                  Label("Goal", systemImage: "plus")
+                    .padding(8)
+                }
+                .tint(store.teamB.bibColor)
+              }
+              .reversed(store.swapTeamOrder)
+              .font(.title2.bold())
+              .labelStyle(.iconOnly)
+            }
+          } else {
+            Button(action: { store.send(.startTimerButtonTapped) }) {
+              Label("Start Quarter", systemImage: "play.fill")
+                .fontWeight(.medium)
+                .padding(8)
+            }
+            .tint(.green)
+          }
+          //          Form {
+          //            Picker("Centre pass", selection: $store.centrePassTeamID) {
+          //              Text(store.teamA.name).tag(store.teamA.id)
+          //              Text(store.teamB.name).tag(store.teamB.id)
+          //            }
+          //          }
+          
+          CentrePassControl(
+            centrePassTeamID: store.centrePassTeamID,
+            swapTeamOrder: store.swapTeamOrder,
+            teamA: store.teamA,
+            teamB: store.teamB,
+            centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
+          )
+        }
+        .padding()
+      }
+      .scrollDisabled(true)
+      .buttonSizing(.flexible)
+      .buttonStyle(.glassProminent)
+      .presentationDetents([.height(80), .height(200)], selection: $store.presentationDetent)
+      .presentationPlacement(.leading)
+      .presentationBackgroundInteraction(.enabled)
+      .presentationBackground(alignment: .topLeading) {}
+      .interactiveDismissDisabled()
+      //      .presentationContentInteraction(.resizes)
+      //      .presentationDragIndicator(.hidden)
+      //      .presentationBackground(.ultraThinMaterial)
+      //      .presentationSizing(.fitted)
+    })
     .alert($store.scope(state: \.alert, action: \.alert))
 #if os(iOS)
     .sensoryFeedback(

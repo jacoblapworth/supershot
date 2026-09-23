@@ -49,6 +49,7 @@ struct ScoringFeature {
     var teamB: Team
     var teamBScore = 0
     var timerEndsAt: Date?
+    var presentationDetent: PresentationDetent = .height(80)
 
     var phases: [GamePhase] {
       gamePhases(for: periods)
@@ -100,8 +101,8 @@ struct ScoringFeature {
       centrePassTeamID == teamB.id ? teamB : teamA
     }
 
-    var isShowingOriginalTeamOrder: Bool {
-      !period.isMultiple(of: 2)
+    var swapTeamOrder: Bool {
+      period.isMultiple(of: 2)
     }
 
     var lastCompletedQuarterNumber: Int {
@@ -113,7 +114,7 @@ struct ScoringFeature {
     }
   }
 
-  enum Action {
+  enum Action: BindableAction {
     case alert(PresentationAction<Alert>)
     case centrePassTeamButtonTapped(Team.ID)
     case centrePassTeamResponse(Result<Team.ID, any Error>)
@@ -140,6 +141,8 @@ struct ScoringFeature {
     case undoButtonTapped
     case undoResponse(Result<ScoreSnapshot, any Error>)
 
+    case binding(BindingAction<State>)
+    
     enum Delegate {
       case gameFinished(Game.ID)
     }
@@ -162,6 +165,7 @@ struct ScoringFeature {
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
+    BindingReducer()
     Reduce { state, action in
       switch action {
       case .alert, .delegate:
@@ -348,6 +352,8 @@ struct ScoringFeature {
         return refreshActivityEffect(gameID: state.gameID)
 
       case .undoResponse(.failure):
+        return .none
+      case .binding(_):
         return .none
       }
     }

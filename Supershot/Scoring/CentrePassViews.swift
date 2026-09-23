@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CentrePassControl: View {
   var centrePassTeamID: UUID
-  var isShowingOriginalTeamOrder: Bool
+  var swapTeamOrder: Bool = false
   var teamA: ScoringFeature.Team
   var teamB: ScoringFeature.Team
   var centrePassTeamTapped: (UUID) -> Void
@@ -13,13 +13,11 @@ struct CentrePassControl: View {
         .font(.headline)
 
       HStack(spacing: 12) {
-        if isShowingOriginalTeamOrder {
+        Group {
           centrePassButton(team: teamA)
           centrePassButton(team: teamB)
-        } else {
-          centrePassButton(team: teamB)
-          centrePassButton(team: teamA)
         }
+        .reversed(swapTeamOrder)
       }
 
       Text("Tap a team to correct the next centre pass.")
@@ -27,7 +25,7 @@ struct CentrePassControl: View {
         .foregroundStyle(.secondary)
     }
     .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 8))
+    .background(.thinMaterial, in: .containerRelative)
   }
 
   private func centrePassButton(team: ScoringFeature.Team) -> some View {
@@ -79,7 +77,7 @@ private struct CentrePassButton: View {
 #Preview("Centre pass") {
   CentrePassControl(
     centrePassTeamID: ScoringFeature.Team.previewRavens.id,
-    isShowingOriginalTeamOrder: true,
+    swapTeamOrder: true,
     teamA: .previewRavens,
     teamB: .previewSwifts,
     centrePassTeamTapped: { _ in }
