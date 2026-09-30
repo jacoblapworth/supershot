@@ -56,19 +56,39 @@ struct NewGameFeature {
 
   @ObservableState
   struct State: Equatable {
-    var customizesBreaks = false
+    var timing = SetupTiming()
+    var customizesBreaks: Bool {
+      get { timing.customizesBreaks }
+      set { timing.customizesBreaks = newValue }
+    }
     var errorMessage: String?
-    var firstBreakDuration = DurationDraft(totalSeconds: 1 * 60)
-    var firstCentrePass: TeamSide?
-    var halfTimeDuration = DurationDraft(totalSeconds: 1 * 60)
+    var firstBreakDuration: DurationDraft {
+      get { timing.firstBreakDuration }
+      set { timing.firstBreakDuration = newValue }
+    }
+    var firstCentrePass: TeamSide = .teamA
+    var halfTimeDuration: DurationDraft {
+      get { timing.halfTimeDuration }
+      set { timing.halfTimeDuration = newValue }
+    }
     var isSaving = false
     var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     var location = LocationState.idle
+    @Presents var teamConfiguration: SetupTeamFeature.State?
+    @Presents var timingEditor: SetupTimingFeature.State?
+    var configuringTeamSide: TeamSide?
+    var pendingTeamConfiguration: TeamSide?
     @Presents var picker: TeamPickerFeature.State?
     var pickingTeamSide: TeamSide?
-    var periodDuration = DurationDraft(totalSeconds: 8 * 60)
+    var periodDuration: DurationDraft {
+      get { timing.periodDuration }
+      set { timing.periodDuration = newValue }
+    }
     var rightTeam = TeamSelection(bibColor: ColorPalette.red)
-    var secondBreakDuration = DurationDraft(totalSeconds: 1 * 60)
+    var secondBreakDuration: DurationDraft {
+      get { timing.secondBreakDuration }
+      set { timing.secondBreakDuration = newValue }
+    }
 
     init() {
       @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
@@ -90,14 +110,15 @@ struct NewGameFeature {
     var canStartGame: Bool {
       leftTeam.team != nil
         && rightTeam.team != nil
-        && firstCentrePass != nil
+        && hasDifferentSelectedTeams
+        && teamConfiguration?.isSaving != true
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
         && !isSaving
     }
 
     var canSwapTeams: Bool {
-      leftTeam.team != nil && rightTeam.team != nil && picker == nil && !isSaving
+      leftTeam.team != nil && rightTeam.team != nil && picker == nil && teamConfiguration == nil && timingEditor == nil && !isSaving
     }
 
     var configurationSummary: String {
@@ -112,16 +133,7 @@ struct NewGameFeature {
       } else {
         matchup = ""
       }
-      let quarter = periodDuration.formatted
-      let breaks = [
-        firstBreakDuration.formatted,
-        halfTimeDuration.formatted,
-        secondBreakDuration.formatted,
-      ]
-      if Set(breaks).count == 1, let first = breaks.first {
-        return "\(matchup)4 × \(quarter) · \(first) breaks"
-      }
-      return "\(matchup)4 × \(quarter) · breaks \(breaks.joined(separator: " / "))"
+      return "\(matchup)\(timing.summary)"
     }
 
     var hasDifferentSelectedTeams: Bool {
@@ -141,23 +153,20 @@ struct NewGameFeature {
   }
 
   enum Action: BindableAction {
-    case allBreakPresetButtonTapped(Int)
     case binding(BindingAction<State>)
-    case customizeBreaksButtonTapped
     case delegate(Delegate)
-    case firstBreakPresetButtonTapped(Int)
-    case halfTimePresetButtonTapped(Int)
     case locationButtonTapped
     case locationResponse(Result<GameLocation, any Error>)
-    case periodPresetButtonTapped(Int)
     case picker(PresentationAction<TeamPickerFeature.Action>)
     case selectTeamButtonTapped(TeamSide)
-    case secondBreakPresetButtonTapped(Int)
     case startGameButtonTapped
     case startGameResponse(Result<ScoringFeature.State, any Error>)
     case swapTeamsButtonTapped
     case task
-    case useFirstBreakForAllButtonTapped
+    case pickerDidDismiss
+    case teamConfiguration(PresentationAction<SetupTeamFeature.Action>)
+    case timingEditor(PresentationAction<SetupTimingFeature.Action>)
+    case editTimingButtonTapped
 
     enum Delegate {
       case gameStarted(ScoringFeature.State)
@@ -178,13 +187,6 @@ struct NewGameFeature {
     BindingReducer()
     Reduce { state, action in
         switch action {
-        case let .allBreakPresetButtonTapped(seconds):
-          let duration = DurationDraft(totalSeconds: seconds)
-          state.firstBreakDuration = duration
-          state.halfTimeDuration = duration
-          state.secondBreakDuration = duration
-          return .none
-
         case .binding:
           state.errorMessage = nil
           if !state.customizesBreaks {
@@ -193,19 +195,7 @@ struct NewGameFeature {
           }
           return .none
 
-        case .customizeBreaksButtonTapped:
-          state.customizesBreaks = true
-          return .none
-
         case .delegate:
-          return .none
-
-        case let .firstBreakPresetButtonTapped(seconds):
-          state.firstBreakDuration = DurationDraft(totalSeconds: seconds)
-          return .none
-
-        case let .halfTimePresetButtonTapped(seconds):
-          state.halfTimeDuration = DurationDraft(totalSeconds: seconds)
           return .none
 
         case .locationButtonTapped:
@@ -230,9 +220,9 @@ struct NewGameFeature {
             state.rightTeam.team = team
             state.rightTeam.bibColor = team.color
           }
+          state.pendingTeamConfiguration = pickingTeamSide
           state.picker = nil
           state.pickingTeamSide = nil
-          state.firstCentrePass = nil
           state.errorMessage = nil
           return .none
 
@@ -249,12 +239,17 @@ struct NewGameFeature {
         case .picker:
           return .none
 
-        case let .periodPresetButtonTapped(seconds):
-          state.periodDuration = DurationDraft(totalSeconds: seconds)
-          return .none
-
         case let .selectTeamButtonTapped(side):
           guard !state.isSaving else { return .none }
+          let selectedTeam = side == .teamA ? state.leftTeam.team : state.rightTeam.team
+          if let selectedTeam {
+            state.configuringTeamSide = side
+            state.teamConfiguration = SetupTeamFeature.State(
+              team: selectedTeam,
+              excluding: Set((side == .teamA ? state.rightTeam.team : state.leftTeam.team).map { [$0.id] } ?? [])
+            )
+            return .none
+          }
           let excludedTeamIDs: Set<Team.ID>
           switch side {
           case .teamA:
@@ -264,12 +259,7 @@ struct NewGameFeature {
           }
           state.pickingTeamSide = side
           state.picker = TeamPickerFeature.State(excluding: excludedTeamIDs)
-          state.firstCentrePass = nil
           state.errorMessage = nil
-          return .none
-
-        case let .secondBreakPresetButtonTapped(seconds):
-          state.secondBreakDuration = DurationDraft(totalSeconds: seconds)
           return .none
 
         case .startGameButtonTapped:
@@ -280,10 +270,6 @@ struct NewGameFeature {
           }
           guard state.hasDifferentSelectedTeams else {
             state.errorMessage = state.teamNameErrorMessage ?? "Choose two different teams."
-            return .none
-          }
-          guard state.firstCentrePass != nil else {
-            state.errorMessage = "Choose the team taking the first centre pass."
             return .none
           }
           guard (state.periodDuration.totalSeconds ?? 0) > 0, state.breakDurationsAreValid else {
@@ -318,17 +304,59 @@ struct NewGameFeature {
           }
           return .none
 
+        case .pickerDidDismiss:
+          guard let side = state.pendingTeamConfiguration else { return .none }
+          state.pendingTeamConfiguration = nil
+          return .send(.selectTeamButtonTapped(side))
+
+        case let .teamConfiguration(.presented(.delegate(.teamUpdated(team)))):
+          guard let side = state.configuringTeamSide else { return .none }
+          if side == .teamA {
+            state.leftTeam.team = team
+            state.leftTeam.bibColor = team.color
+          } else {
+            state.rightTeam.team = team
+            state.rightTeam.bibColor = team.color
+          }
+          return .none
+
+        case .teamConfiguration(.presented(.delegate(.done))):
+          state.teamConfiguration = nil
+          state.configuringTeamSide = nil
+          return .none
+
+        case .teamConfiguration(.dismiss):
+          state.configuringTeamSide = nil
+          return .none
+
+        case .teamConfiguration:
+          return .none
+
+        case .editTimingButtonTapped:
+          state.timingEditor = SetupTimingFeature.State(timing: state.timing)
+          return .none
+
+        case let .timingEditor(.presented(.delegate(.committed(timing)))):
+          state.timing = timing
+          state.timingEditor = nil
+          state.errorMessage = nil
+          return .none
+
+        case .timingEditor(.presented(.delegate(.cancelled))):
+          state.timingEditor = nil
+          return .none
+
+        case .timingEditor:
+          return .none
+
         case .task:
           guard state.location == .idle else { return .none }
           return loadLocation(state: &state)
 
-        case .useFirstBreakForAllButtonTapped:
-          state.halfTimeDuration = state.firstBreakDuration
-          state.secondBreakDuration = state.firstBreakDuration
-          state.customizesBreaks = false
-          return .none
         }
     }
+    .ifLet(\.$teamConfiguration, action: \.teamConfiguration) { SetupTeamFeature() }
+    .ifLet(\.$timingEditor, action: \.timingEditor) { SetupTimingFeature() }
     .ifLet(\.$picker, action: \.picker) {
       TeamPickerFeature()
     }
@@ -338,7 +366,6 @@ struct NewGameFeature {
     guard
       let leftTeam = state.leftTeam.team,
       let rightTeam = state.rightTeam.team,
-      let firstCentrePass = state.firstCentrePass,
       let periodDurationSeconds = state.periodDuration.totalSeconds,
       let firstBreakDurationSeconds = state.firstBreakDuration.totalSeconds,
       let halfTimeDurationSeconds = state.halfTimeDuration.totalSeconds,
@@ -354,7 +381,7 @@ struct NewGameFeature {
       bibColor: state.rightTeam.bibColor,
       team: rightTeam
     )
-    let centrePassTeamID = firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
+    let centrePassTeamID = state.firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
     let breakDurations = [
       firstBreakDurationSeconds,
       halfTimeDurationSeconds,

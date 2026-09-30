@@ -10,10 +10,6 @@ struct NewGameView: View {
         NewGameTeamsView(store: store)
 
         if store.leftTeam.team != nil, store.rightTeam.team != nil {
-          SetupBibColorsView(
-            store: store
-          )
-
           SetupCentrePassView(
             firstCentrePass: $store.firstCentrePass,
             leftTeamName: store.leftTeam.team?.name ?? "Left",
@@ -21,7 +17,7 @@ struct NewGameView: View {
           )
         }
 
-        SetupTimingView(store: store)
+        SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
         
         SetupLocationView(store: store)
       }
@@ -38,7 +34,7 @@ struct NewGameView: View {
         startGameTapped: { store.send(.startGameButtonTapped) }
       )
     }
-    .sheet(item: $store.scope(state: \.picker, action: \.picker)) { pickerStore in
+    .sheet(item: $store.scope(state: \.picker, action: \.picker), onDismiss: { store.send(.pickerDidDismiss) }) { pickerStore in
       NavigationStack {
         TeamPickerView(store: pickerStore)
         .navigationTitle("Select team")
@@ -47,6 +43,12 @@ struct NewGameView: View {
 #endif
       }
       .presentationDetents([.medium, .large])
+    }
+    .sheet(item: $store.scope(state: \.teamConfiguration, action: \.teamConfiguration)) {
+      SetupTeamView(store: $0)
+    }
+    .sheet(item: $store.scope(state: \.timingEditor, action: \.timingEditor)) {
+      SetupTimingEditorView(store: $0)
     }
   }
 }

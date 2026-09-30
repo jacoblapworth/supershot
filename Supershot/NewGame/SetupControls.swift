@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SetupCentrePassView: View {
-  @Binding var firstCentrePass: NewGameFeature.TeamSide?
+  @Binding var firstCentrePass: NewGameFeature.TeamSide
   var leftTeamName: String
   var rightTeamName: String
 
@@ -12,9 +12,9 @@ struct SetupCentrePassView: View {
 
       Picker("First centre pass", selection: $firstCentrePass) {
         Text(leftTeamName)
-          .tag(NewGameFeature.TeamSide?.some(.teamA))
+          .tag(NewGameFeature.TeamSide.teamA)
         Text(rightTeamName)
-          .tag(NewGameFeature.TeamSide?.some(.teamB))
+          .tag(NewGameFeature.TeamSide.teamB)
       }
       .pickerStyle(.segmented)
     }
