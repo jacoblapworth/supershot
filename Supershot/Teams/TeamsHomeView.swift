@@ -43,7 +43,8 @@ struct TeamsHomeView: View {
   }
 
   private var teamsList: some View {
-    List {
+    let filteredTeams = store.withState { $0.filteredTeams(in: teamsResponse.teams) }
+    return List {
       if teamsResponse.teams.isEmpty {
         ContentUnavailableView(
           "No teams yet",
@@ -51,8 +52,11 @@ struct TeamsHomeView: View {
           description: Text("Create a team to use in your next game.")
         )
         .listRowBackground(Color.clear)
+      } else if filteredTeams.isEmpty {
+        ContentUnavailableView.search(text: store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))
+          .listRowBackground(Color.clear)
       } else {
-        ForEach(teamsResponse.teams) { team in
+        ForEach(filteredTeams) { team in
           Button {
             store.send(.teamRowTapped(team))
           } label: {
@@ -68,6 +72,7 @@ struct TeamsHomeView: View {
       }
     }
     .navigationTitle("Teams")
+    .searchable(text: $store.searchText, prompt: "Search teams")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         Button {

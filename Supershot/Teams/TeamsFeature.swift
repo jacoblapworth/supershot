@@ -25,7 +25,16 @@ struct TeamsFeature {
     @Presents var alert: AlertState<Alert>?
     var path = StackState<TeamsPath.State>()
     var pendingGameResume: PendingGameResume?
+    var searchText = ""
     @Presents var teamEditor: TeamEditorFeature.State?
+
+    func filteredTeams(in teams: [TeamListItem]) -> [TeamListItem] {
+      let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !query.isEmpty else { return teams }
+      return teams.filter {
+        $0.name.range(of: query, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+      }
+    }
 
     func hasScoringRoute(for gameID: Game.ID) -> Bool {
       path.contains {
@@ -35,8 +44,9 @@ struct TeamsFeature {
     }
   }
 
-  enum Action {
+  enum Action: BindableAction {
     case alert(PresentationAction<Alert>)
+    case binding(BindingAction<State>)
     case delegate(Delegate)
     case deleteGameButtonTapped(Game.ID)
     case deleteTeamButtonTapped(Team.ID)
@@ -67,9 +77,10 @@ struct TeamsFeature {
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
+    BindingReducer()
     Reduce { state, action in
       switch action {
-      case .alert, .delegate:
+      case .alert, .binding, .delegate:
         return .none
 
       case let .deleteGameButtonTapped(gameID):
