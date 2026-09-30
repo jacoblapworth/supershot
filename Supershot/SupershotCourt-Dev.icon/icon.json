@@ -3,7 +3,7 @@
     "refractivity"
   ],
   "fill" : {
-    "automatic-gradient" : "display-p3:0.00000,0.51263,0.65328,1.00000"
+    "automatic-gradient" : "display-p3:0.52322,0.11766,0.85921,1.00000"
   },
   "groups" : [
     {
@@ -12,24 +12,32 @@
         {
           "blend-mode" : "normal",
           "fill" : "none",
+          "glass" : true,
           "image-name" : "court.svg",
           "name" : "court"
         }
       ],
       "name" : "Group",
+      "position" : {
+        "scale" : 1,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
       "refractivity" : {
         "depth" : 0,
         "enabled" : true,
-        "strength" : 0.5
+        "strength" : 0.14984375
       },
       "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0
+        "kind" : "layer-color",
+        "opacity" : 0.5
       },
       "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 1
+        "value" : 0.6
       }
     },
     {
@@ -42,6 +50,13 @@
           "name" : "lines"
         }
       ],
+      "position" : {
+        "scale" : 1,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
       "refractivity" : {
         "depth" : 0,
         "enabled" : false,
@@ -59,7 +74,7 @@
     },
     {
       "blur-material" : null,
-      "hidden" : false,
+      "hidden" : true,
       "layers" : [
         {
           "blend-mode" : "normal",
@@ -73,13 +88,20 @@
         }
       ],
       "name" : "Group",
+      "position" : {
+        "scale" : 1,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
       "refractivity" : {
         "depth" : 0,
         "enabled" : false,
         "strength" : 0.5
       },
       "shadow" : {
-        "kind" : "neutral",
+        "kind" : "none",
         "opacity" : 2
       },
       "specular" : false,
