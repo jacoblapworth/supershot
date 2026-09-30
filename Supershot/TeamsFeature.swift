@@ -7,6 +7,7 @@ import SQLiteData
 enum TeamsPath {
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
+  case setup(NewGameFeature)
   case teamDetail(TeamDetailFeature)
 }
 
@@ -127,6 +128,20 @@ struct TeamsFeature {
         .element(id: _, action: .teamDetail(.delegate(.gameRowTapped(game))))
       ):
         return .send(.teamGameRowTapped(game))
+
+      case let .path(
+        .element(id: _, action: .teamDetail(.delegate(.newGameButtonTapped(team))))
+      ):
+        var setup = NewGameFeature.State()
+        setup.leftTeam.team = team
+        setup.leftTeam.bibColor = team.color
+        state.path.append(.setup(setup))
+        return .none
+
+      case let .path(.element(id: id, action: .setup(.delegate(.gameStarted(scoring))))):
+        state.path.pop(from: id)
+        state.path.append(.scoring(scoring))
+        return .none
 
       case .path:
         return .none

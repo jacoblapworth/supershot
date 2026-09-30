@@ -80,6 +80,11 @@ struct TeamDetailView: View {
       }
 
       Section("Games") {
+        Button("New game", systemImage: "plus") {
+          store.send(.newGameButtonTapped(team))
+        }
+        .disabled(isResumingGame)
+
         if response.games.isEmpty {
           ContentUnavailableView(
             "No games yet",

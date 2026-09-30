@@ -15,10 +15,12 @@ struct TeamDetailFeature {
     case editButtonTapped(Team)
     case editor(PresentationAction<TeamEditorFeature.Action>)
     case gameRowTapped(GameListItem)
+    case newGameButtonTapped(Team)
 
     enum Delegate: Equatable {
       case deleteTeamButtonTapped
       case gameRowTapped(GameListItem)
+      case newGameButtonTapped(Team)
     }
   }
 
@@ -46,6 +48,10 @@ struct TeamDetailFeature {
 
       case let .gameRowTapped(game):
         return .send(.delegate(.gameRowTapped(game)))
+
+      case let .newGameButtonTapped(team):
+        guard team.id == state.teamID else { return .none }
+        return .send(.delegate(.newGameButtonTapped(team)))
       }
     }
     .ifLet(\.$editor, action: \.editor) {

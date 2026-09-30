@@ -25,6 +25,8 @@ struct TeamsHomeView: View {
 #if os(iOS)
           .toolbarVisibility(.hidden, for: .tabBar)
 #endif
+      case .setup(let setupStore):
+        NewGameView(store: setupStore)
       case .teamDetail(let teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,
