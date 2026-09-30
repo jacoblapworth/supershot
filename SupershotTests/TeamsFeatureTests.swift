@@ -16,6 +16,54 @@ extension SupershotTestSuite {
     $0.uuid = .incrementing
   }) struct TeamsFeatureTests {
     @Test
+    func newGameFromTeamDetailPreselectsTeam() async {
+      let team = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+      let store = TestStore(initialState: {
+        var state = TeamsFeature.State()
+        state.path.append(.teamDetail(TeamDetailFeature.State(teamID: team.id)))
+        return state
+      }()) {
+        TeamsFeature()
+      }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      let detailID = store.state.path.ids[0]
+
+      await store.send(
+        .path(.element(id: detailID, action: .teamDetail(.newGameButtonTapped(team))))
+      )
+      await store.receive {
+        guard case .path(.element(id: detailID, action: .teamDetail(.delegate(.newGameButtonTapped(team))))) = $0 else {
+          return false
+        }
+        return true
+      }
+      var setup = NewGameFeature.State()
+      setup.leftTeam.team = team
+      setup.leftTeam.bibColor = team.color
+      expectNoDifference(
+        Array(store.state.path),
+        [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .setup(setup)]
+      )
+
+      let setupID = store.state.path.ids[1]
+      let scoring = ScoringFeature.State(
+        centrePassTeamID: team.id,
+        gameID: UUID(3),
+        periods: testGamePeriods(gameID: UUID(3)),
+        startedAt: Date(timeIntervalSince1970: 500),
+        teamA: ScoringFeature.Team(id: team.id, bibColor: team.color, name: team.name),
+        teamB: ScoringFeature.Team(id: UUID(2), bibColor: ColorPalette.red, name: "Swifts")
+      )
+      await store.send(
+        .path(.element(id: setupID, action: .setup(.delegate(.gameStarted(scoring)))))
+      )
+      expectNoDifference(
+        Array(store.state.path),
+        [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .scoring(scoring)]
+      )
+    }
+
+    @Test
     func completedTeamGameOpensDetail() async {
       let game = GameListItem(
         endedAt: Date(timeIntervalSince1970: 2_000),
