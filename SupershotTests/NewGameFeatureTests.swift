@@ -15,6 +15,7 @@ extension SupershotTestSuite {
     func newGamesDefaultToEightMinuteQuartersAndOneMinuteBreaks() {
       let state = NewGameFeature.State()
 
+      #expect(state.firstCentrePass == .teamA)
       #expect(state.periodDuration.totalSeconds == 8 * 60)
       #expect(state.firstBreakDuration.totalSeconds == 60)
       #expect(state.halfTimeDuration.totalSeconds == 60)
@@ -79,7 +80,6 @@ extension SupershotTestSuite {
       }
 
       await store.send(.selectTeamButtonTapped(.teamA)) {
-        $0.firstCentrePass = nil
         $0.picker = TeamPickerFeature.State(excluding: [ravens.id])
         $0.pickingTeamSide = .teamA
       }
@@ -98,6 +98,7 @@ extension SupershotTestSuite {
       await store.send(.picker(.presented(.delegate(.teamSelected(foxes))))) {
         $0.leftTeam.bibColor = Color(hex: "#34C759")
         $0.leftTeam.team = foxes
+        $0.pendingTeamConfiguration = .teamA
         $0.picker = nil
         $0.pickingTeamSide = nil
       }

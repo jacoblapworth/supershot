@@ -2,7 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 struct SetupTimingView: View {
-  @Bindable var store: StoreOf<NewGameFeature>
+  @Bindable var store: StoreOf<SetupTimingFeature>
   
   var body: some View {
     VStack(alignment: .leading, spacing: 18) {
@@ -10,7 +10,7 @@ struct SetupTimingView: View {
         .font(.headline)
       
       DurationEditor(
-        duration: $store.periodDuration,
+        duration: $store.timing.periodDuration,
         label: "Quarters",
         presets: [8, 10, 12, 15].map { $0 * 60 },
         presetTapped: { store.send(.periodPresetButtonTapped($0)) }
@@ -18,21 +18,21 @@ struct SetupTimingView: View {
       
       Divider()
       
-      if store.customizesBreaks {
+      if store.timing.customizesBreaks {
         DurationEditor(
-          duration: $store.firstBreakDuration,
+          duration: $store.timing.firstBreakDuration,
           label: "After quarter 1",
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.firstBreakPresetButtonTapped($0)) }
         )
         DurationEditor(
-          duration: $store.halfTimeDuration,
+          duration: $store.timing.halfTimeDuration,
           label: "Half time",
           presets: [0, 1, 2, 4, 5, 8, 10, 12].map { $0 * 60 },
           presetTapped: { store.send(.halfTimePresetButtonTapped($0)) }
         )
         DurationEditor(
-          duration: $store.secondBreakDuration,
+          duration: $store.timing.secondBreakDuration,
           label: "After quarter 3",
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.secondBreakPresetButtonTapped($0)) }
@@ -44,7 +44,7 @@ struct SetupTimingView: View {
         .buttonStyle(.bordered)
       } else {
         DurationEditor(
-          duration: $store.firstBreakDuration,
+          duration: $store.timing.firstBreakDuration,
           label: "Breaks",
           presets: [0, 1, 2, 4, 5].map { $0 * 60 },
           presetTapped: { store.send(.allBreakPresetButtonTapped($0)) }
@@ -98,6 +98,7 @@ private struct DurationEditor: View {
       HStack(spacing: 8) {
         TextField("Minutes", text: $duration.minutesText)
           .textFieldStyle(.roundedBorder)
+          .accessibilityLabel("\(label) minutes")
           .frame(maxWidth: 80)
 #if os(iOS)
           .keyboardType(.numberPad)
@@ -106,6 +107,7 @@ private struct DurationEditor: View {
           .foregroundStyle(.secondary)
         TextField("Seconds", text: $duration.secondsText)
           .textFieldStyle(.roundedBorder)
+          .accessibilityLabel("\(label) seconds")
           .frame(maxWidth: 80)
 #if os(iOS)
           .keyboardType(.numberPad)
@@ -123,16 +125,19 @@ private struct DurationEditor: View {
 }
 
 #Preview("Uniform breaks") {
-  SetupTimingView(store: setupPreviewStore())
-    .padding()
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Custom breaks") {
-  SetupTimingView(store: setupPreviewStore(.previewCustomTiming))
-    .padding()
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewCustomTiming.timing)) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Invalid duration") {
-  SetupTimingView(store: setupPreviewStore(.previewInvalidTiming))
-    .padding()
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewInvalidTiming.timing)) {
+    SetupTimingFeature()
+  })
 }
