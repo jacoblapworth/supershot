@@ -50,7 +50,7 @@ struct AppView: View {
         )
       }
       Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
-        TeamsHomeView(
+        TeamsListiew(
           proAccess: store.proAccess,
           store: store.scope(state: \.teams, action: \.teams)
         )
