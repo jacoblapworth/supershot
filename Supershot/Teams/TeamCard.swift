@@ -15,7 +15,7 @@ struct TeamCard: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 10) {
+      VStack(alignment: .leading, spacing: 10) {
         if let team {
           Circle()
             .fill(team.color)
@@ -41,10 +41,6 @@ struct TeamCard: View {
       }
       .frame(maxWidth: .infinity, minHeight: 150)
       .padding(10)
-      .glassEffect({
-        let material: Glass = (team?.color).map { .regular.tint($0) } ?? .regular
-        return material
-      }(), in: RoundedRectangle(cornerRadius: 12))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
