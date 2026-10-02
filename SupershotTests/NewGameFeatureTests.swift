@@ -80,8 +80,12 @@ extension SupershotTestSuite {
       }
 
       await store.send(.selectTeamButtonTapped(.teamA)) {
-        $0.picker = TeamPickerFeature.State(excluding: [ravens.id])
-        $0.pickingTeamSide = .teamA
+        $0.destination = .teamPicker(
+          NewGameTeamPicker.State(
+            picker: TeamPickerFeature.State(excluding: [ravens.id]),
+            side: .teamA
+          )
+        )
       }
     }
 
@@ -89,18 +93,53 @@ extension SupershotTestSuite {
     func pickedTeamSetsMatchTeamAndBibColor() async {
       let foxes = Team(id: UUID(2), name: "Foxes", colorHex: "#34C759")
       var state = NewGameFeature.State()
-      state.picker = TeamPickerFeature.State()
-      state.pickingTeamSide = .teamA
+      state.destination = .teamPicker(
+        NewGameTeamPicker.State(
+          picker: TeamPickerFeature.State(),
+          side: .teamA
+        )
+      )
       let store = TestStore(initialState: state) {
         NewGameFeature()
       }
 
-      await store.send(.picker(.presented(.delegate(.teamSelected(foxes))))) {
+      await store.send(
+        .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(foxes))))))
+      ) {
         $0.leftTeam.bibColor = Color(hex: "#34C759")
         $0.leftTeam.team = foxes
-        $0.pendingTeamConfiguration = .teamA
-        $0.picker = nil
-        $0.pickingTeamSide = nil
+        $0.pendingTeamConfiguration = NewGameTeamConfiguration.State(
+          configuration: SetupTeamFeature.State(team: foxes),
+          side: .teamA
+        )
+        $0.destination = nil
+      }
+      await store.send(.destinationDidDismiss) {
+        $0.destination = .teamConfiguration(
+          NewGameTeamConfiguration.State(
+            configuration: SetupTeamFeature.State(team: foxes),
+            side: .teamA
+          )
+        )
+        $0.pendingTeamConfiguration = nil
+      }
+    }
+
+    @Test
+    func editingTimingUsesTheSinglePresentationDestination() async {
+      var state = NewGameFeature.State()
+      state.destination = .teamPicker(
+        NewGameTeamPicker.State(
+          picker: TeamPickerFeature.State(),
+          side: .teamA
+        )
+      )
+      let store = TestStore(initialState: state) {
+        NewGameFeature()
+      }
+
+      await store.send(.editTimingButtonTapped) {
+        $0.destination = .timingEditor(SetupTimingFeature.State(timing: $0.timing))
       }
     }
 

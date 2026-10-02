@@ -34,21 +34,37 @@ struct NewGameView: View {
         startGameTapped: { store.send(.startGameButtonTapped) }
       )
     }
-    .sheet(item: $store.scope(state: \.picker, action: \.picker), onDismiss: { store.send(.pickerDidDismiss) }) { pickerStore in
-      NavigationStack {
-        TeamPickerView(store: pickerStore)
-        .navigationTitle("Select team")
+    .sheet(
+      item: $store.scope(state: \.destination, action: \.destination),
+      onDismiss: { store.send(.destinationDidDismiss) }
+    ) { destinationStore in
+      switch destinationStore.case {
+      case let .teamConfiguration(configurationStore):
+        SetupTeamView(
+          store: configurationStore.scope(
+            state: \.configuration,
+            action: \.configuration
+          )
+        )
+
+      case let .teamPicker(pickerStore):
+        NavigationStack {
+          TeamPickerView(
+            store: pickerStore.scope(
+              state: \.picker,
+              action: \.picker
+            )
+          )
+          .navigationTitle("Select team")
 #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
+          .navigationBarTitleDisplayMode(.inline)
 #endif
+        }
+        .presentationDetents([.medium, .large])
+
+      case let .timingEditor(timingEditorStore):
+        SetupTimingEditorView(store: timingEditorStore)
       }
-      .presentationDetents([.medium, .large])
-    }
-    .sheet(item: $store.scope(state: \.teamConfiguration, action: \.teamConfiguration)) {
-      SetupTeamView(store: $0)
-    }
-    .sheet(item: $store.scope(state: \.timingEditor, action: \.timingEditor)) {
-      SetupTimingEditorView(store: $0)
     }
   }
 }
