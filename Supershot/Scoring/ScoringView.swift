@@ -167,6 +167,10 @@ struct ScoringView: View {
       condition: { _, _ in store.hapticsEnabled }
     )
 #endif
+    .task(id: scenePhase) {
+      guard scenePhase == .active else { return }
+      await store.send(.keepScreenAwakeTask).finish()
+    }
     .task {
       guard scenePhase == .active else { return }
       store.send(.sceneBecameActive)
