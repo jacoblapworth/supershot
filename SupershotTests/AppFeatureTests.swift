@@ -54,11 +54,179 @@ extension SupershotTestSuite {
       }
 
       await store.send(.proPromotionTapped) {
-        $0.proPaywall = ProPaywallFeature.State()
+        $0.destination = .proPaywall(ProPaywallFeature.State())
       }
       await store.send(.proAccessUpdated(.pro)) {
         $0.proAccess = .pro
-        $0.proPaywall = nil
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test
+    func freeAccessReplacesPaywallWithLocationOnboarding() async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.proAccess = .unknown
+      state.selectedTab = .teams
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.locationClient.authorizationStatus = { .notDetermined }
+      }
+
+      await store.send(.proAccessUpdated(.free)) {
+        $0.proAccess = .free
+        $0.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(step: .location)
+        )
+      }
+      await store.finish()
+      expectNoDifference(store.state.selectedTab, .teams)
+    }
+
+    @Test(arguments: [SubscriptionEntitlement.free, .unknown])
+    func nonProAccessRetainsPaywallWhenPermissionsAreResolved(
+      access: SubscriptionEntitlement
+    ) async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.proAccess = .pro
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.locationClient = .preview
+      }
+
+      await store.send(.proAccessUpdated(access)) {
+        $0.proAccess = access
+      }
+      await store.finish()
+    }
+
+    @Test(arguments: [SubscriptionEntitlement.free, .unknown])
+    func nonProAccessClearsObsoleteOnboarding(access: SubscriptionEntitlement) async {
+      var state = AppFeature.State()
+      state.destination = .permissionsOnboarding(PermissionsOnboardingFeature.State())
+      state.proAccess = .pro
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.locationClient = .preview
+      }
+
+      await store.send(.proAccessUpdated(access)) {
+        $0.proAccess = access
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func paywallProAccessBeginsRequiredOnboarding(needsAlarms: Bool) async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.alarmAuthorization.status = { needsAlarms ? .notDetermined : .authorized }
+        $0.locationClient.authorizationStatus = { .notDetermined }
+      }
+
+      await store.send(.destination(.presented(.proPaywall(.customerInfoUpdated(.pro)))))
+      await store.receive {
+        guard case .destination(.presented(.proPaywall(.delegate(.accessChanged(.pro))))) = $0
+        else { return false }
+        return true
+      } assert: {
+        $0.proAccess = .pro
+        $0.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(
+            step: needsAlarms ? .alarms : .location,
+            nextStep: needsAlarms ? .location : nil
+          )
+        )
+      }
+      await store.finish()
+    }
+
+    @Test
+    func paywallProAccessDismissesWhenPermissionsAreResolved() async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+      }
+
+      await store.send(.destination(.presented(.proPaywall(.customerInfoUpdated(.pro)))))
+      await store.receive {
+        guard case .destination(.presented(.proPaywall(.delegate(.accessChanged(.pro))))) = $0
+        else { return false }
+        return true
+      } assert: {
+        $0.proAccess = .pro
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test
+    func promotionDoesNotInterruptOnboarding() async {
+      var state = AppFeature.State()
+      state.destination = .permissionsOnboarding(
+        PermissionsOnboardingFeature.State(step: .location)
+      )
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      }
+
+      await store.send(.proPromotionTapped)
+    }
+
+    @Test
+    func dismissingPaywallPreservesEntitlementAndSelectedTab() async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.proAccess = .free
+      state.selectedTab = .settings
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      }
+
+      await store.send(.destination(.dismiss)) {
+        $0.destination = nil
+      }
+    }
+
+    @Test
+    func sceneActivationRefreshesAccessAndDismissesPaywall() async {
+      var state = AppFeature.State()
+      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.hasStartedSubscriptionObservation = true
+      state.proAccess = .free
+      let store = TestStore(initialState: state) {
+        AppFeature()
+      } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.proSubscription.currentAccess = { .pro }
+      }
+
+      await store.send(.sceneBecameActive)
+      await store.receive {
+        guard case .proAccessUpdated(.pro) = $0 else { return false }
+        return true
+      } assert: {
+        $0.proAccess = .pro
+        $0.destination = nil
       }
       await store.finish()
     }
@@ -79,7 +247,7 @@ extension SupershotTestSuite {
         guard case .proPromotionTapped = $0 else { return false }
         return true
       } assert: {
-        $0.proPaywall = ProPaywallFeature.State()
+        $0.destination = .proPaywall(ProPaywallFeature.State())
       }
       await store.send(.settings(.delegate(.proAccessChanged(.pro))))
       await store.receive {
@@ -87,7 +255,7 @@ extension SupershotTestSuite {
         return true
       } assert: {
         $0.proAccess = .pro
-        $0.proPaywall = nil
+        $0.destination = nil
       }
       await store.finish()
     }
@@ -115,6 +283,27 @@ extension SupershotTestSuite {
 
       await store.send(.proAccessUpdated(.pro)) {
         $0.proAccess = .pro
+      }
+      await store.finish()
+      expectNoDifference(events.value, ["activity", "alarm"])
+
+      events.setValue([])
+      store.dependencies.locationClient.authorizationStatus = { .notDetermined }
+      await store.send(.proAccessUpdated(.pro)) {
+        $0.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(step: .location)
+        )
+      }
+      await store.finish()
+      store.dependencies.locationClient = .preview
+      events.setValue([])
+      await store.send(.destination(.presented(.permissionsOnboarding(.notNowButtonTapped))))
+      await store.receive {
+        guard case .destination(.presented(.permissionsOnboarding(.delegate(.completed)))) = $0
+        else { return false }
+        return true
+      } assert: {
+        $0.destination = nil
       }
       await store.finish()
       expectNoDifference(events.value, ["activity", "alarm"])

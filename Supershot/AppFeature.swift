@@ -13,12 +13,11 @@ struct AppFeature {
 
   @ObservableState
   struct State: Equatable {
+    @Presents var destination: AppDestination.State?
     var games = GamesFeature.State()
     var hasCheckedPermissions = false
     var hasStartedSubscriptionObservation = false
-    @Presents var permissionsOnboarding: PermissionsOnboardingFeature.State?
     var proAccess = SubscriptionEntitlement.unknown
-    @Presents var proPaywall: ProPaywallFeature.State?
     var selectedTab = Tab.games
     var settings = SettingsFeature.State()
     var teams = TeamsFeature.State()
@@ -26,11 +25,10 @@ struct AppFeature {
 
   enum Action {
     case deepLinkOpened(URL)
+    case destination(PresentationAction<AppDestination.Action>)
     case games(GamesFeature.Action)
-    case permissionsOnboarding(PresentationAction<PermissionsOnboardingFeature.Action>)
     case proAccessLoaded(SubscriptionEntitlement)
     case proAccessUpdated(SubscriptionEntitlement)
-    case proPaywall(PresentationAction<ProPaywallFeature.Action>)
     case proPromotionTapped
     case sceneBecameActive
     case selectedTabChanged(Tab)
@@ -84,16 +82,13 @@ struct AppFeature {
         case .games, .settings, .teams:
           return .none
 
-        case .permissionsOnboarding(.presented(.delegate(.completed))):
-          state.permissionsOnboarding = nil
+        case .destination(.presented(.permissionsOnboarding(.delegate(.completed)))):
+          state.destination = nil
           guard
             state.proAccess == .pro,
             alarmAuthorization.status() == .authorized
           else { return .none }
           return synchronizePremiumPresentations(schedulesAlerts: true)
-
-        case .permissionsOnboarding:
-          return .none
 
         case let .proAccessLoaded(access):
           state.hasCheckedPermissions = true
@@ -102,15 +97,15 @@ struct AppFeature {
         case let .proAccessUpdated(access):
           return applyProAccess(access, state: &state)
 
-        case let .proPaywall(.presented(.delegate(.accessChanged(access)))):
+        case let .destination(.presented(.proPaywall(.delegate(.accessChanged(access))))):
           return applyProAccess(access, state: &state)
 
-        case .proPaywall:
+        case .destination:
           return .none
 
         case .proPromotionTapped:
-          guard state.proAccess != .pro else { return .none }
-          state.proPaywall = ProPaywallFeature.State()
+          guard state.proAccess != .pro, state.destination == nil else { return .none }
+          state.destination = .proPaywall(ProPaywallFeature.State())
           return .none
 
         case .sceneBecameActive:
@@ -145,11 +140,8 @@ struct AppFeature {
         }
       }
     }
-    .ifLet(\.$permissionsOnboarding, action: \.permissionsOnboarding) {
-      PermissionsOnboardingFeature()
-    }
-    .ifLet(\.$proPaywall, action: \.proPaywall) {
-      ProPaywallFeature()
+    .ifLet(\.$destination, action: \.destination) {
+      AppDestination.body
     }
   }
 
@@ -161,22 +153,25 @@ struct AppFeature {
 
     switch access {
     case .free:
-      state.permissionsOnboarding = locationClient.authorizationStatus() == .notDetermined
-        ? PermissionsOnboardingFeature.State(step: .location)
-        : nil
+      if locationClient.authorizationStatus() == .notDetermined {
+        state.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(step: .location)
+        )
+      } else if state.destination?.proPaywall == nil {
+        state.destination = nil
+      }
       return cleanUpPremiumPresentations()
 
     case .pro:
-      state.proPaywall = nil
       let alarmAuthorization = alarmAuthorization.status()
       let needsLocation = locationClient.authorizationStatus() == .notDetermined
       if alarmAuthorization == .notDetermined {
-        state.permissionsOnboarding = PermissionsOnboardingFeature.State(
-          nextStep: needsLocation ? .location : nil
+        state.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(nextStep: needsLocation ? .location : nil)
         )
       } else {
-        state.permissionsOnboarding = needsLocation
-          ? PermissionsOnboardingFeature.State(step: .location)
+        state.destination = needsLocation
+          ? .permissionsOnboarding(PermissionsOnboardingFeature.State(step: .location))
           : nil
       }
       return synchronizePremiumPresentations(
@@ -184,7 +179,9 @@ struct AppFeature {
       )
 
     case .unknown:
-      state.permissionsOnboarding = nil
+      if state.destination?.proPaywall == nil {
+        state.destination = nil
+      }
       return .none
     }
   }
@@ -225,6 +222,14 @@ struct AppFeature {
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 }
+
+@Reducer
+enum AppDestination {
+  case permissionsOnboarding(PermissionsOnboardingFeature)
+  case proPaywall(ProPaywallFeature)
+}
+
+extension AppDestination.State: Equatable {}
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
