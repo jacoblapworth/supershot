@@ -13,7 +13,7 @@ struct ScoreboardView: View {
         TeamScore(name: teamA.name, color: teamA.bibColor, score: teamAScore, alignment: swapTeamOrder ? .leading : .trailing)
         TeamScore(name: teamB.name, color: teamB.bibColor, score: teamBScore, alignment: swapTeamOrder ? .trailing : .leading)
       }
-      .reversed(!swapTeamOrder)
+      .reversed(swapTeamOrder)
     }
   }
 }
@@ -55,7 +55,17 @@ private struct TeamScore: View {
   }
 }
 
-#Preview("Scoreboard") {
+#Preview("Scoreboard – odd quarters") {
+  ScoreboardView(
+    teamA: .previewRavens,
+    teamAScore: 18,
+    teamB: .previewSwifts,
+    teamBScore: 16
+  )
+  .padding()
+}
+
+#Preview("Scoreboard – even quarters") {
   ScoreboardView(
     teamA: .previewRavens,
     teamAScore: 18,
