@@ -20,7 +20,7 @@ struct TeamCard: View {
             .fill(team.color)
             .frame(width: 28, height: 28)
             .overlay {
-              Circle().stroke(team.color.opacity(0.12), lineWidth: 5)
+              Circle().stroke(team.color.opacity(0.12), lineWidth: 2)
             }
             .accessibilityHidden(true)
 

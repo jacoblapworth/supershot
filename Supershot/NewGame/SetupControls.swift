@@ -49,11 +49,12 @@ struct SetupStartBar: View {
           ProgressView()
             .frame(maxWidth: .infinity)
         } else {
-          Label("Start game", systemImage: "play.fill")
+          Text("Continue")
+            .padding(8)
             .frame(maxWidth: .infinity)
         }
       }
-      .buttonStyle(.myAppPrimaryButton)
+      .buttonStyle(.glassProminent)
       .disabled(!canStartGame)
     }
     .padding()

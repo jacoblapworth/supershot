@@ -46,10 +46,6 @@ struct ScoringView: View {
           )
           
         }
-        .background {
-          LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
-            .ignoresSafeArea()
-        }
         
         if store.isShowingLastCentrePassBanner {
           LastCentrePassBanner(
@@ -76,6 +72,10 @@ struct ScoringView: View {
       .padding()
       
     }
+//    .background {
+//      LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
+//        .ignoresSafeArea()
+//    }
     .navigationBarBackButtonHidden()
     .toolbar {
 #if os(macOS)
@@ -168,6 +168,7 @@ struct ScoringView: View {
           )
         }
         .padding()
+        .presentationBackground(.thinMaterial)
       }
       .scrollDisabled(true)
       .buttonSizing(.flexible)

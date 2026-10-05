@@ -60,6 +60,7 @@ struct NewGameView: View {
           .navigationBarTitleDisplayMode(.inline)
 #endif
         }
+        .presentationBackground(.thinMaterial)
         .presentationDetents([.medium, .large])
 
       case let .timingEditor(timingEditorStore):
