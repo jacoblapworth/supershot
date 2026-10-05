@@ -245,6 +245,7 @@ extension ScoringFeature.State {
         max(snapshot.game.elapsedSeconds, 0),
         max(currentDuration, 0)
       ),
+      firstQuarterLeftTeam: snapshot.game.firstQuarterLeftTeam,
       gameID: snapshot.game.id,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
       periods: snapshot.periods,

@@ -7,6 +7,17 @@
 
 import Foundation
 
+nonisolated enum GameTeamSlot: String, Codable, Hashable, Sendable {
+  case teamA
+  case teamB
+
+  var opponent: Self { self == .teamA ? .teamB : .teamA }
+
+  func courtLeftTeam(periodNumber: Int) -> Self {
+    periodNumber.isMultiple(of: 2) ? opponent : self
+  }
+}
+
 /// Phase of a game
 nonisolated enum GamePhase: Equatable, Hashable, Sendable {
   case period(number: Int, durationSeconds: Int)

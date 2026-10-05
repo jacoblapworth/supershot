@@ -17,6 +17,8 @@ extension SupershotTestSuite {
     func multipleUnfinishedGamesRehydrateIndependentlyAndPaused() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
+      let firstGameID = UUID(-10)
+      let secondGameID = UUID(-20)
 
       try await database.write { db in
         try db.seed {
@@ -25,17 +27,18 @@ extension SupershotTestSuite {
           Team(id: UUID(-3), name: "Foxes")
           Team(id: UUID(-4), name: "Owls")
           Game(
-            id: UUID(-1),
+            id: firstGameID,
             startedAt: Date(timeIntervalSince1970: 1_000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
+            firstQuarterLeftTeam: .teamB,
             currentPhaseIndex: 4,
             elapsedSeconds: 42,
             timerEndsAt: nil
           )
           Game(
-            id: UUID(-2),
+            id: secondGameID,
             startedAt: Date(timeIntervalSince1970: 2_000),
             endedAt: nil,
             teamAID: UUID(-3),
@@ -46,15 +49,15 @@ extension SupershotTestSuite {
           )
         }
         let periods = [
-          testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
-          testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
+          testGamePeriods(gameID: firstGameID, durationSeconds: 900),
+          testGamePeriods(gameID: secondGameID, durationSeconds: 600),
         ].flatMap { $0 }
         try GamePeriod.insert { periods }.execute(db)
         try Goal.insert {
           Goal(
             id: UUID(-1),
-            gameID: UUID(-1),
-            gamePeriodID: testGamePeriodID(gameID: UUID(-1), position: 1),
+            gameID: firstGameID,
+            gamePeriodID: testGamePeriodID(gameID: firstGameID, position: 1),
             teamID: UUID(-2),
             elapsedSeconds: 30,
             points: 1,
@@ -62,8 +65,8 @@ extension SupershotTestSuite {
           )
           Goal(
             id: UUID(-2),
-            gameID: UUID(-2),
-            gamePeriodID: testGamePeriodID(gameID: UUID(-2), position: 0),
+            gameID: secondGameID,
+            gamePeriodID: testGamePeriodID(gameID: secondGameID, position: 0),
             teamID: UUID(-3),
             elapsedSeconds: 20,
             points: 2,
@@ -75,8 +78,8 @@ extension SupershotTestSuite {
 
       let snapshots = try await database.read { db in
         (
-          try GameSnapshot.fetch(db, gameID: UUID(-1)),
-          try GameSnapshot.fetch(db, gameID: UUID(-2))
+          try GameSnapshot.fetch(db, gameID: firstGameID),
+          try GameSnapshot.fetch(db, gameID: secondGameID)
         )
       }
       let first = ScoringFeature.State(snapshot: snapshots.0)
@@ -89,6 +92,9 @@ extension SupershotTestSuite {
       expectNoDifference(first.canUndo, true)
       expectNoDifference(first.centrePassTeamID, UUID(-1))
       expectNoDifference(first.isTimerRunning, false)
+      expectNoDifference(first.firstQuarterLeftTeam, .teamB)
+      expectNoDifference(first.courtLayout.left.id, UUID(-2))
+      expectNoDifference(first.courtLayout.left.score, 1)
       expectNoDifference(second.period, 2)
       expectNoDifference(second.elapsedSeconds, 75)
       expectNoDifference(second.teamAScore, 2)
@@ -96,6 +102,9 @@ extension SupershotTestSuite {
       expectNoDifference(second.canUndo, true)
       expectNoDifference(second.centrePassTeamID, UUID(-3))
       expectNoDifference(second.isTimerRunning, false)
+      expectNoDifference(second.firstQuarterLeftTeam, .teamA)
+      expectNoDifference(second.courtLayout.left.id, UUID(-4))
+      expectNoDifference(second.courtLayout.right.score, 2)
     }
   }
 }

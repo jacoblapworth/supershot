@@ -2,33 +2,27 @@ import SwiftUI
 import Foundation
 
 struct ScoreboardView: View {
-  var teamA: ScoringFeature.Team
-  var teamAScore: Int
-  var teamB: ScoringFeature.Team
-  var teamBScore: Int
-  var centrePassTeamID: UUID
-  var swapTeamOrder: Bool = false
-  
+  var courtLayout: ScoringFeature.CourtLayout
+
   var body: some View {
     HStack(spacing: 12) {
-      Group {
-        TeamScore(
-          name: teamA.name,
-          color: teamA.bibColor,
-          score: teamAScore,
-          alignment: swapTeamOrder ? .leading : .trailing,
-          hasCentrePass: teamA.id == centrePassTeamID
-        )
-        TeamScore(
-          name: teamB.name,
-          color: teamB.bibColor,
-          score: teamBScore,
-          alignment: swapTeamOrder ? .trailing : .leading,
-          hasCentrePass: teamB.id == centrePassTeamID
-        )
-      }
-      .reversed(swapTeamOrder)
+      teamScore(courtLayout.left, alignment: .trailing)
+      teamScore(courtLayout.right, alignment: .leading)
     }
+    .environment(\.layoutDirection, .leftToRight)
+  }
+
+  private func teamScore(
+    _ courtTeam: ScoringFeature.CourtTeam,
+    alignment: HorizontalAlignment
+  ) -> some View {
+    TeamScore(
+      name: courtTeam.team.name,
+      color: courtTeam.team.bibColor,
+      score: courtTeam.score,
+      alignment: alignment,
+      hasCentrePass: courtTeam.hasCentrePass
+    )
   }
 }
 
@@ -83,7 +77,7 @@ private struct CentrePassIndicator: View {
   
   var body: some View {
     Image(
-      systemName: direction == .leading
+      systemName: direction == .trailing
       ? "arrow.left.circle.fill"
       : "arrow.right.circle.fill"
     )
@@ -92,36 +86,28 @@ private struct CentrePassIndicator: View {
 }
 
 #Preview("Scoreboard – odd quarters") {
-  ScoreboardView(
-    teamA: .previewRavens,
-    teamAScore: 18,
-    teamB: .previewSwifts,
-    teamBScore: 16,
-    centrePassTeamID: ScoringFeature.Team.previewRavens.id
-  )
-  .padding()
+  var state = ScoringFeature.State.previewQuarter
+  state.currentPhaseIndex = 0
+  state.teamAScore = 18
+  state.teamBScore = 16
+  return ScoreboardView(courtLayout: state.courtLayout)
+    .padding()
 }
 
 #Preview("Scoreboard – even quarters") {
-  ScoreboardView(
-    teamA: .previewRavens,
-    teamAScore: 18,
-    teamB: .previewSwifts,
-    teamBScore: 16,
-    centrePassTeamID: ScoringFeature.Team.previewRavens.id,
-    swapTeamOrder: true
-  )
-  .padding()
+  var state = ScoringFeature.State.previewQuarter
+  state.currentPhaseIndex = 2
+  state.teamAScore = 18
+  state.teamBScore = 16
+  return ScoreboardView(courtLayout: state.courtLayout)
+    .padding()
 }
 
 #Preview("Scoreboard disabled") {
-  ScoreboardView(
-    teamA: .previewRavens,
-    teamAScore: 18,
-    teamB: .previewSwifts,
-    teamBScore: 16,
-    centrePassTeamID: ScoringFeature.Team.previewRavens.id
-  )
-  .disabled(true)
-  .padding()
+  var state = ScoringFeature.State.previewQuarter
+  state.teamAScore = 18
+  state.teamBScore = 16
+  return ScoreboardView(courtLayout: state.courtLayout)
+    .disabled(true)
+    .padding()
 }
