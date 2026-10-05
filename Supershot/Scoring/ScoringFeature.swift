@@ -146,7 +146,6 @@ struct ScoringFeature {
     case alert(PresentationAction<Alert>)
     case centrePassTeamButtonTapped(Team.ID)
     case centrePassTeamResponse(Result<Team.ID, any Error>)
-    case closeButtonTapped
     case delegate(Delegate)
     case endQuarterButtonTapped
     case finishGameButtonTapped
@@ -193,7 +192,6 @@ struct ScoringFeature {
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
-  @Dependency(\.dismiss) var dismiss
   @Dependency(\.gameTimer) var gameTimer
   @Dependency(\.soundEffects) var soundEffects
   @Dependency(\.uuid) var uuid
@@ -260,13 +258,6 @@ struct ScoringFeature {
 
       case .centrePassTeamResponse(.failure):
         return .none
-
-      case .closeButtonTapped:
-        synchronizeTimer(state: &state, now: now)
-        return .concatenate(
-          .cancel(id: CancelID.timer),
-          .run { _ in await dismiss() }
-        )
 
       case .endQuarterButtonTapped:
         guard state.canMoveToNextQuarter else { return .none }
