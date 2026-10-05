@@ -42,6 +42,7 @@ struct ScoringView: View {
             teamAScore: store.teamAScore,
             teamB: store.teamB,
             teamBScore: store.teamBScore,
+            centrePassTeamID: store.centrePassTeamID,
             swapTeamOrder: store.swapTeamOrder
           )
           
@@ -152,13 +153,6 @@ struct ScoringView: View {
             }
             .tint(.green)
           }
-          //          Form {
-          //            Picker("Centre pass", selection: $store.centrePassTeamID) {
-          //              Text(store.teamA.name).tag(store.teamA.id)
-          //              Text(store.teamB.name).tag(store.teamB.id)
-          //            }
-          //          }
-          
           CentrePassControl(
             centrePassTeamID: store.centrePassTeamID,
             swapTeamOrder: store.swapTeamOrder,
@@ -168,12 +162,13 @@ struct ScoringView: View {
           )
         }
         .padding()
-        .presentationBackground(.thinMaterial)
       }
+      .presentationBackground(.thinMaterial)
       .scrollDisabled(true)
       .buttonSizing(.flexible)
       .buttonStyle(.glassProminent)
-      .presentationDetents([.height(80), .height(200)], selection: $store.presentationDetent)
+      .presentationDetents([.height(84), .height(200)],
+        selection: $store.presentationDetent)
       .presentationPlacement(.leading)
       .presentationBackgroundInteraction(.enabled)
       .presentationBackground(alignment: .topLeading) {}

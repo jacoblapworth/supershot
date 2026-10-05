@@ -1,17 +1,31 @@
 import SwiftUI
+import Foundation
 
 struct ScoreboardView: View {
   var teamA: ScoringFeature.Team
   var teamAScore: Int
   var teamB: ScoringFeature.Team
   var teamBScore: Int
+  var centrePassTeamID: UUID
   var swapTeamOrder: Bool = false
   
   var body: some View {
     HStack(spacing: 12) {
       Group {
-        TeamScore(name: teamA.name, color: teamA.bibColor, score: teamAScore, alignment: swapTeamOrder ? .leading : .trailing)
-        TeamScore(name: teamB.name, color: teamB.bibColor, score: teamBScore, alignment: swapTeamOrder ? .trailing : .leading)
+        TeamScore(
+          name: teamA.name,
+          color: teamA.bibColor,
+          score: teamAScore,
+          alignment: swapTeamOrder ? .leading : .trailing,
+          hasCentrePass: teamA.id == centrePassTeamID
+        )
+        TeamScore(
+          name: teamB.name,
+          color: teamB.bibColor,
+          score: teamBScore,
+          alignment: swapTeamOrder ? .trailing : .leading,
+          hasCentrePass: teamB.id == centrePassTeamID
+        )
       }
       .reversed(swapTeamOrder)
     }
@@ -23,6 +37,7 @@ private struct TeamScore: View {
   var color: Color
   var score: Int
   var alignment: HorizontalAlignment = .leading
+  var hasCentrePass: Bool = false
 
   @Environment(\.isEnabled) var isEnabled
   private var frameAlignment: Alignment {
@@ -35,9 +50,17 @@ private struct TeamScore: View {
   
   var body: some View {
     VStack(alignment: alignment, spacing: 0) {
-      Text(name)
-        .font(.headline)
-        .lineLimit(1)
+      HStack {
+        if hasCentrePass && alignment == .leading {
+          CentrePassIndicator(direction: .leading)
+        }
+        Text(name)
+          .font(.title3)
+          .lineLimit(1)
+        if hasCentrePass && alignment == .trailing {
+          CentrePassIndicator(direction: .trailing)
+        }
+      }
       Text("\(score)")
         .font(.system(size: 64, weight: .bold))
         .fontWidth(.compressed)
@@ -55,12 +78,26 @@ private struct TeamScore: View {
   }
 }
 
+private struct CentrePassIndicator: View {
+  var direction: HorizontalEdge
+  
+  var body: some View {
+    Image(
+      systemName: direction == .leading
+      ? "arrow.left.circle.fill"
+      : "arrow.right.circle.fill"
+    )
+    .accessibilityLabel("Current centre pass")
+  }
+}
+
 #Preview("Scoreboard – odd quarters") {
   ScoreboardView(
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
-    teamBScore: 16
+    teamBScore: 16,
+    centrePassTeamID: ScoringFeature.Team.previewRavens.id
   )
   .padding()
 }
@@ -71,6 +108,7 @@ private struct TeamScore: View {
     teamAScore: 18,
     teamB: .previewSwifts,
     teamBScore: 16,
+    centrePassTeamID: ScoringFeature.Team.previewRavens.id,
     swapTeamOrder: true
   )
   .padding()
@@ -81,7 +119,8 @@ private struct TeamScore: View {
     teamA: .previewRavens,
     teamAScore: 18,
     teamB: .previewSwifts,
-    teamBScore: 16
+    teamBScore: 16,
+    centrePassTeamID: ScoringFeature.Team.previewRavens.id
   )
   .disabled(true)
   .padding()
