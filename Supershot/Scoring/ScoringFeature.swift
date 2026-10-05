@@ -1,3 +1,4 @@
+import ApplicationDependency
 import SwiftUI
 import ComposableArchitecture
 import Foundation
@@ -151,6 +152,7 @@ struct ScoringFeature {
     case finishGameResponse(Result<Game.ID, any Error>)
     case goalButtonTapped(Team.ID)
     case goalResponse(Result<ScoreSnapshot, any Error>)
+    case keepScreenAwakeTask
     case lastCentrePassNotTakenButtonTapped
     case lastCentrePassResponse(Result<LastCentrePassSnapshot, any Error>)
     case lastCentrePassTakenButtonTapped
@@ -184,6 +186,9 @@ struct ScoringFeature {
     case timer
   }
 
+#if os(iOS)
+  @Dependency(\.application) var application
+#endif
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
@@ -295,6 +300,17 @@ struct ScoringFeature {
 
       case .goalResponse(.failure):
         return reconcileTimerEffect(gameID: state.gameID)
+
+      case .keepScreenAwakeTask:
+#if os(iOS)
+        return .run { @MainActor _ in
+          application.isIdleTimerDisabled = true
+          defer { application.isIdleTimerDisabled = false }
+          try await Task.never()
+        }
+#else
+        return .none
+#endif
 
       case .lastCentrePassNotTakenButtonTapped:
         return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: false)

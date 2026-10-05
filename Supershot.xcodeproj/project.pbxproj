@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		12D13302305B000000000001 /* DependenciesAdditions in Frameworks */ = {isa = PBXBuildFile; productRef = 12D13301305B000000000001 /* DependenciesAdditions */; };
 		121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 121C048F302213DA00ED9B54 /* RevenueCat */; };
 		121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 121C0491302213DA00ED9B54 /* RevenueCatUI */; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
@@ -139,6 +140,7 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				12D13302305B000000000001 /* DependenciesAdditions in Frameworks */,
 				12C147E43059644E008F9513 /* LazyState in Frameworks */,
 				12715897300D144600B14CCB /* Sharing in Frameworks */,
 				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
@@ -226,6 +228,7 @@
 			);
 			name = Supershot;
 			packageProductDependencies = (
+				12D13301305B000000000001 /* DependenciesAdditions */,
 				12715896300D144600B14CCB /* Sharing */,
 				12A4C608301E25CB00094D7C /* Dependencies */,
 				12A4C60A301E25CB00094D7C /* DependenciesMacros */,
@@ -316,6 +319,7 @@
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */,
 				1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
 				12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */,
 				12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */,
@@ -779,6 +783,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tgrapperon/swift-dependencies-additions";
+			requirement = {
+				kind = revision;
+				revision = 0afff683710e63433847641562da5908fe01205f;
+			};
+		};
 		121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -852,6 +864,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		12D13301305B000000000001 /* DependenciesAdditions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */;
+			productName = DependenciesAdditions;
+		};
 		121C048F302213DA00ED9B54 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;

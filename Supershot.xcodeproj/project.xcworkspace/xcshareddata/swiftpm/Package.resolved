@@ -1,5 +1,5 @@
 {
-  "originHash" : "1eb0ac61ec17babafbaba9e7fa6941f786ec5b1ba7b67e5bf27b9477196bde0c",
+  "originHash" : "300a438f1f4b6b2aaf1c4c119b6dc76ca7a1919a3b64a266a9ac710b64ad8f6e",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -98,6 +98,14 @@
       "state" : {
         "revision" : "8dc1fbf2f6255a73dec53b4648164884898db4c5",
         "version" : "1.14.1"
+      }
+    },
+    {
+      "identity" : "swift-dependencies-additions",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/tgrapperon/swift-dependencies-additions",
+      "state" : {
+        "revision" : "0afff683710e63433847641562da5908fe01205f"
       }
     },
     {
