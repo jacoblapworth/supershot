@@ -13,6 +13,43 @@ extension SupershotTestSuite {
   @Suite(.dependencies {
     $0.uuid = .incrementing
   }) struct ScoringFeatureTests {
+    @Test(arguments: 0...6)
+    func swappingSidesPreservesGameStateAndCanBeReversed(phaseIndex: Int) async {
+      var state = Self.state()
+      state.currentPhaseIndex = phaseIndex
+      state.teamAScore = 7
+      state.teamBScore = 4
+      state.centrePassTeamID = state.teamB.id
+      state.elapsedSeconds = 30
+      let originalOrder = state.swapTeamOrder
+      let store = TestStore(initialState: state) {
+        ScoringFeature()
+      }
+
+      await store.send(.swapSidesButtonTapped) {
+        $0.hasSwappedSides = true
+      }
+      expectNoDifference(store.state.swapTeamOrder, !originalOrder)
+
+      await store.send(.swapSidesButtonTapped) {
+        $0.hasSwappedSides = false
+      }
+      expectNoDifference(store.state, state)
+    }
+
+    @Test
+    func manuallySwappedSidesStillAlternateWithQuarters() {
+      var state = Self.state()
+      state.hasSwappedSides = true
+      expectNoDifference(state.swapTeamOrder, true)
+      state.currentPhaseIndex = 1
+      expectNoDifference(state.swapTeamOrder, true)
+      state.currentPhaseIndex = 2
+      expectNoDifference(state.swapTeamOrder, false)
+      state.currentPhaseIndex = 4
+      expectNoDifference(state.swapTeamOrder, true)
+    }
+
     @Test
     func gameTimelineIsFourQuartersWithBreaksBetweenThem() {
       expectNoDifference(
@@ -173,12 +210,13 @@ extension SupershotTestSuite {
       expectNoDifference(goals, [])
     }
 
-    @Test
-    func runningQuarterRecordsGoalWithAuthoritativeQuarterAndElapsedTime() async throws {
+    @Test(arguments: [false, true])
+    func runningQuarterRecordsGoalWithAuthoritativeQuarterAndElapsedTime(swappedSides: Bool) async throws {
       var game = Self.game()
       game.timerEndsAt = Date(timeIntervalSince1970: 1_600)
       let database = try await Self.seed(game)
       var state = Self.state()
+      state.hasSwappedSides = swappedSides
       state.timerEndsAt = game.timerEndsAt
       let store = TestStore(initialState: state) {
         ScoringFeature()
@@ -188,7 +226,9 @@ extension SupershotTestSuite {
         $0.uuid = .incrementing
       }
 
-      await store.send(.goalButtonTapped(UUID(1)))
+      await store.send(.goalButtonTapped(UUID(1))) {
+        $0.elapsedSeconds = 300
+      }
       await store.receive {
         guard case .goalResponse(.success) = $0 else { return false }
         return true
@@ -202,6 +242,7 @@ extension SupershotTestSuite {
       let goal = try await database.read { db in try Goal.fetchOne(db) }
       expectNoDifference(goal?.gamePeriodID, testGamePeriodID(gameID: UUID(3), position: 0))
       expectNoDifference(goal?.elapsedSeconds, 300)
+      await store.finish()
     }
 
     @Test

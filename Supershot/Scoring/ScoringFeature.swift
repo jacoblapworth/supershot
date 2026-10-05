@@ -40,6 +40,7 @@ struct ScoringFeature {
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
     var hasShownAlarmUnavailableAlert = false
+    var hasSwappedSides = false
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
     var periods: [GamePeriod]
@@ -102,7 +103,7 @@ struct ScoringFeature {
     }
 
     var swapTeamOrder: Bool {
-      period.isMultiple(of: 2)
+      period.isMultiple(of: 2) != hasSwappedSides
     }
 
     var lastCompletedQuarterNumber: Int {
@@ -134,6 +135,7 @@ struct ScoringFeature {
     case skipBreakButtonTapped
     case skipPhaseResponse(Result<GameSnapshot, any Error>)
     case startTimerButtonTapped
+    case swapSidesButtonTapped
     case timerTick
     case timerPauseResponse(Result<GameSnapshot, any Error>)
     case timerReconcileResponse(Result<GameSnapshot, any Error>)
@@ -169,6 +171,10 @@ struct ScoringFeature {
     Reduce { state, action in
       switch action {
       case .alert, .delegate:
+        return .none
+
+      case .swapSidesButtonTapped:
+        state.hasSwappedSides.toggle()
         return .none
 
       case let .centrePassTeamButtonTapped(teamID):

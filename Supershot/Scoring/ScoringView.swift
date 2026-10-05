@@ -102,9 +102,9 @@ struct ScoringView: View {
         
         Menu {
           Button {
-            
+            store.send(.swapSidesButtonTapped)
           } label: {
-            Label("Swap teams", systemImage: "arrow.left.arrow.right")
+            Label("Swap sides", systemImage: "arrow.left.arrow.right")
           }
           
           Button {
