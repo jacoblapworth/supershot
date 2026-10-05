@@ -28,6 +28,19 @@ struct ScoringFeature {
     var name: String
   }
 
+  struct CourtTeam: Equatable, Identifiable, Sendable {
+    var team: Team
+    var score: Int
+    var hasCentrePass: Bool
+
+    var id: Team.ID { team.id }
+  }
+
+  struct CourtLayout: Equatable, Sendable {
+    var left: CourtTeam
+    var right: CourtTeam
+  }
+
   @ObservableState
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
@@ -37,10 +50,11 @@ struct ScoringFeature {
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
     var elapsedSeconds = 0
+    var firstQuarterLeftTeam = GameTeamSlot.teamA
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
     var hasShownAlarmUnavailableAlert = false
-    var hasSwappedSides = false
+    var isSavingCourtOrientation = false
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
     var periods: [GamePeriod]
@@ -102,8 +116,20 @@ struct ScoringFeature {
       centrePassTeamID == teamB.id ? teamB : teamA
     }
 
-    var swapTeamOrder: Bool {
-      period.isMultiple(of: 2) != hasSwappedSides
+    var courtLayout: CourtLayout {
+      let a = CourtTeam(
+        team: teamA,
+        score: teamAScore,
+        hasCentrePass: centrePassTeamID == teamA.id
+      )
+      let b = CourtTeam(
+        team: teamB,
+        score: teamBScore,
+        hasCentrePass: centrePassTeamID == teamB.id
+      )
+      return firstQuarterLeftTeam.courtLeftTeam(periodNumber: period) == .teamA
+        ? CourtLayout(left: a, right: b)
+        : CourtLayout(left: b, right: a)
     }
 
     var lastCompletedQuarterNumber: Int {
@@ -136,6 +162,7 @@ struct ScoringFeature {
     case skipPhaseResponse(Result<GameSnapshot, any Error>)
     case startTimerButtonTapped
     case swapSidesButtonTapped
+    case swapSidesResponse(Result<GameTeamSlot, any Error>)
     case timerTick
     case timerPauseResponse(Result<GameSnapshot, any Error>)
     case timerReconcileResponse(Result<GameSnapshot, any Error>)
@@ -174,7 +201,42 @@ struct ScoringFeature {
         return .none
 
       case .swapSidesButtonTapped:
-        state.hasSwappedSides.toggle()
+        guard !state.isSavingCourtOrientation else { return .none }
+        state.isSavingCourtOrientation = true
+        let gameID = state.gameID
+        return .run { send in
+          let result = await Result {
+            try await database.write { db in
+              guard let game = try Game.find(gameID).fetchOne(db) else {
+                throw ScoringPersistenceError.gameNotFound
+              }
+              let orientation = game.firstQuarterLeftTeam.opponent
+              try Game.find(gameID).update {
+                $0.firstQuarterLeftTeam = #bind(orientation)
+              }
+              .execute(db)
+              return orientation
+            }
+          }
+          await send(.swapSidesResponse(result))
+        }
+
+      case let .swapSidesResponse(.success(orientation)):
+        state.isSavingCourtOrientation = false
+        state.firstQuarterLeftTeam = orientation
+        return .none
+
+      case .swapSidesResponse(.failure):
+        state.isSavingCourtOrientation = false
+        state.alert = AlertState {
+          TextState("Couldn’t swap sides")
+        } actions: {
+          ButtonState(role: .cancel, action: .dismissButtonTapped) {
+            TextState("OK")
+          }
+        } message: {
+          TextState("Please try again.")
+        }
         return .none
 
       case let .centrePassTeamButtonTapped(teamID):
@@ -374,6 +436,7 @@ struct ScoringFeature {
   }
 
   private func applyTimer(_ game: Game, to state: inout State) {
+    state.firstQuarterLeftTeam = game.firstQuarterLeftTeam
     state.currentPhaseIndex = game.currentPhaseIndex
     state.elapsedSeconds = game.elapsedSeconds
     state.isShowingLastCentrePassBanner = game.isAwaitingCentrePassConfirmation

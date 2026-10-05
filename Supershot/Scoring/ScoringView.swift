@@ -38,11 +38,7 @@ struct ScoringView: View {
           )
           
           ScoreboardView(
-            teamA: store.teamA,
-            teamAScore: store.teamAScore,
-            teamB: store.teamB,
-            teamBScore: store.teamBScore,
-            swapTeamOrder: store.swapTeamOrder
+            courtLayout: store.courtLayout
           )
           
         }
@@ -106,6 +102,7 @@ struct ScoringView: View {
           } label: {
             Label("Swap sides", systemImage: "arrow.left.arrow.right")
           }
+          .disabled(store.isSavingCourtOrientation)
           
           Button {
             
@@ -128,22 +125,10 @@ struct ScoringView: View {
         VStack(alignment: .leading, spacing: 12) {
           if store.canScoreGoal {
             HStack(spacing: 16) {
-              Group {
-                Button(action: { store.send(.goalButtonTapped(store.teamA.id)) }) {
-                  Label("Goal", systemImage: "plus")
-                    .padding(8)
-                }
-                .tint(store.teamA.bibColor)
-                Button(action: { store.send(.goalButtonTapped(store.teamB.id)) }) {
-                  Label("Goal", systemImage: "plus")
-                    .padding(8)
-                }
-                .tint(store.teamB.bibColor)
-              }
-              .reversed(store.swapTeamOrder)
-              .font(.title2.bold())
-              .labelStyle(.iconOnly)
+              goalButton(for: store.courtLayout.left)
+              goalButton(for: store.courtLayout.right)
             }
+            .environment(\.layoutDirection, .leftToRight)
           } else {
             Button(action: { store.send(.startTimerButtonTapped) }) {
               Label("Start Quarter", systemImage: "play.fill")
@@ -152,28 +137,19 @@ struct ScoringView: View {
             }
             .tint(.green)
           }
-          //          Form {
-          //            Picker("Centre pass", selection: $store.centrePassTeamID) {
-          //              Text(store.teamA.name).tag(store.teamA.id)
-          //              Text(store.teamB.name).tag(store.teamB.id)
-          //            }
-          //          }
-          
           CentrePassControl(
-            centrePassTeamID: store.centrePassTeamID,
-            swapTeamOrder: store.swapTeamOrder,
-            teamA: store.teamA,
-            teamB: store.teamB,
+            courtLayout: store.courtLayout,
             centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
           )
         }
         .padding()
-        .presentationBackground(.thinMaterial)
       }
+      .presentationBackground(.thinMaterial)
       .scrollDisabled(true)
       .buttonSizing(.flexible)
       .buttonStyle(.glassProminent)
-      .presentationDetents([.height(80), .height(200)], selection: $store.presentationDetent)
+      .presentationDetents([.height(84), .height(200)],
+        selection: $store.presentationDetent)
       .presentationPlacement(.leading)
       .presentationBackgroundInteraction(.enabled)
       .presentationBackground(alignment: .topLeading) {}
@@ -198,6 +174,17 @@ struct ScoringView: View {
     .onChange(of: scenePhase, scenePhaseChanged)
   }
   
+  private func goalButton(for courtTeam: ScoringFeature.CourtTeam) -> some View {
+    Button(action: { store.send(.goalButtonTapped(courtTeam.id)) }) {
+      Label("Goal", systemImage: "plus")
+        .padding(8)
+    }
+    .tint(courtTeam.team.bibColor)
+    .accessibilityLabel("Goal for \(courtTeam.team.name)")
+    .font(.title2.bold())
+    .labelStyle(.iconOnly)
+  }
+
   private var gamesButton: some View {
     Button {
       store.send(.closeButtonTapped)

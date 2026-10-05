@@ -1,10 +1,7 @@
 import SwiftUI
 
 struct CentrePassControl: View {
-  var centrePassTeamID: UUID
-  var swapTeamOrder: Bool = false
-  var teamA: ScoringFeature.Team
-  var teamB: ScoringFeature.Team
+  var courtLayout: ScoringFeature.CourtLayout
   var centrePassTeamTapped: (UUID) -> Void
 
   var body: some View {
@@ -13,12 +10,10 @@ struct CentrePassControl: View {
         .font(.headline)
 
       HStack(spacing: 12) {
-        Group {
-          centrePassButton(team: teamA)
-          centrePassButton(team: teamB)
-        }
-        .reversed(swapTeamOrder)
+        centrePassButton(courtTeam: courtLayout.left)
+        centrePassButton(courtTeam: courtLayout.right)
       }
+      .environment(\.layoutDirection, .leftToRight)
 
       Text("Tap a team to correct the next centre pass.")
         .font(.caption)
@@ -28,12 +23,12 @@ struct CentrePassControl: View {
     .background(.thinMaterial, in: .containerRelative)
   }
 
-  private func centrePassButton(team: ScoringFeature.Team) -> some View {
+  private func centrePassButton(courtTeam: ScoringFeature.CourtTeam) -> some View {
     CentrePassButton(
-      color: team.bibColor,
-      isSelected: centrePassTeamID == team.id,
-      name: team.name,
-      action: { centrePassTeamTapped(team.id) }
+      color: courtTeam.team.bibColor,
+      isSelected: courtTeam.hasCentrePass,
+      name: courtTeam.team.name,
+      action: { centrePassTeamTapped(courtTeam.id) }
     )
   }
 }
@@ -76,10 +71,7 @@ private struct CentrePassButton: View {
 
 #Preview("Centre pass") {
   CentrePassControl(
-    centrePassTeamID: ScoringFeature.Team.previewRavens.id,
-    swapTeamOrder: true,
-    teamA: .previewRavens,
-    teamB: .previewSwifts,
+    courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
     centrePassTeamTapped: { _ in }
   )
   .padding()

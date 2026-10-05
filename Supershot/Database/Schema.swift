@@ -18,6 +18,8 @@ nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   var isRunning: Bool { endsAt != nil }
 }
 
+extension GameTeamSlot: QueryBindable {}
+
 @Table
 nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
@@ -28,6 +30,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var teamBID: Team.ID
   var teamBBibColorHex = ColorPalette.red.hex()
   var centrePassTeamID: Team.ID?
+  var firstQuarterLeftTeam = GameTeamSlot.teamA
   var latitude: Double?
   var longitude: Double?
   var pointOfInterestName: String?
@@ -178,13 +181,16 @@ extension DependencyValues {
           "teamBID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "teamBBibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#FF3B30',
           "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE CASCADE,
+          "firstQuarterLeftTeam" TEXT NOT NULL DEFAULT 'teamA'
+            CHECK ("firstQuarterLeftTeam" IN ('teamA', 'teamB')),
           "latitude" REAL,
           "longitude" REAL,
           "pointOfInterestName" TEXT,
           "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "currentPhaseIndex" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
-          "timerEndsAt" TEXT
+          "timerEndsAt" TEXT,
+          CHECK ("teamAID" != "teamBID")
         ) STRICT
         """)
       .execute(db)
