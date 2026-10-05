@@ -30,9 +30,18 @@ struct PaletteColorPicker: View {
           .accessibilityLabel(option.name)
           .accessibilityAddTraits(color == option.color ? .isSelected : [])
         }
+        ColorPicker("Custom color",
+                    selection: $color,
+                    supportsOpacity: false
+        )
+        .labelsHidden()
       }
 
-      ColorPicker("Custom color", selection: $color, supportsOpacity: false)
     }
   }
+}
+
+#Preview {
+  @Previewable @State var color: Color = .blue
+  PaletteColorPicker(color: $color, title: "Colour")
 }

@@ -74,12 +74,8 @@ struct NewGameFeature {
     var isSaving = false
     var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     var location = LocationState.idle
-    @Presents var teamConfiguration: SetupTeamFeature.State?
-    @Presents var timingEditor: SetupTimingFeature.State?
-    var configuringTeamSide: TeamSide?
-    var pendingTeamConfiguration: TeamSide?
-    @Presents var picker: TeamPickerFeature.State?
-    var pickingTeamSide: TeamSide?
+    @Presents var destination: NewGameDestination.State?
+    var pendingTeamConfiguration: NewGameTeamConfiguration.State?
     var periodDuration: DurationDraft {
       get { timing.periodDuration }
       set { timing.periodDuration = newValue }
@@ -111,14 +107,14 @@ struct NewGameFeature {
       leftTeam.team != nil
         && rightTeam.team != nil
         && hasDifferentSelectedTeams
-        && teamConfiguration?.isSaving != true
+        && !isSavingTeamConfiguration
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
         && !isSaving
     }
 
     var canSwapTeams: Bool {
-      leftTeam.team != nil && rightTeam.team != nil && picker == nil && teamConfiguration == nil && timingEditor == nil && !isSaving
+      leftTeam.team != nil && rightTeam.team != nil && destination == nil && !isSaving
     }
 
     var configurationSummary: String {
@@ -141,6 +137,11 @@ struct NewGameFeature {
       return leftID != rightID
     }
 
+    private var isSavingTeamConfiguration: Bool {
+      guard case let .teamConfiguration(configuration) = destination else { return false }
+      return configuration.configuration.isSaving
+    }
+
     var gameLocation: GameLocation? {
       guard case let .loaded(location) = location else { return nil }
       return location
@@ -155,18 +156,16 @@ struct NewGameFeature {
   enum Action: BindableAction {
     case binding(BindingAction<State>)
     case delegate(Delegate)
+    case destination(PresentationAction<NewGameDestination.Action>)
+    case destinationDidDismiss
+    case editTimingButtonTapped
     case locationButtonTapped
     case locationResponse(Result<GameLocation, any Error>)
-    case picker(PresentationAction<TeamPickerFeature.Action>)
     case selectTeamButtonTapped(TeamSide)
     case startGameButtonTapped
     case startGameResponse(Result<ScoringFeature.State, any Error>)
     case swapTeamsButtonTapped
     case task
-    case pickerDidDismiss
-    case teamConfiguration(PresentationAction<SetupTeamFeature.Action>)
-    case timingEditor(PresentationAction<SetupTimingFeature.Action>)
-    case editTimingButtonTapped
 
     enum Delegate {
       case gameStarted(ScoringFeature.State)
@@ -210,9 +209,9 @@ struct NewGameFeature {
           state.location = .unavailable(canRetry: true)
           return .none
 
-        case let .picker(.presented(.delegate(.teamSelected(team)))):
-          guard let pickingTeamSide = state.pickingTeamSide else { return .none }
-          switch pickingTeamSide {
+        case let .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(team)))))):
+          guard case let .teamPicker(picker) = state.destination else { return .none }
+          switch picker.side {
           case .teamA:
             state.leftTeam.team = team
             state.leftTeam.bibColor = team.color
@@ -220,45 +219,82 @@ struct NewGameFeature {
             state.rightTeam.team = team
             state.rightTeam.bibColor = team.color
           }
-          state.pendingTeamConfiguration = pickingTeamSide
-          state.picker = nil
-          state.pickingTeamSide = nil
+          state.pendingTeamConfiguration = NewGameTeamConfiguration.State(
+            configuration: SetupTeamFeature.State(
+              team: team,
+              excluding: excludedTeamIDs(for: picker.side, state: state)
+            ),
+            side: picker.side
+          )
+          state.destination = nil
           state.errorMessage = nil
           return .none
 
-        case .picker(.presented(.delegate(.cancelled))):
-          state.picker = nil
-          state.pickingTeamSide = nil
+        case .destination(.presented(.teamPicker(.picker(.delegate(.cancelled))))):
+          state.destination = nil
           return .none
 
-        case .picker(.dismiss):
-          state.picker = nil
-          state.pickingTeamSide = nil
+        case let .destination(
+          .presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(team)))))
+        ):
+          guard case let .teamConfiguration(configuration) = state.destination else { return .none }
+          if configuration.side == .teamA {
+            state.leftTeam.team = team
+            state.leftTeam.bibColor = team.color
+          } else {
+            state.rightTeam.team = team
+            state.rightTeam.bibColor = team.color
+          }
           return .none
 
-        case .picker:
+        case .destination(.presented(.teamConfiguration(.configuration(.delegate(.done))))):
+          state.destination = nil
+          return .none
+
+        case let .destination(.presented(.timingEditor(.delegate(.committed(timing))))):
+          state.timing = timing
+          state.destination = nil
+          state.errorMessage = nil
+          return .none
+
+        case .destination(.presented(.timingEditor(.delegate(.cancelled)))):
+          state.destination = nil
+          return .none
+
+        case .destination:
+          return .none
+
+        case .destinationDidDismiss:
+          guard let pendingTeamConfiguration = state.pendingTeamConfiguration else { return .none }
+          state.pendingTeamConfiguration = nil
+          state.destination = .teamConfiguration(pendingTeamConfiguration)
+          return .none
+
+        case .editTimingButtonTapped:
+          state.destination = .timingEditor(SetupTimingFeature.State(timing: state.timing))
           return .none
 
         case let .selectTeamButtonTapped(side):
           guard !state.isSaving else { return .none }
           let selectedTeam = side == .teamA ? state.leftTeam.team : state.rightTeam.team
           if let selectedTeam {
-            state.configuringTeamSide = side
-            state.teamConfiguration = SetupTeamFeature.State(
-              team: selectedTeam,
-              excluding: Set((side == .teamA ? state.rightTeam.team : state.leftTeam.team).map { [$0.id] } ?? [])
+            state.destination = .teamConfiguration(
+              NewGameTeamConfiguration.State(
+                configuration: SetupTeamFeature.State(
+                  team: selectedTeam,
+                  excluding: excludedTeamIDs(for: side, state: state)
+                ),
+                side: side
+              )
             )
             return .none
           }
-          let excludedTeamIDs: Set<Team.ID>
-          switch side {
-          case .teamA:
-            excludedTeamIDs = state.rightTeam.team.map { [$0.id] } ?? []
-          case .teamB:
-            excludedTeamIDs = state.leftTeam.team.map { [$0.id] } ?? []
-          }
-          state.pickingTeamSide = side
-          state.picker = TeamPickerFeature.State(excluding: excludedTeamIDs)
+          state.destination = .teamPicker(
+            NewGameTeamPicker.State(
+              picker: TeamPickerFeature.State(excluding: excludedTeamIDs(for: side, state: state)),
+              side: side
+            )
+          )
           state.errorMessage = nil
           return .none
 
@@ -304,61 +340,23 @@ struct NewGameFeature {
           }
           return .none
 
-        case .pickerDidDismiss:
-          guard let side = state.pendingTeamConfiguration else { return .none }
-          state.pendingTeamConfiguration = nil
-          return .send(.selectTeamButtonTapped(side))
-
-        case let .teamConfiguration(.presented(.delegate(.teamUpdated(team)))):
-          guard let side = state.configuringTeamSide else { return .none }
-          if side == .teamA {
-            state.leftTeam.team = team
-            state.leftTeam.bibColor = team.color
-          } else {
-            state.rightTeam.team = team
-            state.rightTeam.bibColor = team.color
-          }
-          return .none
-
-        case .teamConfiguration(.presented(.delegate(.done))):
-          state.teamConfiguration = nil
-          state.configuringTeamSide = nil
-          return .none
-
-        case .teamConfiguration(.dismiss):
-          state.configuringTeamSide = nil
-          return .none
-
-        case .teamConfiguration:
-          return .none
-
-        case .editTimingButtonTapped:
-          state.timingEditor = SetupTimingFeature.State(timing: state.timing)
-          return .none
-
-        case let .timingEditor(.presented(.delegate(.committed(timing)))):
-          state.timing = timing
-          state.timingEditor = nil
-          state.errorMessage = nil
-          return .none
-
-        case .timingEditor(.presented(.delegate(.cancelled))):
-          state.timingEditor = nil
-          return .none
-
-        case .timingEditor:
-          return .none
-
         case .task:
           guard state.location == .idle else { return .none }
           return loadLocation(state: &state)
 
         }
     }
-    .ifLet(\.$teamConfiguration, action: \.teamConfiguration) { SetupTeamFeature() }
-    .ifLet(\.$timingEditor, action: \.timingEditor) { SetupTimingFeature() }
-    .ifLet(\.$picker, action: \.picker) {
-      TeamPickerFeature()
+    .ifLet(\.$destination, action: \.destination) {
+      NewGameDestination.body
+    }
+  }
+
+  private func excludedTeamIDs(for side: TeamSide, state: State) -> Set<Team.ID> {
+    switch side {
+    case .teamA:
+      return state.rightTeam.team.map { [$0.id] } ?? []
+    case .teamB:
+      return state.leftTeam.team.map { [$0.id] } ?? []
     }
   }
 
@@ -502,6 +500,53 @@ struct NewGameFeature {
 
   private nonisolated enum CancelID {
     case location
+  }
+}
+
+@Reducer
+enum NewGameDestination {
+  case teamConfiguration(NewGameTeamConfiguration)
+  case teamPicker(NewGameTeamPicker)
+  case timingEditor(SetupTimingFeature)
+}
+
+extension NewGameDestination.State: Equatable {}
+
+@Reducer
+struct NewGameTeamConfiguration {
+  @ObservableState
+  struct State: Equatable {
+    var configuration: SetupTeamFeature.State
+    let side: NewGameFeature.TeamSide
+  }
+
+  enum Action {
+    case configuration(SetupTeamFeature.Action)
+  }
+
+  var body: some Reducer<State, Action> {
+    Scope(state: \.configuration, action: \.configuration) {
+      SetupTeamFeature()
+    }
+  }
+}
+
+@Reducer
+struct NewGameTeamPicker {
+  @ObservableState
+  struct State: Equatable {
+    var picker: TeamPickerFeature.State
+    let side: NewGameFeature.TeamSide
+  }
+
+  enum Action {
+    case picker(TeamPickerFeature.Action)
+  }
+
+  var body: some Reducer<State, Action> {
+    Scope(state: \.picker, action: \.picker) {
+      TeamPickerFeature()
+    }
   }
 }
 

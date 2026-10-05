@@ -11,12 +11,18 @@ struct SetupTeamView: View {
             Circle().fill(store.previewTeam.color).frame(width: 56, height: 56)
               .accessibilityHidden(true)
             Text(store.previewTeam.name).font(.title2.bold())
-          }
-          Button("Change team") { store.send(.changeTeamButtonTapped) }
+            Spacer()
+            Button {
+              store.send(.changeTeamButtonTapped)
+            } label: {
+              Label("Change team", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
+            }
             .buttonStyle(.bordered).disabled(store.isSaving)
+            .labelStyle(.iconOnly)
+          }
           PaletteColorPicker(
             color: Binding(get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }),
-            title: "Bib colour"
+            title: "Colour"
           )
           if store.isSaving { ProgressView("Saving colour…") }
           if let errorMessage = store.errorMessage {
@@ -34,11 +40,14 @@ struct SetupTeamView: View {
       .sheet(item: $store.scope(state: \.picker, action: \.picker)) { picker in
         NavigationStack {
           TeamPickerView(store: picker).navigationTitle("Select team")
-        }.presentationDetents([.medium, .large])
+        }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(.thinMaterial)
       }
     }
     .interactiveDismissDisabled(store.isSaving)
     .presentationDetents([.medium, .large])
+    .presentationBackground(.thinMaterial)
   }
 }
 

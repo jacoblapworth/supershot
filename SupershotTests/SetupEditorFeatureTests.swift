@@ -14,8 +14,15 @@ extension SupershotTestSuite {
       state.firstCentrePass = .teamB
       let store = TestStore(initialState: state) { NewGameFeature() }
       await store.send(.selectTeamButtonTapped(.teamA)) {
-        $0.configuringTeamSide = .teamA
-        $0.teamConfiguration = SetupTeamFeature.State(team: state.leftTeam.team!, excluding: [state.rightTeam.team!.id])
+        $0.destination = .teamConfiguration(
+          NewGameTeamConfiguration.State(
+            configuration: SetupTeamFeature.State(
+              team: state.leftTeam.team!,
+              excluding: [state.rightTeam.team!.id]
+            ),
+            side: .teamA
+          )
+        )
       }
       #expect(store.state.firstCentrePass == .teamB)
     }
@@ -23,28 +30,42 @@ extension SupershotTestSuite {
     @Test func pickerDismissalOpensConfiguration() async {
       var state = NewGameFeature.State()
       state.leftTeam.team = .previewFoxes
-      state.pendingTeamConfiguration = .teamA
+      state.pendingTeamConfiguration = NewGameTeamConfiguration.State(
+        configuration: SetupTeamFeature.State(team: .previewFoxes),
+        side: .teamA
+      )
       let store = TestStore(initialState: state) { NewGameFeature() }
-      await store.send(.pickerDidDismiss) { $0.pendingTeamConfiguration = nil }
-      await store.receive(\.selectTeamButtonTapped) {
-        $0.configuringTeamSide = .teamA
-        $0.teamConfiguration = SetupTeamFeature.State(team: .previewFoxes)
+      await store.send(.destinationDidDismiss) {
+        $0.destination = .teamConfiguration(
+          NewGameTeamConfiguration.State(
+            configuration: SetupTeamFeature.State(team: .previewFoxes),
+            side: .teamA
+          )
+        )
+        $0.pendingTeamConfiguration = nil
       }
     }
 
     @Test func timingDraftIsIsolatedUntilDone() async {
       let store = TestStore(initialState: NewGameFeature.State()) { NewGameFeature() }
       await store.send(.editTimingButtonTapped) {
-        $0.timingEditor = SetupTimingFeature.State(timing: $0.timing)
+        $0.destination = .timingEditor(SetupTimingFeature.State(timing: $0.timing))
       }
-      await store.send(.timingEditor(.presented(.periodPresetButtonTapped(900)))) {
-        $0.timingEditor?.timing.periodDuration = .init(totalSeconds: 900)
+      await store.send(.destination(.presented(.timingEditor(.periodPresetButtonTapped(900))))) {
+        var timing = $0.timing
+        timing.periodDuration = .init(totalSeconds: 900)
+        $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))
       }
       #expect(store.state.periodDuration.totalSeconds == 480)
-      await store.send(.timingEditor(.presented(.doneButtonTapped)))
-      await store.receive(\.timingEditor.presented.delegate.committed) {
+      await store.send(.destination(.presented(.timingEditor(.doneButtonTapped))))
+      await store.receive {
+        guard case .destination(.presented(.timingEditor(.delegate(.committed)))) = $0 else {
+          return false
+        }
+        return true
+      } assert: {
         $0.periodDuration = .init(totalSeconds: 900)
-        $0.timingEditor = nil
+        $0.destination = nil
       }
     }
 
@@ -52,10 +73,17 @@ extension SupershotTestSuite {
       var state = NewGameFeature.State()
       var draft = state.timing
       draft.periodDuration = .init(totalSeconds: 900)
-      state.timingEditor = SetupTimingFeature.State(timing: draft)
+      state.destination = .timingEditor(SetupTimingFeature.State(timing: draft))
       let store = TestStore(initialState: state) { NewGameFeature() }
-      await store.send(.timingEditor(.presented(.cancelButtonTapped)))
-      await store.receive(\.timingEditor.presented.delegate.cancelled) { $0.timingEditor = nil }
+      await store.send(.destination(.presented(.timingEditor(.cancelButtonTapped))))
+      await store.receive {
+        guard case .destination(.presented(.timingEditor(.delegate(.cancelled)))) = $0 else {
+          return false
+        }
+        return true
+      } assert: {
+        $0.destination = nil
+      }
       #expect(store.state.periodDuration.totalSeconds == 480)
     }
 
@@ -63,9 +91,9 @@ extension SupershotTestSuite {
       var state = NewGameFeature.State()
       var draft = state.timing
       draft.periodDuration = .init(totalSeconds: 900)
-      state.timingEditor = SetupTimingFeature.State(timing: draft)
+      state.destination = .timingEditor(SetupTimingFeature.State(timing: draft))
       let store = TestStore(initialState: state) { NewGameFeature() }
-      await store.send(.timingEditor(.dismiss)) { $0.timingEditor = nil }
+      await store.send(.destination(.dismiss)) { $0.destination = nil }
       #expect(store.state.periodDuration.totalSeconds == 480)
     }
 

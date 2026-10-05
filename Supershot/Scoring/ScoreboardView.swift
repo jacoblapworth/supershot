@@ -47,7 +47,7 @@ private struct TeamScore: View {
     .padding()
     .frame(maxWidth: .infinity, alignment: frameAlignment)
     .background(
-      color.opacity(0.12),
+      Color.white,
       in: RoundedRectangle(cornerRadius: 12)
     )
     .opacity(isEnabled ? 1 : 0.65)

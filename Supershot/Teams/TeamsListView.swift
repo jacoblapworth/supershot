@@ -3,7 +3,7 @@ import Dependencies
 import SQLiteData
 import SwiftUI
 
-struct TeamsHomeView: View {
+struct TeamsListView: View {
   let proAccess: SubscriptionEntitlement
   @Bindable var store: StoreOf<TeamsFeature>
   @Fetch(TeamsRequest(), animation: .default)
@@ -43,14 +43,21 @@ struct TeamsHomeView: View {
   }
 
   private var teamsList: some View {
-    let filteredTeams = store.withState { $0.filteredTeams(in: teamsResponse.teams) }
+    let filteredTeams = store.state.filteredTeams(in: teamsResponse.teams)
     return List {
       if teamsResponse.teams.isEmpty {
-        ContentUnavailableView(
-          "No teams yet",
-          systemImage: "person.2",
-          description: Text("Create a team to use in your next game.")
-        )
+        ContentUnavailableView(label: {
+          Label("No teams yet", systemImage: "person.2")
+        }, description: {
+          Text("Create a team to use in your next game.")
+        }, actions: {
+          Button("New team") {
+            store.send(.newTeamButtonTapped)
+          }
+          .buttonStyle(.borderedProminent)
+          .fontWeight(.medium)
+          .controlSize(.large)
+        })
         .listRowBackground(Color.clear)
       } else if filteredTeams.isEmpty {
         ContentUnavailableView.search(text: store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -121,7 +128,7 @@ private struct TeamRow: View {
     try! $0.bootstrapDatabase()
     try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
-  TeamsHomeView(
+  TeamsListView(
     proAccess: .free,
     store: Store(initialState: TeamsFeature.State()) {
       TeamsFeature()
