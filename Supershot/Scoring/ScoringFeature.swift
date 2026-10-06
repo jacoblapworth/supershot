@@ -1,3 +1,4 @@
+import ApplicationDependency
 import SwiftUI
 import ComposableArchitecture
 import Foundation
@@ -145,13 +146,13 @@ struct ScoringFeature {
     case alert(PresentationAction<Alert>)
     case centrePassTeamButtonTapped(Team.ID)
     case centrePassTeamResponse(Result<Team.ID, any Error>)
-    case closeButtonTapped
     case delegate(Delegate)
     case endQuarterButtonTapped
     case finishGameButtonTapped
     case finishGameResponse(Result<Game.ID, any Error>)
     case goalButtonTapped(Team.ID)
     case goalResponse(Result<ScoreSnapshot, any Error>)
+    case keepScreenAwakeTask
     case lastCentrePassNotTakenButtonTapped
     case lastCentrePassResponse(Result<LastCentrePassSnapshot, any Error>)
     case lastCentrePassTakenButtonTapped
@@ -185,10 +186,12 @@ struct ScoringFeature {
     case timer
   }
 
+#if os(iOS)
+  @Dependency(\.application) var application
+#endif
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
-  @Dependency(\.dismiss) var dismiss
   @Dependency(\.gameTimer) var gameTimer
   @Dependency(\.soundEffects) var soundEffects
   @Dependency(\.uuid) var uuid
@@ -256,13 +259,6 @@ struct ScoringFeature {
       case .centrePassTeamResponse(.failure):
         return .none
 
-      case .closeButtonTapped:
-        synchronizeTimer(state: &state, now: now)
-        return .concatenate(
-          .cancel(id: CancelID.timer),
-          .run { _ in await dismiss() }
-        )
-
       case .endQuarterButtonTapped:
         guard state.canMoveToNextQuarter else { return .none }
         return skipCurrentPhase(state: &state)
@@ -304,6 +300,17 @@ struct ScoringFeature {
 
       case .goalResponse(.failure):
         return reconcileTimerEffect(gameID: state.gameID)
+
+      case .keepScreenAwakeTask:
+#if os(iOS)
+        return .run { @MainActor _ in
+          application.isIdleTimerDisabled = true
+          defer { application.isIdleTimerDisabled = false }
+          try await Task.never()
+        }
+#else
+        return .none
+#endif
 
       case .lastCentrePassNotTakenButtonTapped:
         return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: false)

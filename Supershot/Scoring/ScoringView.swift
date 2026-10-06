@@ -72,18 +72,7 @@ struct ScoringView: View {
 //      LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
 //        .ignoresSafeArea()
 //    }
-    .navigationBarBackButtonHidden()
     .toolbar {
-#if os(macOS)
-      ToolbarItem(placement: .navigation) {
-        gamesButton
-      }
-#else
-      ToolbarItem(placement: .topBarLeading) {
-        gamesButton
-      }
-#endif
-      
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.undoButtonTapped)
@@ -167,6 +156,10 @@ struct ScoringView: View {
       condition: { _, _ in store.hapticsEnabled }
     )
 #endif
+    .task(id: scenePhase) {
+      guard scenePhase == .active else { return }
+      await store.send(.keepScreenAwakeTask).finish()
+    }
     .task {
       guard scenePhase == .active else { return }
       store.send(.sceneBecameActive)
@@ -185,14 +178,6 @@ struct ScoringView: View {
     .labelStyle(.iconOnly)
   }
 
-  private var gamesButton: some View {
-    Button {
-      store.send(.closeButtonTapped)
-    } label: {
-      Label("Games", systemImage: "chevron.left")
-    }
-  }
-  
   private func scenePhaseChanged(
     _ oldValue: ScenePhase,
     _ newValue: ScenePhase

@@ -1,6 +1,8 @@
+import ApplicationDependency
 import ComposableArchitecture
 import CustomDump
 import Dependencies
+import DependenciesAdditionsBasics
 import Foundation
 import SQLiteData
 import SwiftUI
@@ -14,6 +16,31 @@ extension SupershotTestSuite {
   @Suite(.dependencies {
     $0.uuid = .incrementing
   }) struct ScoringFeatureTests {
+#if os(iOS)
+    @Test(arguments: [0, 1, 6])
+    func keepsScreenAwakeUntilScoringTaskIsCancelled(phaseIndex: Int) async {
+      let isIdleTimerDisabled = LockIsolated(false)
+      var state = Self.state()
+      state.currentPhaseIndex = phaseIndex
+      let store = TestStore(initialState: state) {
+        ScoringFeature()
+      } withDependencies: {
+        $0.application.$isIdleTimerDisabled = .init(isIdleTimerDisabled)
+      }
+
+      let task = await store.send(.keepScreenAwakeTask)
+      expectNoDifference(isIdleTimerDisabled.value, true)
+      await task.cancel()
+      expectNoDifference(isIdleTimerDisabled.value, false)
+
+      let resumedTask = await store.send(.keepScreenAwakeTask)
+      expectNoDifference(isIdleTimerDisabled.value, true)
+      await resumedTask.cancel()
+      expectNoDifference(isIdleTimerDisabled.value, false)
+      await store.finish()
+    }
+#endif
+
     @Test(arguments: 0...6)
     func swappingSidesPreservesGameStateAndCanBeReversed(phaseIndex: Int) async throws {
       var game = Self.game()
