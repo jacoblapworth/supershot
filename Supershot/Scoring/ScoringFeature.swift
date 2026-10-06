@@ -409,7 +409,7 @@ struct ScoringFeature {
         state.teamAScore = snapshot.teamAScore
         state.teamBScore = snapshot.teamBScore
         state.canUndo = !snapshot.goals.isEmpty
-        state.canUndoDuringConfirmation = snapshot.goals.last?.isLate == true
+        state.canUndoDuringConfirmation = snapshot.canUndoDuringConfirmation
         state.centrePassTeamID = snapshot.game.centrePassTeamID ?? snapshot.teamA.id
         applyTimer(snapshot.game, to: &state)
         guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
@@ -660,7 +660,7 @@ struct ScoringFeature {
 
           if let latestGoal {
             try Goal.find(latestGoal.id).delete().execute(db)
-            guard let game = try Game.find(gameID).fetchOne(db) else {
+            guard let game = try Game.find(gameID).fetchOne(db), game.endedAt == nil else {
               throw ScoringPersistenceError.gameNotFound
             }
             let centrePassTeamID = resolvedCentrePassTeamID(
@@ -746,27 +746,14 @@ extension ScoringFeature.ScoreSnapshot {
     teamAID: Team.ID,
     teamBID: Team.ID
   ) throws -> Self {
-    guard let game = try Game.find(gameID).fetchOne(db) else {
-      throw ScoringPersistenceError.gameNotFound
-    }
-    let goals = try Goal
-      .where { $0.gameID.eq(gameID) }
-      .fetchAll(db)
-
+    let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
     return Self(
-      canUndo: !goals.isEmpty,
-      canUndoDuringConfirmation: goals.max { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }?.isLate == true,
-      centrePassTeamID: resolvedCentrePassTeamID(
-        game.centrePassTeamID,
-        teamAID: teamAID,
-        teamBID: teamBID
-      ),
-      teamAScore: goals
-        .filter { $0.teamID == teamAID }
-        .reduce(0) { $0 + $1.points },
-      teamBScore: goals
-        .filter { $0.teamID == teamBID }
-        .reduce(0) { $0 + $1.points }
+      canUndo: !snapshot.goals.isEmpty,
+      canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
+      centrePassTeamID: resolvedCentrePassTeamID(snapshot.game.centrePassTeamID,
+        teamAID: teamAID, teamBID: teamBID),
+      teamAScore: snapshot.teamAScore,
+      teamBScore: snapshot.teamBScore
     )
   }
 }

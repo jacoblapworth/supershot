@@ -155,6 +155,52 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.countdown, game.countdown)
     }
 
+    @Test
+    func pendingQuestionDoesNotAllowUndoOfAnEarlierQuartersLateGoal() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let game = try seed(window: .runningBreak, pending: true)
+      try await database.write { db in
+        try Game.find(game.id).update {
+          $0.currentPhaseIndex = 3
+          $0.lateScoringPeriodNumber = #bind(2)
+        }.execute(db)
+        try Goal.insert {
+          Goal(id: UUID(10), gameID: game.id,
+            gamePeriodID: testGamePeriodID(gameID: game.id, position: 0), teamID: UUID(1),
+            elapsedSeconds: 900, isLate: true, createdAt: Date(timeIntervalSince1970: 999))
+        }.execute(db)
+      }
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) { ScoringFeature() }
+      #expect(!store.state.canUndoGoal)
+      await store.send(.undoButtonTapped)
+      let stored = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      expectNoDifference(stored, snapshot)
+      await store.finish()
+    }
+
+    @Test
+    func finishRaceCannotDeleteALateGoal() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let game = try seed(window: .finalQuarter, pending: false)
+      _ = try await database.write {
+        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 6,
+          goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
+          scoringContext: .completedPeriod(number: 4))
+      }
+      let before = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: before)) { ScoringFeature() }
+      try await database.write { db in
+        try Game.find(game.id).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1_001)) }.execute(db)
+      }
+      await store.send(.undoButtonTapped)
+      await store.receive { if case .undoResponse(.failure) = $0 { true } else { false } }
+      let after = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      expectNoDifference(after.goals, before.goals)
+      expectNoDifference(after.game.centrePassTeamID, before.game.centrePassTeamID)
+      await store.finish()
+    }
+
     private func seed(window: Window, pending: Bool) throws -> Game {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

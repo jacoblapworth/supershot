@@ -238,7 +238,7 @@ extension ScoringFeature.State {
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,
-      canUndoDuringConfirmation: snapshot.goals.last?.isLate == true,
+      canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
       centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
         ? snapshot.teamB.id
         : snapshot.teamA.id,

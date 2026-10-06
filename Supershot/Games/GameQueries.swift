@@ -152,6 +152,14 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
     game.progress.isFinalPeriodComplete(in: timeline)
   }
 
+  var canUndoDuringConfirmation: Bool {
+    guard let completed = game.lateScoringPeriodNumber,
+      let latest = goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }),
+      latest.isLate
+    else { return false }
+    return periods.first(where: { $0.id == latest.gamePeriodID })?.number == completed
+  }
+
   var teamAScore: Int {
     goals
       .filter { $0.teamID == teamA.id }

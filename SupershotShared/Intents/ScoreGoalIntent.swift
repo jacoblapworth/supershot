@@ -17,7 +17,7 @@ import SQLiteData
 #endif
 
 struct ScoreGoalIntent: LiveActivityIntent {
-  static var allowedExecutionTargets: IntentExecutionTargets { [.main, .widgetKitExtension, .appIntentsExtension] }
+  static var allowedExecutionTargets: IntentExecutionTargets { .main }
   static var isDiscoverable: Bool { false }
   static var supportedModes: IntentModes { .background }
   static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
