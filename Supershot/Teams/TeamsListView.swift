@@ -34,11 +34,9 @@ struct TeamsListView: View {
         )
       }
     }
-    .alert($store.scope(state: \.alert, action: \.alert))
-    .sheet(item: $store.scope(state: \.teamEditor, action: \.teamEditor)) { editorStore in
-      NavigationStack {
-        TeamEditorView(store: editorStore)
-      }
+    .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
+    .sheet(item: $store.scope(state: \.destination?.teamEditor, action: \.destination.teamEditor)) { editorStore in
+      TeamsEditorView(store: editorStore)
     }
   }
 
@@ -89,6 +87,17 @@ struct TeamsListView: View {
         }
       }
     }
+  }
+}
+
+private struct TeamsEditorView: View {
+  @Bindable var store: StoreOf<TeamsEditorFeature>
+
+  var body: some View {
+    NavigationStack {
+      TeamEditorView(store: store.scope(state: \.editor, action: \.editor))
+    }
+    .alert($store.scope(state: \.alert, action: \.alert))
   }
 }
 

@@ -22,11 +22,22 @@ struct TeamsFeature {
 
   @ObservableState
   struct State: Equatable {
-    @Presents var alert: AlertState<Alert>?
+    @Presents var destination: TeamsDestination.State?
     var path = StackState<TeamsPath.State>()
     var pendingGameResume: PendingGameResume?
     var searchText = ""
-    @Presents var teamEditor: TeamEditorFeature.State?
+
+    mutating func clearResumeAlert() {
+      switch destination {
+      case .alert:
+        destination = nil
+      case var .teamEditor(editor):
+        editor.alert = nil
+        destination = .teamEditor(editor)
+      case nil:
+        break
+      }
+    }
 
     func filteredTeams(in teams: [TeamListItem]) -> [TeamListItem] {
       let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -45,9 +56,9 @@ struct TeamsFeature {
   }
 
   enum Action: BindableAction {
-    case alert(PresentationAction<Alert>)
     case binding(BindingAction<State>)
     case delegate(Delegate)
+    case destination(PresentationAction<TeamsDestination.Action>)
     case deleteGameButtonTapped(Game.ID)
     case deleteTeamButtonTapped(Team.ID)
     case gameDeepLinkOpened(Game.ID)
@@ -55,7 +66,6 @@ struct TeamsFeature {
     case path(StackActionOf<TeamsPath>)
     case proPromotionTapped
     case resumeGameResponse(PendingGameResume, Result<GameSnapshot, any Error>)
-    case teamEditor(PresentationAction<TeamEditorFeature.Action>)
     case teamGameRowTapped(GameListItem)
     case teamRowTapped(TeamListItem)
 
@@ -80,7 +90,7 @@ struct TeamsFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .alert, .binding, .delegate:
+      case .binding, .delegate:
         return .none
 
       case let .deleteGameButtonTapped(gameID):
@@ -99,11 +109,11 @@ struct TeamsFeature {
             .path(.element(id: id, action: .scoring(.sceneBecameActive)))
           )
         }
-        state.alert = nil
+        state.clearResumeAlert()
         return resumeGame(gameID: gameID, state: &state)
 
       case .newTeamButtonTapped:
-        state.teamEditor = TeamEditorFeature.State()
+        state.destination = .teamEditor(TeamsEditorFeature.State())
         return .none
 
       case let .path(
@@ -176,15 +186,20 @@ struct TeamsFeature {
       case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
-        state.alert = .gameUnavailable
+        if case var .teamEditor(editor) = state.destination {
+          editor.alert = .gameUnavailable
+          state.destination = .teamEditor(editor)
+        } else {
+          state.destination = .alert(.gameUnavailable)
+        }
         return .none
 
-      case .teamEditor(.presented(.delegate(.cancelled))),
-        .teamEditor(.presented(.delegate(.saved(_)))):
-        state.teamEditor = nil
+      case .destination(.presented(.teamEditor(.editor(.delegate(.cancelled))))),
+        .destination(.presented(.teamEditor(.editor(.delegate(.saved(_)))))):
+        state.destination = nil
         return .none
 
-      case .teamEditor:
+      case .destination:
         return .none
 
       case let .teamGameRowTapped(game):
@@ -195,7 +210,7 @@ struct TeamsFeature {
           return .none
         }
 
-        state.alert = nil
+        state.clearResumeAlert()
         return resumeGame(gameID: game.id, state: &state)
 
       case let .teamRowTapped(team):
@@ -208,9 +223,8 @@ struct TeamsFeature {
     .forEach(\.path, action: \.path) {
       TeamsPath.body
     }
-    .ifLet(\.$alert, action: \.alert)
-    .ifLet(\.$teamEditor, action: \.teamEditor) {
-      TeamEditorFeature()
+    .ifLet(\.$destination, action: \.destination) {
+      TeamsDestination.body
     }
   }
 
