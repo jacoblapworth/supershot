@@ -17,6 +17,7 @@ struct SettingsView: View {
 #if os(iOS)
       SettingsContent(
         proAccess: proAccess,
+        store: store,
         manageSubscriptionTapped: { store.send(.manageSubscriptionButtonTapped) },
         proPromotionTapped: { store.send(.proPromotionTapped) }
       )
@@ -34,6 +35,7 @@ struct SettingsView: View {
 #else
       SettingsContent(
         proAccess: proAccess,
+        store: store,
         manageSubscriptionTapped: {
           openURL(URL(string: "https://apps.apple.com/account/subscriptions")!)
         },
@@ -46,6 +48,7 @@ struct SettingsView: View {
 
 private struct SettingsContent: View {
   let proAccess: SubscriptionEntitlement
+  let store: StoreOf<SettingsFeature>
   var manageSubscriptionTapped: () -> Void
   var proPromotionTapped: () -> Void
   
@@ -58,6 +61,9 @@ private struct SettingsContent: View {
       )
       FeedbackSettingsSection()
       GameDefaultsSettingsSection()
+#if DEBUG
+      DebugSettingsSection(store: store)
+#endif
     }
     .navigationTitle("Settings")
   }
@@ -67,8 +73,6 @@ private struct SubscriptionSettingsSection: View {
   let proAccess: SubscriptionEntitlement
   var manageSubscriptionTapped: () -> Void
   var proPromotionTapped: () -> Void
-  
-  @State private var debugOverlayVisible: Bool = false
   
   var body: some View {
     Section("Subscription") {
@@ -101,18 +105,60 @@ private struct SubscriptionSettingsSection: View {
         Button("Checking subscription…") {}
           .disabled(true)
       }
-      
-#if DEBUG
-      Button {
-        self.debugOverlayVisible = true
-      } label: {
-        Label("Debug", systemImage: "flask.fill")
-      }
-      .debugRevenueCatOverlay(isPresented: self.$debugOverlayVisible)
-#endif
     }
   }
 }
+
+#if DEBUG
+private struct DebugSettingsSection: View {
+  @Bindable var store: StoreOf<SettingsFeature>
+  @State private var debugOverlayVisible = false
+
+  var body: some View {
+    Section {
+      Button {
+        store.send(.exportDatabaseButtonTapped)
+      } label: {
+        HStack {
+          Label("Export SQLite database", systemImage: "square.and.arrow.up")
+          if store.databaseExport == .preparing {
+            Spacer()
+            ProgressView()
+          }
+        }
+      }
+      .disabled(store.databaseExport != nil)
+
+      Button {
+        debugOverlayVisible = true
+      } label: {
+        Label("Subscription debugger", systemImage: "flask.fill")
+      }
+      .debugRevenueCatOverlay(isPresented: $debugOverlayVisible)
+    } header: {
+      Text("Debug")
+    } footer: {
+      Text("Export a snapshot of all teams, games, and goals for inspection.")
+    }
+    .sheet(
+      isPresented: $store.isDatabaseSharePresented.sending(
+        \.databaseSharePresentationChanged
+      )
+    ) {
+      if case let .ready(url) = store.databaseExport {
+        DatabaseShareSheet(url: url) {
+          store.send(.databaseShareCompleted($0))
+        }
+#if os(macOS)
+        .frame(width: 320, height: 120)
+#endif
+      }
+    }
+    .alert($store.scope(state: \.alert, action: \.alert))
+  }
+
+}
+#endif
 
 private struct FeedbackSettingsSection: View {
   @Shared(.hapticsEnabled) private var hapticsEnabled
