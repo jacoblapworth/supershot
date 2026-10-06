@@ -15,15 +15,17 @@ struct AppView: View {
           .controlSize(.large)
           .accessibilityLabel("Preparing Supershot")
       } else if let onboardingStore = store.scope(
-        state: \.permissionsOnboarding,
-        action: \.permissionsOnboarding.presented
+        state: \.destination?.permissionsOnboarding,
+        action: \.destination.permissionsOnboarding
       ) {
         PermissionsOnboardingView(store: onboardingStore)
       } else {
         tabs
       }
     }
-    .sheet(item: $store.scope(state: \.proPaywall, action: \.proPaywall)) { paywallStore in
+    .sheet(
+      item: $store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
+    ) { paywallStore in
       ProPaywallView(store: paywallStore)
     }
     .task { store.send(.task) }

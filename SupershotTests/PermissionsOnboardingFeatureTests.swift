@@ -33,8 +33,8 @@ extension SupershotTestSuite {
         return true
       } assert: {
         $0.hasCheckedPermissions = true
-        $0.permissionsOnboarding = PermissionsOnboardingFeature.State(
-          nextStep: .location
+        $0.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(nextStep: .location)
         )
         $0.proAccess = .pro
       }
@@ -65,7 +65,9 @@ extension SupershotTestSuite {
         return true
       } assert: {
         $0.hasCheckedPermissions = true
-        $0.permissionsOnboarding = PermissionsOnboardingFeature.State(step: .location)
+        $0.destination = .permissionsOnboarding(
+          PermissionsOnboardingFeature.State(step: .location)
+        )
         $0.proAccess = .free
       }
       await store.finish()
@@ -91,7 +93,7 @@ extension SupershotTestSuite {
         $0.proAccess = .pro
       }
       await store.finish()
-      expectNoDifference(store.state.permissionsOnboarding, nil)
+      expectNoDifference(store.state.destination, nil)
     }
 
     @Test
@@ -220,20 +222,22 @@ extension SupershotTestSuite {
     func completingOnboardingRevealsGames() async {
       var state = AppFeature.State()
       state.hasCheckedPermissions = true
-      state.permissionsOnboarding = PermissionsOnboardingFeature.State(step: .location)
+      state.destination = .permissionsOnboarding(
+        PermissionsOnboardingFeature.State(step: .location)
+      )
 
       let store = TestStore(initialState: state) {
         AppFeature()
       }
 
-      await store.send(.permissionsOnboarding(.presented(.notNowButtonTapped)))
+      await store.send(.destination(.presented(.permissionsOnboarding(.notNowButtonTapped))))
       await store.receive {
-        guard case .permissionsOnboarding(.presented(.delegate(.completed))) = $0 else {
+        guard case .destination(.presented(.permissionsOnboarding(.delegate(.completed)))) = $0 else {
           return false
         }
         return true
       } assert: {
-        $0.permissionsOnboarding = nil
+        $0.destination = nil
       }
     }
   }
