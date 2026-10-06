@@ -64,20 +64,20 @@ extension SupershotTestSuite {
       }
       await store.receive(\.swapSidesResponse) {
         $0.isSavingCourtOrientation = false
-        $0.firstQuarterLeftTeam = .teamB
+        $0.swapSides = true
       }
       expectNoDifference(
         store.state.courtLayout,
         ScoringFeature.CourtLayout(left: originalLayout.right, right: originalLayout.left)
       )
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
-      expectNoDifference(snapshot.game.firstQuarterLeftTeam, .teamB)
+      expectNoDifference(snapshot.game.swapSides, true)
       expectNoDifference(snapshot.game.teamAID, state.teamA.id)
       expectNoDifference(snapshot.game.teamBID, state.teamB.id)
       expectNoDifference(snapshot.game.teamABibColorHex, game.teamABibColorHex)
       expectNoDifference(snapshot.game.teamBBibColorHex, game.teamBBibColorHex)
       let reopened = ScoringFeature.State(snapshot: snapshot)
-      expectNoDifference(reopened.firstQuarterLeftTeam, .teamB)
+      expectNoDifference(reopened.swapSides, true)
       expectNoDifference(reopened.courtLayout.left.id, originalLayout.right.id)
 
       await store.send(.swapSidesButtonTapped) {
@@ -85,7 +85,7 @@ extension SupershotTestSuite {
       }
       await store.receive(\.swapSidesResponse) {
         $0.isSavingCourtOrientation = false
-        $0.firstQuarterLeftTeam = .teamA
+        $0.swapSides = false
       }
       expectNoDifference(store.state, state)
       let restored = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
@@ -105,13 +105,13 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test(arguments: [GameTeamSlot.teamA, .teamB], 0...6)
+    @Test(arguments: [false, true], 0...6)
     func courtLayoutKeepsScoreColourAndCentrePassWithTeam(
-      orientation: GameTeamSlot,
+      swapSides: Bool,
       phaseIndex: Int
     ) {
       var state = Self.state()
-      state.firstQuarterLeftTeam = orientation
+      state.swapSides = swapSides
       state.currentPhaseIndex = phaseIndex
       state.teamA.bibColor = .blue
       state.teamB.bibColor = .red
@@ -121,7 +121,7 @@ extension SupershotTestSuite {
       let a = ScoringFeature.CourtTeam(team: state.teamA, score: 7, hasCentrePass: false)
       let b = ScoringFeature.CourtTeam(team: state.teamB, score: 4, hasCentrePass: true)
       let teamAIsLeft = [true, true, false, false, true, true, false][phaseIndex]
-        != (orientation == .teamB)
+        != swapSides
       expectNoDifference(
         state.courtLayout,
         teamAIsLeft
@@ -175,7 +175,7 @@ extension SupershotTestSuite {
       }
       await store.receive(\.swapSidesResponse) {
         $0.isSavingCourtOrientation = false
-        $0.firstQuarterLeftTeam = .teamB
+        $0.swapSides = true
       }
       expectNoDifference(store.state.courtLayout.left.id, state.teamB.id)
       await store.finish()
@@ -184,14 +184,14 @@ extension SupershotTestSuite {
     @Test
     func reconciliationRestoresPersistedCourtOrientation() async throws {
       var game = Self.game()
-      game.firstQuarterLeftTeam = .teamB
+      game.swapSides = true
       let database = try await Self.seed(game)
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       let store = TestStore(initialState: Self.state()) {
         ScoringFeature()
       }
       await store.send(.timerReconcileResponse(.success(snapshot))) {
-        $0.firstQuarterLeftTeam = .teamB
+        $0.swapSides = true
       }
       expectNoDifference(store.state.courtLayout.left.id, UUID(2))
       await store.finish()
@@ -361,10 +361,10 @@ extension SupershotTestSuite {
     func runningQuarterRecordsGoalWithAuthoritativeQuarterAndElapsedTime(swappedSides: Bool) async throws {
       var game = Self.game()
       game.timerEndsAt = Date(timeIntervalSince1970: 1_600)
-      game.firstQuarterLeftTeam = swappedSides ? .teamB : .teamA
+      game.swapSides = swappedSides
       let database = try await Self.seed(game)
       var state = Self.state()
-      state.firstQuarterLeftTeam = swappedSides ? .teamB : .teamA
+      state.swapSides = swappedSides
       state.timerEndsAt = game.timerEndsAt
       let store = TestStore(initialState: state) {
         ScoringFeature()
@@ -403,7 +403,7 @@ extension SupershotTestSuite {
     @Test
     func scoringAndUndoingDisplayedLeftTeamPreservesOrientation() async throws {
       var game = Self.game()
-      game.firstQuarterLeftTeam = .teamB
+      game.swapSides = true
       game.timerEndsAt = Date(timeIntervalSince1970: 1_600)
       let database = try await Self.seed(game)
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
@@ -438,7 +438,7 @@ extension SupershotTestSuite {
       expectNoDifference(store.state.courtLayout.left.score, 0)
       expectNoDifference(store.state.courtLayout.right.hasCentrePass, true)
       let reopened = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
-      expectNoDifference(reopened.game.firstQuarterLeftTeam, .teamB)
+      expectNoDifference(reopened.game.swapSides, true)
       expectNoDifference(reopened.goals, [])
       await store.finish()
     }
