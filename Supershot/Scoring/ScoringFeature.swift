@@ -72,7 +72,7 @@ struct ScoringFeature {
     }
 
     var currentPhase: GamePhase {
-      phases[Swift.min(Swift.max(currentPhaseIndex, 0), phases.count - 1)]
+      GameTimeline(phases: phases)?.phase(at: currentPhaseIndex) ?? .period(number: 1, durationSeconds: 0)
     }
 
     var countdown: GameCountdown {
@@ -90,7 +90,10 @@ struct ScoringFeature {
     var period: Int { currentPhase.periodNumber }
     var isTimerRunning: Bool { countdown.isRunning }
     var currentDurationSeconds: Int { currentPhase.durationSeconds }
-    var isPeriodComplete: Bool { elapsedSeconds >= currentDurationSeconds }
+    var timerProjection: GameCountdown.Projection {
+      countdown.projection(durationSeconds: currentDurationSeconds)
+    }
+    var isPeriodComplete: Bool { timerProjection.status == .complete }
     var canScoreGoal: Bool {
       currentPhase.isQuarter
         && isTimerRunning
@@ -99,11 +102,10 @@ struct ScoringFeature {
     }
 
     var canFinishGame: Bool {
-      currentPhaseIndex == phases.count - 1
-        && currentPhase.isQuarter
-        && isPeriodComplete
-        && !isTimerRunning
-        && !isShowingLastCentrePassBanner
+      guard let timeline = GameTimeline(phases: phases) else { return false }
+      return GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
+        isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner)
+        .isFinalPeriodComplete(in: timeline) && !isShowingLastCentrePassBanner
     }
 
     var canMoveToNextQuarter: Bool {
@@ -138,7 +140,7 @@ struct ScoringFeature {
     }
 
     var timeRemainingSeconds: Int {
-      max(currentDurationSeconds - elapsedSeconds, 0)
+      timerProjection.remainingSeconds
     }
   }
 
@@ -184,6 +186,7 @@ struct ScoringFeature {
 
   private nonisolated enum CancelID: Hashable, Sendable {
     case timer
+    case timerOperation
   }
 
 #if os(iOS)
@@ -329,7 +332,7 @@ struct ScoringFeature {
         return .none
 
       case .pauseTimerButtonTapped:
-        guard state.isTimerRunning else { return .none }
+        guard state.isTimerRunning, !state.isTransitioningPeriod else { return .none }
         synchronizeTimer(state: &state, now: now)
         state.timerEndsAt = nil
         return .merge(
@@ -345,6 +348,7 @@ struct ScoringFeature {
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameActive:
+        guard !state.isTransitioningPeriod else { return .none }
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameInactive:
@@ -367,6 +371,7 @@ struct ScoringFeature {
       case .startTimerButtonTapped:
         guard
           !state.isTimerRunning,
+          !state.isTransitioningPeriod,
           !state.isPeriodComplete,
           state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
         else { return .none }
@@ -386,7 +391,7 @@ struct ScoringFeature {
         )
 
       case .timerTick:
-        guard state.isTimerRunning else { return .none }
+        guard state.isTimerRunning, !state.isTransitioningPeriod else { return .none }
         synchronizeTimer(state: &state, now: now)
         guard state.isPeriodComplete else { return .none }
         state.timerEndsAt = nil
@@ -467,6 +472,7 @@ struct ScoringFeature {
           )
         )
       }
+      .cancellable(id: CancelID.timerOperation, cancelInFlight: true)
     )
   }
 
@@ -519,18 +525,19 @@ struct ScoringFeature {
   private func finishGameEffect(state: State) -> Effect<Action> {
     let endedAt = now
     let gameID = state.gameID
-    let currentPhaseIndex = state.currentPhaseIndex
-    let elapsedSeconds = state.elapsedSeconds
 
     return .run { send in
       let result = await Result {
         try await database.write { db in
-          guard try Game.find(gameID).fetchOne(db) != nil else {
-            throw ScoringPersistenceError.gameNotFound
-          }
+          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: now)
+          guard game.endedAt == nil,
+            game.progress.isFinalPeriodComplete(in: snapshot.timeline),
+            !game.isAwaitingCentrePassConfirmation
+          else { throw ScoringPersistenceError.goalUnavailable }
           try Game.find(gameID).update {
-            $0.currentPhaseIndex = currentPhaseIndex
-            $0.elapsedSeconds = elapsedSeconds
+            $0.currentPhaseIndex = game.currentPhaseIndex
+            $0.elapsedSeconds = game.elapsedSeconds
             $0.endedAt = #bind(endedAt)
             $0.isAwaitingCentrePassConfirmation = false
             $0.timerEndsAt = #bind(nil as Date?)
@@ -586,6 +593,7 @@ struct ScoringFeature {
         )
       )
     }
+    .cancellable(id: CancelID.timerOperation, cancelInFlight: true)
   }
 
   private func reconcileTimerEffect(gameID: Game.ID) -> Effect<Action> {
@@ -598,6 +606,7 @@ struct ScoringFeature {
         )
       )
     }
+    .cancellable(id: CancelID.timerOperation, cancelInFlight: true)
   }
 
   private func refreshActivityEffect(gameID: Game.ID) -> Effect<Action> {
@@ -622,6 +631,7 @@ struct ScoringFeature {
         )
       )
     }
+    .cancellable(id: CancelID.timerOperation, cancelInFlight: true)
   }
 
   private func undoGoalEffect(state: State) -> Effect<Action> {

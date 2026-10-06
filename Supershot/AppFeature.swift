@@ -233,12 +233,8 @@ extension AppDestination.State: Equatable {}
 
 extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
-    let phases = snapshot.phases
-    let currentPhaseIndex = min(
-      max(snapshot.game.currentPhaseIndex, 0),
-      phases.count - 1
-    )
-    let currentDuration = phases[currentPhaseIndex].durationSeconds
+    let currentPhaseIndex = snapshot.game.currentPhaseIndex
+    let currentDuration = snapshot.currentPhase.durationSeconds
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,

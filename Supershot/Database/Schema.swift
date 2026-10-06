@@ -12,12 +12,6 @@ import OSLog
 import SQLiteData
 import CasePaths
 
-nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
-  var elapsedSeconds = 0
-  var endsAt: Date?
-  var isRunning: Bool { endsAt != nil }
-}
-
 extension GameTeamSlot: QueryBindable {}
 
 @Table
@@ -48,18 +42,19 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   }
 }
 
-//@Table
-//struct Phase {
-//  let id: UUID
-//  var kind: Kind
-//  var duration: Int
-//  
-//  @Selection
-//  enum Kind {
-//    case period
-//    case rest
-//  }
-//}
+extension Game {
+  nonisolated var progress: GameProgress {
+    get {
+      GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
+        isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation)
+    }
+    set {
+      currentPhaseIndex = newValue.phaseIndex
+      countdown = newValue.countdown
+      isAwaitingCentrePassConfirmation = newValue.isAwaitingCentrePassConfirmation
+    }
+  }
+}
 
 @Table
 nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {

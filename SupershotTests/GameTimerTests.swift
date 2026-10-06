@@ -77,6 +77,100 @@ extension SupershotTestSuite {
       )
     }
 
+    @Test(arguments: [1_169.999, 1_170, 1_170.001])
+    func breakBoundaryReconciliationStopsAtPausedPeriod(timestamp: Double) {
+      let timeline = GameTimeline(phases: [
+        .period(number: 1, durationSeconds: 900),
+        .breakTime(afterPeriod: 1, durationSeconds: 120),
+        .period(number: 2, durationSeconds: 900),
+      ])!
+      var progress = GameProgress(phaseIndex: 0,
+        countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1_050)),
+        isAwaitingCentrePassConfirmation: false)
+      progress.reconcile(in: timeline, now: Date(timeIntervalSince1970: timestamp))
+      #expect(progress.phaseIndex == (timestamp < 1_170 ? 1 : 2))
+      #expect(progress.countdown.elapsedSeconds == (timestamp < 1_170 ? 119 : 0))
+      #expect(progress.countdown.isRunning == (timestamp < 1_170))
+      #expect(progress.isAwaitingCentrePassConfirmation)
+    }
+
+    @Test
+    func omittedBreakDoesNotAutomaticallyStartNextPeriod() {
+      let timeline = GameTimeline(phases: [
+        .period(number: 1, durationSeconds: 900), .period(number: 2, durationSeconds: 900),
+      ])!
+      var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
+        isAwaitingCentrePassConfirmation: false)
+      progress.complete(in: timeline, boundary: Date(timeIntervalSince1970: 1_000))
+      #expect(progress.phaseIndex == 1)
+      #expect(progress.countdown == GameCountdown())
+      #expect(progress.isAwaitingCentrePassConfirmation)
+      let state = GameActivityAttributes.ContentState(
+        centrePassTeamID: UUID(1), currentDurationSeconds: 900, elapsedSeconds: 0,
+        phaseIndex: 1, phase: timeline.phases[1], teamAScore: 0, teamBScore: 0)
+      #expect(!state.isInBreak)
+      #expect(state.period == 2)
+    }
+
+    @Test
+    func invalidTimelinesAreRejected() {
+      #expect(GameTimeline(phases: []) == nil)
+      #expect(GameTimeline(phases: [.period(number: 2, durationSeconds: 900)]) == nil)
+      #expect(GameTimeline(phases: [.period(number: 1, durationSeconds: 0)]) == nil)
+      #expect(GameTimeline(phases: [.period(number: 1, durationSeconds: 900),
+        .breakTime(afterPeriod: 1, durationSeconds: 120)]) == nil)
+    }
+
+    @Test
+    func alarmPlanIncludesFollowingBreakAndOmitsZeroBreak() {
+      let end = Date(timeIntervalSince1970: 1_050)
+      for duration in [0, 120] {
+        let timeline = GameTimeline(phases: [
+          .period(number: 1, durationSeconds: 900),
+          .breakTime(afterPeriod: 1, durationSeconds: duration),
+          .period(number: 2, durationSeconds: 900),
+        ])!
+        let progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: end),
+          isAwaitingCentrePassConfirmation: false)
+        let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
+        #expect(plan.count == (duration > 0 ? 2 : 1))
+        #expect(plan.first?.date == end)
+        #expect(plan.first?.phaseIndex == 0)
+        if duration > 0 {
+          #expect(plan.last?.date == end.addingTimeInterval(120))
+          #expect(plan.last?.phase == .breakTime(afterPeriod: 1, durationSeconds: 120))
+        }
+        #expect(ScheduledGameAlarm.plan(timeline: timeline,
+          progress: GameProgress(phaseIndex: 0, countdown: GameCountdown(),
+            isAwaitingCentrePassConfirmation: false)).isEmpty)
+      }
+    }
+
+    @Test
+    func delayedStartResponseCannotOverwritePause() async throws {
+      let responseClock = TestClock()
+      let timerClock = TestClock()
+      let store = Self.makeScoringStore(clock: timerClock)
+      let database = store.dependencies.defaultDatabase
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      store.dependencies.gameTimer.startOrResume = { _, _, _ in
+        try await responseClock.sleep(for: .seconds(1))
+        var game = snapshot.game
+        game.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+        return GameTimerUpdate(snapshot: GameSnapshot(game: game, goals: snapshot.goals,
+          periods: snapshot.periods, teamA: snapshot.teamA, teamB: snapshot.teamB))
+      }
+      store.dependencies.gameTimer.pause = { _, _ in snapshot }
+      await store.send(.startTimerButtonTapped) {
+        $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+      }
+      await store.send(.pauseTimerButtonTapped) { $0.timerEndsAt = nil }
+      await store.receive { if case .timerPauseResponse = $0 { true } else { false } }
+      await responseClock.advance(by: .seconds(1))
+      #expect(!store.state.isTimerRunning)
+      await store.finish()
+    }
+
     @Test
     func freeAccessPersistsTimersWithoutCreatingPremiumPresentations() async throws {
       let seedStore = Self.makeScoringStore()
@@ -87,6 +181,8 @@ extension SupershotTestSuite {
       let update = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
+        $0.proSubscription = .free
+        $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
         try await client.startOrResume(UUID(3), 0, true)
       }
@@ -254,7 +350,7 @@ extension SupershotTestSuite {
       let update = try await withDependencies {
         $0.date.now = Date(timeIntervalSince1970: 1_000)
         $0.defaultDatabase = database
-        $0.alarmClient = Self.alarmClient(events: events)
+        $0.alarmClient = Self.alarmClient(events: events, alarmUnavailable: true)
       } operation: {
         @Dependency(\.gameTimer) var client
         return try await client.startOrResume(UUID(3), 0, true)
@@ -279,6 +375,7 @@ extension SupershotTestSuite {
       let clock = TestClock()
       let events = LockIsolated<[TimerSystemEvent]>([])
       let store = Self.makeScoringStore(clock: clock)
+      store.dependencies.alarmClient = Self.alarmClient(events: events, alarmUnavailable: true)
 
       await store.send(.startTimerButtonTapped) {
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)

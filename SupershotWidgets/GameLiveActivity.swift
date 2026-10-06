@@ -406,23 +406,12 @@ private extension GameActivityAttributes {
 }
 
 private extension GameActivityAttributes.ContentState {
-  var isInBreak: Bool { !phaseIndex.isMultiple(of: 2) }
-
-  var period: Int { phaseIndex / 2 + 1 }
-
-  var isComplete: Bool {
-    elapsedSeconds >= currentDurationSeconds
-  }
-
-  var remainingSeconds: Int {
-    max(currentDurationSeconds - elapsedSeconds, 0)
-  }
-
   static let pausedPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
@@ -433,6 +422,7 @@ private extension GameActivityAttributes.ContentState {
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: Date.now.addingTimeInterval(655)
@@ -443,6 +433,7 @@ private extension GameActivityAttributes.ContentState {
     currentDurationSeconds: 900,
     elapsedSeconds: 900,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
