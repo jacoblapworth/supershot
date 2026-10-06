@@ -1,3 +1,4 @@
+import CryptoKit
 import DependenciesTestSupport
 import Foundation
 import GRDB
@@ -26,17 +27,11 @@ nonisolated func testGamePeriodID(
   gameID: Game.ID,
   position: Int
 ) -> GamePeriod.ID {
-  let value = gameID.uuid
-  return UUID(
-    uuid: (
-      value.0, value.1, value.2, value.3,
-      value.4, value.5, value.6, value.7,
-      value.8, value.9, value.10, value.11,
-      value.12, value.13,
-      value.14 ^ 0x80,
-      value.15 ^ UInt8(truncatingIfNeeded: position + 1)
-    )
-  )
+  let bytes = Array(SHA256.hash(data: Data("\(gameID.uuidString):\(position)".utf8)))
+  return UUID(uuid: (
+    bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+    bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+  ))
 }
 
 nonisolated func testGamePeriods(
