@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		12D13302305B000000000001 /* DependenciesAdditions in Frameworks */ = {isa = PBXBuildFile; productRef = 12D13301305B000000000001 /* DependenciesAdditions */; };
 		121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 121C048F302213DA00ED9B54 /* RevenueCat */; };
 		121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 121C0491302213DA00ED9B54 /* RevenueCatUI */; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
@@ -20,6 +19,7 @@
 		12B00002301F000000000001 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = 12B0000D301F000000000001 /* CustomDump */; };
 		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		12C147E43059644E008F9513 /* LazyState in Frameworks */ = {isa = PBXBuildFile; productRef = 12C147E33059644E008F9513 /* LazyState */; };
+		12D13302305B000000000001 /* DependenciesAdditions in Frameworks */ = {isa = PBXBuildFile; productRef = 12D13301305B000000000001 /* DependenciesAdditions */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -783,14 +783,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tgrapperon/swift-dependencies-additions";
-			requirement = {
-				kind = revision;
-				revision = 0afff683710e63433847641562da5908fe01205f;
-			};
-		};
 		121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -861,14 +853,17 @@
 				minimumVersion = 1.0.0;
 			};
 		};
+		12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tgrapperon/swift-dependencies-additions";
+			requirement = {
+				kind = revision;
+				revision = 0afff683710e63433847641562da5908fe01205f;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		12D13301305B000000000001 /* DependenciesAdditions */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */;
-			productName = DependenciesAdditions;
-		};
 		121C048F302213DA00ED9B54 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
@@ -923,6 +918,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */;
 			productName = LazyState;
+		};
+		12D13301305B000000000001 /* DependenciesAdditions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */;
+			productName = DependenciesAdditions;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
