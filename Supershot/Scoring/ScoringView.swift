@@ -56,6 +56,20 @@ struct ScoringView: View {
             }
           )
         }
+
+        if store.canFinishGame {
+          ScoringGameControls(
+            canFinishGame: store.canFinishGame,
+            canMoveToNextQuarter: store.canMoveToNextQuarter,
+            clockPhase: store.clockPhase,
+            isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
+            isTransitioningPeriod: store.isTransitioningPeriod,
+            period: store.period,
+            endQuarterTapped: { store.send(.endQuarterButtonTapped) },
+            finishGameTapped: { store.send(.finishGameButtonTapped) },
+            skipBreakTapped: { store.send(.skipBreakButtonTapped) }
+          )
+        }
         
         GoalTimelineView(
           teamABibColor: store.teamA.bibColor,

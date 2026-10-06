@@ -515,6 +515,60 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func finishingFinalQuarterPersistsResultAndEndsPresentation() async throws {
+      var game = Self.game()
+      game.currentPhaseIndex = 6
+      game.elapsedSeconds = 900
+      game.lateScoringPeriodNumber = 4
+      let database = try await Self.seed(game)
+      let endedPresentations = LockIsolated<[Game.ID]>([])
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
+        ScoringFeature()
+      } withDependencies: {
+        $0.defaultDatabase = database
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.gameTimer.endPresentation = { id in endedPresentations.withValue { $0.append(id) } }
+      }
+
+      expectNoDifference(store.state.canScoreGoal, true)
+      expectNoDifference(store.state.canFinishGame, true)
+      await store.send(.finishGameButtonTapped)
+      await store.receive(\.finishGameResponse)
+      await store.receive {
+        if case let .delegate(.gameFinished(id)) = $0 { id == game.id } else { false }
+      }
+
+      let stored = try await database.read { try Game.find(game.id).fetchOne($0) }
+      expectNoDifference(stored?.endedAt, Date(timeIntervalSince1970: 1_000))
+      expectNoDifference(stored?.elapsedSeconds, 900)
+      expectNoDifference(stored?.timerEndsAt, nil)
+      expectNoDifference(endedPresentations.value, [game.id])
+      await store.finish()
+    }
+
+    @Test
+    func finalQuarterConfirmationMustBeAnsweredBeforeFinishing() async throws {
+      var game = Self.game()
+      game.currentPhaseIndex = 6
+      game.elapsedSeconds = 900
+      game.lateScoringPeriodNumber = 4
+      game.isAwaitingCentrePassConfirmation = true
+      let database = try await Self.seed(game)
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
+        ScoringFeature()
+      }
+
+      expectNoDifference(store.state.canScoreGoal, true)
+      expectNoDifference(store.state.canFinishGame, false)
+      await store.send(.finishGameButtonTapped)
+      let stored = try await database.read { try Game.find(game.id).fetchOne($0) }
+      expectNoDifference(stored?.endedAt, nil)
+      await store.finish()
+    }
+
+    @Test
     func finishRejectsStaleScreenProgress() async throws {
       let database = try await Self.seed(Self.game())
       var state = Self.state()
