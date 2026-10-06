@@ -135,7 +135,7 @@ extension SupershotTestSuite {
         )
       }
       await store.send(.newTeamButtonTapped) {
-        $0.teamEditor = TeamEditorFeature.State()
+        $0.destination = .teamEditor(TeamsEditorFeature.State())
       }
     }
     
@@ -204,6 +204,10 @@ extension SupershotTestSuite {
       )
       var state = TeamsFeature.State()
       state.pendingGameResume = currentRequest
+      var editor = TeamsEditorFeature.State()
+      editor.editor.name = "Draft team"
+      editor.alert = .gameUnavailable
+      state.destination = .teamEditor(editor)
       let store = TestStore(initialState: state) {
         TeamsFeature()
       }
@@ -218,6 +222,256 @@ extension SupershotTestSuite {
           .failure(TabFeatureTestError.unavailable)
         )
       )
+    }
+
+    @Test
+    func resumeFailurePresentsRootAlertAndDismisses() async {
+      var gameTimer = GameTimerClient.live
+      gameTimer.reconcile = { _ in throw TabFeatureTestError.unavailable }
+      let store = Self.makeStore(gameTimer: gameTimer)
+      let request = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
+
+      await store.send(.gameDeepLinkOpened(request.gameID)) {
+        $0.pendingGameResume = request
+      }
+      await store.receive(\.resumeGameResponse) {
+        $0.pendingGameResume = nil
+        $0.destination = .alert(.gameUnavailable)
+      }
+      await store.send(.destination(.presented(.alert(.dismissButtonTapped)))) {
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func resumeFailureWhileEditingPreservesDraftAndStack(opensEditorDuringResume: Bool) async {
+      let (responses, continuation) = AsyncStream<Void>.makeStream()
+      var gameTimer = GameTimerClient.live
+      gameTimer.reconcile = { _ in
+        for await _ in responses { break }
+        throw TabFeatureTestError.unavailable
+      }
+      var state = TeamsFeature.State()
+      state.path.append(.teamDetail(TeamDetailFeature.State(teamID: UUID(1))))
+      let store = Self.makeStore(state: state, gameTimer: gameTimer)
+      let request = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
+
+      if opensEditorDuringResume {
+        await store.send(.gameDeepLinkOpened(request.gameID)) {
+          $0.pendingGameResume = request
+        }
+      }
+      await store.send(.newTeamButtonTapped) {
+        $0.destination = .teamEditor(TeamsEditorFeature.State())
+      }
+      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.set(\.name, "Draft team"))))))) {
+        Self.updateEditor(in: &$0) { $0.editor.name = "Draft team" }
+      }
+      if !opensEditorDuringResume {
+        await store.send(.gameDeepLinkOpened(request.gameID)) {
+          $0.pendingGameResume = request
+        }
+      }
+      continuation.yield(())
+      continuation.finish()
+      await store.receive(\.resumeGameResponse) {
+        $0.pendingGameResume = nil
+        Self.updateEditor(in: &$0) { $0.alert = .gameUnavailable }
+      }
+      await store.send(.destination(.presented(.teamEditor(.alert(.presented(.dismissButtonTapped)))))) {
+        Self.updateEditor(in: &$0) { $0.alert = nil }
+      }
+      expectNoDifference(store.state.destination?.teamEditor?.editor.name, "Draft team")
+      expectNoDifference(Array(store.state.path), Array(state.path))
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func editorCancellationDismissesEntirePresentation(hasAlert: Bool) async {
+      var editor = TeamsEditorFeature.State()
+      editor.editor.name = "Unsaved team"
+      editor.alert = hasAlert ? .gameUnavailable : nil
+      var state = TeamsFeature.State()
+      state.destination = .teamEditor(editor)
+      let store = TestStore(initialState: state) { TeamsFeature() }
+
+      await store.send(.destination(.presented(.teamEditor(.editor(.cancelButtonTapped)))))
+      await store.receive(\.destination.teamEditor.editor.delegate) {
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func sheetDismissalDiscardsEditorAndNestedAlert(hasAlert: Bool) async {
+      var editor = TeamsEditorFeature.State()
+      editor.alert = hasAlert ? .gameUnavailable : nil
+      var state = TeamsFeature.State()
+      state.destination = .teamEditor(editor)
+      let store = TestStore(initialState: state) { TeamsFeature() }
+
+      await store.send(.destination(.dismiss)) {
+        $0.destination = nil
+      }
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func editorSavePersistsAndDismisses(hasAlert: Bool) async throws {
+      var state = TeamsFeature.State()
+      var editor = TeamsEditorFeature.State()
+      editor.alert = hasAlert ? .gameUnavailable : nil
+      state.destination = .teamEditor(editor)
+      let store = Self.makeStore(state: state)
+      let database = store.dependencies.defaultDatabase
+      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.set(\.name, "New team"))))))) {
+        Self.updateEditor(in: &$0) { $0.editor.name = "New team" }
+      }
+      await store.send(.destination(.presented(.teamEditor(.editor(.saveButtonTapped))))) {
+        Self.updateEditor(in: &$0) { $0.editor.isSaving = true }
+      }
+      await store.receive(\.destination.teamEditor.editor.saveResponse) {
+        Self.updateEditor(in: &$0) { $0.editor.isSaving = false }
+      }
+      await store.receive(\.destination.teamEditor.editor.delegate) {
+        $0.destination = nil
+      }
+      let savedName = try await database.read { try Team.find(UUID(0)).fetchOne($0)?.name }
+      expectNoDifference(savedName, "New team")
+      await store.finish()
+    }
+
+    @Test
+    func nestedAlertSystemDismissalPreservesEditor() async {
+      var state = TeamsFeature.State()
+      var editor = TeamsEditorFeature.State()
+      editor.editor.name = "Draft team"
+      editor.alert = .gameUnavailable
+      state.destination = .teamEditor(editor)
+      let store = TestStore(initialState: state) { TeamsFeature() }
+
+      await store.send(.destination(.presented(.teamEditor(.alert(.dismiss))))) {
+        Self.updateEditor(in: &$0) { $0.alert = nil }
+      }
+    }
+
+    @Test
+    func successfulDeepLinkKeepsEditorAndAppendsScoring() async {
+      var state = TeamsFeature.State()
+      var editor = TeamsEditorFeature.State()
+      editor.editor.name = "Draft team"
+      state.destination = .teamEditor(editor)
+      state.path.append(.teamDetail(TeamDetailFeature.State(teamID: UUID(1))))
+      let store = Self.makeStore(state: state)
+      await store.send(.gameDeepLinkOpened(UUID(3))) {
+        $0.pendingGameResume = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
+      }
+      let snapshot = try! await store.dependencies.defaultDatabase.read {
+        try GameSnapshot.fetch($0, gameID: UUID(3))
+      }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      await store.receive(\.resumeGameResponse)
+      expectNoDifference(store.state.pendingGameResume, nil)
+      expectNoDifference(
+        Array(store.state.path),
+        [.teamDetail(TeamDetailFeature.State(teamID: UUID(1))), .scoring(ScoringFeature.State(snapshot: snapshot))]
+      )
+      expectNoDifference(store.state.destination, state.destination)
+      await store.finish()
+    }
+
+    @Test(arguments: [false, true])
+    func deletionFailureKeepsEditorAndDoesNotEndPresentation(deletesTeam: Bool) async throws {
+      let endedGameIDs = LockIsolated<[Game.ID]>([])
+      var gameTimer = GameTimerClient.live
+      gameTimer.endPresentation = { gameID in
+        endedGameIDs.withValue { $0.append(gameID) }
+      }
+      var state = TeamsFeature.State()
+      var editor = TeamsEditorFeature.State()
+      editor.editor.name = "Draft team"
+      editor.alert = .gameUnavailable
+      state.destination = .teamEditor(editor)
+      let store = Self.makeStore(state: state, gameTimer: gameTimer)
+      let database = store.dependencies.defaultDatabase
+      try await database.write { db in
+        try db.execute(sql: """
+          CREATE TRIGGER fail_game_delete BEFORE DELETE ON games
+          BEGIN SELECT RAISE(ABORT, 'Test deletion failure'); END;
+          """)
+      }
+      await withKnownIssue {
+        await store.send(deletesTeam ? .deleteTeamButtonTapped(UUID(1)) : .deleteGameButtonTapped(UUID(3)))
+        await store.finish()
+      }
+      try await database.write { db in
+        try db.execute(sql: "DROP TRIGGER fail_game_delete")
+      }
+      expectNoDifference(store.state.destination, state.destination)
+      expectNoDifference(endedGameIDs.value, [])
+      let teamName = try await database.read { try Team.find(UUID(1)).fetchOne($0)?.name }
+      expectNoDifference(teamName, "Ravens")
+      #expect(try await database.read { try Game.find(UUID(3)).fetchOne($0) } != nil)
+    }
+
+    @Test
+    func failureAfterSheetDismissalPresentsRootAlert() async {
+      let request = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
+      var state = TeamsFeature.State()
+      state.destination = .teamEditor(TeamsEditorFeature.State())
+      state.pendingGameResume = request
+      let store = TestStore(initialState: state) { TeamsFeature() }
+
+      await store.send(.destination(.dismiss)) {
+        $0.destination = nil
+      }
+      await store.send(.resumeGameResponse(request, .failure(TabFeatureTestError.unavailable))) {
+        $0.pendingGameResume = nil
+        $0.destination = .alert(.gameUnavailable)
+      }
+      await store.send(.destination(.dismiss)) {
+        $0.destination = nil
+      }
+    }
+
+    @Test(arguments: [false, true])
+    func newResumeClearsAlertFromItsOwner(hasEditor: Bool) async {
+      let (responses, continuation) = AsyncStream<Void>.makeStream()
+      var gameTimer = GameTimerClient.live
+      gameTimer.reconcile = { _ in
+        for await _ in responses { break }
+        throw TabFeatureTestError.unavailable
+      }
+      var state = TeamsFeature.State()
+      if hasEditor {
+        var editor = TeamsEditorFeature.State()
+        editor.editor.name = "Draft team"
+        editor.alert = .gameUnavailable
+        state.destination = .teamEditor(editor)
+      } else {
+        state.destination = .alert(.gameUnavailable)
+      }
+      let store = Self.makeStore(state: state, gameTimer: gameTimer)
+      await store.send(.gameDeepLinkOpened(UUID(3))) {
+        $0.pendingGameResume = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
+        if hasEditor {
+          Self.updateEditor(in: &$0) { $0.alert = nil }
+        } else {
+          $0.destination = nil
+        }
+      }
+      continuation.yield(())
+      continuation.finish()
+      await store.receive(\.resumeGameResponse) {
+        $0.pendingGameResume = nil
+        if hasEditor {
+          Self.updateEditor(in: &$0) { $0.alert = .gameUnavailable }
+        } else {
+          $0.destination = .alert(.gameUnavailable)
+        }
+      }
+      await store.finish()
     }
     
     @Test
@@ -261,6 +515,18 @@ extension SupershotTestSuite {
       }
     }
     
+    private static func updateEditor(
+      in state: inout TeamsFeature.State,
+      _ update: (inout TeamsEditorFeature.State) -> Void
+    ) {
+      guard case var .teamEditor(editor) = state.destination else {
+        Issue.record("Expected a team editor destination")
+        return
+      }
+      update(&editor)
+      state.destination = .teamEditor(editor)
+    }
+
     private static func makeStore(
       state: TeamsFeature.State? = nil,
       gameTimer: GameTimerClient = .live
