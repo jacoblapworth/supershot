@@ -204,21 +204,8 @@ private struct LockScreenGameView: View {
           alignment: .trailing
         )
       }
-      if context.state.isInBreak {
-        HStack {
-          VStack(alignment: .center, spacing: 0) {
-            Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.secondary)
-            TimerText(state: context.state, isStale: context.isStale)
-              .font(.title.bold())
-          }
-          Spacer()
-          TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
-        }
-      } else {
-        GoalControls(context: context)
-      }
+      GoalControls(context: context)
+
     }
     .foregroundStyle(.white)
   }
@@ -312,7 +299,9 @@ private struct GoalButton: View {
     Button(intent: ScoreGoalIntent(
       gameID: context.attributes.gameID,
       teamID: isTeamA ? context.attributes.teamAID : context.attributes.teamBID,
-      expectedPhaseIndex: context.state.phaseIndex
+      expectedPhaseIndex: context.state.phaseIndex,
+      completedPeriodNumber: context.state.scoringContext?.isLate == true
+        ? context.state.scoringContext?.periodNumber : nil
     )) {
       Label("Goal", systemImage: "plus")
         .font(.title3.bold())
@@ -324,10 +313,7 @@ private struct GoalButton: View {
     .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
     .disabled(
       context.isStale
-        || context.state.isComplete
-        || context.state.isInBreak
-        || context.state.timerEndsAt == nil
-        || context.state.isAwaitingCentrePassConfirmation
+        || context.state.scoringContext == nil
     )
   }
 }
@@ -345,6 +331,7 @@ private struct GoalControls: View {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.title.bold())
       }
+      TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
       Spacer()
       GoalButton(context: context, isTeamA: false)
     }

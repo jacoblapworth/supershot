@@ -122,6 +122,7 @@ nonisolated struct GameProgress: Equatable, Sendable {
   var phaseIndex: Int
   var countdown: GameCountdown
   var isAwaitingCentrePassConfirmation: Bool
+  var lateScoringPeriodNumber: Int?
 
   func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {
     phaseIndex == timeline.phases.count - 1
@@ -142,6 +143,7 @@ nonisolated struct GameProgress: Equatable, Sendable {
   mutating func complete(in timeline: GameTimeline, boundary: Date) {
     guard let phase = timeline.phase(at: phaseIndex) else { return }
     countdown = GameCountdown(elapsedSeconds: phase.durationSeconds)
+    if phase.isQuarter { lateScoringPeriodNumber = phase.periodNumber }
     guard phaseIndex + 1 < timeline.phases.count else { return }
     if phase.isQuarter { isAwaitingCentrePassConfirmation = true }
     phaseIndex += 1
@@ -175,5 +177,41 @@ nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
       ))
     }
     return result
+  }
+}
+
+/// Attribution is separate from the phase whose clock is currently on screen.
+nonisolated enum GameScoringContext: Equatable, Sendable {
+  case livePeriod(number: Int)
+  case completedPeriod(number: Int)
+
+  var periodNumber: Int {
+    switch self {
+    case let .livePeriod(number), let .completedPeriod(number): number
+    }
+  }
+
+  var isLate: Bool {
+    if case .completedPeriod = self { true } else { false }
+  }
+
+  static func resolve(
+    phase: GamePhase,
+    countdown: GameCountdown,
+    isAwaitingCentrePassConfirmation: Bool,
+    lateScoringPeriodNumber: Int?,
+    now: Date? = nil
+  ) -> Self? {
+    let timer = countdown.projection(durationSeconds: phase.durationSeconds, now: now)
+    if phase.isQuarter, timer.status == .running, !isAwaitingCentrePassConfirmation {
+      return .livePeriod(number: phase.periodNumber)
+    }
+    guard let completed = lateScoringPeriodNumber else { return nil }
+    let isCompletedPeriod = phase.isQuarter && phase.periodNumber == completed && timer.status == .complete
+    let isFollowingBreak = phase.isBreak && phase.periodNumber == completed
+    let isWaitingPeriod = phase.isQuarter && phase.periodNumber == completed + 1
+      && timer.status == .paused && timer.elapsedSeconds == 0
+    return isCompletedPeriod || isFollowingBreak || isWaitingPeriod
+      ? .completedPeriod(number: completed) : nil
   }
 }

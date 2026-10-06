@@ -221,6 +221,7 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
 
+          if phase.isQuarter { game.lateScoringPeriodNumber = nil }
           game.timerEndsAt = GameTimerClient.endDate(
             durationSeconds: phase.durationSeconds,
             elapsedSeconds: game.elapsedSeconds,
@@ -296,6 +297,7 @@ private nonisolated func isFinalPeriodComplete(_ game: Game, phases: [GamePhase]
 
 private nonisolated func persistTimerState(_ game: Game, in db: Database) throws {
   try Game.find(game.id).update {
+    $0.lateScoringPeriodNumber = #bind(game.lateScoringPeriodNumber)
     $0.currentPhaseIndex = game.currentPhaseIndex
     $0.elapsedSeconds = game.elapsedSeconds
     $0.isAwaitingCentrePassConfirmation = game.isAwaitingCentrePassConfirmation

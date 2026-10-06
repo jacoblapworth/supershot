@@ -238,6 +238,7 @@ extension ScoringFeature.State {
 
     self.init(
       canUndo: !snapshot.goals.isEmpty,
+      canUndoDuringConfirmation: snapshot.goals.last?.isLate == true,
       centrePassTeamID: snapshot.game.centrePassTeamID == snapshot.teamB.id
         ? snapshot.teamB.id
         : snapshot.teamA.id,
@@ -249,6 +250,7 @@ extension ScoringFeature.State {
       firstQuarterLeftTeam: snapshot.game.firstQuarterLeftTeam,
       gameID: snapshot.game.id,
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber,
       periods: snapshot.periods,
       startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(

@@ -42,7 +42,9 @@ extension ScoringFeature.State {
   static var previewBreak: Self {
     var state = previewQuarter
     state.currentPhaseIndex = 3
-    state.elapsedSeconds = state.currentDurationSeconds
+    state.lateScoringPeriodNumber = 2
+    state.isShowingLastCentrePassBanner = true
+    state.elapsedSeconds = 0
     state.teamAScore = 19
     state.teamBScore = 19
     return state

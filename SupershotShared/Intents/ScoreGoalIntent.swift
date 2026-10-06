@@ -26,13 +26,15 @@ struct ScoreGoalIntent: LiveActivityIntent {
   @Parameter(title: "Game") var gameID: String
   @Parameter(title: "Team") var teamID: String
   @Parameter(title: "Phase") var expectedPhaseIndex: Int
+  @Parameter(title: "Completed Quarter") var completedPeriodNumber: Int?
 
   init() {}
 
-  init(gameID: UUID, teamID: UUID, expectedPhaseIndex: Int) {
+  init(gameID: UUID, teamID: UUID, expectedPhaseIndex: Int, completedPeriodNumber: Int? = nil) {
     self.gameID = gameID.uuidString
     self.teamID = teamID.uuidString
     self.expectedPhaseIndex = expectedPhaseIndex
+    self.completedPeriodNumber = completedPeriodNumber
   }
 
   func perform() async throws -> some IntentResult {
@@ -47,11 +49,12 @@ struct ScoreGoalIntent: LiveActivityIntent {
     let goalID = uuid()
     let createdAt = now
     let phaseIndex = expectedPhaseIndex
+    let scoringContext = completedPeriodNumber.map { GameScoringContext.completedPeriod(number: $0) }
     do {
       _ = try await database.write { db in
         try ScoringFeature.insertGoal(
           db, gameID: gameID, teamID: teamID,
-          expectedPhaseIndex: phaseIndex, goalID: goalID, createdAt: createdAt
+          expectedPhaseIndex: phaseIndex, goalID: goalID, createdAt: createdAt, scoringContext: scoringContext
         )
       }
     } catch {

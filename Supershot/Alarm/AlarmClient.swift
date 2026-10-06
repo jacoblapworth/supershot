@@ -199,7 +199,8 @@ private nonisolated extension GameActivityAttributes.ContentState {
       teamAScore: snapshot.teamAScore,
       teamBScore: snapshot.teamBScore,
       timerEndsAt: snapshot.game.timerEndsAt,
-      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation
+      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber
     )
   }
 }

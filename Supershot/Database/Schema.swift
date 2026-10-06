@@ -29,6 +29,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var longitude: Double?
   var pointOfInterestName: String?
   var isAwaitingCentrePassConfirmation = false
+  var lateScoringPeriodNumber: Int?
   var currentPhaseIndex = 0
   var elapsedSeconds = 0
   var timerEndsAt: Date? = nil
@@ -46,12 +47,14 @@ extension Game {
   nonisolated var progress: GameProgress {
     get {
       GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
-        isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation)
+        isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
+        lateScoringPeriodNumber: lateScoringPeriodNumber)
     }
     set {
       currentPhaseIndex = newValue.phaseIndex
       countdown = newValue.countdown
       isAwaitingCentrePassConfirmation = newValue.isAwaitingCentrePassConfirmation
+      lateScoringPeriodNumber = newValue.lateScoringPeriodNumber
     }
   }
 }
@@ -137,6 +140,7 @@ nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   var centrePassTeamID: Team.ID? = nil
   var teamID: Team.ID
   var elapsedSeconds: Int
+  var isLate = false
   var points: Int = 1
   var createdAt: Date
 }
@@ -182,6 +186,7 @@ extension DependencyValues {
           "longitude" REAL,
           "pointOfInterestName" TEXT,
           "isAwaitingCentrePassConfirmation" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
+          "lateScoringPeriodNumber" INTEGER CHECK ("lateScoringPeriodNumber" > 0),
           "currentPhaseIndex" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "timerEndsAt" TEXT,
@@ -213,6 +218,7 @@ extension DependencyValues {
           "centrePassTeamID" TEXT REFERENCES "teams"("id") ON DELETE SET NULL,
           "teamID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "elapsedSeconds" INTEGER NOT NULL,
+          "isLate" INTEGER NOT NULL DEFAULT 0,
           "points" INTEGER NOT NULL,
           "createdAt" TEXT NOT NULL,
           FOREIGN KEY("gamePeriodID", "gameID")

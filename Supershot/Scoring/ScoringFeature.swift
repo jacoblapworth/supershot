@@ -14,6 +14,7 @@ struct ScoringFeature {
 
   struct ScoreSnapshot: Equatable, Sendable {
     var canUndo = false
+    var canUndoDuringConfirmation = false
     var centrePassTeamID: Team.ID
     var teamAScore = 0
     var teamBScore = 0
@@ -48,6 +49,7 @@ struct ScoringFeature {
     @Shared(.hapticsEnabled) var hapticsEnabled
     @Shared(.soundEffectsEnabled) var soundEffectsEnabled
     var canUndo = false
+    var canUndoDuringConfirmation = false
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
     var elapsedSeconds = 0
@@ -58,6 +60,7 @@ struct ScoringFeature {
     var isSavingCourtOrientation = false
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
+    var lateScoringPeriodNumber: Int?
     var periods: [GamePeriod]
     let startedAt: Date
     var teamA: Team
@@ -94,12 +97,14 @@ struct ScoringFeature {
       countdown.projection(durationSeconds: currentDurationSeconds)
     }
     var isPeriodComplete: Bool { timerProjection.status == .complete }
-    var canScoreGoal: Bool {
-      currentPhase.isQuarter
-        && isTimerRunning
-        && !isPeriodComplete
-        && !isShowingLastCentrePassBanner
+    var scoringContext: GameScoringContext? {
+      GameScoringContext.resolve(phase: currentPhase, countdown: countdown,
+        isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner,
+        lateScoringPeriodNumber: lateScoringPeriodNumber)
     }
+
+    var canScoreGoal: Bool { scoringContext != nil && !isTransitioningPeriod }
+    var canUndoGoal: Bool { canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation) }
 
     var canFinishGame: Bool {
       guard let timeline = GameTimeline(phases: phases) else { return false }
@@ -404,6 +409,7 @@ struct ScoringFeature {
         state.teamAScore = snapshot.teamAScore
         state.teamBScore = snapshot.teamBScore
         state.canUndo = !snapshot.goals.isEmpty
+        state.canUndoDuringConfirmation = snapshot.goals.last?.isLate == true
         state.centrePassTeamID = snapshot.game.centrePassTeamID ?? snapshot.teamA.id
         applyTimer(snapshot.game, to: &state)
         guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
@@ -424,7 +430,7 @@ struct ScoringFeature {
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .undoButtonTapped:
-        guard state.canUndo, !state.isShowingLastCentrePassBanner else { return .none }
+        guard state.canUndoGoal else { return .none }
         return undoGoalEffect(state: state)
 
       case let .undoResponse(.success(snapshot)):
@@ -442,6 +448,7 @@ struct ScoringFeature {
 
   private func apply(_ snapshot: ScoreSnapshot, to state: inout State) {
     state.canUndo = snapshot.canUndo
+    state.canUndoDuringConfirmation = snapshot.canUndoDuringConfirmation
     state.centrePassTeamID = snapshot.centrePassTeamID
     state.teamAScore = snapshot.teamAScore
     state.teamBScore = snapshot.teamBScore
@@ -449,6 +456,7 @@ struct ScoringFeature {
 
   private func applyTimer(_ game: Game, to state: inout State) {
     state.firstQuarterLeftTeam = game.firstQuarterLeftTeam
+    state.lateScoringPeriodNumber = game.lateScoringPeriodNumber
     state.currentPhaseIndex = game.currentPhaseIndex
     state.elapsedSeconds = game.elapsedSeconds
     state.isShowingLastCentrePassBanner = game.isAwaitingCentrePassConfirmation
@@ -494,29 +502,31 @@ struct ScoringFeature {
     state: State,
     wasLastCentrePassTaken: Bool
   ) -> Effect<Action> {
-    let centrePassTeamID = wasLastCentrePassTaken
-      ? opposingTeamID(
-        state.centrePassTeamID,
-        teamAID: state.teamA.id,
-        teamBID: state.teamB.id
-      )
-      : state.centrePassTeamID
     let gameID = state.gameID
-    let snapshot = LastCentrePassSnapshot(centrePassTeamID: centrePassTeamID)
-
+    let completedPeriod = state.lastCompletedQuarterNumber
     return .run { send in
       let result = await Result {
         try await database.write { db in
-          guard try Game.find(gameID).fetchOne(db) != nil else {
-            throw ScoringPersistenceError.gameNotFound
+          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let game = snapshot.game
+          let currentCompletedPeriod = snapshot.currentPhase.isBreak
+            ? snapshot.currentPhase.periodNumber : snapshot.currentPhase.periodNumber - 1
+          guard game.endedAt == nil, currentCompletedPeriod == completedPeriod else {
+            throw ScoringPersistenceError.goalUnavailable
+          }
+          var centrePassTeamID = resolvedCentrePassTeamID(game.centrePassTeamID,
+            teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
+          // Read ownership inside the same write as the answer, so concurrent late goals are retained.
+          if game.isAwaitingCentrePassConfirmation && wasLastCentrePassTaken {
+            centrePassTeamID = opposingTeamID(centrePassTeamID,
+              teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
           }
           try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(snapshot.centrePassTeamID)
+            $0.centrePassTeamID = #bind(centrePassTeamID)
             $0.isAwaitingCentrePassConfirmation = false
-          }
-          .execute(db)
+          }.execute(db)
+          return LastCentrePassSnapshot(centrePassTeamID: centrePassTeamID)
         }
-        return snapshot
       }
       await send(.lastCentrePassResponse(result))
     }
@@ -556,13 +566,14 @@ struct ScoringFeature {
     let expectedPhaseIndex = state.currentPhaseIndex
     let gameID = state.gameID
     let goalID = uuid()
+    let scoringContext = state.scoringContext
     return .run { send in
       let result = await Result {
         try await database.write { db in
           try Self.insertGoal(
             db, gameID: gameID, teamID: teamID,
             expectedPhaseIndex: expectedPhaseIndex, goalID: goalID,
-            createdAt: createdAt, points: points
+            createdAt: createdAt, points: points, scoringContext: scoringContext
           )
         }
       }
@@ -744,6 +755,7 @@ extension ScoringFeature.ScoreSnapshot {
 
     return Self(
       canUndo: !goals.isEmpty,
+      canUndoDuringConfirmation: goals.max { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }?.isLate == true,
       centrePassTeamID: resolvedCentrePassTeamID(
         game.centrePassTeamID,
         teamAID: teamAID,
@@ -788,33 +800,28 @@ extension ScoringFeature {
     expectedPhaseIndex: Int,
     goalID: UUID,
     createdAt: Date,
-    points: Int = 1
+    points: Int = 1,
+    scoringContext requestedContext: GameScoringContext? = nil
   ) throws -> ScoreSnapshot {
     let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    let game = snapshot.game
+    let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: createdAt)
     let teamAID = snapshot.teamA.id
     let teamBID = snapshot.teamB.id
+    // createdAt is the tap/recording time. A queued live tap is not silently converted to a late goal.
     guard
       game.endedAt == nil,
-      !game.isAwaitingCentrePassConfirmation,
       teamID == teamAID || teamID == teamBID,
       game.currentPhaseIndex == expectedPhaseIndex,
-      case let .period(_, durationSeconds) = snapshot.currentPhase,
-      let gamePeriodID = snapshot.currentPeriod?.id,
-      let timerEndsAt = game.timerEndsAt,
-      timerEndsAt > createdAt
-    else {
-      throw ScoringPersistenceError.goalUnavailable
-    }
-    let elapsedSeconds = GameTimerClient.elapsedSeconds(
-      durationSeconds: durationSeconds,
-      persistedElapsedSeconds: game.elapsedSeconds,
-      timerEndsAt: timerEndsAt,
-      now: createdAt
-    )
-    guard elapsedSeconds < durationSeconds else {
-      throw ScoringPersistenceError.goalUnavailable
-    }
+      let context = GameScoringContext.resolve(
+        phase: snapshot.currentPhase, countdown: game.countdown,
+        isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
+        lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: createdAt),
+      context == (requestedContext ?? .livePeriod(number: snapshot.currentPhase.periodNumber)),
+      let targetPeriod = snapshot.periods.first(where: { $0.number == context.periodNumber })
+    else { throw ScoringPersistenceError.goalUnavailable }
+    let elapsedSeconds = context.isLate ? targetPeriod.durationSeconds : game.countdown.projection(
+      durationSeconds: targetPeriod.durationSeconds, now: createdAt
+    ).elapsedSeconds
 
     let centrePassTeamID = resolvedCentrePassTeamID(
       game.centrePassTeamID,
@@ -825,10 +832,11 @@ extension ScoringFeature {
       Goal(
         id: goalID,
         gameID: gameID,
-        gamePeriodID: gamePeriodID,
+        gamePeriodID: targetPeriod.id,
         centrePassTeamID: centrePassTeamID,
         teamID: teamID,
         elapsedSeconds: elapsedSeconds,
+        isLate: context.isLate,
         points: points,
         createdAt: createdAt
       )

@@ -14,6 +14,7 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
     var teamBScore: Int
     var timerEndsAt: Date?
     var isAwaitingCentrePassConfirmation = false
+    var lateScoringPeriodNumber: Int?
   }
 
   var gameID: UUID
@@ -33,6 +34,11 @@ nonisolated extension GameActivityAttributes {
 
 #if os(iOS)
 nonisolated extension GameActivityAttributes.ContentState {
+  var scoringContext: GameScoringContext? {
+    GameScoringContext.resolve(phase: phase, countdown: countdown,
+      isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: lateScoringPeriodNumber)
+  }
   var isInBreak: Bool { phase.isBreak }
   var period: Int { phase.periodNumber }
   var countdown: GameCountdown { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
