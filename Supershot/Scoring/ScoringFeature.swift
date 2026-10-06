@@ -68,7 +68,8 @@ struct ScoringFeature {
     var teamB: Team
     var teamBScore = 0
     var timerEndsAt: Date?
-    var presentationDetent: PresentationDetent = .height(80)
+    var presentationDetent: PresentationDetent = .height(84)
+    var detents: [PresentationDetent] = [.height(84), .height(200)]
 
     var phases: [GamePhase] {
       gamePhases(for: periods)
