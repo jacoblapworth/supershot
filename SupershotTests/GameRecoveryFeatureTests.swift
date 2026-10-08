@@ -33,7 +33,7 @@ extension SupershotTestSuite {
             teamAID: UUID(-1),
             teamBID: UUID(-2),
             swapSides: true,
-            currentPhaseIndex: 4,
+            currentPhaseIndex: 2,
             elapsedSeconds: 42,
             timerEndsAt: nil
           )
@@ -43,7 +43,7 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-3),
             teamBID: UUID(-4),
-            currentPhaseIndex: 2,
+            currentPhaseIndex: 1,
             elapsedSeconds: 75,
             timerEndsAt: nil
           )

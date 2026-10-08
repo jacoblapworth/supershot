@@ -71,7 +71,7 @@ extension SupershotTestSuite {
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
       let content = GameActivityAttributes.ContentState(
-        centrePassTeamID: UUID(1), currentDurationSeconds: duration,
+        centrePassTeamID: UUID(1),
         elapsedSeconds: elapsed, phaseIndex: snapshot.game.currentPhaseIndex,
         phase: snapshot.currentPhase, teamAScore: 0, teamBScore: 0,
         isAwaitingCentrePassConfirmation: pending)

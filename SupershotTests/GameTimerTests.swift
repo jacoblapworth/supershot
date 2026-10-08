@@ -79,11 +79,7 @@ extension SupershotTestSuite {
 
     @Test(arguments: [1_169.999, 1_170, 1_170.001])
     func breakBoundaryReconciliationStopsAtPausedPeriod(timestamp: Double) {
-      let timeline = GameTimeline(phases: [
-        .period(number: 1, durationSeconds: 900),
-        .breakTime(afterPeriod: 1, durationSeconds: 120),
-        .period(number: 2, durationSeconds: 900),
-      ])!
+      let timeline = GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120))!
       var progress = GameProgress(phaseIndex: 0,
         countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1_050)),
         isAwaitingCentrePassConfirmation: false)
@@ -96,9 +92,7 @@ extension SupershotTestSuite {
 
     @Test
     func omittedBreakDoesNotAutomaticallyStartNextPeriod() {
-      let timeline = GameTimeline(phases: [
-        .period(number: 1, durationSeconds: 900), .period(number: 2, durationSeconds: 900),
-      ])!
+      let timeline = GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2))!
       var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
         isAwaitingCentrePassConfirmation: false)
       progress.complete(in: timeline, boundary: Date(timeIntervalSince1970: 1_000))
@@ -106,30 +100,17 @@ extension SupershotTestSuite {
       #expect(progress.countdown == GameCountdown())
       #expect(progress.isAwaitingCentrePassConfirmation)
       let state = GameActivityAttributes.ContentState(
-        centrePassTeamID: UUID(1), currentDurationSeconds: 900, elapsedSeconds: 0,
+        centrePassTeamID: UUID(1), elapsedSeconds: 0,
         phaseIndex: 1, phase: timeline.phases[1], teamAScore: 0, teamBScore: 0)
       #expect(!state.isInBreak)
       #expect(state.period == 2)
     }
 
     @Test
-    func invalidTimelinesAreRejected() {
-      #expect(GameTimeline(phases: []) == nil)
-      #expect(GameTimeline(phases: [.period(number: 2, durationSeconds: 900)]) == nil)
-      #expect(GameTimeline(phases: [.period(number: 1, durationSeconds: 0)]) == nil)
-      #expect(GameTimeline(phases: [.period(number: 1, durationSeconds: 900),
-        .breakTime(afterPeriod: 1, durationSeconds: 120)]) == nil)
-    }
-
-    @Test
     func alarmPlanIncludesFollowingBreakAndOmitsZeroBreak() {
       let end = Date(timeIntervalSince1970: 1_050)
       for duration in [0, 120] {
-        let timeline = GameTimeline(phases: [
-          .period(number: 1, durationSeconds: 900),
-          .breakTime(afterPeriod: 1, durationSeconds: duration),
-          .period(number: 2, durationSeconds: 900),
-        ])!
+        let timeline = GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: duration))!
         let progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: end),
           isAwaitingCentrePassConfirmation: false)
         let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
@@ -138,7 +119,7 @@ extension SupershotTestSuite {
         #expect(plan.first?.phaseIndex == 0)
         if duration > 0 {
           #expect(plan.last?.date == end.addingTimeInterval(120))
-          #expect(plan.last?.phase == .breakTime(afterPeriod: 1, durationSeconds: 120))
+          #expect(plan.last?.phase == .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120))
         }
         #expect(ScheduledGameAlarm.plan(timeline: timeline,
           progress: GameProgress(phaseIndex: 0, countdown: GameCountdown(),

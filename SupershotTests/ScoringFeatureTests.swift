@@ -200,15 +200,15 @@ extension SupershotTestSuite {
     @Test
     func gameTimelineIsFourQuartersWithBreaksBetweenThem() {
       expectNoDifference(
-        gamePhases(for: Self.periods()),
+        GameTimeline(periods: Self.periods())!.phases,
         [
-          .period(number: 1, durationSeconds: 900),
-          .breakTime(afterPeriod: 1, durationSeconds: 120),
-          .period(number: 2, durationSeconds: 900),
-          .breakTime(afterPeriod: 2, durationSeconds: 300),
-          .period(number: 3, durationSeconds: 900),
-          .breakTime(afterPeriod: 3, durationSeconds: 120),
-          .period(number: 4, durationSeconds: 900),
+          .period(testGamePeriodReference(number: 1), durationSeconds: 900),
+          .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120),
+          .period(testGamePeriodReference(number: 2), durationSeconds: 900),
+          .breakTime(after: testGamePeriodReference(number: 2), durationSeconds: 300),
+          .period(testGamePeriodReference(number: 3), durationSeconds: 900),
+          .breakTime(after: testGamePeriodReference(number: 3), durationSeconds: 120),
+          .period(testGamePeriodReference(number: 4), durationSeconds: 900),
         ]
       )
     }
@@ -227,11 +227,11 @@ extension SupershotTestSuite {
       let client = GameTimerClient.live
 
       expectNoDifference(
-        gamePhases(for: periods),
+        GameTimeline(periods: periods)!.phases,
         [
-          .period(number: 1, durationSeconds: 1_800),
-          .breakTime(afterPeriod: 1, durationSeconds: 600),
-          .period(number: 2, durationSeconds: 1_800),
+          .period(testGamePeriodReference(number: 1), durationSeconds: 1_800),
+          .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 600),
+          .period(testGamePeriodReference(number: 2), durationSeconds: 1_800),
         ]
       )
 
@@ -263,7 +263,7 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.currentPhaseIndex, 1)
       expectNoDifference(
         snapshot.currentPhase,
-        .breakTime(afterPeriod: 1, durationSeconds: 120)
+        .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120)
       )
       expectNoDifference(snapshot.game.elapsedSeconds, 0)
       expectNoDifference(
@@ -292,7 +292,7 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.currentPhaseIndex, 2)
       expectNoDifference(
         snapshot.currentPhase,
-        .period(number: 2, durationSeconds: 900)
+        .period(testGamePeriodReference(number: 2), durationSeconds: 900)
       )
       expectNoDifference(snapshot.game.countdown, GameCountdown())
       expectNoDifference(snapshot.game.isAwaitingCentrePassConfirmation, true)
@@ -316,7 +316,7 @@ extension SupershotTestSuite {
         return try await client.skip(UUID(3), 0)
       }
 
-      expectNoDifference(snapshot.game.currentPhaseIndex, 2)
+      expectNoDifference(snapshot.game.currentPhaseIndex, 1)
       expectNoDifference(snapshot.game.countdown, GameCountdown())
       expectNoDifference(snapshot.game.isAwaitingCentrePassConfirmation, true)
     }

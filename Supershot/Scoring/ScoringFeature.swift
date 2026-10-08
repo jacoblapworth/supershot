@@ -71,12 +71,12 @@ struct ScoringFeature {
     var presentationDetent: PresentationDetent = .height(84)
     var detents: [PresentationDetent] = [.height(84), .height(200)]
 
-    var phases: [GamePhase] {
-      gamePhases(for: periods)
-    }
-
-    var currentPhase: GamePhase {
-      GameTimeline(phases: phases)?.phase(at: currentPhaseIndex) ?? .period(number: 1, durationSeconds: 0)
+    var timeline: GameTimeline { GameTimeline(periods: periods)! }
+    var currentPhase: GamePhase { timeline.phase(at: currentPhaseIndex)! }
+    var activePlayingPeriod: GamePeriod? { timeline.activePlayingPeriod(at: currentPhaseIndex) }
+    var precedingPeriod: GamePeriod? { timeline.precedingPeriod(at: currentPhaseIndex) }
+    var scoringPeriod: GamePeriod? {
+      scoringContext.flatMap { timeline.scoringPeriod(for: $0) }
     }
 
     var countdown: GameCountdown {
@@ -91,7 +91,7 @@ struct ScoringFeature {
       currentPhase.isBreak ? .breakTime : .quarter
     }
 
-    var period: Int { currentPhase.periodNumber }
+    var period: Int { currentPhase.associatedPeriod.number }
     var isTimerRunning: Bool { countdown.isRunning }
     var currentDurationSeconds: Int { currentPhase.durationSeconds }
     var timerProjection: GameCountdown.Projection {
@@ -108,14 +108,13 @@ struct ScoringFeature {
     var canUndoGoal: Bool { canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation) }
 
     var canFinishGame: Bool {
-      guard let timeline = GameTimeline(phases: phases) else { return false }
-      return GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
+      GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
         isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner)
         .isFinalPeriodComplete(in: timeline) && !isShowingLastCentrePassBanner
     }
 
     var canMoveToNextQuarter: Bool {
-      currentPhase.isQuarter
+      currentPhase.isPlayingPeriod
         && !isPeriodComplete
         && !isShowingLastCentrePassBanner
         && !isTransitioningPeriod
@@ -142,7 +141,7 @@ struct ScoringFeature {
     }
 
     var lastCompletedQuarterNumber: Int {
-      currentPhase.isBreak ? period : max(period - 1, 1)
+      precedingPeriod?.number ?? period
     }
 
     var timeRemainingSeconds: Int {
@@ -253,7 +252,7 @@ struct ScoringFeature {
 
       case let .centrePassTeamButtonTapped(teamID):
         guard
-          state.currentPhase.isQuarter,
+          state.currentPhase.isPlayingPeriod,
           !state.isShowingLastCentrePassBanner,
           teamID == state.teamA.id || teamID == state.teamB.id,
           teamID != state.centrePassTeamID
@@ -510,9 +509,7 @@ struct ScoringFeature {
         try await database.write { db in
           let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
           let game = snapshot.game
-          let currentCompletedPeriod = snapshot.currentPhase.isBreak
-            ? snapshot.currentPhase.periodNumber : snapshot.currentPhase.periodNumber - 1
-          guard game.endedAt == nil, currentCompletedPeriod == completedPeriod else {
+          guard game.endedAt == nil, snapshot.precedingPeriod?.number == completedPeriod else {
             throw ScoringPersistenceError.goalUnavailable
           }
           var centrePassTeamID = resolvedCentrePassTeamID(game.centrePassTeamID,
@@ -541,7 +538,7 @@ struct ScoringFeature {
       let result = await Result {
         try await database.write { db in
           let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: endedAt)
+          let game = reconciledGame(snapshot.game, timeline: snapshot.timeline, now: endedAt)
           guard game.endedAt == nil,
             game.progress.isFinalPeriodComplete(in: snapshot.timeline),
             !game.isAwaitingCentrePassConfirmation
@@ -794,7 +791,7 @@ extension ScoringFeature {
     scoringContext requestedContext: GameScoringContext? = nil
   ) throws -> ScoreSnapshot {
     let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: createdAt)
+    let game = reconciledGame(snapshot.game, timeline: snapshot.timeline, now: createdAt)
     let teamAID = snapshot.teamA.id
     let teamBID = snapshot.teamB.id
     // createdAt is the tap/recording time. A queued live tap is not silently converted to a late goal.
@@ -807,8 +804,8 @@ extension ScoringFeature {
         phase: phase, countdown: game.countdown,
         isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
         lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: createdAt),
-      context == (requestedContext ?? .livePeriod(number: phase.periodNumber)),
-      let targetPeriod = snapshot.periods.first(where: { $0.number == context.periodNumber })
+      context == (requestedContext ?? .livePeriod(number: phase.associatedPeriod.number)),
+      let targetPeriod = snapshot.timeline.scoringPeriod(for: context)
     else { throw ScoringPersistenceError.goalUnavailable }
     let elapsedSeconds = context.isLate ? targetPeriod.durationSeconds : game.countdown.projection(
       durationSeconds: targetPeriod.durationSeconds, now: createdAt

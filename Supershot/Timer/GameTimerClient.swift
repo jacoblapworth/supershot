@@ -67,8 +67,8 @@ nonisolated extension GameTimerClient {
         let (didPause, snapshot) = try await database.write { db in
           let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
           let storedGame = storedSnapshot.game
-          let phases = storedSnapshot.phases
-          var game = reconciledGame(storedGame, phases: phases, now: now)
+          let timeline = storedSnapshot.timeline
+          var game = reconciledGame(storedGame, timeline: timeline, now: now)
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex
@@ -82,7 +82,7 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
           game.elapsedSeconds = GameTimerClient.elapsedSeconds(
-            durationSeconds: currentPhase(game, in: phases).durationSeconds,
+            durationSeconds: timeline.phase(at: game.currentPhaseIndex)!.durationSeconds,
             persistedElapsedSeconds: game.elapsedSeconds,
             timerEndsAt: game.timerEndsAt,
             now: now
@@ -111,7 +111,7 @@ nonisolated extension GameTimerClient {
           let storedGame = storedSnapshot.game
           let game = reconciledGame(
             storedGame,
-            phases: storedSnapshot.phases,
+            timeline: storedSnapshot.timeline,
             now: now
           )
           if storedGame != game {
@@ -168,20 +168,20 @@ nonisolated extension GameTimerClient {
         let (didSkip, snapshot) = try await database.write { db in
           let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
           let storedGame = storedSnapshot.game
-          let phases = storedSnapshot.phases
-          var game = reconciledGame(storedGame, phases: phases, now: now)
+          let timeline = storedSnapshot.timeline
+          var game = reconciledGame(storedGame, timeline: timeline, now: now)
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
-            !isFinalPeriodComplete(game, phases: phases)
+            !game.progress.isFinalPeriodComplete(in: timeline)
           else {
             if storedGame != game { try persistTimerState(game, in: db) }
             return (false, try snapshot(db, replacing: game))
           }
 
-          game.elapsedSeconds = currentPhase(game, in: phases).durationSeconds
+          game.elapsedSeconds = timeline.phase(at: game.currentPhaseIndex)!.durationSeconds
           game.timerEndsAt = nil
-          advanceCompletedPhase(&game, phases: phases, boundary: now)
+          game.progress.complete(in: timeline, boundary: now)
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
@@ -208,9 +208,9 @@ nonisolated extension GameTimerClient {
         let (didStart, snapshot) = try await database.write { db in
           let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
           let storedGame = storedSnapshot.game
-          let phases = storedSnapshot.phases
-          var game = reconciledGame(storedGame, phases: phases, now: now)
-          let phase = currentPhase(game, in: phases)
+          let timeline = storedSnapshot.timeline
+          var game = reconciledGame(storedGame, timeline: timeline, now: now)
+          let phase = timeline.phase(at: game.currentPhaseIndex)!
           guard
             game.endedAt == nil,
             expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
@@ -222,7 +222,7 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
 
-          if phase.isQuarter { game.lateScoringPeriodNumber = nil }
+          if phase.isPlayingPeriod { game.lateScoringPeriodNumber = nil }
           game.timerEndsAt = GameTimerClient.endDate(
             durationSeconds: phase.durationSeconds,
             elapsedSeconds: game.elapsedSeconds,
@@ -271,29 +271,15 @@ private nonisolated func phaseCount(for gameID: Game.ID) async -> Int {
     let periods = try GamePeriod
       .where { $0.gameID.eq(gameID) }
       .fetchAll(db)
-    return gamePhases(for: periods).count
+    return GameTimeline(periods: periods)?.phases.count ?? 0
   }) ?? 0
 }
 
-nonisolated func reconciledGame(_ storedGame: Game, phases: [GamePhase], now: Date) -> Game {
-  guard storedGame.endedAt == nil, let timeline = GameTimeline(phases: phases) else { return storedGame }
+nonisolated func reconciledGame(_ storedGame: Game, timeline: GameTimeline, now: Date) -> Game {
+  guard storedGame.endedAt == nil else { return storedGame }
   var game = storedGame
   game.progress.reconcile(in: timeline, now: now)
   return game
-}
-
-private nonisolated func advanceCompletedPhase(_ game: inout Game, phases: [GamePhase], boundary: Date) {
-  guard let timeline = GameTimeline(phases: phases) else { return }
-  game.progress.complete(in: timeline, boundary: boundary)
-}
-
-private nonisolated func currentPhase(_ game: Game, in phases: [GamePhase]) -> GamePhase {
-  phases[game.currentPhaseIndex]
-}
-
-private nonisolated func isFinalPeriodComplete(_ game: Game, phases: [GamePhase]) -> Bool {
-  guard let timeline = GameTimeline(phases: phases) else { return false }
-  return game.progress.isFinalPeriodComplete(in: timeline)
 }
 
 private nonisolated func persistTimerState(_ game: Game, in db: Database) throws {

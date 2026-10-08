@@ -46,7 +46,8 @@ extension SupershotTestSuite {
       }
       #expect(periods.map(\.position) == [0, 1, 2, 3])
       #expect(periods.allSatisfy { $0.gameID == game.id && $0.durationSeconds == 600 })
-      #expect(periods.map(\.breakAfterDurationSeconds) == [0, 0, 0, nil])
+      #expect(periods.map(\.breakAfterDurationSeconds) == [nil, nil, nil, nil])
+      #expect(GameTimeline(periods: periods)?.phases.count == 4)
       #expect(try await GameEntityQuery().entities(for: [game.id, UUID(-99)]).map(\.id) == [game.id])
       #expect(try await GameEntityQuery().entities(matching: "Ravens").map(\.id) == [game.id])
       #expect(try await GameEntityQuery().entities(matching: "Missing").isEmpty)

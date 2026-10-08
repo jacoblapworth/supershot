@@ -12,8 +12,6 @@ import OSLog
 import SQLiteData
 import CasePaths
 
-extension GameTeamSlot: QueryBindable {}
-
 @Table
 nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
@@ -67,30 +65,22 @@ nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
   var durationSeconds: Int
   var breakAfterDurationSeconds: Int?
 
+  init(
+    id: UUID,
+    gameID: Game.ID,
+    position: Int,
+    durationSeconds: Int,
+    breakAfterDurationSeconds: Int? = nil
+  ) {
+    self.id = id
+    self.gameID = gameID
+    self.position = position
+    self.durationSeconds = durationSeconds
+    self.breakAfterDurationSeconds = breakAfterDurationSeconds == 0 ? nil : breakAfterDurationSeconds
+  }
+
   /// User facing number presentation
   var number: Int { position + 1 }
-}
-
-nonisolated func gamePhases(for periods: [GamePeriod]) -> [GamePhase] {
-  periods
-    .sorted { ($0.position, $0.id) < ($1.position, $1.id) }
-    .flatMap { period in
-      var phases = [
-        GamePhase.period(
-          number: period.number,
-          durationSeconds: period.durationSeconds
-        )
-      ]
-      if let breakDurationSeconds = period.breakAfterDurationSeconds {
-        phases.append(
-          .breakTime(
-            afterPeriod: period.number,
-            durationSeconds: breakDurationSeconds
-          )
-        )
-      }
-      return phases
-    }
 }
 
 extension Game {
@@ -202,7 +192,7 @@ extension DependencyValues {
           "position" INTEGER NOT NULL CHECK ("position" >= 0),
           "durationSeconds" INTEGER NOT NULL CHECK ("durationSeconds" > 0),
           "breakAfterDurationSeconds" INTEGER CHECK (
-            "breakAfterDurationSeconds" >= 0
+            "breakAfterDurationSeconds" > 0
           ),
           UNIQUE("gameID", "position"),
           UNIQUE("id", "gameID")

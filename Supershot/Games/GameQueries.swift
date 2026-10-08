@@ -126,9 +126,9 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
 /// GameSnapshot aggregates the core records for a game so that higher–level
 /// queries, computed properties, and presentation logic can be performed without
 /// repeatedly hitting the database. It bundles the `Game` row itself, the
-/// participating `Team`s, all `GamePeriod`s (quarters and breaks), and every
+/// participating `Team`s, all playing `GamePeriod`s with their break durations, and every
 /// `Goal` that has been recorded for the game. From those inputs it derives
-/// useful, read‑only facts such as the current phase, current period, whether the
+/// useful, read‑only facts such as the current phase, scoring period, whether the
 /// final period has completed, and each team’s total score.
 ///
 nonisolated struct GameSnapshot: Equatable, Sendable {
@@ -138,14 +138,30 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
   let teamA: Team
   let teamB: Team
 
-  var phases: [GamePhase] { gamePhases(for: periods) }
+  var timeline: GameTimeline { GameTimeline(periods: periods)! }
 
-  var timeline: GameTimeline { GameTimeline(phases: phases)! }
+  var phases: [GamePhase] { timeline.phases }
 
   var currentPhase: GamePhase { timeline.phase(at: game.currentPhaseIndex)! }
 
-  var currentPeriod: GamePeriod? {
-    periods.first { $0.number == currentPhase.periodNumber }
+  var activePlayingPeriod: GamePeriod? {
+    timeline.activePlayingPeriod(at: game.currentPhaseIndex)
+  }
+
+  var precedingPeriod: GamePeriod? {
+    timeline.precedingPeriod(at: game.currentPhaseIndex)
+  }
+
+  var scoringContext: GameScoringContext? {
+    GameScoringContext.resolve(
+      phase: currentPhase, countdown: game.countdown,
+      isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: game.lateScoringPeriodNumber
+    )
+  }
+
+  var scoringPeriod: GamePeriod? {
+    scoringContext.flatMap { timeline.scoringPeriod(for: $0) }
   }
 
   var isFinalPeriodComplete: Bool {
@@ -188,7 +204,7 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
       .order { ($0.position, $0.id) }
       .fetchAll(db)
     guard
-      let timeline = GameTimeline(phases: gamePhases(for: periods)),
+      let timeline = GameTimeline(periods: periods),
       timeline.phase(at: game.currentPhaseIndex) != nil
     else {
       throw GameQueryError.periodsNotFound
@@ -252,12 +268,11 @@ nonisolated struct GamesRequest: FetchKeyRequest {
 
         let gameGoals = goalsByGame[game.id, default: []]
         let gamePeriods = periodsByGame[game.id, default: []]
-        let phases = gamePhases(for: gamePeriods)
-        guard let timeline = GameTimeline(phases: phases),
+        guard let timeline = GameTimeline(periods: gamePeriods),
           let currentPhase = timeline.phase(at: game.currentPhaseIndex)
         else { return nil }
         return GameListItem(
-          currentQuarter: currentPhase.periodNumber,
+          currentQuarter: currentPhase.associatedPeriod.number,
           endedAt: game.endedAt,
           id: game.id,
           periods: gamePeriods,
@@ -439,7 +454,7 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   let playedPeriod = snapshot.game.endedAt == nil
     ? min(
       max(
-        snapshot.currentPhase.periodNumber,
+        snapshot.currentPhase.associatedPeriod.number,
         snapshot.goals.compactMap { periodsByID[$0.gamePeriodID]?.number }.max() ?? 1
       ),
       maximumPeriod

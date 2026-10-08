@@ -18,12 +18,12 @@ struct GamePhaseLabel: View {
   
   private var label: String {
     switch phase {
-    case .period(let number, _):
+    case .period(let period, _):
       switch size {
       case .short:
-        return "Q\(number)"
+        return "Q\(period.number)"
       case .long:
-        return "Quarter \(number)"
+        return "Quarter \(period.number)"
       }
     case .breakTime:
       switch size {
@@ -41,5 +41,10 @@ struct GamePhaseLabel: View {
 }
 
 #Preview {
-  GamePhaseLabel(phase: .period(number: 1, durationSeconds: 60))
+  GamePhaseLabel(
+    phase: .period(
+      GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, number: 1),
+      durationSeconds: 60
+    )
+  )
 }

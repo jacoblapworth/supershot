@@ -55,3 +55,10 @@ nonisolated func testGamePeriods(
     )
   }
 }
+
+nonisolated func testGamePeriodReference(
+  number: Int,
+  gameID: Game.ID = UUID(3)
+) -> GamePeriodReference {
+  GamePeriodReference(id: testGamePeriodID(gameID: gameID, position: number - 1), number: number)
+}

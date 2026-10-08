@@ -395,10 +395,12 @@ private extension GameActivityAttributes {
 private extension GameActivityAttributes.ContentState {
   static let pausedPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
-    currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
-    phase: .period(number: 2, durationSeconds: 900),
+    phase: .period(
+      GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, number: 2),
+      durationSeconds: 900
+    ),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
@@ -406,10 +408,12 @@ private extension GameActivityAttributes.ContentState {
 
   static let runningPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
-    currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
-    phase: .period(number: 2, durationSeconds: 900),
+    phase: .period(
+      GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, number: 2),
+      durationSeconds: 900
+    ),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: Date.now.addingTimeInterval(655)
@@ -417,10 +421,12 @@ private extension GameActivityAttributes.ContentState {
 
   static let endedPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
-    currentDurationSeconds: 900,
     elapsedSeconds: 900,
     phaseIndex: 2,
-    phase: .period(number: 2, durationSeconds: 900),
+    phase: .period(
+      GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!, number: 2),
+      durationSeconds: 900
+    ),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
