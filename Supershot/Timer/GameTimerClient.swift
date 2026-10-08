@@ -78,6 +78,7 @@ nonisolated extension GameTimerClient {
           }
 
           guard game.timerEndsAt != nil else {
+            if storedGame != game { try persistTimerState(game, in: db) }
             return (false, try snapshot(db, replacing: game))
           }
           game.elapsedSeconds = GameTimerClient.elapsedSeconds(

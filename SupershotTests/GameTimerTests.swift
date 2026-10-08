@@ -341,6 +341,30 @@ extension SupershotTestSuite {
       }
     }
 
+    @Test(arguments: [nil, 1, 2] as [Int?])
+    func pauseAtExpiredBreakPersistsReconciledProgress(expectedPhaseIndex: Int?) async throws {
+      var state = Self.scoringState()
+      state.currentPhaseIndex = 1
+      state.periods[0].breakAfterDurationSeconds = 120
+      state.isShowingLastCentrePassBanner = true
+      state.timerEndsAt = Date(timeIntervalSince1970: 1_000)
+      let seedStore = Self.makeScoringStore(state: state)
+      let database = seedStore.dependencies.defaultDatabase
+
+      try await withDependencies {
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.defaultDatabase = database
+      } operation: {
+        let paused = try await GameTimerClient.live.pause(UUID(3), expectedPhaseIndex)
+        let stored = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect(paused.game.currentPhaseIndex == 2)
+        #expect(paused.game.timerEndsAt == nil)
+        #expect(paused.game.elapsedSeconds == 0)
+        #expect(paused.game.isAwaitingCentrePassConfirmation)
+        expectNoDifference(stored.game, paused.game)
+      }
+    }
+
     @Test
     func unavailableSystemPresentationsDoNotRollBackTimer() async throws {
       let seedStore = Self.makeScoringStore()

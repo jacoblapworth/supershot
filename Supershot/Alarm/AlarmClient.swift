@@ -40,7 +40,7 @@ nonisolated extension AlarmClient {
     Self(
       authorise: { try await AlarmManager.shared.requestAuthorization() },
       scheduleAlarm: { snapshot, requestsAuthorization in
-        guard let timerEndsAt = snapshot.game.timerEndsAt else { return false }
+        guard snapshot.game.timerEndsAt != nil else { return false }
         let manager = AlarmManager.shared
         var authorizationState = manager.authorizationState
         if authorizationState == .notDetermined,
@@ -142,7 +142,7 @@ private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
   var phaseIndex: Int
 }
 
-extension ScheduledGameAlarm {
+nonisolated extension ScheduledGameAlarm {
   var title: LocalizedStringResource {
     switch phase {
     case let .period(number, _): "Quarter \(number) ended."
