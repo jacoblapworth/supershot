@@ -132,7 +132,7 @@ struct ScoringView: View {
               goalButton(for: store.courtLayout.right)
             }
             .environment(\.layoutDirection, .leftToRight)
-          } else if store.currentPhase.isQuarter && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner {
+          } else if store.currentPhase.isPlayingPeriod && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner {
             Button(action: { store.send(.startTimerButtonTapped) }) {
               Label("Start Quarter", systemImage: "play.fill")
                 .fontWeight(.medium)

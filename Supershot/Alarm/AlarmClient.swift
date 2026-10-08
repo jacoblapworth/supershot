@@ -145,7 +145,7 @@ private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
 nonisolated extension ScheduledGameAlarm {
   var title: LocalizedStringResource {
     switch phase {
-    case let .period(number, _): "Quarter \(number) ended."
+    case let .period(period, _): "Quarter \(period.number) ended."
     case .breakTime: "Break ended."
     }
   }
@@ -192,7 +192,6 @@ private nonisolated extension GameActivityAttributes.ContentState {
   init(snapshot: GameSnapshot) {
     self.init(
       centrePassTeamID: snapshot.game.centrePassTeamID ?? snapshot.teamA.id,
-      currentDurationSeconds: snapshot.currentPhase.durationSeconds,
       elapsedSeconds: snapshot.game.elapsedSeconds,
       phaseIndex: snapshot.game.currentPhaseIndex,
       phase: snapshot.currentPhase,

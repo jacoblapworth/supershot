@@ -6,7 +6,6 @@ import SwiftUI
 nonisolated struct GameActivityAttributes: ActivityAttributes {
   nonisolated struct ContentState: Codable, Hashable, Sendable {
     var centrePassTeamID: UUID
-    var currentDurationSeconds: Int
     var elapsedSeconds: Int
     var phaseIndex: Int
     var phase: GamePhase
@@ -41,7 +40,7 @@ nonisolated extension GameActivityAttributes.ContentState {
   }
   var isInBreak: Bool { phase.isBreak }
   var canControlTimer: Bool { !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation) }
-  var period: Int { phase.periodNumber }
+  var period: Int { phase.associatedPeriod.number }
   var countdown: GameCountdown { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
   var isComplete: Bool { countdown.projection(durationSeconds: phase.durationSeconds).status == .complete }
   var remainingSeconds: Int { countdown.projection(durationSeconds: phase.durationSeconds).remainingSeconds }

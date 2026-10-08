@@ -45,7 +45,6 @@ extension SupershotTestSuite {
       }
       let content = GameActivityAttributes.ContentState(
         centrePassTeamID: snapshot.game.centrePassTeamID!,
-        currentDurationSeconds: snapshot.currentPhase.durationSeconds,
         elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
         phase: snapshot.currentPhase, teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore,
         timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
@@ -115,16 +114,25 @@ extension SupershotTestSuite {
           $0.timerEndsAt = #bind(endsAt)
         }.execute(db)
         try GamePeriod.find(testGamePeriodID(gameID: game.id, position: 0)).update {
-          $0.breakAfterDurationSeconds = #bind(0)
+          $0.breakAfterDurationSeconds = #bind(nil as Int?)
         }.execute(db)
       }
       let client = GameTimerClient.live
       let completed = try await (skip ? client.skip(game.id, 0) : client.reconcile(game.id))
-      expectNoDifference(completed.game.currentPhaseIndex, 2)
+      expectNoDifference(completed.game.currentPhaseIndex, 1)
       expectNoDifference(completed.game.lateScoringPeriodNumber, 1)
       #expect(completed.game.isAwaitingCentrePassConfirmation)
+      await #expect(throws: (any Error).self) {
+        try await database.write {
+          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 0,
+            goalID: UUID(9), createdAt: Date(timeIntervalSince1970: 1_000),
+            scoringContext: .completedPeriod(number: 1))
+        }
+      }
+      let staleTimer = try await client.startOrResume(game.id, 0, false)
+      expectNoDifference(staleTimer.snapshot.game.countdown, completed.game.countdown)
       _ = try await database.write {
-        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 2,
+        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 1,
           goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
           scoringContext: .completedPeriod(number: 1))
       }

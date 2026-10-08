@@ -7,35 +7,37 @@
 
 import Foundation
 
-/// Phase of a game
+/// Stable identity and display number of a playing period in a derived phase.
+nonisolated struct GamePeriodReference: Equatable, Hashable, Codable, Sendable {
+  let id: UUID
+  let number: Int
+}
+
+/// A clock segment derived from the game's persisted periods.
 nonisolated enum GamePhase: Equatable, Hashable, Codable, Sendable {
-  case period(number: Int, durationSeconds: Int)
-  case breakTime(afterPeriod: Int, durationSeconds: Int)
-  
+  case period(GamePeriodReference, durationSeconds: Int)
+  case breakTime(after: GamePeriodReference, durationSeconds: Int)
+
   var durationSeconds: Int {
     switch self {
-    case let .period(_, durationSeconds), let .breakTime(_, durationSeconds):
-      max(durationSeconds, 0)
+    case let .period(_, duration), let .breakTime(_, duration): duration
     }
   }
-  
-  var periodNumber: Int {
+
+  /// For a break, this identifies the period that precedes it.
+  var associatedPeriod: GamePeriodReference {
     switch self {
-    case let .period(number, _):
-      number
-    case let .breakTime(afterQuarter, _):
-      afterQuarter
+    case let .period(period, _), let .breakTime(period, _): period
     }
   }
-  
+
   var isBreak: Bool {
-    switch self {
-    case .period: false
-    case .breakTime: true
-    }
+    if case .breakTime = self { true } else { false }
   }
-  
-  var isQuarter: Bool { !isBreak }
+
+  var isPlayingPeriod: Bool {
+    if case .period = self { true } else { false }
+  }
 }
 
 /// A countdown's persisted values. All time-dependent facts come from one projection.
@@ -78,97 +80,6 @@ nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   }
 }
 
-/// An immutable ordered timeline. Optional breaks may be omitted, but periods stay contiguous.
-nonisolated struct GameTimeline: Equatable, Sendable {
-  let phases: [GamePhase]
-
-  init?(phases: [GamePhase]) {
-    guard !phases.isEmpty else { return nil }
-    var nextPeriod = 1
-    var followsPeriod = false
-    for phase in phases {
-      switch phase {
-      case let .period(number, duration):
-        guard number == nextPeriod, duration > 0 else { return nil }
-        nextPeriod += 1
-        followsPeriod = true
-      case let .breakTime(afterPeriod, duration):
-        guard followsPeriod, afterPeriod == nextPeriod - 1, duration >= 0 else { return nil }
-        followsPeriod = false
-      }
-    }
-    guard phases.last?.isQuarter == true else { return nil }
-    self.phases = phases
-  }
-
-  func phase(at index: Int) -> GamePhase? {
-    phases.indices.contains(index) ? phases[index] : nil
-  }
-}
-
-/// Timing transitions are independent of storage, UI, and system presentations.
-nonisolated struct GameProgress: Equatable, Sendable {
-  var phaseIndex: Int
-  var countdown: GameCountdown
-  var isAwaitingCentrePassConfirmation: Bool
-  var lateScoringPeriodNumber: Int?
-
-  func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {
-    phaseIndex == timeline.phases.count - 1
-      && countdown.projection(durationSeconds: timeline.phases[phaseIndex].durationSeconds).status == .complete
-      && !countdown.isRunning
-  }
-
-  mutating func reconcile(in timeline: GameTimeline, now: Date) {
-    guard timeline.phase(at: phaseIndex) != nil else { return }
-    while let boundary = countdown.endsAt, boundary <= now {
-      complete(in: timeline, boundary: boundary)
-    }
-    countdown.elapsedSeconds = countdown.projection(
-      durationSeconds: timeline.phases[phaseIndex].durationSeconds, now: now
-    ).elapsedSeconds
-  }
-
-  mutating func complete(in timeline: GameTimeline, boundary: Date) {
-    guard let phase = timeline.phase(at: phaseIndex) else { return }
-    countdown = GameCountdown(elapsedSeconds: phase.durationSeconds)
-    if phase.isQuarter { lateScoringPeriodNumber = phase.periodNumber }
-    guard phaseIndex + 1 < timeline.phases.count else { return }
-    if phase.isQuarter { isAwaitingCentrePassConfirmation = true }
-    phaseIndex += 1
-    countdown = GameCountdown()
-    let next = timeline.phases[phaseIndex]
-    // Playing periods always wait for an explicit start, even when a break is omitted.
-    if next.isBreak {
-      if next.durationSeconds > 0 {
-        countdown.endsAt = boundary.addingTimeInterval(TimeInterval(next.durationSeconds))
-      } else {
-        complete(in: timeline, boundary: boundary)
-      }
-    }
-  }
-}
-
-nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
-  var date: Date
-  var phase: GamePhase
-  var phaseIndex: Int
-
-  static func plan(timeline: GameTimeline, progress: GameProgress) -> [Self] {
-    guard let phase = timeline.phase(at: progress.phaseIndex), let endsAt = progress.countdown.endsAt else {
-      return []
-    }
-    var result = [Self(date: endsAt, phase: phase, phaseIndex: progress.phaseIndex)]
-    if phase.isQuarter, let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0 {
-      result.append(Self(
-        date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
-        phase: next, phaseIndex: progress.phaseIndex + 1
-      ))
-    }
-    return result
-  }
-}
-
 /// Attribution is separate from the phase whose clock is currently on screen.
 nonisolated enum GameScoringContext: Equatable, Sendable {
   case livePeriod(number: Int)
@@ -192,13 +103,13 @@ nonisolated enum GameScoringContext: Equatable, Sendable {
     now: Date? = nil
   ) -> Self? {
     let timer = countdown.projection(durationSeconds: phase.durationSeconds, now: now)
-    if phase.isQuarter, timer.status == .running, !isAwaitingCentrePassConfirmation {
-      return .livePeriod(number: phase.periodNumber)
+    if phase.isPlayingPeriod, timer.status == .running, !isAwaitingCentrePassConfirmation {
+      return .livePeriod(number: phase.associatedPeriod.number)
     }
     guard let completed = lateScoringPeriodNumber else { return nil }
-    let isCompletedPeriod = phase.isQuarter && phase.periodNumber == completed && timer.status == .complete
-    let isFollowingBreak = phase.isBreak && phase.periodNumber == completed
-    let isWaitingPeriod = phase.isQuarter && phase.periodNumber == completed + 1
+    let isCompletedPeriod = phase.isPlayingPeriod && phase.associatedPeriod.number == completed && timer.status == .complete
+    let isFollowingBreak = phase.isBreak && phase.associatedPeriod.number == completed
+    let isWaitingPeriod = phase.isPlayingPeriod && phase.associatedPeriod.number == completed + 1
       && timer.status == .paused && timer.elapsedSeconds == 0
     return isCompletedPeriod || isFollowingBreak || isWaitingPeriod
       ? .completedPeriod(number: completed) : nil

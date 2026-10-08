@@ -197,12 +197,15 @@ extension SupershotTestSuite {
       #expect(!store.state.isSaving)
     }
 
-    @Test
-    func startGameUsesPersistedTeamsAndGameSpecificBibColors() async throws {
+    @Test(arguments: [0, 60])
+    func startGameUsesPersistedTeamsAndGameSpecificBibColors(breakSeconds: Int) async throws {
       let ravens = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
       let swifts = Team(id: UUID(2), name: "Swifts", colorHex: ColorPalette.red.hex())
       var state = NewGameFeature.State()
       state.firstCentrePass = .teamB
+      state.firstBreakDuration = .init(totalSeconds: breakSeconds)
+      state.halfTimeDuration = .init(totalSeconds: breakSeconds)
+      state.secondBreakDuration = .init(totalSeconds: breakSeconds)
       state.location = .loaded(
         GameLocation(
           latitude: 51.556,
@@ -252,7 +255,10 @@ extension SupershotTestSuite {
       expectNoDifference(game?.teamABibColorHex, "#AF52DE")
       expectNoDifference(game?.teamBBibColorHex, "#FF2D55")
       expectNoDifference(periods.map(\.durationSeconds), [480, 480, 480, 480])
-      expectNoDifference(periods.map(\.breakAfterDurationSeconds), [60, 60, 60, nil])
+      let storedBreak: Int? = breakSeconds == 0 ? nil : breakSeconds
+      expectNoDifference(periods.map(\.breakAfterDurationSeconds), [storedBreak, storedBreak, storedBreak, nil])
+      let timeline = try #require(GameTimeline(periods: periods))
+      #expect(timeline.phases.count == (breakSeconds == 0 ? 4 : 7))
       expectNoDifference(
         game?.location,
         GameLocation(

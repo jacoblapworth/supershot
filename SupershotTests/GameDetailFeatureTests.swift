@@ -201,7 +201,7 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
-            currentPhaseIndex: 4
+            currentPhaseIndex: 2
           )
           periods[0]
           periods[1]
