@@ -541,7 +541,7 @@ struct ScoringFeature {
       let result = await Result {
         try await database.write { db in
           let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: now)
+          let game = reconciledGame(snapshot.game, phases: snapshot.phases, now: endedAt)
           guard game.endedAt == nil,
             game.progress.isFinalPeriodComplete(in: snapshot.timeline),
             !game.isAwaitingCentrePassConfirmation
@@ -654,6 +654,11 @@ struct ScoringFeature {
     return .run { send in
       let result = await Result {
         try await database.write { db in
+          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+          let game = snapshot.game
+          guard game.endedAt == nil,
+            !game.isAwaitingCentrePassConfirmation || snapshot.canUndoDuringConfirmation
+          else { throw ScoringPersistenceError.goalUnavailable }
           let latestGoal = try Goal
             .where { $0.gameID.eq(gameID) }
             .order { ($0.createdAt.desc(), $0.id.desc()) }
@@ -661,9 +666,6 @@ struct ScoringFeature {
 
           if let latestGoal {
             try Goal.find(latestGoal.id).delete().execute(db)
-            guard let game = try Game.find(gameID).fetchOne(db), game.endedAt == nil else {
-              throw ScoringPersistenceError.gameNotFound
-            }
             let centrePassTeamID = resolvedCentrePassTeamID(
               game.centrePassTeamID,
               teamAID: teamAID,
@@ -800,11 +802,12 @@ extension ScoringFeature {
       game.endedAt == nil,
       teamID == teamAID || teamID == teamBID,
       game.currentPhaseIndex == expectedPhaseIndex,
+      let phase = snapshot.timeline.phase(at: game.currentPhaseIndex),
       let context = GameScoringContext.resolve(
-        phase: snapshot.currentPhase, countdown: game.countdown,
+        phase: phase, countdown: game.countdown,
         isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
         lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: createdAt),
-      context == (requestedContext ?? .livePeriod(number: snapshot.currentPhase.periodNumber)),
+      context == (requestedContext ?? .livePeriod(number: phase.periodNumber)),
       let targetPeriod = snapshot.periods.first(where: { $0.number == context.periodNumber })
     else { throw ScoringPersistenceError.goalUnavailable }
     let elapsedSeconds = context.isLate ? targetPeriod.durationSeconds : game.countdown.projection(

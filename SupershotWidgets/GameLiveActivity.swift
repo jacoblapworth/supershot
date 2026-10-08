@@ -344,7 +344,7 @@ private struct TimerControl: View {
   var state: GameActivityAttributes.ContentState
 
   var body: some View {
-    if !isStale, !state.isComplete {
+    if !isStale, state.canControlTimer {
       if state.timerEndsAt != nil {
         Button(
           intent: PauseGameTimerIntent(

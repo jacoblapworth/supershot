@@ -179,6 +179,55 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
+    @Test(arguments: [1_099.999, 1_100, 1_100.001], [false, true])
+    func lateGoalAtBreakBoundaryRejectsStalePhase(timestamp: Double, pending: Bool) async throws {
+      @Dependency(\.defaultDatabase) var database
+      let game = try seed(window: .runningBreak, pending: pending)
+      let record = {
+        try await database.write {
+          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+            expectedPhaseIndex: 1, goalID: UUID(10),
+            createdAt: Date(timeIntervalSince1970: timestamp),
+            scoringContext: .completedPeriod(number: 1))
+        }
+      }
+      if timestamp < 1_100 {
+        _ = try await record()
+      } else {
+        await #expect(throws: (any Error).self) { try await record() }
+      }
+      let stored = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      #expect(stored.goals.count == (timestamp < 1_100 ? 1 : 0))
+      expectNoDifference(stored.game.countdown, game.countdown)
+      expectNoDifference(stored.game.currentPhaseIndex, game.currentPhaseIndex)
+    }
+
+    @Test
+    func staleUndoCannotDeleteEarlierQuartersLateGoalDuringConfirmation() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let game = try seed(window: .runningBreak, pending: true)
+      _ = try await database.write {
+        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+          expectedPhaseIndex: 1, goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
+          scoringContext: .completedPeriod(number: 1))
+      }
+      let before = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: before)) { ScoringFeature() }
+      #expect(store.state.canUndoGoal)
+      try await database.write { db in
+        try Game.find(game.id).update {
+          $0.currentPhaseIndex = 3
+          $0.lateScoringPeriodNumber = #bind(2)
+        }.execute(db)
+      }
+      let advanced = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      await store.send(.undoButtonTapped)
+      await store.receive { if case .undoResponse(.failure) = $0 { true } else { false } }
+      let after = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      expectNoDifference(after, advanced)
+      await store.finish()
+    }
+
     @Test
     func finishRaceCannotDeleteALateGoal() async throws {
       @Dependency(\.defaultDatabase) var database
