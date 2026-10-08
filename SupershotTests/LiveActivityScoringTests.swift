@@ -55,6 +55,36 @@ extension SupershotTestSuite {
       #expect(snapshot.game.centrePassTeamID == UUID(1))
     }
 
+    @Test(arguments: [false, true], [(false, false), (false, true), (true, false), (true, true)])
+    func timerControlAvailabilityMatchesResumeIntent(isBreak: Bool, confirmationAndCompletion: (Bool, Bool)) async throws {
+      let (pending, complete) = confirmationAndCompletion
+      @Dependency(\.defaultDatabase) var database
+      try seedGame(reason: isBreak ? "break" : "paused")
+      let duration = isBreak ? 120 : 900
+      let elapsed = complete ? duration : 0
+      try await database.write { db in
+        try Game.find(UUID(3)).update {
+          $0.elapsedSeconds = elapsed
+          $0.isAwaitingCentrePassConfirmation = pending
+          $0.timerEndsAt = #bind(nil as Date?)
+        }.execute(db)
+      }
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      let content = GameActivityAttributes.ContentState(
+        centrePassTeamID: UUID(1), currentDurationSeconds: duration,
+        elapsedSeconds: elapsed, phaseIndex: snapshot.game.currentPhaseIndex,
+        phase: snapshot.currentPhase, teamAScore: 0, teamBScore: 0,
+        isAwaitingCentrePassConfirmation: pending)
+      let canResume = !complete && (isBreak || !pending)
+      #expect(content.canControlTimer == canResume)
+      _ = try await ResumeGameTimerIntent(
+        gameID: UUID(3), expectedPhaseIndex: snapshot.game.currentPhaseIndex
+      ).perform()
+      let stored = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      #expect((stored.game.timerEndsAt != nil) == canResume)
+      #expect(stored.game.isAwaitingCentrePassConfirmation == pending)
+    }
+
     private func seedGame(reason: String = "running") throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

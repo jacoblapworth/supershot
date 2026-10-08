@@ -40,6 +40,7 @@ nonisolated extension GameActivityAttributes.ContentState {
       lateScoringPeriodNumber: lateScoringPeriodNumber)
   }
   var isInBreak: Bool { phase.isBreak }
+  var canControlTimer: Bool { !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation) }
   var period: Int { phase.periodNumber }
   var countdown: GameCountdown { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
   var isComplete: Bool { countdown.projection(durationSeconds: phase.durationSeconds).status == .complete }
