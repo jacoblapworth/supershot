@@ -9,10 +9,12 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
     var currentDurationSeconds: Int
     var elapsedSeconds: Int
     var phaseIndex: Int
+    var phase: GamePhase
     var teamAScore: Int
     var teamBScore: Int
     var timerEndsAt: Date?
     var isAwaitingCentrePassConfirmation = false
+    var lateScoringPeriodNumber: Int?
   }
 
   var gameID: UUID
@@ -27,5 +29,21 @@ nonisolated struct GameActivityAttributes: ActivityAttributes {
 nonisolated extension GameActivityAttributes {
   var teamAColor: Color { Color(hex: teamAColorHex) }
   var teamBColor: Color { Color(hex: teamBColorHex) }
+}
+#endif
+
+#if os(iOS)
+nonisolated extension GameActivityAttributes.ContentState {
+  var scoringContext: GameScoringContext? {
+    GameScoringContext.resolve(phase: phase, countdown: countdown,
+      isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: lateScoringPeriodNumber)
+  }
+  var isInBreak: Bool { phase.isBreak }
+  var canControlTimer: Bool { !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation) }
+  var period: Int { phase.periodNumber }
+  var countdown: GameCountdown { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
+  var isComplete: Bool { countdown.projection(durationSeconds: phase.durationSeconds).status == .complete }
+  var remainingSeconds: Int { countdown.projection(durationSeconds: phase.durationSeconds).remainingSeconds }
 }
 #endif

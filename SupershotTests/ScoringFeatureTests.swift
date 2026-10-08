@@ -514,6 +514,25 @@ extension SupershotTestSuite {
       expectNoDifference(state.canFinishGame, true)
     }
 
+    @Test
+    func finishRejectsStaleScreenProgress() async throws {
+      let database = try await Self.seed(Self.game())
+      var state = Self.state()
+      state.currentPhaseIndex = 6
+      state.elapsedSeconds = 900
+      let store = TestStore(initialState: state) { ScoringFeature() } withDependencies: {
+        $0.defaultDatabase = database
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+      }
+      await store.send(.finishGameButtonTapped)
+      await store.receive { if case .finishGameResponse(.failure) = $0 { true } else { false } }
+      let stored = try await database.read { try Game.find(UUID(3)).fetchOne($0) }
+      expectNoDifference(stored?.currentPhaseIndex, 0)
+      expectNoDifference(stored?.elapsedSeconds, 0)
+      expectNoDifference(stored?.endedAt, nil)
+      await store.finish()
+    }
+
     private nonisolated static func game() -> Game {
       Game(
         id: UUID(3),

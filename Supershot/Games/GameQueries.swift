@@ -140,23 +140,24 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
 
   var phases: [GamePhase] { gamePhases(for: periods) }
 
-  var currentPhase: GamePhase {
-    let phases = phases
-    guard !phases.isEmpty else {
-      return .period(number: 1, durationSeconds: 0)
-    }
-    return phases[min(max(game.currentPhaseIndex, 0), phases.count - 1)]
-  }
+  var timeline: GameTimeline { GameTimeline(phases: phases)! }
+
+  var currentPhase: GamePhase { timeline.phase(at: game.currentPhaseIndex)! }
 
   var currentPeriod: GamePeriod? {
     periods.first { $0.number == currentPhase.periodNumber }
   }
 
   var isFinalPeriodComplete: Bool {
-    game.currentPhaseIndex == phases.count - 1
-      && currentPhase.isQuarter
-      && game.elapsedSeconds >= currentPhase.durationSeconds
-      && game.timerEndsAt == nil
+    game.progress.isFinalPeriodComplete(in: timeline)
+  }
+
+  var canUndoDuringConfirmation: Bool {
+    guard let completed = game.lateScoringPeriodNumber,
+      let latest = goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }),
+      latest.isLate
+    else { return false }
+    return periods.first(where: { $0.id == latest.gamePeriodID })?.number == completed
   }
 
   var teamAScore: Int {
@@ -186,7 +187,10 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
       .where { $0.gameID.eq(gameID) }
       .order { ($0.position, $0.id) }
       .fetchAll(db)
-    guard !periods.isEmpty else {
+    guard
+      let timeline = GameTimeline(phases: gamePhases(for: periods)),
+      timeline.phase(at: game.currentPhaseIndex) != nil
+    else {
       throw GameQueryError.periodsNotFound
     }
 
@@ -249,10 +253,9 @@ nonisolated struct GamesRequest: FetchKeyRequest {
         let gameGoals = goalsByGame[game.id, default: []]
         let gamePeriods = periodsByGame[game.id, default: []]
         let phases = gamePhases(for: gamePeriods)
-        guard !phases.isEmpty else { return nil }
-        let currentPhase = phases[
-          min(max(game.currentPhaseIndex, 0), phases.count - 1)
-        ]
+        guard let timeline = GameTimeline(phases: phases),
+          let currentPhase = timeline.phase(at: game.currentPhaseIndex)
+        else { return nil }
         return GameListItem(
           currentQuarter: currentPhase.periodNumber,
           endedAt: game.endedAt,

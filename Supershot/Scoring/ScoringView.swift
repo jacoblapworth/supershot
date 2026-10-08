@@ -79,7 +79,7 @@ struct ScoringView: View {
         } label: {
           Image(systemName: "arrow.uturn.backward")
         }
-        .disabled(!store.canUndo || store.isShowingLastCentrePassBanner)
+        .disabled(!store.canUndoGoal)
         .accessibilityLabel("Undo last goal")
       }
       
@@ -118,7 +118,7 @@ struct ScoringView: View {
               goalButton(for: store.courtLayout.right)
             }
             .environment(\.layoutDirection, .leftToRight)
-          } else {
+          } else if store.currentPhase.isQuarter && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner {
             Button(action: { store.send(.startTimerButtonTapped) }) {
               Label("Start Quarter", systemImage: "play.fill")
                 .fontWeight(.medium)

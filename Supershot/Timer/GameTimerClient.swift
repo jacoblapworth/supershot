@@ -78,6 +78,7 @@ nonisolated extension GameTimerClient {
           }
 
           guard game.timerEndsAt != nil else {
+            if storedGame != game { try persistTimerState(game, in: db) }
             return (false, try snapshot(db, replacing: game))
           }
           game.elapsedSeconds = GameTimerClient.elapsedSeconds(
@@ -221,6 +222,7 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
 
+          if phase.isQuarter { game.lateScoringPeriodNumber = nil }
           game.timerEndsAt = GameTimerClient.endDate(
             durationSeconds: phase.durationSeconds,
             elapsedSeconds: game.elapsedSeconds,
@@ -273,97 +275,30 @@ private nonisolated func phaseCount(for gameID: Game.ID) async -> Int {
   }) ?? 0
 }
 
-/// Reconciles a persisted Game's timer-related state against the current time and advances phases as needed.
-///
-/// This function takes a snapshot of a stored `Game` and produces an updated copy that reflects
-/// the passage of time up to `now`. It:
-/// - Recomputes `elapsedSeconds` based on the current phase duration, previously persisted elapsed time,
-///   and any active countdown (`timerEndsAt`), using `GameTimerClient.elapsedSeconds`.
-/// - If the countdown has expired (i.e., `timerEndsAt` is in the past or equal to `now`), it repeatedly:
-///   - Marks the current phase as complete by setting `elapsedSeconds` to the phase duration and clearing `timerEndsAt`.
-///   - Advances the game to the next logical phase via `advanceCompletedPhase(_:boundary:)`, using the boundary time
-///     at which the phase completed (the prior `timerEndsAt`).
-///
-/// The result is an in-memory `Game` value that accurately represents the game's timer progression as of `now`,
-/// without persisting any changes. Callers are responsible for persisting the returned state if desired.
-///
-/// - Parameters:
-///   - storedGame: The persisted `Game` value to reconcile. This value is not mutated.
-///   - now: The current wall-clock time used for reconciliation.
-/// - Returns: A new `Game` whose `elapsedSeconds`, `timerEndsAt`, and `currentPhaseIndex` are updated to reflect
-///   the correct state at `now`, potentially having advanced through one or more completed phases.
-/// - Important: This function is pure and does not perform any database I/O; persistence must be handled by the caller.
-/// - SeeAlso: `GameTimerClient.elapsedSeconds(durationSeconds:persistedElapsedSeconds:timerEndsAt:now:)`,
-///            `advanceCompletedPhase(_:boundary:)`
-private nonisolated func reconciledGame(
-  _ storedGame: Game,
-  phases: [GamePhase],
-  now: Date
-) -> Game {
+nonisolated func reconciledGame(_ storedGame: Game, phases: [GamePhase], now: Date) -> Game {
+  guard storedGame.endedAt == nil, let timeline = GameTimeline(phases: phases) else { return storedGame }
   var game = storedGame
-  game.elapsedSeconds = GameTimerClient.elapsedSeconds(
-    durationSeconds: currentPhase(game, in: phases).durationSeconds,
-    persistedElapsedSeconds: game.elapsedSeconds,
-    timerEndsAt: game.timerEndsAt,
-    now: now
-  )
-
-  while let timerEndsAt = game.timerEndsAt, timerEndsAt <= now {
-    game.elapsedSeconds = currentPhase(game, in: phases).durationSeconds
-    game.timerEndsAt = nil
-    advanceCompletedPhase(&game, phases: phases, boundary: timerEndsAt)
-  }
+  game.progress.reconcile(in: timeline, now: now)
   return game
 }
 
-private nonisolated func advanceCompletedPhase(
-  _ game: inout Game,
-  phases: [GamePhase],
-  boundary: Date
-) {
-  switch currentPhase(game, in: phases) {
-  case .period:
-    guard game.currentPhaseIndex + 1 < phases.count else { return }
-    game.isAwaitingCentrePassConfirmation = true
-    game.currentPhaseIndex += 1
-    game.elapsedSeconds = 0
-    let duration = currentPhase(game, in: phases).durationSeconds
-    if duration > 0 {
-      game.timerEndsAt = boundary.addingTimeInterval(TimeInterval(duration))
-    } else {
-      advanceCompletedPhase(&game, phases: phases, boundary: boundary)
-    }
-
-  case .breakTime:
-    game.currentPhaseIndex = Swift.min(
-      game.currentPhaseIndex + 1,
-      phases.count - 1
-    )
-    game.elapsedSeconds = 0
-    game.timerEndsAt = nil
-  }
+private nonisolated func advanceCompletedPhase(_ game: inout Game, phases: [GamePhase], boundary: Date) {
+  guard let timeline = GameTimeline(phases: phases) else { return }
+  game.progress.complete(in: timeline, boundary: boundary)
 }
 
-private nonisolated func currentPhase(
-  _ game: Game,
-  in phases: [GamePhase]
-) -> GamePhase {
-  phases[Swift.min(Swift.max(game.currentPhaseIndex, 0), phases.count - 1)]
+private nonisolated func currentPhase(_ game: Game, in phases: [GamePhase]) -> GamePhase {
+  phases[game.currentPhaseIndex]
 }
 
-private nonisolated func isFinalPeriodComplete(
-  _ game: Game,
-  phases: [GamePhase]
-) -> Bool {
-  let phase = currentPhase(game, in: phases)
-  return game.currentPhaseIndex == phases.count - 1
-    && phase.isQuarter
-    && game.elapsedSeconds >= phase.durationSeconds
-    && game.timerEndsAt == nil
+private nonisolated func isFinalPeriodComplete(_ game: Game, phases: [GamePhase]) -> Bool {
+  guard let timeline = GameTimeline(phases: phases) else { return false }
+  return game.progress.isFinalPeriodComplete(in: timeline)
 }
 
 private nonisolated func persistTimerState(_ game: Game, in db: Database) throws {
   try Game.find(game.id).update {
+    $0.lateScoringPeriodNumber = #bind(game.lateScoringPeriodNumber)
     $0.currentPhaseIndex = game.currentPhaseIndex
     $0.elapsedSeconds = game.elapsedSeconds
     $0.isAwaitingCentrePassConfirmation = game.isAwaitingCentrePassConfirmation
@@ -397,17 +332,8 @@ extension GameTimerClient {
     timerEndsAt: Date?,
     now: Date
   ) -> Int {
-    let durationSeconds = max(durationSeconds, 0)
-    let persistedElapsedSeconds = min(
-      max(persistedElapsedSeconds, 0),
-      durationSeconds
-    )
-    guard let timerEndsAt else { return persistedElapsedSeconds }
-    let remainingSeconds = min(
-      max(Int(ceil(timerEndsAt.timeIntervalSince(now))), 0),
-      durationSeconds
-    )
-    return durationSeconds - remainingSeconds
+    GameCountdown(elapsedSeconds: persistedElapsedSeconds, endsAt: timerEndsAt)
+      .projection(durationSeconds: durationSeconds, now: now).elapsedSeconds
   }
   
   static nonisolated func endDate(
@@ -415,8 +341,6 @@ extension GameTimerClient {
     elapsedSeconds: Int,
     now: Date
   ) -> Date? {
-    let remainingSeconds = max(durationSeconds - elapsedSeconds, 0)
-    guard remainingSeconds > 0 else { return nil }
-    return now.addingTimeInterval(TimeInterval(remainingSeconds))
+    GameCountdown(elapsedSeconds: elapsedSeconds).endDate(durationSeconds: durationSeconds, now: now)
   }
 }

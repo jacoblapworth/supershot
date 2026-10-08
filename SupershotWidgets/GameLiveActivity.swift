@@ -204,21 +204,8 @@ private struct LockScreenGameView: View {
           alignment: .trailing
         )
       }
-      if context.state.isInBreak {
-        HStack {
-          VStack(alignment: .center, spacing: 0) {
-            Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
-              .font(.caption.weight(.semibold))
-              .foregroundStyle(.secondary)
-            TimerText(state: context.state, isStale: context.isStale)
-              .font(.title.bold())
-          }
-          Spacer()
-          TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
-        }
-      } else {
-        GoalControls(context: context)
-      }
+      GoalControls(context: context)
+
     }
     .foregroundStyle(.white)
   }
@@ -312,7 +299,9 @@ private struct GoalButton: View {
     Button(intent: ScoreGoalIntent(
       gameID: context.attributes.gameID,
       teamID: isTeamA ? context.attributes.teamAID : context.attributes.teamBID,
-      expectedPhaseIndex: context.state.phaseIndex
+      expectedPhaseIndex: context.state.phaseIndex,
+      completedPeriodNumber: context.state.scoringContext?.isLate == true
+        ? context.state.scoringContext?.periodNumber : nil
     )) {
       Label("Goal", systemImage: "plus")
         .font(.title3.bold())
@@ -324,10 +313,7 @@ private struct GoalButton: View {
     .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
     .disabled(
       context.isStale
-        || context.state.isComplete
-        || context.state.isInBreak
-        || context.state.timerEndsAt == nil
-        || context.state.isAwaitingCentrePassConfirmation
+        || context.state.scoringContext == nil
     )
   }
 }
@@ -345,6 +331,7 @@ private struct GoalControls: View {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.title.bold())
       }
+      TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
       Spacer()
       GoalButton(context: context, isTeamA: false)
     }
@@ -357,7 +344,7 @@ private struct TimerControl: View {
   var state: GameActivityAttributes.ContentState
 
   var body: some View {
-    if !isStale, !state.isComplete {
+    if !isStale, state.canControlTimer {
       if state.timerEndsAt != nil {
         Button(
           intent: PauseGameTimerIntent(
@@ -406,23 +393,12 @@ private extension GameActivityAttributes {
 }
 
 private extension GameActivityAttributes.ContentState {
-  var isInBreak: Bool { !phaseIndex.isMultiple(of: 2) }
-
-  var period: Int { phaseIndex / 2 + 1 }
-
-  var isComplete: Bool {
-    elapsedSeconds >= currentDurationSeconds
-  }
-
-  var remainingSeconds: Int {
-    max(currentDurationSeconds - elapsedSeconds, 0)
-  }
-
   static let pausedPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil
@@ -433,6 +409,7 @@ private extension GameActivityAttributes.ContentState {
     currentDurationSeconds: 900,
     elapsedSeconds: 245,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: Date.now.addingTimeInterval(655)
@@ -443,6 +420,7 @@ private extension GameActivityAttributes.ContentState {
     currentDurationSeconds: 900,
     elapsedSeconds: 900,
     phaseIndex: 2,
+    phase: .period(number: 2, durationSeconds: 900),
     teamAScore: 18,
     teamBScore: 16,
     timerEndsAt: nil

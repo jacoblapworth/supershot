@@ -40,7 +40,7 @@ nonisolated extension AlarmClient {
     Self(
       authorise: { try await AlarmManager.shared.requestAuthorization() },
       scheduleAlarm: { snapshot, requestsAuthorization in
-        guard let timerEndsAt = snapshot.game.timerEndsAt else { return false }
+        guard snapshot.game.timerEndsAt != nil else { return false }
         let manager = AlarmManager.shared
         var authorizationState = manager.authorizationState
         if authorizationState == .notDetermined,
@@ -52,30 +52,7 @@ nonisolated extension AlarmClient {
         }
 
         cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
-        var alarms = [
-          ScheduledGameAlarm(
-            date: timerEndsAt,
-            phase: snapshot.currentPhase,
-            phaseIndex: snapshot.game.currentPhaseIndex
-          )
-        ]
-        if
-          snapshot.currentPhase.isQuarter,
-          snapshot.game.currentPhaseIndex + 1 < snapshot.phases.count
-            {
-          let breakPhase = snapshot.phases[snapshot.game.currentPhaseIndex + 1]
-          if breakPhase.durationSeconds > 0 {
-            alarms.append(
-              ScheduledGameAlarm(
-                date: timerEndsAt.addingTimeInterval(
-                  TimeInterval(breakPhase.durationSeconds)
-                ),
-                phase: breakPhase,
-                phaseIndex: snapshot.game.currentPhaseIndex + 1
-              )
-            )
-          }
-        }
+        let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.progress)
 
         for alarm in alarms {
           let presentation = AlarmPresentation(
@@ -165,17 +142,11 @@ private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
   var phaseIndex: Int
 }
 
-private nonisolated struct ScheduledGameAlarm {
-  var date: Date
-  var phase: GamePhase
-  var phaseIndex: Int
-
+nonisolated extension ScheduledGameAlarm {
   var title: LocalizedStringResource {
     switch phase {
-    case let .period(number, _):
-      "Quarter \(number) ended."
-    case .breakTime:
-      "Break ended."
+    case let .period(number, _): "Quarter \(number) ended."
+    case .breakTime: "Break ended."
     }
   }
 }
@@ -224,10 +195,12 @@ private nonisolated extension GameActivityAttributes.ContentState {
       currentDurationSeconds: snapshot.currentPhase.durationSeconds,
       elapsedSeconds: snapshot.game.elapsedSeconds,
       phaseIndex: snapshot.game.currentPhaseIndex,
+      phase: snapshot.currentPhase,
       teamAScore: snapshot.teamAScore,
       teamBScore: snapshot.teamBScore,
       timerEndsAt: snapshot.game.timerEndsAt,
-      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation
+      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber
     )
   }
 }
