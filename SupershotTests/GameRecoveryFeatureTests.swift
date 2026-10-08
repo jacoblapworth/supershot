@@ -32,7 +32,7 @@ extension SupershotTestSuite {
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
-            firstQuarterLeftTeam: .teamB,
+            swapSides: true,
             currentPhaseIndex: 4,
             elapsedSeconds: 42,
             timerEndsAt: nil
@@ -92,7 +92,7 @@ extension SupershotTestSuite {
       expectNoDifference(first.canUndo, true)
       expectNoDifference(first.centrePassTeamID, UUID(-1))
       expectNoDifference(first.isTimerRunning, false)
-      expectNoDifference(first.firstQuarterLeftTeam, .teamB)
+      expectNoDifference(first.swapSides, true)
       expectNoDifference(first.courtLayout.left.id, UUID(-2))
       expectNoDifference(first.courtLayout.left.score, 1)
       expectNoDifference(second.period, 2)
@@ -102,7 +102,7 @@ extension SupershotTestSuite {
       expectNoDifference(second.canUndo, true)
       expectNoDifference(second.centrePassTeamID, UUID(-3))
       expectNoDifference(second.isTimerRunning, false)
-      expectNoDifference(second.firstQuarterLeftTeam, .teamA)
+      expectNoDifference(second.swapSides, false)
       expectNoDifference(second.courtLayout.left.id, UUID(-4))
       expectNoDifference(second.courtLayout.right.score, 2)
     }

@@ -53,7 +53,7 @@ struct ScoringFeature {
     var centrePassTeamID: Team.ID
     var currentPhaseIndex = 0
     var elapsedSeconds = 0
-    var firstQuarterLeftTeam = GameTeamSlot.teamA
+    var swapSides = false
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
     var hasShownAlarmUnavailableAlert = false
@@ -136,7 +136,7 @@ struct ScoringFeature {
         score: teamBScore,
         hasCentrePass: centrePassTeamID == teamB.id
       )
-      return firstQuarterLeftTeam.courtLeftTeam(periodNumber: period) == .teamA
+      return period.isMultiple(of: 2) == swapSides
         ? CourtLayout(left: a, right: b)
         : CourtLayout(left: b, right: a)
     }
@@ -171,7 +171,7 @@ struct ScoringFeature {
     case skipPhaseResponse(Result<GameSnapshot, any Error>)
     case startTimerButtonTapped
     case swapSidesButtonTapped
-    case swapSidesResponse(Result<GameTeamSlot, any Error>)
+    case swapSidesResponse(Result<Bool, any Error>)
     case timerTick
     case timerPauseResponse(Result<GameSnapshot, any Error>)
     case timerReconcileResponse(Result<GameSnapshot, any Error>)
@@ -222,20 +222,20 @@ struct ScoringFeature {
               guard let game = try Game.find(gameID).fetchOne(db) else {
                 throw ScoringPersistenceError.gameNotFound
               }
-              let orientation = game.firstQuarterLeftTeam.opponent
+              let swapSides = !game.swapSides
               try Game.find(gameID).update {
-                $0.firstQuarterLeftTeam = #bind(orientation)
+                $0.swapSides = #bind(swapSides)
               }
               .execute(db)
-              return orientation
+              return swapSides
             }
           }
           await send(.swapSidesResponse(result))
         }
 
-      case let .swapSidesResponse(.success(orientation)):
+      case let .swapSidesResponse(.success(swapSides)):
         state.isSavingCourtOrientation = false
-        state.firstQuarterLeftTeam = orientation
+        state.swapSides = swapSides
         return .none
 
       case .swapSidesResponse(.failure):
@@ -456,7 +456,7 @@ struct ScoringFeature {
   }
 
   private func applyTimer(_ game: Game, to state: inout State) {
-    state.firstQuarterLeftTeam = game.firstQuarterLeftTeam
+    state.swapSides = game.swapSides
     state.lateScoringPeriodNumber = game.lateScoringPeriodNumber
     state.currentPhaseIndex = game.currentPhaseIndex
     state.elapsedSeconds = game.elapsedSeconds
