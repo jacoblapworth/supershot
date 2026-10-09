@@ -33,9 +33,6 @@ struct TeamCard: View {
               .font(.headline)
               .lineLimit(2)
               .multilineTextAlignment(.leading)
-            Text("Configure team")
-              .font(.caption)
-              .foregroundStyle(.secondary)
           }
         } else {
           VStack(spacing: 10) {
