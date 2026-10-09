@@ -10,15 +10,11 @@ struct AppView: View {
 
   var body: some View {
     Group {
-      if !store.hasCheckedPermissions {
-        ProgressView()
-          .controlSize(.large)
-          .accessibilityLabel("Preparing Supershot")
-      } else if let onboardingStore = store.scope(
-        state: \.destination?.permissionsOnboarding,
-        action: \.destination.permissionsOnboarding
+      if let welcomeStore = store.scope(
+        state: \.destination?.welcome,
+        action: \.destination.welcome
       ) {
-        PermissionsOnboardingView(store: onboardingStore)
+        WelcomeView(store: welcomeStore)
       } else {
         tabs
       }
@@ -48,13 +44,15 @@ struct AppView: View {
       Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
         GamesHomeView(
           proAccess: store.proAccess,
-          store: store.scope(state: \.games, action: \.games)
+          store: store.scope(state: \.games, action: \.games),
+          isPresentingPaywall: store.destination?.proPaywall != nil
         )
       }
       Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
         TeamsListView(
           proAccess: store.proAccess,
-          store: store.scope(state: \.teams, action: \.teams)
+          store: store.scope(state: \.teams, action: \.teams),
+          isPresentingPaywall: store.destination?.proPaywall != nil
         )
       }
       Tab("Settings", systemImage: "gearshape", value: AppFeature.Tab.settings) {

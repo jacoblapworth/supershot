@@ -39,11 +39,18 @@ import RevenueCat
   
   var body: some Scene {
     WindowGroup {
-      AppView(
-        store: Store(initialState: AppFeature.State()) {
-          AppFeature()
-        }
-      )
+      SupershotRootView()
     }
+  }
+}
+
+/// Retain each window’s store when shared preferences change during onboarding.
+private struct SupershotRootView: View {
+  @State private var store = Store(initialState: AppFeature.State()) {
+    AppFeature()
+  }
+
+  var body: some View {
+    AppView(store: store)
   }
 }

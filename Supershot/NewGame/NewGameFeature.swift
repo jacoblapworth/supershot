@@ -10,9 +10,12 @@ import SQLiteData
 struct NewGameFeature {
   nonisolated enum LocationState: Equatable, Sendable {
     case idle
+    case requesting
+    case denied
+    case restricted
     case loaded(GameLocation)
     case loading
-    case unavailable(canRetry: Bool)
+    case failed
   }
 
   nonisolated enum TeamSide: Equatable, Hashable, Sendable {
@@ -56,6 +59,7 @@ struct NewGameFeature {
 
   @ObservableState
   struct State: Equatable {
+    var alarms = AlarmPermissionFeature.State()
     var timing = SetupTiming()
     var customizesBreaks: Bool {
       get { timing.customizesBreaks }
@@ -154,12 +158,15 @@ struct NewGameFeature {
   }
 
   enum Action: BindableAction {
+    case alarms(AlarmPermissionFeature.Action)
     case binding(BindingAction<State>)
     case delegate(Delegate)
     case destination(PresentationAction<NewGameDestination.Action>)
     case destinationDidDismiss
     case editTimingButtonTapped
     case locationButtonTapped
+    case locationAuthorizationResponse(LocationAuthorizationStatus)
+    case sceneBecameActive
     case locationResponse(Result<GameLocation, any Error>)
     case selectTeamButtonTapped(TeamSide)
     case startGameButtonTapped
@@ -169,6 +176,7 @@ struct NewGameFeature {
 
     enum Delegate {
       case gameStarted(ScoringFeature.State)
+      case proPromotionTapped
     }
   }
 
@@ -183,6 +191,7 @@ struct NewGameFeature {
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
+    Scope(state: \.alarms, action: \.alarms) { AlarmPermissionFeature() }
     BindingReducer()
     Reduce { state, action in
         switch action {
@@ -194,11 +203,34 @@ struct NewGameFeature {
           }
           return .none
 
+        case .alarms(.delegate(.proPromotionTapped)):
+          return .send(.delegate(.proPromotionTapped))
+
+        case .alarms:
+          return .none
+
         case .delegate:
           return .none
 
         case .locationButtonTapped:
-          guard state.location != .loading else { return .none }
+          guard state.location != .loading, state.location != .requesting else { return .none }
+          if locationClient.authorizationStatus() == .notDetermined {
+            state.location = .requesting
+            return .run { send in
+              await send(.locationAuthorizationResponse(await locationClient.requestAuthorization()))
+            }
+            .cancellable(id: CancelID.location, cancelInFlight: true)
+          }
+          return loadLocation(state: &state)
+
+        case let .locationAuthorizationResponse(status):
+          return loadLocation(state: &state, authorization: status)
+
+        case .sceneBecameActive:
+          guard state.location != .loading, state.location != .requesting else { return .none }
+          if case .loaded = state.location, locationClient.authorizationStatus() == .authorized {
+            return .none
+          }
           return loadLocation(state: &state)
 
         case let .locationResponse(.success(location)):
@@ -206,7 +238,7 @@ struct NewGameFeature {
           return .none
 
         case .locationResponse(.failure):
-          state.location = .unavailable(canRetry: true)
+          state.location = .failed
           return .none
 
         case let .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(team)))))):
@@ -480,10 +512,22 @@ struct NewGameFeature {
     }
   }
 
-  private func loadLocation(state: inout State) -> Effect<Action> {
-    guard locationClient.authorizationStatus() == .authorized else {
-      state.location = .unavailable(canRetry: false)
+  private func loadLocation(
+    state: inout State,
+    authorization: LocationAuthorizationStatus? = nil
+  ) -> Effect<Action> {
+    switch authorization ?? locationClient.authorizationStatus() {
+    case .notDetermined:
+      state.location = .idle
       return .none
+    case .denied:
+      state.location = .denied
+      return .none
+    case .restricted:
+      state.location = .restricted
+      return .none
+    case .authorized:
+      break
     }
     state.location = .loading
     return .run { send in

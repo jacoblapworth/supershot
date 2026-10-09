@@ -192,7 +192,7 @@ extension SupershotTestSuite {
         guard case .locationResponse(.failure) = $0 else { return false }
         return true
       } assert: {
-        $0.location = .unavailable(canRetry: true)
+        $0.location = .failed
       }
       #expect(!store.state.isSaving)
     }

@@ -6,6 +6,7 @@ import MapKit
 nonisolated enum LocationAuthorizationStatus: Equatable, Sendable {
   case authorized
   case denied
+  case restricted
   case notDetermined
 }
 
@@ -165,17 +166,27 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
 
 private nonisolated extension CLAuthorizationStatus {
   var isAuthorized: Bool {
+#if os(iOS)
     self == .authorizedAlways || self == .authorizedWhenInUse
+#else
+    self == .authorizedAlways
+#endif
   }
 }
 
 private nonisolated extension LocationAuthorizationStatus {
   init(_ status: CLAuthorizationStatus) {
     switch status {
-    case .authorizedAlways, .authorizedWhenInUse:
+    case .authorizedAlways:
       self = .authorized
-    case .denied, .restricted:
+#if os(iOS)
+    case .authorizedWhenInUse:
+      self = .authorized
+#endif
+    case .denied:
       self = .denied
+    case .restricted:
+      self = .restricted
     case .notDetermined:
       self = .notDetermined
     @unknown default:

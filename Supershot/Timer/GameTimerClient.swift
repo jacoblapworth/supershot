@@ -3,7 +3,7 @@ import Foundation
 import SQLiteData
 
 nonisolated struct GameTimerUpdate: Equatable, Sendable {
-  var alarmAuthorizationDenied = false
+  var alarmSchedulingFailed = false
   var snapshot: GameSnapshot
 }
 
@@ -14,10 +14,11 @@ nonisolated struct GameTimerClient: Sendable {
   var pause: @Sendable (Game.ID, Int?) async throws -> GameSnapshot
   var reconcile: @Sendable (Game.ID) async throws -> GameSnapshot
   var refreshActivity: @Sendable (Game.ID) async -> Void
-  var scheduleAlarm: @Sendable (Game.ID) async -> Void
+  /// Returns true when scheduling fails after authorization.
+  var scheduleAlarm: @Sendable (Game.ID) async -> Bool
   /// Skip to end of the game timer
   var skip: @Sendable (Game.ID, Int?) async throws -> GameSnapshot
-  var startOrResume: @Sendable (Game.ID, Int?, Bool) async throws -> GameTimerUpdate
+  var startOrResume: @Sendable (Game.ID, Int?) async throws -> GameTimerUpdate
 }
 
 extension DependencyValues {
@@ -151,11 +152,12 @@ nonisolated extension GameTimerClient {
             try GameSnapshot.fetch(db, gameID: gameID)
           }),
           snapshot.game.timerEndsAt != nil
-        else { return }
+        else { return false }
         if await hasActiveProAccess(proSubscription) {
-          _ = await alarms.scheduleAlarm(snapshot, false)
+          return await alarms.scheduleAlarm(snapshot)
         } else {
           await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
+          return false
         }
       },
       skip: { gameID, expectedPhaseIndex in
@@ -189,7 +191,7 @@ nonisolated extension GameTimerClient {
           if didSkip {
             await alarms.cancelAlarm(gameID, snapshot.phases.count)
             if snapshot.game.timerEndsAt != nil {
-              _ = await alarms.scheduleAlarm(snapshot, false)
+              _ = await alarms.scheduleAlarm(snapshot)
             }
           }
           await alarms.updateActivity(snapshot, true)
@@ -198,7 +200,7 @@ nonisolated extension GameTimerClient {
         }
         return snapshot
       },
-      startOrResume: { gameID, expectedPhaseIndex, requestsAuthorization in
+      startOrResume: { gameID, expectedPhaseIndex in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.date) var date
         @Dependency(\.defaultDatabase) var database
@@ -232,18 +234,18 @@ nonisolated extension GameTimerClient {
           return (game.timerEndsAt != nil, try snapshot(db, replacing: game))
         }
 
-        let alarmAuthorizationDenied: Bool
+        let alarmSchedulingFailed: Bool
         if await hasActiveProAccess(proSubscription) {
           await alarms.updateActivity(snapshot, true)
-          alarmAuthorizationDenied = didStart
-            ? await alarms.scheduleAlarm(snapshot, requestsAuthorization)
+          alarmSchedulingFailed = didStart
+            ? await alarms.scheduleAlarm(snapshot)
             : false
         } else {
           await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-          alarmAuthorizationDenied = false
+          alarmSchedulingFailed = false
         }
         return GameTimerUpdate(
-          alarmAuthorizationDenied: alarmAuthorizationDenied,
+          alarmSchedulingFailed: alarmSchedulingFailed,
           snapshot: snapshot
         )
       }

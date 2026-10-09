@@ -7,6 +7,9 @@
 
 
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 struct TeamCard: View {
   var action: () -> Void
@@ -66,7 +69,12 @@ private struct TeamCardBackground: View {
   @Environment(\.scenePhase) private var scenePhase
 
   var body: some View {
-    Color(uiColor: .secondarySystemBackground)
+#if os(iOS)
+    let backgroundColor = Color(uiColor: .secondarySystemBackground)
+#else
+    let backgroundColor = Color(nsColor: .controlBackgroundColor)
+#endif
+    backgroundColor
       .overlay {
         if let color {
           TimelineView(.animation(minimumInterval: 1 / 15, paused: reduceMotion || scenePhase != .active)) { context in

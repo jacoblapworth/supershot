@@ -16,6 +16,7 @@ extension SupershotTestSuite {
   @MainActor
   @Suite(.dependencies {
     $0.uuid = .incrementing
+    $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
   }) struct AppFeatureTests {
     @Test
     func failedSubscriptionLookupFallsBackToFree() async {
@@ -36,7 +37,7 @@ extension SupershotTestSuite {
         guard case .proAccessLoaded(.free) = $0 else { return false }
         return true
       } assert: {
-        $0.hasCheckedPermissions = true
+        $0.hasLoadedAccess = true
         $0.proAccess = .free
       }
       await store.finish()
@@ -45,7 +46,7 @@ extension SupershotTestSuite {
     @Test
     func promotionPresentsPaywallAndProAccessDismissesIt() async {
       var state = AppFeature.State()
-      state.hasCheckedPermissions = true
+      state.hasLoadedAccess = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -63,28 +64,6 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test
-    func freeAccessReplacesPaywallWithLocationOnboarding() async {
-      var state = AppFeature.State()
-      state.destination = .proPaywall(PaywallFeature.State())
-      state.proAccess = .unknown
-      state.selectedTab = .teams
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      } withDependencies: {
-        try! clearDatabase($0.defaultDatabase)
-        $0.locationClient.authorizationStatus = { .notDetermined }
-      }
-
-      await store.send(.proAccessUpdated(.free)) {
-        $0.proAccess = .free
-        $0.destination = .permissionsOnboarding(
-          PermissionsOnboardingFeature.State(step: .location)
-        )
-      }
-      await store.finish()
-      expectNoDifference(store.state.selectedTab, .teams)
-    }
 
     @Test(arguments: [SubscriptionEntitlement.free, .unknown])
     func nonProAccessRetainsPaywallWhenPermissionsAreResolved(
@@ -106,54 +85,7 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test(arguments: [SubscriptionEntitlement.free, .unknown])
-    func nonProAccessClearsObsoleteOnboarding(access: SubscriptionEntitlement) async {
-      var state = AppFeature.State()
-      state.destination = .permissionsOnboarding(PermissionsOnboardingFeature.State())
-      state.proAccess = .pro
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      } withDependencies: {
-        try! clearDatabase($0.defaultDatabase)
-        $0.locationClient = .preview
-      }
 
-      await store.send(.proAccessUpdated(access)) {
-        $0.proAccess = access
-        $0.destination = nil
-      }
-      await store.finish()
-    }
-
-    @Test(arguments: [false, true])
-    func paywallProAccessBeginsRequiredOnboarding(needsAlarms: Bool) async {
-      var state = AppFeature.State()
-      state.destination = .proPaywall(PaywallFeature.State())
-      state.proAccess = .free
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      } withDependencies: {
-        try! clearDatabase($0.defaultDatabase)
-        $0.alarmAuthorization.status = { needsAlarms ? .notDetermined : .authorized }
-        $0.locationClient.authorizationStatus = { .notDetermined }
-      }
-
-      await store.send(.destination(.presented(.proPaywall(.customerInfoUpdated(.pro)))))
-      await store.receive {
-        guard case .destination(.presented(.proPaywall(.delegate(.accessChanged(.pro))))) = $0
-        else { return false }
-        return true
-      } assert: {
-        $0.proAccess = .pro
-        $0.destination = .permissionsOnboarding(
-          PermissionsOnboardingFeature.State(
-            step: needsAlarms ? .alarms : .location,
-            nextStep: needsAlarms ? .location : nil
-          )
-        )
-      }
-      await store.finish()
-    }
 
     @Test
     func paywallProAccessDismissesWhenPermissionsAreResolved() async {
@@ -178,19 +110,6 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test
-    func promotionDoesNotInterruptOnboarding() async {
-      var state = AppFeature.State()
-      state.destination = .permissionsOnboarding(
-        PermissionsOnboardingFeature.State(step: .location)
-      )
-      state.proAccess = .free
-      let store = TestStore(initialState: state) {
-        AppFeature()
-      }
-
-      await store.send(.proPromotionTapped)
-    }
 
     @Test
     func dismissingPaywallPreservesEntitlementAndSelectedTab() async {
@@ -234,7 +153,7 @@ extension SupershotTestSuite {
     @Test
     func childDelegatesUpdateGlobalPremiumState() async {
       var state = AppFeature.State()
-      state.hasCheckedPermissions = true
+      state.hasLoadedAccess = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -267,11 +186,11 @@ extension SupershotTestSuite {
       let events = LockIsolated<[String]>([])
       var timer = GameTimerClient.live
       timer.refreshActivity = { _ in events.withValue { $0.append("activity") } }
-      timer.scheduleAlarm = { _ in events.withValue { $0.append("alarm") } }
+      timer.scheduleAlarm = { _ in events.withValue { $0.append("alarm") }; return false }
       timer.endPresentation = { _ in events.withValue { $0.append("cleanup") } }
 
       var state = AppFeature.State()
-      state.hasCheckedPermissions = true
+      state.hasLoadedAccess = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -283,27 +202,6 @@ extension SupershotTestSuite {
 
       await store.send(.proAccessUpdated(.pro)) {
         $0.proAccess = .pro
-      }
-      await store.finish()
-      expectNoDifference(events.value, ["activity", "alarm"])
-
-      events.setValue([])
-      store.dependencies.locationClient.authorizationStatus = { .notDetermined }
-      await store.send(.proAccessUpdated(.pro)) {
-        $0.destination = .permissionsOnboarding(
-          PermissionsOnboardingFeature.State(step: .location)
-        )
-      }
-      await store.finish()
-      store.dependencies.locationClient = .preview
-      events.setValue([])
-      await store.send(.destination(.presented(.permissionsOnboarding(.notNowButtonTapped))))
-      await store.receive {
-        guard case .destination(.presented(.permissionsOnboarding(.delegate(.completed)))) = $0
-        else { return false }
-        return true
-      } assert: {
-        $0.destination = nil
       }
       await store.finish()
       expectNoDifference(events.value, ["activity", "alarm"])
@@ -437,6 +335,7 @@ extension SupershotTestSuite {
             $0.date.now = date
           }
           $0.uuid = .incrementing
+    $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
           try! $0.bootstrapDatabase()
           try! clearDatabase($0.defaultDatabase)
           try! $0.defaultDatabase.write { db in

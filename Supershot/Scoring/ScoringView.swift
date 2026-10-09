@@ -7,8 +7,16 @@ struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Fetch private var timelineResponse: GoalTimelineRequest.Value
   @Bindable var store: StoreOf<ScoringFeature>
+  let proAccess: SubscriptionEntitlement
+  let isPresentingPaywall: Bool
   
-  init(store: StoreOf<ScoringFeature>) {
+  init(
+    store: StoreOf<ScoringFeature>,
+    proAccess: SubscriptionEntitlement = .unknown,
+    isPresentingPaywall: Bool = false
+  ) {
+    self.isPresentingPaywall = isPresentingPaywall
+    self.proAccess = proAccess
     self.store = store
     _timelineResponse = Fetch(
       wrappedValue: GoalTimelineRequest.Value(
@@ -43,6 +51,13 @@ struct ScoringView: View {
           
         }
         
+#if os(iOS)
+        AlarmPermissionCard(
+          store: store.scope(state: \.alarms, action: \.alarms),
+          proAccess: proAccess,
+          hidesWhenAuthorized: true
+        )
+#endif
         if store.isShowingLastCentrePassBanner {
           LastCentrePassBanner(
             centrePassTeam: store.centrePassTeam,
@@ -123,7 +138,10 @@ struct ScoringView: View {
     //      LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)
     //        .ignoresSafeArea()
     //    }
-    .sheet(isPresented: .constant(true), content: {
+    .sheet(
+      isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
+      onDismiss: { store.send(.controlsSheetDidDismiss) },
+      content: {
       ScrollView {
         VStack(alignment: .leading, spacing: 12) {
           if store.canScoreGoal {
@@ -153,7 +171,9 @@ struct ScoringView: View {
       .buttonStyle(.glassProminent)
       .presentationDetents([.height(84), .height(200)],
         selection: $store.presentationDetent)
+#if os(iOS)
       .presentationPlacement(.leading)
+#endif
       .presentationBackgroundInteraction(.enabled)
       .presentationBackground(alignment: .topLeading) {}
       .interactiveDismissDisabled()
@@ -163,6 +183,12 @@ struct ScoringView: View {
       //      .presentationSizing(.fitted)
     })
     .alert($store.scope(state: \.alert, action: \.alert))
+    .onChange(of: isPresentingPaywall) { wasPresented, isPresented in
+      if wasPresented && !isPresented { store.send(.proPaywallDidDismiss) }
+    }
+    .onChange(of: proAccess) { _, access in
+      if access == .pro { store.send(.proPaywallDidDismiss) }
+    }
 #if os(iOS)
     .sensoryFeedback(
       .success,

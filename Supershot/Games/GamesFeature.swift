@@ -118,6 +118,10 @@ struct GamesFeature {
         state.path.pop(from: id)
         return .send(.deleteGameButtonTapped(gameID))
 
+      case .path(.element(id: _, action: .setup(.delegate(.proPromotionTapped)))),
+        .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
+        return .send(.delegate(.proPromotionTapped))
+
       case .path:
         return .none
 
