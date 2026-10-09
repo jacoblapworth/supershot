@@ -18,6 +18,9 @@ nonisolated struct GameTimerClient: Sendable {
   var scheduleAlarm: @Sendable (Game.ID) async -> Bool
   /// Skip to end of the game timer
   var skip: @Sendable (Game.ID, Int?) async throws -> GameSnapshot
+  var setRemainingTime: @Sendable (Game.ID, Int, Int) async throws -> GameSnapshot = { _, _, _ in
+    throw GameTimerError.invalidCorrection
+  }
   var startOrResume: @Sendable (Game.ID, Int?) async throws -> GameTimerUpdate
 }
 
@@ -200,6 +203,33 @@ nonisolated extension GameTimerClient {
         }
         return snapshot
       },
+      setRemainingTime: { gameID, expectedPhaseIndex, remainingSeconds in
+        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.alarmClient) var alarms
+        @Dependency(\.proSubscription) var proSubscription
+        let updated = try await database.write { db in
+          let stored = try GameSnapshot.fetch(db, gameID: gameID)
+          var game = stored.game
+          guard game.endedAt == nil,
+            game.currentPhaseIndex == expectedPhaseIndex,
+            game.timerEndsAt == nil,
+            !game.isAwaitingCentrePassConfirmation,
+            let phase = stored.timeline.phase(at: expectedPhaseIndex),
+            game.elapsedSeconds < phase.durationSeconds,
+            (1...phase.durationSeconds).contains(remainingSeconds)
+          else { throw GameTimerError.invalidCorrection }
+          game.elapsedSeconds = phase.durationSeconds - remainingSeconds
+          try persistTimerState(game, in: db)
+          return try snapshot(db, replacing: game)
+        }
+        await alarms.cancelAlarm(gameID, updated.phases.count)
+        if await hasActiveProAccess(proSubscription) {
+          await alarms.updateActivity(updated, true)
+        } else {
+          await alarms.endActivity(gameID)
+        }
+        return updated
+      },
       startOrResume: { gameID, expectedPhaseIndex in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.date) var date
@@ -309,8 +339,17 @@ private nonisolated func snapshot(
   )
 }
 
-private nonisolated enum GameTimerError: Error {
+private nonisolated enum GameTimerError: Error, LocalizedError {
   case gameNotFound
+  case invalidCorrection
+
+  var errorDescription: String? {
+    switch self {
+    case .gameNotFound: "The game could not be found."
+    case .invalidCorrection:
+      "The clock has changed. Close the editor and pause the current clock before trying again."
+    }
+  }
 }
 
 extension GameTimerClient {

@@ -1,14 +1,16 @@
 import ApplicationDependency
-import SwiftUI
 import ComposableArchitecture
 import Foundation
-import Sharing
 import SQLiteData
+import Sharing
+import SwiftUI
 
 @Reducer
 struct ScoringFeature {
   nonisolated enum ControlsPresentation: Equatable, Sendable {
     case shown
+    case dismissingForTimeInput
+    case hiddenForTimeInput
     case dismissingForPaywall
     case hiddenForPaywall
   }
@@ -51,6 +53,9 @@ struct ScoringFeature {
 
   @ObservableState
   struct State: Equatable {
+    @Presents var timeInput: TimeInputFeature.State?
+    var editedPhaseIndex: Int?
+    var isTimerOperationPending = false
     @Presents var alert: AlertState<Alert>?
     var alarms = AlarmPermissionFeature.State()
     var controlsPresentation = ControlsPresentation.shown
@@ -112,6 +117,11 @@ struct ScoringFeature {
         lateScoringPeriodNumber: lateScoringPeriodNumber)
     }
 
+    var canEditTime: Bool {
+      !isTimerRunning && !isPeriodComplete && !isTransitioningPeriod
+        && !isTimerOperationPending && !isShowingLastCentrePassBanner
+    }
+
     var canScoreGoal: Bool { scoringContext != nil && !isTransitioningPeriod }
     var canUndoGoal: Bool { canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation) }
 
@@ -161,6 +171,10 @@ struct ScoringFeature {
     case alarms(AlarmPermissionFeature.Action)
     case alarmScheduleResponse(Bool)
     case alert(PresentationAction<Alert>)
+    case editTimeButtonTapped
+    case timeInput(PresentationAction<TimeInputFeature.Action>)
+    case timeInputSheetDidDismiss
+    case timeCorrectionResponse(Result<GameSnapshot, any Error>)
     case controlsSheetDidDismiss
     case proPaywallDidDismiss
     case centrePassTeamButtonTapped(Team.ID)
@@ -227,12 +241,74 @@ struct ScoringFeature {
         state.controlsPresentation = .dismissingForPaywall
         return .none
 
+      case .editTimeButtonTapped:
+        guard state.canEditTime, state.controlsPresentation == .shown else { return .none }
+        state.editedPhaseIndex = state.currentPhaseIndex
+        state.controlsPresentation = .dismissingForTimeInput
+        return .none
+
+      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+        guard let phaseIndex = state.editedPhaseIndex, state.canEditTime,
+          phaseIndex == state.currentPhaseIndex,
+          (1...state.currentDurationSeconds).contains(seconds)
+        else {
+          state.timeInput?.errorMessage = "The clock has changed. Close the editor and try again."
+          return .none
+        }
+        state.timeInput?.isSaving = true
+        let gameID = state.gameID
+        return .run { send in
+          await send(
+            .timeCorrectionResponse(
+              await Result {
+                try await gameTimer.setRemainingTime(gameID, phaseIndex, seconds)
+              }))
+        }
+
+      case .timeInput(.presented(.delegate(.cancelled))):
+        state.timeInput = nil
+        return .none
+
+      case .timeInput:
+        return .none
+
+      case .timeInputSheetDidDismiss:
+        guard state.controlsPresentation == .hiddenForTimeInput else { return .none }
+        state.editedPhaseIndex = nil
+        state.controlsPresentation = .shown
+        return .none
+
+      case .timeCorrectionResponse(.success(let snapshot)):
+        applyTimer(snapshot.game, to: &state)
+        state.timeInput = nil
+        return .none
+
+      case .timeCorrectionResponse(.failure(let error)):
+        state.timeInput?.isSaving = false
+        state.timeInput?.errorMessage = error.localizedDescription
+        return .none
+
       case .controlsSheetDidDismiss:
+        if state.controlsPresentation == .dismissingForTimeInput {
+          state.controlsPresentation = .hiddenForTimeInput
+          guard state.canEditTime, state.editedPhaseIndex == state.currentPhaseIndex else {
+            state.editedPhaseIndex = nil
+            state.controlsPresentation = .shown
+            return .none
+          }
+          state.timeInput = .init(
+            title: "Edit remaining time", totalSeconds: state.timeRemainingSeconds,
+            allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
+          return .none
+        }
         guard state.controlsPresentation == .dismissingForPaywall else { return .none }
         state.controlsPresentation = .hiddenForPaywall
         return .send(.delegate(.proPromotionTapped))
 
       case .proPaywallDidDismiss:
+        guard state.timeInput == nil, state.controlsPresentation != .dismissingForTimeInput,
+          state.controlsPresentation != .hiddenForTimeInput
+        else { return .none }
         state.controlsPresentation = .shown
         return .none
 
@@ -378,19 +454,22 @@ struct ScoringFeature {
         return .none
 
       case .pauseTimerButtonTapped:
-        guard state.isTimerRunning, !state.isTransitioningPeriod else { return .none }
+        guard state.isTimerRunning, !state.isTransitioningPeriod, state.timeInput == nil else { return .none }
         synchronizeTimer(state: &state, now: now)
         state.timerEndsAt = nil
+        state.isTimerOperationPending = true
         return .merge(
           .cancel(id: CancelID.timer),
           pauseTimerEffect(gameID: state.gameID, expectedPhaseIndex: state.currentPhaseIndex)
         )
 
       case let .timerPauseResponse(.success(snapshot)):
+        state.isTimerOperationPending = false
         applyTimer(snapshot.game, to: &state)
         return .none
 
       case .timerPauseResponse(.failure):
+        state.isTimerOperationPending = false
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameActive:
@@ -417,6 +496,9 @@ struct ScoringFeature {
       case .startTimerButtonTapped:
         guard
           !state.isTimerRunning,
+          !state.isTimerOperationPending,
+          state.timeInput == nil,
+          state.controlsPresentation == .shown,
           !state.isTransitioningPeriod,
           !state.isPeriodComplete,
           state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
@@ -458,6 +540,7 @@ struct ScoringFeature {
         return .none
 
       case let .timerStartResponse(.success(update)):
+        state.isTimerOperationPending = false
         applyTimer(update.snapshot.game, to: &state)
         if update.alarmSchedulingFailed, !state.hasShownAlarmSchedulingFailureAlert {
           state.alert = .alarmSchedulingFailed
@@ -466,6 +549,7 @@ struct ScoringFeature {
         return .none
 
       case .timerStartResponse(.failure):
+        state.isTimerOperationPending = false
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .undoButtonTapped:
@@ -482,6 +566,7 @@ struct ScoringFeature {
         return .none
       }
     }
+    .ifLet(\.$timeInput, action: \.timeInput) { TimeInputFeature() }
     .ifLet(\.$alert, action: \.alert)
   }
 

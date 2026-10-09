@@ -1,10 +1,15 @@
 import ComposableArchitecture
 import Foundation
+import Sharing
 
 @Reducer
 struct SettingsFeature {
   @ObservableState
   struct State: Equatable {
+    @Presents var timeInput: TimeInputFeature.State?
+    var editedDefault: DurationDefault?
+    @Shared(.defaultPeriodDurationSeconds) var defaultPeriodDurationSeconds
+    @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
     var isCustomerCenterPresented = false
 #if DEBUG
     @Presents var alert: AlertState<Alert>?
@@ -22,7 +27,11 @@ struct SettingsFeature {
 #endif
   }
 
+  enum DurationDefault: Equatable { case quarter, breakTime }
+
   enum Action {
+    case editDefaultButtonTapped(DurationDefault)
+    case timeInput(PresentationAction<TimeInputFeature.Action>)
     case customerCenterPresentationChanged(Bool)
     case customerInfoUpdated(SubscriptionEntitlement)
     case delegate(Delegate)
@@ -50,11 +59,39 @@ struct SettingsFeature {
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case .editDefaultButtonTapped(let field):
+        guard !state.isCustomerCenterPresented else { return .none }
+        #if DEBUG
+          guard state.databaseExport == nil else { return .none }
+        #endif
+        state.editedDefault = field
+        state.timeInput = .init(
+          title: field == .quarter ? "Quarter length" : "Break length",
+          totalSeconds: field == .quarter
+            ? state.defaultPeriodDurationSeconds : state.defaultBreakDurationSeconds,
+          allowedSeconds: (field == .quarter ? 1 : 0)...5999)
+        return .none
+      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+        switch state.editedDefault {
+        case .quarter: state.$defaultPeriodDurationSeconds.withLock { $0 = seconds }
+        case .breakTime: state.$defaultBreakDurationSeconds.withLock { $0 = seconds }
+        case nil: break
+        }
+        state.timeInput = nil
+        state.editedDefault = nil
+        return .none
+      case .timeInput(.presented(.delegate(.cancelled))), .timeInput(.dismiss):
+        state.timeInput = nil
+        state.editedDefault = nil
+        return .none
+      case .timeInput:
+        return .none
 #if DEBUG
       case .alert:
         return .none
 
       case .exportDatabaseButtonTapped:
+        guard state.timeInput == nil else { return .none }
         guard state.databaseExport == nil else { return .none }
         state.databaseExport = .preparing
         return .run { send in
@@ -93,6 +130,7 @@ struct SettingsFeature {
         return .none
 
       case .manageSubscriptionButtonTapped:
+        guard state.timeInput == nil else { return .none }
         state.isCustomerCenterPresented = true
         return .none
 
@@ -100,6 +138,7 @@ struct SettingsFeature {
         return .send(.delegate(.proPromotionTapped))
       }
     }
+    .ifLet(\.$timeInput, action: \.timeInput) { TimeInputFeature() }
 #if DEBUG
     .ifLet(\.$alert, action: \.alert)
 #endif

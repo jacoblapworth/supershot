@@ -33,6 +33,8 @@ struct ScoringView: View {
         
         VStack {
           TimerView(
+            canEditTime: store.canEditTime,
+            editTimeTapped: { store.send(.editTimeButtonTapped) },
             clockPhase: store.clockPhase,
             currentDurationSeconds: store.currentDurationSeconds,
             elapsedSeconds: store.elapsedSeconds,
@@ -182,6 +184,10 @@ struct ScoringView: View {
       //      .presentationBackground(.ultraThinMaterial)
       //      .presentationSizing(.fitted)
     })
+    .sheet(
+      item: $store.scope(state: \.timeInput, action: \.timeInput),
+      onDismiss: { store.send(.timeInputSheetDidDismiss) }
+    ) { TimeInputView(store: $0) }
     .alert($store.scope(state: \.alert, action: \.alert))
     .onChange(of: isPresentingPaywall) { wasPresented, isPresented in
       if wasPresented && !isPresented { store.send(.proPaywallDidDismiss) }

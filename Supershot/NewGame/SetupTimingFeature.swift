@@ -28,19 +28,21 @@ nonisolated struct SetupTiming: Equatable, Sendable {
 struct SetupTimingFeature {
   @ObservableState
   struct State: Equatable {
+    @Presents var timeInput: TimeInputFeature.State?
+    var editedDuration: DurationField?
     var timing: SetupTiming
   }
+  enum DurationField: Equatable {
+    case quarter, allBreaks, firstBreak, halfTime, secondBreak
+  }
   enum Action: BindableAction {
-    case allBreakPresetButtonTapped(Int)
+    case editDurationButtonTapped(DurationField)
+    case timeInput(PresentationAction<TimeInputFeature.Action>)
     case binding(BindingAction<State>)
     case cancelButtonTapped
     case customizeBreaksButtonTapped
     case delegate(Delegate)
     case doneButtonTapped
-    case firstBreakPresetButtonTapped(Int)
-    case halfTimePresetButtonTapped(Int)
-    case periodPresetButtonTapped(Int)
-    case secondBreakPresetButtonTapped(Int)
     case useFirstBreakForAllButtonTapped
 
     @CasePathable
@@ -53,15 +55,55 @@ struct SetupTimingFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
+      case .editDurationButtonTapped(let field):
+        state.editedDuration = field
+        let duration: NewGameFeature.DurationDraft
+        let title: String
+        switch field {
+        case .quarter:
+          duration = state.timing.periodDuration
+          title = "Quarter length"
+        case .allBreaks:
+          duration = state.timing.firstBreakDuration
+          title = "Break length"
+        case .firstBreak:
+          duration = state.timing.firstBreakDuration
+          title = "After quarter 1"
+        case .halfTime:
+          duration = state.timing.halfTimeDuration
+          title = "Half time"
+        case .secondBreak:
+          duration = state.timing.secondBreakDuration
+          title = "After quarter 3"
+        }
+        state.timeInput = .init(
+          title: title, totalSeconds: duration.totalSeconds ?? 0,
+          allowedSeconds: (field == .quarter ? 1 : 0)...5999)
+      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+        let duration = NewGameFeature.DurationDraft(totalSeconds: seconds)
+        switch state.editedDuration {
+        case .quarter: state.timing.periodDuration = duration
+        case .allBreaks:
+          state.timing.firstBreakDuration = duration
+          state.timing.halfTimeDuration = duration
+          state.timing.secondBreakDuration = duration
+        case .firstBreak: state.timing.firstBreakDuration = duration
+        case .halfTime: state.timing.halfTimeDuration = duration
+        case .secondBreak: state.timing.secondBreakDuration = duration
+        case nil: break
+        }
+        state.timeInput = nil
+        state.editedDuration = nil
+      case .timeInput(.presented(.delegate(.cancelled))), .timeInput(.dismiss):
+        state.timeInput = nil
+        state.editedDuration = nil
+      case .timeInput:
+        break
       case .binding:
         if !state.timing.customizesBreaks {
           state.timing.halfTimeDuration = state.timing.firstBreakDuration
           state.timing.secondBreakDuration = state.timing.firstBreakDuration
         }
-      case let .allBreakPresetButtonTapped(seconds):
-        state.timing.firstBreakDuration = .init(totalSeconds: seconds)
-        state.timing.halfTimeDuration = state.timing.firstBreakDuration
-        state.timing.secondBreakDuration = state.timing.firstBreakDuration
       case .cancelButtonTapped:
         return .send(.delegate(.cancelled))
       case .customizeBreaksButtonTapped:
@@ -71,14 +113,6 @@ struct SetupTimingFeature {
       case .doneButtonTapped:
         guard state.timing.isValid else { return .none }
         return .send(.delegate(.committed(state.timing)))
-      case let .firstBreakPresetButtonTapped(seconds):
-        state.timing.firstBreakDuration = .init(totalSeconds: seconds)
-      case let .halfTimePresetButtonTapped(seconds):
-        state.timing.halfTimeDuration = .init(totalSeconds: seconds)
-      case let .periodPresetButtonTapped(seconds):
-        state.timing.periodDuration = .init(totalSeconds: seconds)
-      case let .secondBreakPresetButtonTapped(seconds):
-        state.timing.secondBreakDuration = .init(totalSeconds: seconds)
       case .useFirstBreakForAllButtonTapped:
         state.timing.halfTimeDuration = state.timing.firstBreakDuration
         state.timing.secondBreakDuration = state.timing.firstBreakDuration
@@ -86,6 +120,7 @@ struct SetupTimingFeature {
       }
       return .none
     }
+    .ifLet(\.$timeInput, action: \.timeInput) { TimeInputFeature() }
   }
 }
 
@@ -117,6 +152,9 @@ struct SetupTimingEditorView: View {
             Text("Enter valid quarter and break durations.").foregroundStyle(.red)
           }
         }.padding()
+      }
+      .sheet(item: $store.scope(state: \.timeInput, action: \.timeInput)) {
+        TimeInputView(store: $0)
       }
       .navigationTitle("Timing")
       .toolbar {

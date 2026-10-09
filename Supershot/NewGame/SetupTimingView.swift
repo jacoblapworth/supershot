@@ -8,34 +8,22 @@ struct SetupTimingView: View {
     VStack(alignment: .leading, spacing: 18) {
       Label("Timing", systemImage: "timer")
         .font(.headline)
-      
-      DurationEditor(
-        duration: $store.timing.periodDuration,
-        label: "Quarters",
-        presets: [8, 10, 12, 15].map { $0 * 60 },
-        presetTapped: { store.send(.periodPresetButtonTapped($0)) }
+
+      durationRow("Quarters",
+        duration:store.timing.periodDuration, field:.quarter
       )
       
       Divider()
       
       if store.timing.customizesBreaks {
-        DurationEditor(
-          duration: $store.timing.firstBreakDuration,
-          label: "After quarter 1",
-          presets: [0, 1, 2, 4, 5].map { $0 * 60 },
-          presetTapped: { store.send(.firstBreakPresetButtonTapped($0)) }
-        )
-        DurationEditor(
-          duration: $store.timing.halfTimeDuration,
-          label: "Half time",
-          presets: [0, 1, 2, 4, 5, 8, 10, 12].map { $0 * 60 },
-          presetTapped: { store.send(.halfTimePresetButtonTapped($0)) }
-        )
-        DurationEditor(
-          duration: $store.timing.secondBreakDuration,
-          label: "After quarter 3",
-          presets: [0, 1, 2, 4, 5].map { $0 * 60 },
-          presetTapped: { store.send(.secondBreakPresetButtonTapped($0)) }
+        durationRow(
+          "After quarter 1",
+          duration:store.timing.firstBreakDuration, field: .firstBreak)
+        durationRow("Half time",
+          duration:store.timing.halfTimeDuration, field: .halfTime)
+        durationRow(
+          "After quarter 3",
+          duration:store.timing.secondBreakDuration, field:.secondBreak
         )
         
         Button("Use first break for all") {
@@ -43,11 +31,8 @@ struct SetupTimingView: View {
         }
         .buttonStyle(.bordered)
       } else {
-        DurationEditor(
-          duration: $store.timing.firstBreakDuration,
-          label: "Breaks",
-          presets: [0, 1, 2, 4, 5].map { $0 * 60 },
-          presetTapped: { store.send(.allBreakPresetButtonTapped($0)) }
+        durationRow("Breaks",
+          duration:store.timing.firstBreakDuration, field:.allBreaks
         )
         
         Button("Customize each break") {
@@ -58,69 +43,18 @@ struct SetupTimingView: View {
     }
     .setupCardStyle()
   }
-}
 
-private struct DurationEditor: View {
-  @Binding var duration: NewGameFeature.DurationDraft
-  var label: String
-  var presets: [Int]
-  var presetTapped: (Int) -> Void
-  
-  var body: some View {
-    VStack(alignment: .leading, spacing: 10) {
+private func durationRow(
+    _ label: String, duration: NewGameFeature.DurationDraft, field: SetupTimingFeature.DurationField) -> some View {
       HStack {
         Text(label)
-          .font(.subheadline.weight(.semibold))
         Spacer()
         Text(duration.formatted)
-          .font(.subheadline.monospacedDigit().weight(.semibold))
-          .foregroundStyle(duration.totalSeconds == nil ? Color.red : Color.secondary)
-      }
-      
-      ScrollView(.horizontal) {
-        HStack(spacing: 8) {
-          ForEach(presets, id: \.self) { seconds in
-            Button {
-              presetTapped(seconds)
-            } label: {
-              if duration.totalSeconds == seconds {
-                Label(formatted(seconds), systemImage: "checkmark")
-              } else {
-                Text(formatted(seconds))
-              }
-            }
-            .buttonStyle(.bordered)
-          }
-        }
-      }
-      .scrollIndicators(.hidden)
-      
-      HStack(spacing: 8) {
-        TextField("Minutes", text: $duration.minutesText)
-          .textFieldStyle(.roundedBorder)
-          .accessibilityLabel("\(label) minutes")
-          .frame(maxWidth: 80)
-#if os(iOS)
-          .keyboardType(.numberPad)
-#endif
-        Text("min")
+          .monospacedDigit()
           .foregroundStyle(.secondary)
-        TextField("Seconds", text: $duration.secondsText)
-          .textFieldStyle(.roundedBorder)
-          .accessibilityLabel("\(label) seconds")
-          .frame(maxWidth: 80)
-#if os(iOS)
-          .keyboardType(.numberPad)
-#endif
-        Text("sec")
-          .foregroundStyle(.secondary)
+      Button("Edit") { store.send(.editDurationButtonTapped(field)) }
+          .accessibilityLabel("Edit \(label)")
       }
-      .font(.subheadline)
-    }
-  }
-  
-  private func formatted(_ seconds: Int) -> String {
-    "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
   }
 }
 

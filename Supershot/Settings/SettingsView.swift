@@ -43,6 +43,7 @@ struct SettingsView: View {
       )
 #endif
     }
+    .sheet(item: $store.scope(state: \.timeInput, action: \.timeInput)) { TimeInputView(store: $0) }
   }
 }
 
@@ -60,7 +61,7 @@ private struct SettingsContent: View {
         proPromotionTapped: proPromotionTapped
       )
       FeedbackSettingsSection()
-      GameDefaultsSettingsSection()
+      GameDefaultsSettingsSection(store: store)
 #if DEBUG
       DebugSettingsSection(store: store)
 #endif
@@ -181,37 +182,28 @@ private struct FeedbackSettingsSection: View {
 }
 
 private struct GameDefaultsSettingsSection: View {
-  @Shared(.defaultBreakDurationSeconds) private var defaultBreakDurationSeconds
-  @Shared(.defaultPeriodDurationSeconds) private var defaultPeriodDurationSeconds
+  let store: StoreOf<SettingsFeature>
   
   var body: some View {
     Section {
-      Picker(
-        selection: Binding($defaultPeriodDurationSeconds)
-      ) {
-        Text("8 minutes").tag(8 * 60)
-        Text("10 minutes").tag(10 * 60)
-        Text("12 minutes").tag(12 * 60)
-        Text("15 minutes").tag(15 * 60)
-      } label: {
-        Label("Quarter length", systemImage: "timer")
-      }
-      
-      Picker(
-        selection: Binding($defaultBreakDurationSeconds)
-      ) {
-        Text("No break").tag(0)
-        Text("1 minute").tag(1 * 60)
-        Text("2 minutes").tag(2 * 60)
-        Text("4 minutes").tag(4 * 60)
-        Text("5 minutes").tag(5 * 60)
-      } label: {
-        Label("Break length", systemImage: "pause.circle")
-      }
+      durationRow("Quarter length", seconds: store.defaultPeriodDurationSeconds, field: .quarter)
+      durationRow("Break length", seconds: store.defaultBreakDurationSeconds, field: .breakTime)
     } header: {
       Text("New game defaults")
     } footer: {
       Text("These times are used when you set up a new game and can still be changed before it starts.")
+    }
+  }
+  private func durationRow(_ title: String, seconds: Int, field: SettingsFeature.DurationDefault)
+    -> some View
+  {
+    HStack {
+      Text(title)
+      Spacer()
+      Text("\(seconds / 60):\(String(format: "%02d", seconds % 60))")
+        .monospacedDigit().foregroundStyle(.secondary)
+      Button("Edit") { store.send(.editDefaultButtonTapped(field)) }
+        .accessibilityLabel("Edit \(title)")
     }
   }
 }

@@ -146,11 +146,153 @@ extension SupershotTestSuite {
       await store.send(.startTimerButtonTapped) {
         $0.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       }
-      await store.send(.pauseTimerButtonTapped) { $0.timerEndsAt = nil }
-      await store.receive { if case .timerPauseResponse = $0 { true } else { false } }
+      await store.send(.pauseTimerButtonTapped) {
+        $0.timerEndsAt = nil
+        $0.isTimerOperationPending = true
+      }
+      await store.receive { if case .timerPauseResponse = $0 { true } else { false } } assert: {
+        $0.isTimerOperationPending = false
+      }
       await responseClock.advance(by: .seconds(1))
       #expect(!store.state.isTimerRunning)
       await store.finish()
+    }
+
+    @Test
+    func timeEditorCoordinatesSheetsAndRestoresControlsDetent() async {
+      let store = Self.makeScoringStore()
+      await store.send(.editTimeButtonTapped) {
+        $0.editedPhaseIndex = 0
+        $0.controlsPresentation = .dismissingForTimeInput
+      }
+      #expect(store.state.timeInput == nil)
+      await store.send(.controlsSheetDidDismiss) {
+        $0.controlsPresentation = .hiddenForTimeInput
+        $0.timeInput = .init(
+          title: "Edit remaining time", totalSeconds: 900,
+          allowedSeconds: 1...900, selectedUnit: .seconds)
+      }
+      await store.send(.timeInput(.presented(.cancelButtonTapped)))
+      await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
+      await store.send(.timeInputSheetDidDismiss) {
+        $0.editedPhaseIndex = nil
+        $0.controlsPresentation = .shown
+      }
+      #expect(store.state.presentationDetent == .height(84))
+      #expect(store.state.elapsedSeconds == 0)
+    }
+
+    @Test
+    func failedClockSaveRetainsDraftForRetry() async {
+      let store = Self.makeScoringStore()
+      store.dependencies.gameTimer.setRemainingTime = { _, _, _ in
+        throw CocoaError(.fileWriteNoPermission)
+      }
+      await store.send(.editTimeButtonTapped) {
+        $0.editedPhaseIndex = 0
+        $0.controlsPresentation = .dismissingForTimeInput
+      }
+      await store.send(.controlsSheetDidDismiss) {
+        $0.controlsPresentation = .hiddenForTimeInput
+        $0.timeInput = .init(
+          title: "Edit remaining time", totalSeconds: 900,
+          allowedSeconds: 1...900, selectedUnit: .seconds)
+      }
+      await store.send(.timeInput(.presented(.delegate(.committed(120))))) {
+        $0.timeInput?.isSaving = true
+      }
+      await store.receive(\.timeCorrectionResponse.failure) {
+        $0.timeInput?.isSaving = false
+        $0.timeInput?.errorMessage = CocoaError(.fileWriteNoPermission).localizedDescription
+      }
+      #expect(store.state.elapsedSeconds == 0)
+      await store.send(.timeInput(.dismiss)) { $0.timeInput = nil }
+      await store.send(.timeInputSheetDidDismiss) {
+        $0.editedPhaseIndex = nil
+        $0.controlsPresentation = .shown
+      }
+    }
+
+    @Test(arguments: [false, true])
+    func clockCorrectionCanBeSavedForQuarterOrBreak(isBreak: Bool) async throws {
+      var state = Self.scoringState()
+      state.periods = testGamePeriods(gameID: UUID(3), breakDurationSeconds: 120)
+      state.currentPhaseIndex = isBreak ? 1 : 0
+      let store = Self.makeScoringStore(state: state)
+      let database = store.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      store.dependencies.alarmClient = Self.alarmClient(events: events)
+      store.dependencies.proSubscription = .pro
+      await store.send(.editTimeButtonTapped) {
+        $0.editedPhaseIndex = state.currentPhaseIndex
+        $0.controlsPresentation = .dismissingForTimeInput
+      }
+      await store.send(.controlsSheetDidDismiss) {
+        $0.controlsPresentation = .hiddenForTimeInput
+        $0.timeInput = .init(title: "Edit remaining time", totalSeconds: state.currentDurationSeconds,
+          allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
+      }
+      await store.send(.timeInput(.presented(.delegate(.committed(60))))) {
+        $0.timeInput?.isSaving = true
+      }
+      await store.receive(\.timeCorrectionResponse.success) {
+        $0.elapsedSeconds = state.currentDurationSeconds - 60
+        $0.timeInput = nil
+      }
+      await store.send(.timeInputSheetDidDismiss) {
+        $0.editedPhaseIndex = nil
+        $0.controlsPresentation = .shown
+      }
+      let saved = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      #expect(saved.game.elapsedSeconds == state.currentDurationSeconds - 60)
+      #expect(!store.state.isTimerRunning)
+      #expect(events.value == [.cancelAlarm, .activity(nil)])
+    }
+
+    @Test func timeEditorCannotOpenForRunningCompleteOrPendingClock() async {
+      for condition in 0..<4 {
+        var state = Self.scoringState()
+        switch condition {
+        case 0: state.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+        case 1: state.elapsedSeconds = state.currentDurationSeconds
+        case 2: state.isTimerOperationPending = true
+        default: state.isShowingLastCentrePassBanner = true
+        }
+        let store = Self.makeScoringStore(state: state)
+        await store.send(.editTimeButtonTapped)
+        #expect(store.state.timeInput == nil)
+      }
+    }
+
+    @Test
+    func clockCorrectionPersistsAndRejectsInvalidOrRunningEdits() async throws {
+      let store = Self.makeScoringStore()
+      let database = store.dependencies.defaultDatabase
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      try await withDependencies {
+        $0.defaultDatabase = database
+        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.proSubscription = .pro
+        $0.alarmClient = Self.alarmClient(events: events)
+      } operation: {
+        let client = GameTimerClient.live
+        let corrected = try await client.setRemainingTime(UUID(3), 0, 125)
+        #expect(corrected.game.elapsedSeconds == 775)
+        #expect(corrected.game.timerEndsAt == nil)
+        #expect(events.value == [.cancelAlarm, .activity(nil)])
+        let saved = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect(saved.game.elapsedSeconds == 775)
+        for (phase, seconds) in [(1, 120), (0, 0), (0, 901)] {
+          await #expect(throws: (any Error).self) {
+            try await client.setRemainingTime(UUID(3), phase, seconds)
+          }
+        }
+        let started = try await client.startOrResume(UUID(3), 0)
+        #expect(started.snapshot.game.timerEndsAt == Date(timeIntervalSince1970: 1_125))
+        await #expect(throws: (any Error).self) {
+          try await client.setRemainingTime(UUID(3), 0, 120)
+        }
+      }
     }
 
     @Test
@@ -399,10 +541,13 @@ extension SupershotTestSuite {
 
       await store.send(.pauseTimerButtonTapped) {
         $0.timerEndsAt = nil
+        $0.isTimerOperationPending = true
       }
       await store.receive {
         guard case .timerPauseResponse(.success) = $0 else { return false }
         return true
+      } assert: {
+        $0.isTimerOperationPending = false
       }
 
       await store.send(.startTimerButtonTapped) {
@@ -416,10 +561,13 @@ extension SupershotTestSuite {
 
       await store.send(.pauseTimerButtonTapped) {
         $0.timerEndsAt = nil
+        $0.isTimerOperationPending = true
       }
       await store.receive {
         guard case .timerPauseResponse(.success) = $0 else { return false }
         return true
+      } assert: {
+        $0.isTimerOperationPending = false
       }
       await store.finish()
     }
