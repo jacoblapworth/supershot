@@ -81,8 +81,8 @@ struct ScoringFeature {
     var teamB: Team
     var teamBScore = 0
     var timerEndsAt: Date?
-    var presentationDetent: PresentationDetent = .height(84)
-    var detents: [PresentationDetent] = [.height(84), .height(200)]
+    var presentationDetent: PresentationDetent = .height(112)
+    var detents: Set<PresentationDetent> = [.height(112), .height(200)]
 
     var timeline: GameTimeline { GameTimeline(periods: periods)! }
     var currentPhase: GamePhase { timeline.phase(at: currentPhaseIndex)! }
@@ -195,6 +195,7 @@ struct ScoringFeature {
     case skipBreakButtonTapped
     case skipPhaseResponse(Result<GameSnapshot, any Error>)
     case startTimerButtonTapped
+    case swapCentrePass
     case swapSidesButtonTapped
     case swapSidesResponse(Result<Bool, any Error>)
     case timerTick
@@ -366,6 +367,10 @@ struct ScoringFeature {
           TextState("Please try again.")
         }
         return .none
+        
+      case .swapCentrePass:
+        state.centrePassTeamID = state.teamA.id == state.centrePassTeamID ? state.teamB.id : state.teamA.id
+        return updateCentrePassEffect(gameID: state.gameID, teamID: state.centrePassTeamID)
 
       case let .centrePassTeamButtonTapped(teamID):
         guard
