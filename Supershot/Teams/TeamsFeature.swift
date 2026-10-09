@@ -164,6 +164,10 @@ struct TeamsFeature {
         state.path.append(.scoring(scoring))
         return .none
 
+      case .path(.element(id: _, action: .setup(.delegate(.proPromotionTapped)))),
+        .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
+        return .send(.delegate(.proPromotionTapped))
+
       case .path:
         return .none
 

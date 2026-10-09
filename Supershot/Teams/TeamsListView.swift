@@ -6,6 +6,7 @@ import SwiftUI
 struct TeamsListView: View {
   let proAccess: SubscriptionEntitlement
   @Bindable var store: StoreOf<TeamsFeature>
+  var isPresentingPaywall = false
   @Fetch(TeamsRequest(), animation: .default)
   private var teamsResponse = TeamsRequest.Value()
 
@@ -21,12 +22,12 @@ struct TeamsListView: View {
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
       case .scoring(let scoringStore):
-        ScoringView(store: scoringStore)
+        ScoringView(store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall)
 #if os(iOS)
           .toolbarVisibility(.hidden, for: .tabBar)
 #endif
       case .setup(let setupStore):
-        NewGameView(store: setupStore)
+        NewGameView(store: setupStore, proAccess: proAccess)
       case .teamDetail(let teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,

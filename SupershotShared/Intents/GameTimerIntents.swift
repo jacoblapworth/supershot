@@ -55,7 +55,7 @@ struct ResumeGameTimerIntent: LiveActivityIntent {
     #if !WIDGET_EXTENSION
     let gameTimer = DependencyValues._current.gameTimer
     if let gameID = UUID(uuidString: gameID) {
-      _ = try? await gameTimer.startOrResume(gameID, expectedPhaseIndex, false)
+      _ = try? await gameTimer.startOrResume(gameID, expectedPhaseIndex)
     }
     #endif
     return .result()

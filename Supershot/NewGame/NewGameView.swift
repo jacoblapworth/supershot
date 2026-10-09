@@ -2,7 +2,9 @@ import ComposableArchitecture
 import SwiftUI
 
 struct NewGameView: View {
+  @Environment(\.scenePhase) private var scenePhase
   @Bindable var store: StoreOf<NewGameFeature>
+  var proAccess: SubscriptionEntitlement = .unknown
 
   var body: some View {
     ScrollView {
@@ -19,12 +21,21 @@ struct NewGameView: View {
 
         SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
         
+#if os(iOS)
+        AlarmPermissionCard(
+          store: store.scope(state: \.alarms, action: \.alarms),
+          proAccess: proAccess
+        )
+#endif
         SetupLocationView(store: store)
       }
       .padding()
     }
     .navigationTitle("New game")
     .task { store.send(.task) }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { store.send(.sceneBecameActive) }
+    }
     .safeAreaInset(edge: .bottom) {
       SetupStartBar(
         canStartGame: store.canStartGame,

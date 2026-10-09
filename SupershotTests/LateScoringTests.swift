@@ -88,7 +88,7 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .waitingQuarter, pending: false)
       let client = GameTimerClient.live
-      _ = try await client.startOrResume(game.id, game.currentPhaseIndex, false)
+      _ = try await client.startOrResume(game.id, game.currentPhaseIndex)
       let paused = try await client.pause(game.id, game.currentPhaseIndex)
       expectNoDifference(paused.game.elapsedSeconds, 0)
       expectNoDifference(paused.game.lateScoringPeriodNumber, nil)
@@ -129,7 +129,7 @@ extension SupershotTestSuite {
             scoringContext: .completedPeriod(number: 1))
         }
       }
-      let staleTimer = try await client.startOrResume(game.id, 0, false)
+      let staleTimer = try await client.startOrResume(game.id, 0)
       expectNoDifference(staleTimer.snapshot.game.countdown, completed.game.countdown)
       _ = try await database.write {
         try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 1,

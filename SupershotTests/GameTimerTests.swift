@@ -6,6 +6,7 @@ import CustomDump
 import Dependencies
 import Foundation
 import GRDB
+import OrderedCollections
 import SQLiteData
 import Testing
 
@@ -134,7 +135,7 @@ extension SupershotTestSuite {
       let store = Self.makeScoringStore(clock: timerClock)
       let database = store.dependencies.defaultDatabase
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      store.dependencies.gameTimer.startOrResume = { _, _, _ in
+      store.dependencies.gameTimer.startOrResume = { _, _ in
         try await responseClock.sleep(for: .seconds(1))
         var game = snapshot.game
         game.timerEndsAt = Date(timeIntervalSince1970: 1_900)
@@ -165,14 +166,14 @@ extension SupershotTestSuite {
         $0.proSubscription = .free
         $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
-        try await client.startOrResume(UUID(3), 0, true)
+        try await client.startOrResume(UUID(3), 0)
       }
 
       expectNoDifference(
         update.snapshot.game.timerEndsAt,
         Date(timeIntervalSince1970: 1_900)
       )
-      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(update.alarmSchedulingFailed, false)
       expectNoDifference(events.value, [.cancelAlarm, .endActivity])
     }
 
@@ -189,7 +190,7 @@ extension SupershotTestSuite {
         $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
         @Dependency(\.gameTimer) var client
-        let started = try await client.startOrResume(UUID(3), 0, true)
+        let started = try await client.startOrResume(UUID(3), 0)
         expectNoDifference(started.snapshot.game.elapsedSeconds, 0)
         expectNoDifference(
           started.snapshot.game.timerEndsAt,
@@ -199,12 +200,12 @@ extension SupershotTestSuite {
           events.value,
           [
             .activity(Date(timeIntervalSince1970: 1_900)),
-            .alarm(Date(timeIntervalSince1970: 1_900), requestsAuthorization: true),
+            .alarm(Date(timeIntervalSince1970: 1_900)),
           ]
         )
 
         events.setValue([])
-        _ = try await client.startOrResume(UUID(3), 0, false)
+        _ = try await client.startOrResume(UUID(3), 0)
         expectNoDifference(
           events.value,
           [.activity(Date(timeIntervalSince1970: 1_900))]
@@ -235,7 +236,7 @@ extension SupershotTestSuite {
         expectNoDifference(events.value, [.cancelAlarm, .activity(nil)])
 
         events.setValue([])
-        let resumed = try await client.startOrResume(UUID(3), 0, false)
+        let resumed = try await client.startOrResume(UUID(3), 0)
         expectNoDifference(
           resumed.snapshot.game.timerEndsAt,
           Date(timeIntervalSince1970: 1_900)
@@ -244,7 +245,7 @@ extension SupershotTestSuite {
           events.value,
           [
             .activity(Date(timeIntervalSince1970: 1_900)),
-            .alarm(Date(timeIntervalSince1970: 1_900), requestsAuthorization: false),
+            .alarm(Date(timeIntervalSince1970: 1_900)),
           ]
         )
       }
@@ -266,10 +267,10 @@ extension SupershotTestSuite {
         $0.alarmClient = Self.alarmClient(events: events)
       } operation: {
         @Dependency(\.gameTimer) var client
-        return try await client.startOrResume(UUID(3), 1, false)
+        return try await client.startOrResume(UUID(3), 1)
       }
 
-      expectNoDifference(update.alarmAuthorizationDenied, false)
+      expectNoDifference(update.alarmSchedulingFailed, false)
       expectNoDifference(
         update.snapshot.game.timerEndsAt,
         Date(timeIntervalSince1970: 1_100)
@@ -278,7 +279,7 @@ extension SupershotTestSuite {
         events.value,
         [
           .activity(Date(timeIntervalSince1970: 1_100)),
-          .alarm(Date(timeIntervalSince1970: 1_100), requestsAuthorization: false),
+          .alarm(Date(timeIntervalSince1970: 1_100)),
         ]
       )
     }
@@ -358,10 +359,10 @@ extension SupershotTestSuite {
         $0.alarmClient = Self.alarmClient(events: events, alarmUnavailable: true)
       } operation: {
         @Dependency(\.gameTimer) var client
-        return try await client.startOrResume(UUID(3), 0, true)
+        return try await client.startOrResume(UUID(3), 0)
       }
 
-      expectNoDifference(update.alarmAuthorizationDenied, true)
+      expectNoDifference(update.alarmSchedulingFailed, true)
       expectNoDifference(
         update.snapshot.game.timerEndsAt,
         Date(timeIntervalSince1970: 1_900)
@@ -389,8 +390,8 @@ extension SupershotTestSuite {
         guard case .timerStartResponse(.success) = $0 else { return false }
         return true
       } assert: {
-        $0.alert = .alarmUnavailable
-        $0.hasShownAlarmUnavailableAlert = true
+        $0.alert = .alarmSchedulingFailed
+        $0.hasShownAlarmSchedulingFailureAlert = true
       }
       await store.send(.alert(.presented(.dismissButtonTapped))) {
         $0.alert = nil
@@ -423,18 +424,62 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
+    @Test(arguments: [false, true])
+    func enablingAlarmsSchedulesOnlyRunningGames(isRunning: Bool) async {
+      var state = Self.scoringState()
+      state.alarms.access = .pro
+      if isRunning { state.timerEndsAt = Date(timeIntervalSince1970: 1_900) }
+      let events = LockIsolated<[TimerSystemEvent]>([])
+      let store = Self.makeScoringStore(state: state)
+      store.dependencies.alarmAuthorization.request = { .authorized }
+      store.dependencies.alarmClient = Self.alarmClient(events: events)
+      await store.send(.alarms(.enableButtonTapped)) { $0.alarms.isRequesting = true }
+      await store.receive(\.alarms.authorizationResponse) {
+        $0.alarms.isRequesting = false
+        $0.alarms.authorization = .authorized
+      }
+      await store.receive { if case .alarms(.delegate(.authorized)) = $0 { true } else { false } }
+      await store.receive(\.alarmScheduleResponse)
+      await store.finish()
+      #expect(events.value.contains { if case .alarm = $0 { return true }; return false } == isRunning)
+    }
+
+    @Test
+    func scoringRoutesProPromotionThroughBothTabs() async {
+      var scoring = Self.scoringState()
+      scoring.alarms.access = .free
+      var games = GamesFeature.State()
+      games.path.append(.scoring(scoring))
+      let gamesStore = TestStore(initialState: games) { GamesFeature() }
+      gamesStore.exhaustivity = .off(showSkippedAssertions: false)
+      await gamesStore.send(.path(.element(id: games.path.ids[0], action: .scoring(.alarms(.enableButtonTapped)))))
+      await gamesStore.receive(\.path)
+      #expect(gamesStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
+      await gamesStore.send(.path(.element(id: games.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      await gamesStore.receive(\.delegate)
+      var teams = TeamsFeature.State()
+      teams.path.append(.scoring(scoring))
+      let teamsStore = TestStore(initialState: teams) { TeamsFeature() }
+      teamsStore.exhaustivity = .off(showSkippedAssertions: false)
+      await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.alarms(.enableButtonTapped)))))
+      await teamsStore.receive(\.path)
+      #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
+      await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      await teamsStore.receive(\.delegate)
+      await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.proPaywallDidDismiss))))
+      #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .shown)
+    }
+
     private nonisolated static func alarmClient(
         events: LockIsolated<[TimerSystemEvent]>,
         alarmUnavailable: Bool = false
       ) -> AlarmClient {
         AlarmClient(
-          authorise: { .authorized },
-          scheduleAlarm: { snapshot, requestsAuthorization in
+          scheduleAlarm: { snapshot in
             events.withValue {
               $0.append(
                 .alarm(
-                  snapshot.game.timerEndsAt,
-                  requestsAuthorization: requestsAuthorization
+                  snapshot.game.timerEndsAt
                 )
               )
             }
@@ -540,7 +585,7 @@ extension SupershotTestSuite {
 
 private nonisolated enum TimerSystemEvent: Equatable, Sendable {
   case activity(Date?)
-  case alarm(Date?, requestsAuthorization: Bool)
+  case alarm(Date?)
   case cancelAlarm
   case endActivity
 }

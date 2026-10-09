@@ -9,8 +9,7 @@ import SwiftUI
 #endif
 
 nonisolated struct AlarmClient: Sendable {
-  var authorise: @Sendable () async throws -> AlarmManager.AuthorizationState
-  var scheduleAlarm: @Sendable (GameSnapshot, Bool) async -> Bool
+  var scheduleAlarm: @Sendable (GameSnapshot) async -> Bool
   var updateActivity: @Sendable (GameSnapshot, Bool) async -> Void
   var cancelAlarm: @Sendable (Game.ID, Int) async -> Void
   var endActivity: @Sendable (Game.ID) async -> Void
@@ -26,8 +25,7 @@ extension DependencyValues {
 
 nonisolated extension AlarmClient {
   static let noop = Self(
-    authorise: { .authorized },
-    scheduleAlarm: { _, _ in false },
+    scheduleAlarm: { _ in false },
     updateActivity: { _, _ in },
     cancelAlarm: { _, _ in },
     endActivity: { _ in }
@@ -38,18 +36,10 @@ nonisolated extension AlarmClient {
   static var live: Self {
     #if os(iOS)
     Self(
-      authorise: { try await AlarmManager.shared.requestAuthorization() },
-      scheduleAlarm: { snapshot, requestsAuthorization in
+      scheduleAlarm: { snapshot in
         guard snapshot.game.timerEndsAt != nil else { return false }
         let manager = AlarmManager.shared
-        var authorizationState = manager.authorizationState
-        if authorizationState == .notDetermined,
-           requestsAuthorization {
-          authorizationState = (try? await manager.requestAuthorization()) ?? authorizationState
-        }
-        guard authorizationState == .authorized else {
-          return authorizationState == .denied || requestsAuthorization
-        }
+        guard manager.authorizationState == .authorized else { return false }
 
         cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
         let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.progress)

@@ -8,6 +8,7 @@ struct GamesHomeView: View {
   private var gamesResponse = GamesRequest.Value()
   let proAccess: SubscriptionEntitlement
   @Bindable var store: StoreOf<GamesFeature>
+  var isPresentingPaywall = false
 
   var body: some View {
     NavigationStack(path: $store.scope(state: \.path, action: \.path)) {
@@ -21,12 +22,12 @@ struct GamesHomeView: View {
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
       case .scoring(let scoringStore):
-        ScoringView(store: scoringStore)
+        ScoringView(store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall)
 #if os(iOS)
           .toolbarVisibility(.hidden, for: .tabBar)
 #endif
       case .setup(let setupStore):
-        NewGameView(store: setupStore)
+        NewGameView(store: setupStore, proAccess: proAccess)
 #if os(iOS)
           .toolbarVisibility(.hidden, for: .tabBar)
 #endif

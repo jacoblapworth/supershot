@@ -53,6 +53,7 @@ struct FooterCardView: View {
     }
 }
 
+#if os(iOS)
 #Preview {
   NavigationView {
     FooterCardView()
@@ -66,3 +67,5 @@ struct FooterCardView: View {
     }
   }
 }
+
+#endif

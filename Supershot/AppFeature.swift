@@ -2,6 +2,7 @@ import SwiftUI
 import ComposableArchitecture
 import Foundation
 import SQLiteData
+import Sharing
 
 @Reducer
 struct AppFeature {
@@ -17,10 +18,18 @@ struct AppFeature {
     var games = GamesFeature.State()
     var teams = TeamsFeature.State()
     var settings = SettingsFeature.State()
-    var hasCheckedPermissions = false
+    @Shared(.hasCompletedWelcome) var hasCompletedWelcome
+    var pendingDeepLink: URL?
+    var hasLoadedAccess = false
     var hasStartedSubscriptionObservation = false
     var proAccess = SubscriptionEntitlement.unknown
     var selectedTab = Tab.games
+
+    init() {
+      if !hasCompletedWelcome {
+        destination = .welcome(WelcomeFeature.State())
+      }
+    }
   }
 
   enum Action {
@@ -40,7 +49,6 @@ struct AppFeature {
   @Dependency(\.alarmAuthorization) var alarmAuthorization
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
-  @Dependency(\.locationClient) var locationClient
   @Dependency(\.proSubscription) var proSubscription
 
   var body: some Reducer<State, Action> {
@@ -58,6 +66,10 @@ struct AppFeature {
         switch action {
         case let .deepLinkOpened(url):
           guard let gameID = gameID(from: url) else { return .none }
+          guard state.hasCompletedWelcome else {
+            state.pendingDeepLink = url
+            return .none
+          }
 
           if state.games.hasScoringRoute(for: gameID) {
             state.selectedTab = .games
@@ -82,16 +94,16 @@ struct AppFeature {
         case .games, .settings, .teams:
           return .none
 
-        case .destination(.presented(.permissionsOnboarding(.delegate(.completed)))):
+        case .destination(.presented(.welcome(.delegate(.completed)))):
+          state.$hasCompletedWelcome.withLock { $0 = true }
           state.destination = nil
-          guard
-            state.proAccess == .pro,
-            alarmAuthorization.status() == .authorized
-          else { return .none }
-          return synchronizePremiumPresentations(schedulesAlerts: true)
+          state.selectedTab = .games
+          guard let url = state.pendingDeepLink else { return .none }
+          state.pendingDeepLink = nil
+          return .send(.deepLinkOpened(url))
 
         case let .proAccessLoaded(access):
-          state.hasCheckedPermissions = true
+          state.hasLoadedAccess = true
           return applyProAccess(access, state: &state)
 
         case let .proAccessUpdated(access):
@@ -153,35 +165,18 @@ struct AppFeature {
 
     switch access {
     case .free:
-      if locationClient.authorizationStatus() == .notDetermined {
-        state.destination = .permissionsOnboarding(
-          PermissionsOnboardingFeature.State(step: .location)
-        )
-      } else if state.destination?.proPaywall == nil {
-        state.destination = nil
-      }
       return cleanUpPremiumPresentations()
 
     case .pro:
       let alarmAuthorization = alarmAuthorization.status()
-      let needsLocation = locationClient.authorizationStatus() == .notDetermined
-      if alarmAuthorization == .notDetermined {
-        state.destination = .permissionsOnboarding(
-          PermissionsOnboardingFeature.State(nextStep: needsLocation ? .location : nil)
-        )
-      } else {
-        state.destination = needsLocation
-          ? .permissionsOnboarding(PermissionsOnboardingFeature.State(step: .location))
-          : nil
+      if state.destination?.proPaywall != nil {
+        state.destination = nil
       }
       return synchronizePremiumPresentations(
         schedulesAlerts: alarmAuthorization == .authorized
       )
 
     case .unknown:
-      if state.destination?.proPaywall == nil {
-        state.destination = nil
-      }
       return .none
     }
   }
@@ -203,7 +198,7 @@ struct AppFeature {
       for gameID in gameIDs {
         await gameTimer.refreshActivity(gameID)
         if schedulesAlerts {
-          await gameTimer.scheduleAlarm(gameID)
+          _ = await gameTimer.scheduleAlarm(gameID)
         }
       }
     }
@@ -225,7 +220,7 @@ struct AppFeature {
 
 @Reducer
 enum AppDestination {
-  case permissionsOnboarding(PermissionsOnboardingFeature)
+  case welcome(WelcomeFeature)
   case proPaywall(PaywallFeature)
 }
 

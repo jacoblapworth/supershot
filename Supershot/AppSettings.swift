@@ -1,6 +1,10 @@
 import Sharing
 
 extension SharedKey where Self == AppStorageKey<Bool>.Default {
+  static var hasCompletedWelcome: Self {
+    Self[.appStorage("hasCompletedWelcome"), default: false]
+  }
+
   static var hapticsEnabled: Self {
     Self[.appStorage("hapticsEnabled"), default: true]
   }

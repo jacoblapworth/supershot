@@ -7,6 +7,12 @@ import SQLiteData
 
 @Reducer
 struct ScoringFeature {
+  nonisolated enum ControlsPresentation: Equatable, Sendable {
+    case shown
+    case dismissingForPaywall
+    case hiddenForPaywall
+  }
+
   nonisolated enum ClockPhase: Equatable, Sendable {
     case breakTime
     case quarter
@@ -46,6 +52,8 @@ struct ScoringFeature {
   @ObservableState
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
+    var alarms = AlarmPermissionFeature.State()
+    var controlsPresentation = ControlsPresentation.shown
     @Shared(.hapticsEnabled) var hapticsEnabled
     @Shared(.soundEffectsEnabled) var soundEffectsEnabled
     var canUndo = false
@@ -56,7 +64,7 @@ struct ScoringFeature {
     var swapSides = false
     let gameID: Game.ID
     var goalFeedbackTrigger = 0
-    var hasShownAlarmUnavailableAlert = false
+    var hasShownAlarmSchedulingFailureAlert = false
     var isSavingCourtOrientation = false
     var isShowingLastCentrePassBanner = false
     var isTransitioningPeriod = false
@@ -150,7 +158,11 @@ struct ScoringFeature {
   }
 
   enum Action: BindableAction {
+    case alarms(AlarmPermissionFeature.Action)
+    case alarmScheduleResponse(Bool)
     case alert(PresentationAction<Alert>)
+    case controlsSheetDidDismiss
+    case proPaywallDidDismiss
     case centrePassTeamButtonTapped(Team.ID)
     case centrePassTeamResponse(Result<Team.ID, any Error>)
     case delegate(Delegate)
@@ -182,6 +194,7 @@ struct ScoringFeature {
     
     enum Delegate {
       case gameFinished(Game.ID)
+      case proPromotionTapped
     }
   }
 
@@ -205,10 +218,38 @@ struct ScoringFeature {
   @Dependency(\.uuid) var uuid
 
   var body: some Reducer<State, Action> {
+    Scope(state: \.alarms, action: \.alarms) { AlarmPermissionFeature() }
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .alert, .delegate:
+      case .alarms(.delegate(.proPromotionTapped)):
+        guard state.controlsPresentation == .shown else { return .none }
+        state.controlsPresentation = .dismissingForPaywall
+        return .none
+
+      case .controlsSheetDidDismiss:
+        guard state.controlsPresentation == .dismissingForPaywall else { return .none }
+        state.controlsPresentation = .hiddenForPaywall
+        return .send(.delegate(.proPromotionTapped))
+
+      case .proPaywallDidDismiss:
+        state.controlsPresentation = .shown
+        return .none
+
+      case .alarms(.delegate(.authorized)):
+        let gameID = state.gameID
+        return .run { send in
+          await send(.alarmScheduleResponse(await gameTimer.scheduleAlarm(gameID)))
+        }
+
+      case let .alarmScheduleResponse(failed):
+        if failed, !state.hasShownAlarmSchedulingFailureAlert {
+          state.alert = .alarmSchedulingFailed
+          state.hasShownAlarmSchedulingFailureAlert = true
+        }
+        return .none
+
+      case .alarms, .alert, .delegate:
         return .none
 
       case .swapSidesButtonTapped:
@@ -380,7 +421,6 @@ struct ScoringFeature {
           !state.isPeriodComplete,
           state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
         else { return .none }
-        let requestsAuthorization = state.currentPhaseIndex == 0 && state.elapsedSeconds == 0
         state.timerEndsAt = GameTimerClient.endDate(
           durationSeconds: state.currentDurationSeconds,
           elapsedSeconds: state.elapsedSeconds,
@@ -389,8 +429,7 @@ struct ScoringFeature {
         return .merge(
           startTimerEffect(
             gameID: state.gameID,
-            expectedPhaseIndex: state.currentPhaseIndex,
-            requestsAuthorization: requestsAuthorization
+            expectedPhaseIndex: state.currentPhaseIndex
           ),
           timerEffect()
         )
@@ -420,9 +459,9 @@ struct ScoringFeature {
 
       case let .timerStartResponse(.success(update)):
         applyTimer(update.snapshot.game, to: &state)
-        if update.alarmAuthorizationDenied, !state.hasShownAlarmUnavailableAlert {
-          state.alert = .alarmUnavailable
-          state.hasShownAlarmUnavailableAlert = true
+        if update.alarmSchedulingFailed, !state.hasShownAlarmSchedulingFailureAlert {
+          state.alert = .alarmSchedulingFailed
+          state.hasShownAlarmSchedulingFailureAlert = true
         }
         return .none
 
@@ -624,8 +663,7 @@ struct ScoringFeature {
 
   private func startTimerEffect(
     gameID: Game.ID,
-    expectedPhaseIndex: Int,
-    requestsAuthorization: Bool
+    expectedPhaseIndex: Int
   ) -> Effect<Action> {
     .run { send in
       await send(
@@ -633,8 +671,7 @@ struct ScoringFeature {
           await Result {
             try await gameTimer.startOrResume(
               gameID,
-              expectedPhaseIndex,
-              requestsAuthorization
+              expectedPhaseIndex
             )
           }
         )
@@ -724,7 +761,7 @@ struct ScoringFeature {
 }
 
 extension AlertState where Action == ScoringFeature.Alert {
-  static var alarmUnavailable: Self {
+  static var alarmSchedulingFailed: Self {
     Self {
       TextState("Quarter alerts unavailable")
     } actions: {
@@ -733,7 +770,7 @@ extension AlertState where Action == ScoringFeature.Alert {
       }
     } message: {
       TextState(
-        "The game timer will keep running, but Supershot cannot show a prominent quarter-end alert. You can allow alarms in Settings."
+        "The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer."
       )
     }
   }
