@@ -3,31 +3,29 @@ import SwiftUI
 
 struct TimeInputView: View {
   @Bindable var store: StoreOf<TimeInputFeature>
-
+  
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: 28) {
-          TimeInputDisplay(store: store)
-          TimeInputKeypad(store: store)
-          if let error = store.errorMessage {
-            Text(error).foregroundStyle(.red)
-          } else if !store.isValid {
-            Text(
-              "Enter a time between \(formatted(store.allowedSeconds.lowerBound)) and \(formatted(store.allowedSeconds.upperBound))."
-            )
-            .foregroundStyle(.red)
-          }
-          if store.isSaving { ProgressView("Saving time…") }
+      VStack(spacing: 16) {
+        TimeInputDisplay(store: store)
+        TimeInputKeypad(store: store)
+        if let error = store.errorMessage {
+          Text(error).foregroundStyle(.red)
+        } else if !store.isValid {
+          Text(
+            "Enter a time between \(formatted(store.allowedSeconds.lowerBound)) and \(formatted(store.allowedSeconds.upperBound))."
+          )
+          .foregroundStyle(.red)
         }
-        .padding(24)
-        .frame(maxWidth: 560)
-        .frame(maxWidth: .infinity)
+        if store.isSaving { ProgressView("Saving time…") }
       }
+      .padding(24)
+      .frame(maxWidth: 560)
+      .frame(maxWidth: .infinity)
       .navigationTitle(store.title)
-      #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-      #endif
+#if os(iOS)
+      .navigationBarTitleDisplayMode(.inline)
+#endif
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel", systemImage: "xmark") { store.send(.cancelButtonTapped) }
@@ -39,11 +37,11 @@ struct TimeInputView: View {
         }
       }
     }
-    .presentationDetents([.large])
+    .presentationDetents([.medium])
     .presentationBackground(.regularMaterial)
     .interactiveDismissDisabled(store.isSaving)
   }
-
+  
   private func formatted(_ seconds: Int) -> String {
     "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
   }
@@ -51,19 +49,19 @@ struct TimeInputView: View {
 
 private struct TimeInputDisplay: View {
   let store: StoreOf<TimeInputFeature>
-
+  
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(alignment: .top, spacing: 12) {
       field(.minutes, value: store.minutes, label: "Minutes")
       Text(":").font(.system(size: 56, weight: .bold, design: .rounded))
         .accessibilityHidden(true)
+        .padding(.vertical, 12)
       field(.seconds, value: store.seconds, label: "Seconds")
     }
-    .padding(16)
-    .background(.quaternary, in: RoundedRectangle(cornerRadius: 28))
+    .glassEffect(in: RoundedRectangle(cornerRadius: 28))
     .environment(\.layoutDirection, .leftToRight)
   }
-
+  
   private func field(_ unit: TimeInputFeature.Unit, value: String, label: String) -> some View {
     Button {
       store.send(.unitButtonTapped(unit))
@@ -74,14 +72,15 @@ private struct TimeInputDisplay: View {
           .monospacedDigit()
           .minimumScaleFactor(0.5)
           .lineLimit(1)
+          .padding(.horizontal, 12)
+          .overlay {
+            RoundedRectangle(cornerRadius: 20)
+              .strokeBorder(store.selectedUnit == unit ? Color.accentColor : .clear, lineWidth: 3)
+          }
         Text(label).font(.subheadline)
       }
       .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
-      .overlay {
-        RoundedRectangle(cornerRadius: 20)
-          .strokeBorder(store.selectedUnit == unit ? Color.accentColor : .clear, lineWidth: 3)
-      }
     }
     .buttonStyle(.plain)
     .disabled(store.isSaving)
@@ -94,7 +93,7 @@ private struct TimeInputDisplay: View {
 
 private struct TimeInputKeypad: View {
   let store: StoreOf<TimeInputFeature>
-
+  
   var body: some View {
     Grid(horizontalSpacing: 10, verticalSpacing: 14) {
       GridRow {
@@ -126,7 +125,7 @@ private struct TimeInputKeypad: View {
     .disabled(store.isSaving)
     .environment(\.layoutDirection, .leftToRight)
   }
-
+  
   private func add(_ amount: Int) -> some View {
     key(tint: .green) {
       store.send(.quickAddButtonTapped(amount))
@@ -136,7 +135,7 @@ private struct TimeInputKeypad: View {
     .disabled(!store.enabledQuickAdds.contains(amount))
     .accessibilityLabel("Add \(amount) \(store.selectedUnit == .minutes ? "minutes" : "seconds")")
   }
-
+  
   private func digit(_ value: Int) -> some View {
     key {
       store.send(.digitButtonTapped(value))
@@ -144,31 +143,36 @@ private struct TimeInputKeypad: View {
       Text("\(value)")
     }
   }
-
+  
   private func key<Label: View>(
     tint: Color = .primary, action: @escaping () -> Void, @ViewBuilder label: () -> Label
   ) -> some View {
     Button(action: action) {
       label()
         .font(.title2.bold())
+        .fontDesign(.rounded)
         .minimumScaleFactor(0.6)
         .lineLimit(1)
         .foregroundStyle(tint)
         .frame(maxWidth: .infinity)
         .frame(minHeight: 44)
-        .aspectRatio(1, contentMode: .fit)
-        .background(tint.opacity(0.12), in: Circle())
-        .overlay { Circle().strokeBorder(tint.opacity(0.2)) }
     }
-    .buttonStyle(.plain)
+    .tint(tint.opacity(0.2))
+    .buttonStyle(.glassProminent)
+    .buttonBorderShape(.circle)
   }
 }
 
 #Preview {
-  TimeInputView(
-    store: Store(
-      initialState: TimeInputFeature.State(
-        title: "Quarter length", totalSeconds: 480, allowedSeconds: 1...5999
-      )
-    ) { TimeInputFeature() })
+  NavigationStack {}
+    .sheet(isPresented: .constant(true)) {
+      TimeInputView(
+        store: Store(
+          initialState: TimeInputFeature.State(
+            title: "Quarter length",
+            totalSeconds: 480,
+            allowedSeconds: 1...5999
+          )
+        ) { TimeInputFeature() })
+    }
 }
