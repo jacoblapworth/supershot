@@ -252,7 +252,7 @@ nonisolated extension GameTimerClient {
 }
 
 private nonisolated func hasActiveProAccess(
-  _ proSubscription: ProSubscriptionClient
+  _ proSubscription: SubscriptionClient
 ) async -> Bool {
   (try? await proSubscription.currentAccess()) == .pro
 }

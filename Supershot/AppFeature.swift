@@ -15,12 +15,12 @@ struct AppFeature {
   struct State: Equatable {
     @Presents var destination: AppDestination.State?
     var games = GamesFeature.State()
+    var teams = TeamsFeature.State()
+    var settings = SettingsFeature.State()
     var hasCheckedPermissions = false
     var hasStartedSubscriptionObservation = false
     var proAccess = SubscriptionEntitlement.unknown
     var selectedTab = Tab.games
-    var settings = SettingsFeature.State()
-    var teams = TeamsFeature.State()
   }
 
   enum Action {
@@ -105,7 +105,7 @@ struct AppFeature {
 
         case .proPromotionTapped:
           guard state.proAccess != .pro, state.destination == nil else { return .none }
-          state.destination = .proPaywall(ProPaywallFeature.State())
+          state.destination = .proPaywall(PaywallFeature.State())
           return .none
 
         case .sceneBecameActive:
@@ -226,7 +226,7 @@ struct AppFeature {
 @Reducer
 enum AppDestination {
   case permissionsOnboarding(PermissionsOnboardingFeature)
-  case proPaywall(ProPaywallFeature)
+  case proPaywall(PaywallFeature)
 }
 
 extension AppDestination.State: Equatable {}

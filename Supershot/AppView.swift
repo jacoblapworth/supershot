@@ -26,7 +26,7 @@ struct AppView: View {
     .sheet(
       item: $store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
     ) { paywallStore in
-      ProPaywallView(store: paywallStore)
+      PaywallView(store: paywallStore)
     }
     .task { store.send(.task) }
     .onChange(of: scenePhase) { _, scenePhase in
