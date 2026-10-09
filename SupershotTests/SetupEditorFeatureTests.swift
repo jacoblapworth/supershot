@@ -51,7 +51,16 @@ extension SupershotTestSuite {
       await store.send(.editTimingButtonTapped) {
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: $0.timing))
       }
-      await store.send(.destination(.presented(.timingEditor(.periodPresetButtonTapped(900))))) {
+      await store.send(.destination(.presented(.timingEditor(.editDurationButtonTapped(.quarter)))))
+      {
+        var editor = SetupTimingFeature.State(timing: $0.timing)
+        editor.editedDuration = .quarter
+        editor.timeInput = .init(
+          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1...5999)
+        $0.destination = .timingEditor(editor)
+      }
+      await store.send(
+        .destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(900)))))))) {
         var timing = $0.timing
         timing.periodDuration = .init(totalSeconds: 900)
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))

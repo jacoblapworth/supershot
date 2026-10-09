@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct TimerView: View {
+  var canEditTime = false
+  var editTimeTapped: () -> Void = {}
   var clockPhase: ScoringFeature.ClockPhase
   var currentDurationSeconds: Int
   var elapsedSeconds: Int
@@ -16,9 +18,17 @@ struct TimerView: View {
     VStack(spacing: 12) {
       
       VStack(alignment: .leading, spacing: 0) {
-        Text(title)
-          .font(.footnote)
-          .foregroundStyle(.white)
+        HStack {
+          Text(title)
+            .font(.footnote)
+            .foregroundStyle(.white)
+          Spacer()
+          Button("Edit", action: editTimeTapped)
+            .font(.subheadline)
+            .foregroundStyle(.white)
+            .disabled(!canEditTime)
+            .accessibilityLabel("Edit remaining time")
+        }
         
         HStack {
           Text(formattedTime(timeRemainingSeconds))
