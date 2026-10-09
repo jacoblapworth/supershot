@@ -23,7 +23,7 @@ extension SupershotTestSuite {
         AppFeature()
       } withDependencies: {
         try! clearDatabase($0.defaultDatabase)
-        $0.proSubscription = ProSubscriptionClient(
+        $0.proSubscription = SubscriptionClient(
           accessUpdates: { AsyncStream { $0.finish() } },
           currentAccess: { throw SubscriptionTestError.unavailable }
         )
@@ -54,7 +54,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.proPromotionTapped) {
-        $0.destination = .proPaywall(ProPaywallFeature.State())
+        $0.destination = .proPaywall(PaywallFeature.State())
       }
       await store.send(.proAccessUpdated(.pro)) {
         $0.proAccess = .pro
@@ -66,7 +66,7 @@ extension SupershotTestSuite {
     @Test
     func freeAccessReplacesPaywallWithLocationOnboarding() async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .unknown
       state.selectedTab = .teams
       let store = TestStore(initialState: state) {
@@ -91,7 +91,7 @@ extension SupershotTestSuite {
       access: SubscriptionEntitlement
     ) async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .pro
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -128,7 +128,7 @@ extension SupershotTestSuite {
     @Test(arguments: [false, true])
     func paywallProAccessBeginsRequiredOnboarding(needsAlarms: Bool) async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -158,7 +158,7 @@ extension SupershotTestSuite {
     @Test
     func paywallProAccessDismissesWhenPermissionsAreResolved() async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .free
       let store = TestStore(initialState: state) {
         AppFeature()
@@ -195,7 +195,7 @@ extension SupershotTestSuite {
     @Test
     func dismissingPaywallPreservesEntitlementAndSelectedTab() async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .free
       state.selectedTab = .settings
       let store = TestStore(initialState: state) {
@@ -210,7 +210,7 @@ extension SupershotTestSuite {
     @Test
     func sceneActivationRefreshesAccessAndDismissesPaywall() async {
       var state = AppFeature.State()
-      state.destination = .proPaywall(ProPaywallFeature.State())
+      state.destination = .proPaywall(PaywallFeature.State())
       state.hasStartedSubscriptionObservation = true
       state.proAccess = .free
       let store = TestStore(initialState: state) {
@@ -247,7 +247,7 @@ extension SupershotTestSuite {
         guard case .proPromotionTapped = $0 else { return false }
         return true
       } assert: {
-        $0.destination = .proPaywall(ProPaywallFeature.State())
+        $0.destination = .proPaywall(PaywallFeature.State())
       }
       await store.send(.settings(.delegate(.proAccessChanged(.pro))))
       await store.receive {
@@ -318,8 +318,8 @@ extension SupershotTestSuite {
 
     @Test
     func paywallReportsPurchaseAndRestoreAccess() async {
-      let store = TestStore(initialState: ProPaywallFeature.State()) {
-        ProPaywallFeature()
+      let store = TestStore(initialState: PaywallFeature.State()) {
+        PaywallFeature()
       }
 
       await store.send(.customerInfoUpdated(.free))

@@ -110,7 +110,7 @@ struct SettingsFeature {
     guard case let .ready(url) = state.databaseExport else { return .none }
     state.databaseExport = nil
     return .run { _ in
-      databaseExportClient.removeSnapshot(url)
+      await databaseExportClient.removeSnapshot(url)
     }
   }
 #endif

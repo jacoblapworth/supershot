@@ -51,7 +51,7 @@ extension SupershotTestSuite {
           currentLocation: { throw LocationClientError.locationUnavailable },
           requestAuthorization: { .notDetermined }
         )
-        $0.proSubscription = ProSubscriptionClient(
+        $0.proSubscription = SubscriptionClient(
           accessUpdates: { AsyncStream { $0.finish() } },
           currentAccess: { .free }
         )
