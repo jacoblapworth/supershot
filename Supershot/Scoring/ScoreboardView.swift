@@ -59,7 +59,7 @@ private struct TeamScore: View {
         .font(.system(size: 80, weight: .bold))
         .fontWidth(.compressed)
         .monospacedDigit()
-        .foregroundStyle(color)
+        .teamScoreStyle(color: color)
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: frameAlignment)

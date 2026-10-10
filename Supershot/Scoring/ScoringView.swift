@@ -6,6 +6,7 @@ import SwiftUI
 struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Fetch private var timelineResponse: GoalTimelineRequest.Value
+  @State private var isScoreboardAboveViewport = false
   @Bindable var store: StoreOf<ScoringFeature>
   let proAccess: SubscriptionEntitlement
   let isPresentingPaywall: Bool
@@ -50,6 +51,11 @@ struct ScoringView: View {
           ScoreboardView(
             courtLayout: store.courtLayout
           )
+          .onGeometryChange(for: Bool.self) { geometry in
+            geometry.frame(in: .named("scoringViewport")).maxY <= 0
+          } action: { isAboveViewport in
+            isScoreboardAboveViewport = isAboveViewport
+          }
           
         }
         
@@ -99,16 +105,26 @@ struct ScoringView: View {
       .padding()
       
     }
+    .coordinateSpace(name: "scoringViewport")
     .safeAreaInset(edge: .bottom, spacing: 0) {
       Color
         .clear
         .frame(height: 112)
     }
-    //    .background {
-    //      LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
-    //        .ignoresSafeArea()
-    //    }
+    .background {
+      TeamColorBackground(
+        leftColor: store.courtLayout.left.team.bibColor,
+        rightColor: store.courtLayout.right.team.bibColor
+      )
+      .ignoresSafeArea()
+    }
+    .preferredColorScheme(.dark)
     .toolbar {
+      ToolbarItem(placement: .principal) {
+        if isScoreboardAboveViewport {
+          ScoringHeaderView(courtLayout: store.courtLayout)
+        }
+      }
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.undoButtonTapped)
@@ -141,10 +157,6 @@ struct ScoringView: View {
       }
       
     }
-    //    .background {
-    //      LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)
-    //        .ignoresSafeArea()
-    //    }
     .sheet(
       isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
       onDismiss: { store.send(.controlsSheetDidDismiss) },
