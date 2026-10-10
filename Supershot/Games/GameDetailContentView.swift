@@ -26,6 +26,14 @@ struct GameDetailContentView: View {
       }
       .padding()
     }
+    .background {
+      TeamColorBackground(
+        leftColor: detail.teamABibColor,
+        rightColor: detail.teamBBibColor
+      )
+      .ignoresSafeArea()
+    }
+    .preferredColorScheme(.dark)
   }
 }
 

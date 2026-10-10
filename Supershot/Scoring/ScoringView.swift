@@ -6,6 +6,7 @@ import SwiftUI
 struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Fetch private var timelineResponse: GoalTimelineRequest.Value
+  @State private var isScoreboardAboveViewport = false
   @Bindable var store: StoreOf<ScoringFeature>
   let proAccess: SubscriptionEntitlement
   let isPresentingPaywall: Bool
@@ -50,6 +51,11 @@ struct ScoringView: View {
           ScoreboardView(
             courtLayout: store.courtLayout
           )
+          .onGeometryChange(for: Bool.self) { geometry in
+            geometry.frame(in: .named("scoringViewport")).maxY <= 0
+          } action: { isAboveViewport in
+            isScoreboardAboveViewport = isAboveViewport
+          }
           
         }
         
@@ -73,7 +79,7 @@ struct ScoringView: View {
             }
           )
         }
-
+        
         if store.canFinishGame {
           ScoringGameControls(
             canFinishGame: store.canFinishGame,
@@ -99,11 +105,26 @@ struct ScoringView: View {
       .padding()
       
     }
-//    .background {
-//      LinearGradient(colors: [store.teamA.bibColor, store.teamB.bibColor], startPoint: .leading, endPoint: .trailing)
-//        .ignoresSafeArea()
-//    }
+    .coordinateSpace(name: "scoringViewport")
+    .safeAreaInset(edge: .bottom, spacing: 0) {
+      Color
+        .clear
+        .frame(height: 112)
+    }
+    .background {
+      TeamColorBackground(
+        leftColor: store.courtLayout.left.team.bibColor,
+        rightColor: store.courtLayout.right.team.bibColor
+      )
+      .ignoresSafeArea()
+    }
+    .preferredColorScheme(.dark)
     .toolbar {
+      ToolbarItem(placement: .principal) {
+        if isScoreboardAboveViewport {
+          ScoringHeaderView(courtLayout: store.courtLayout)
+        }
+      }
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.undoButtonTapped)
@@ -125,7 +146,7 @@ struct ScoringView: View {
           .disabled(store.isSavingCourtOrientation)
           
           Button {
-            
+            store.send(.swapCentrePass)
           } label: {
             Label("Change centre pass", systemImage: "arrow.left.circle.fill")
           }
@@ -136,94 +157,82 @@ struct ScoringView: View {
       }
       
     }
-    //    .background {
-    //      LinearGradient(colors: [.red, .blue], startPoint: .top, endPoint: .bottom)
-    //        .ignoresSafeArea()
-    //    }
     .sheet(
       isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
       onDismiss: { store.send(.controlsSheetDidDismiss) },
       content: {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 12) {
-          if store.canScoreGoal {
-            HStack(spacing: 16) {
-              goalButton(for: store.courtLayout.left)
-              goalButton(for: store.courtLayout.right)
+        ScrollView {
+          VStack(alignment: .leading, spacing: 12) {
+            if store.canScoreGoal {
+              HStack(spacing: 16) {
+                goalButton(for: store.courtLayout.left)
+                goalButton(for: store.courtLayout.right)
+              }
+              .environment(\.layoutDirection, .leftToRight)
+            } else if store.currentPhase.isPlayingPeriod && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner {
+              Button(action: { store.send(.startTimerButtonTapped) }) {
+                Label("Start Quarter", systemImage: "play.fill")
+                  .fontWeight(.medium)
+                  .padding(8)
+              }
+              .tint(.green)
             }
-            .environment(\.layoutDirection, .leftToRight)
-          } else if store.currentPhase.isPlayingPeriod && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner {
-            Button(action: { store.send(.startTimerButtonTapped) }) {
-              Label("Start Quarter", systemImage: "play.fill")
-                .fontWeight(.medium)
-                .padding(8)
-            }
-            .tint(.green)
           }
-          CentrePassControl(
-            courtLayout: store.courtLayout,
-            centrePassTeamTapped: { store.send(.centrePassTeamButtonTapped($0)) }
-          )
+          .padding()
         }
-        .padding()
-      }
-      .presentationBackground(.thinMaterial)
-      .scrollDisabled(true)
-      .buttonSizing(.flexible)
-      .buttonStyle(.glassProminent)
-      .presentationDetents([.height(84), .height(200)],
-        selection: $store.presentationDetent)
+        .scrollDisabled(true)
+        .buttonSizing(.flexible)
+        .buttonStyle(.glassProminent)
+        .presentationDetents(store.detents, selection: $store.presentationDetent)
+        .presentationBackgroundInteraction(.enabled)
+        .presentationBackground(alignment: .topLeading) {}
+        .interactiveDismissDisabled()
+        .presentationContentInteraction(.resizes)
+        .presentationDragIndicator(.hidden)
 #if os(iOS)
-      .presentationPlacement(.leading)
+        .presentationPlacement(.leading)
 #endif
-      .presentationBackgroundInteraction(.enabled)
-      .presentationBackground(alignment: .topLeading) {}
-      .interactiveDismissDisabled()
-      //      .presentationContentInteraction(.resizes)
-      //      .presentationDragIndicator(.hidden)
-      //      .presentationBackground(.ultraThinMaterial)
-      //      .presentationSizing(.fitted)
-    })
+      })
     .sheet(
       item: $store.scope(state: \.timeInput, action: \.timeInput),
       onDismiss: { store.send(.timeInputSheetDidDismiss) }
     ) { TimeInputView(store: $0) }
-    .alert($store.scope(state: \.alert, action: \.alert))
-    .onChange(of: isPresentingPaywall) { wasPresented, isPresented in
-      if wasPresented && !isPresented { store.send(.proPaywallDidDismiss) }
-    }
-    .onChange(of: proAccess) { _, access in
-      if access == .pro { store.send(.proPaywallDidDismiss) }
-    }
+      .alert($store.scope(state: \.alert, action: \.alert))
+      .onChange(of: isPresentingPaywall) { wasPresented, isPresented in
+        if wasPresented && !isPresented { store.send(.proPaywallDidDismiss) }
+      }
+      .onChange(of: proAccess) { _, access in
+        if access == .pro { store.send(.proPaywallDidDismiss) }
+      }
 #if os(iOS)
-    .sensoryFeedback(
-      .success,
-      trigger: store.goalFeedbackTrigger,
-      condition: { _, _ in store.hapticsEnabled }
-    )
+      .sensoryFeedback(
+        .success,
+        trigger: store.goalFeedbackTrigger,
+        condition: { _, _ in store.hapticsEnabled }
+      )
 #endif
-    .task(id: scenePhase) {
-      guard scenePhase == .active else { return }
-      await store.send(.keepScreenAwakeTask).finish()
-    }
-    .task {
-      guard scenePhase == .active else { return }
-      store.send(.sceneBecameActive)
-    }
-    .onChange(of: scenePhase, scenePhaseChanged)
+      .task(id: scenePhase) {
+        guard scenePhase == .active else { return }
+        await store.send(.keepScreenAwakeTask).finish()
+      }
+      .task {
+        guard scenePhase == .active else { return }
+        store.send(.sceneBecameActive)
+      }
+      .onChange(of: scenePhase, scenePhaseChanged)
   }
   
   private func goalButton(for courtTeam: ScoringFeature.CourtTeam) -> some View {
     Button(action: { store.send(.goalButtonTapped(courtTeam.id)) }) {
       Label("Goal", systemImage: "plus")
-        .padding(8)
+        .padding(24)
     }
     .tint(courtTeam.team.bibColor)
     .accessibilityLabel("Goal for \(courtTeam.team.name)")
     .font(.title2.bold())
     .labelStyle(.iconOnly)
   }
-
+  
   private func scenePhaseChanged(
     _ oldValue: ScenePhase,
     _ newValue: ScenePhase
