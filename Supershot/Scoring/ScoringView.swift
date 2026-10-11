@@ -5,7 +5,9 @@ import SwiftUI
 
 struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
-  @Fetch private var timelineResponse: GoalTimelineRequest.Value
+  @Fetch private var analysisResponse: GameAnalysisRequest.Value
+  @State private var selectedAnalysis = GameAnalysisTab.playByPlay
+  @State private var viewportHeight: CGFloat = 0
   @State private var isScoreboardAboveViewport = false
   @Bindable var store: StoreOf<ScoringFeature>
   let proAccess: SubscriptionEntitlement
@@ -19,18 +21,25 @@ struct ScoringView: View {
     self.isPresentingPaywall = isPresentingPaywall
     self.proAccess = proAccess
     self.store = store
-    _timelineResponse = Fetch(
-      wrappedValue: GoalTimelineRequest.Value(
-        timeline: .empty(through: store.period)
+    _analysisResponse = Fetch(
+      wrappedValue: GameAnalysisRequest.Value(
+        analysis: GameAnalysis(
+          goalTimeline: .empty(through: store.period),
+          periods: store.periods,
+          teamABibColor: store.teamA.bibColor,
+          teamAName: store.teamA.name,
+          teamBBibColor: store.teamB.bibColor,
+          teamBName: store.teamB.name
+        )
       ),
-      GoalTimelineRequest(gameID: store.gameID),
+      GameAnalysisRequest(gameID: store.gameID),
       animation: .default
     )
   }
   
   var body: some View {
     ScrollView {
-      VStack(spacing: 20) {
+      LazyVStack(spacing: 20, pinnedViews: [.sectionHeaders]) {
         
         VStack {
           TimerView(
@@ -94,17 +103,20 @@ struct ScoringView: View {
           )
         }
         
-        GoalTimelineView(
-          teamABibColor: store.teamA.bibColor,
-          teamAName: store.teamA.name,
-          teamBBibColor: store.teamB.bibColor,
-          teamBName: store.teamB.name,
-          timeline: timelineResponse.timeline
-        )
+        Section {
+          GameAnalysisContentView(
+            analysis: analysisResponse.analysis,
+            selection: selectedAnalysis
+          )
+          .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+        } header: {
+          GameAnalysisControl(selection: $selectedAnalysis)
+        }
       }
       .padding()
       
     }
+    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
     .coordinateSpace(name: "scoringViewport")
     .safeAreaInset(edge: .bottom, spacing: 0) {
       Color

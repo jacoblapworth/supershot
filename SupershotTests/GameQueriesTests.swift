@@ -118,6 +118,56 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func liveAnalysisUpdatesAfterGoalsAndUndo() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let periods = testGamePeriods(gameID: UUID(-1), durationSeconds: 900)
+      try await database.write { db in
+        try db.seed {
+          Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
+          Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
+          Game(
+            id: UUID(-1), startedAt: Date(timeIntervalSince1970: 1_000),
+            teamAID: UUID(-1), teamABibColorHex: "#AF52DE", teamBID: UUID(-2)
+          )
+        }
+        try GamePeriod.insert { periods }.execute(db)
+      }
+
+      let initial = try await database.read { db in
+        try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis
+      }
+      #expect(initial.teamAName == "Ravens")
+      #expect(initial.teamABibColor == ColorPalette.purple)
+      #expect(initial.goalTimeline.quarters.first?.goals.isEmpty == true)
+      #expect(initial.statistics.teamA.averageTimeToGoalSeconds == nil)
+
+      try await database.write { db in
+        try Goal.insert {
+          Goal(
+            id: UUID(-1), gameID: UUID(-1), gamePeriodID: periods[0].id,
+            centrePassTeamID: UUID(-1), teamID: UUID(-1), elapsedSeconds: 30,
+            points: 2, createdAt: Date(timeIntervalSince1970: 1_030)
+          )
+        }.execute(db)
+      }
+      let scored = try await database.read { db in
+        try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis
+      }
+      #expect(scored.goalTimeline.quarters.first?.teamAQuarterScore == 2)
+      #expect(scored.statistics.teamA.averageTimeToGoalSeconds == 30)
+      #expect(scored.statistics.teamA.centrePass?.conversions == 1)
+
+      try await database.write { db in
+        try Goal.find(UUID(-1)).delete().execute(db)
+      }
+      let undone = try await database.read { db in
+        try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis
+      }
+      expectNoDifference(undone, initial)
+    }
+
+    @Test
     func gameHistoryKeepsBibColorsAfterTeamProfileColorsChange() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

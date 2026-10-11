@@ -1,31 +1,32 @@
 import SwiftUI
 
 struct GameDetailContentView: View {
+  @State private var selectedAnalysis = GameAnalysisTab.playByPlay
+  @State private var viewportHeight: CGFloat = 0
   var detail: CompletedGameDetail
   var showsProPromotion: Bool
   var proPromotionTapped: () -> Void
 
   var body: some View {
     ScrollView {
-      VStack(alignment: .leading, spacing: 28) {
+      LazyVStack(alignment: .leading, spacing: 28, pinnedViews: [.sectionHeaders]) {
         GameOverviewView(detail: detail)
         if let location = detail.location {
           GameLocationSection(location: location)
         }
-        GameStatisticsView(detail: detail)
-        GoalTimelineView(
-          teamABibColor: detail.teamABibColor,
-          teamAName: detail.teamAName,
-          teamBBibColor: detail.teamBBibColor,
-          teamBName: detail.teamBName,
-          timeline: detail.goalTimeline
-        )
-        if showsProPromotion {
-          ProPromotionCard(exploreProTapped: proPromotionTapped)
+        Section {
+          GameAnalysisContentView(analysis: detail.analysis, selection: selectedAnalysis)
+            .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+          if showsProPromotion {
+            ProPromotionCard(exploreProTapped: proPromotionTapped)
+          }
+        } header: {
+          GameAnalysisControl(selection: $selectedAnalysis)
         }
       }
       .padding()
     }
+    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
     .background {
       TeamColorBackground(
         leftColor: detail.teamABibColor,

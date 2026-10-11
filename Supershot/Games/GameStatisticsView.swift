@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct GameStatisticsView: View {
-  var detail: CompletedGameDetail
+  var detail: GameAnalysis
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -157,6 +157,6 @@ private struct TeamStatisticsHeader: View {
 }
 
 #Preview("Game statistics") {
-  GameStatisticsView(detail: .previewCompleted)
+  GameStatisticsView(detail: CompletedGameDetail.previewCompleted.analysis)
     .padding()
 }
