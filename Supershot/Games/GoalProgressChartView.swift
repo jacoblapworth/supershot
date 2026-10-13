@@ -2,7 +2,7 @@ import Charts
 import SwiftUI
 
 struct GoalProgressChartView: View {
-  var detail: CompletedGameDetail
+  var detail: GameAnalysis
   @State private var breakdown = GoalProgressBreakdown.wholeGame
   @State private var selectedMoment: GoalProgressMoment?
 
@@ -285,7 +285,7 @@ struct GoalProgressChartView: View {
 }
 
 private struct GoalProgressLegend: View {
-  var detail: CompletedGameDetail
+  var detail: GameAnalysis
 
   var body: some View {
     HStack(spacing: 16) {
@@ -369,7 +369,7 @@ private struct GoalProgressPoint: Identifiable {
 }
 
 private struct GoalProgressTooltip: View {
-  var detail: CompletedGameDetail
+  var detail: GameAnalysis
   var moment: GoalProgressMoment
 
   var body: some View {
@@ -396,11 +396,11 @@ private struct GoalProgressTooltip: View {
 }
 
 #Preview("Goal progression") {
-  GoalProgressChartView(detail: .previewCompleted)
+  GoalProgressChartView(detail: CompletedGameDetail.previewCompleted.analysis)
     .padding()
 }
 
 #Preview("Empty goal progression") {
-  GoalProgressChartView(detail: .previewNoGoals)
+  GoalProgressChartView(detail: CompletedGameDetail.previewNoGoals.analysis)
     .padding()
 }

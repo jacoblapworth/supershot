@@ -91,6 +91,17 @@ nonisolated struct CompletedGameStatistics: Equatable, Sendable {
   var teamB = TeamGameStatistics()
 }
 
+/// The same analysis data is used for live and completed games.
+nonisolated struct GameAnalysis: Equatable, Sendable {
+  var goalTimeline = GoalTimeline()
+  var periods: [GamePeriod] = []
+  var statistics = CompletedGameStatistics()
+  var teamABibColor = ColorPalette.blue
+  var teamAName = ""
+  var teamBBibColor = ColorPalette.red
+  var teamBName = ""
+}
+
 nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   let endedAt: Date
   let goalTimeline: GoalTimeline
@@ -105,6 +116,18 @@ nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendable {
   var teamBBibColor = ColorPalette.red
   let teamBName: String
   let teamBScore: Int
+
+  var analysis: GameAnalysis {
+    GameAnalysis(
+      goalTimeline: goalTimeline,
+      periods: periods,
+      statistics: statistics,
+      teamABibColor: teamABibColor,
+      teamAName: teamAName,
+      teamBBibColor: teamBBibColor,
+      teamBName: teamBName
+    )
+  }
 
   var resultTitle: String {
     if teamAScore == teamBScore {
@@ -356,6 +379,33 @@ nonisolated struct GoalTimelineRequest: FetchKeyRequest {
     Value(
       timeline: goalTimeline(
         snapshot: try GameSnapshot.fetch(db, gameID: gameID)
+      )
+    )
+  }
+}
+
+nonisolated struct GameAnalysisRequest: FetchKeyRequest {
+  struct Value: Equatable, Sendable {
+    var analysis = GameAnalysis()
+  }
+
+  let gameID: Game.ID
+
+  func fetch(_ db: Database) throws -> Value {
+    let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
+    return Value(
+      analysis: GameAnalysis(
+        goalTimeline: goalTimeline(snapshot: snapshot),
+        periods: snapshot.periods,
+        statistics: completedGameStatistics(
+          goals: snapshot.goals,
+          teamAID: snapshot.teamA.id,
+          teamBID: snapshot.teamB.id
+        ),
+        teamABibColor: snapshot.game.teamABibColor,
+        teamAName: snapshot.teamA.name,
+        teamBBibColor: snapshot.game.teamBBibColor,
+        teamBName: snapshot.teamB.name
       )
     )
   }

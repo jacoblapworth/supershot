@@ -1,39 +1,50 @@
 import SwiftUI
 
 struct GameDetailContentView: View {
+  @State private var selectedAnalysis = GameAnalysisTab.playByPlay
+  @State private var viewportHeight: CGFloat = 0
   var detail: CompletedGameDetail
   var showsProPromotion: Bool
   var proPromotionTapped: () -> Void
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 28) {
-        GameOverviewView(detail: detail)
-        if let location = detail.location {
-          GameLocationSection(location: location)
+    ScrollViewReader { scrollProxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 28, pinnedViews: [.sectionHeaders]) {
+          GameOverviewView(detail: detail)
+            .padding(.top)
+          if let location = detail.location {
+            GameLocationSection(location: location)
+          }
+          Section {
+            GameAnalysisContentView(analysis: detail.analysis, selection: selectedAnalysis)
+              .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+            if showsProPromotion {
+              ProPromotionCard(exploreProTapped: proPromotionTapped)
+            }
+          } header: {
+            GameAnalysisControl(selection: $selectedAnalysis) {
+              withAnimation(nil) {
+                scrollProxy.scrollTo("gameAnalysis", anchor: .top)
+              }
+            }
+            .id("gameAnalysis")
+          }
         }
-        GameStatisticsView(detail: detail)
-        GoalTimelineView(
-          teamABibColor: detail.teamABibColor,
-          teamAName: detail.teamAName,
-          teamBBibColor: detail.teamBBibColor,
-          teamBName: detail.teamBName,
-          timeline: detail.goalTimeline
-        )
-        if showsProPromotion {
-          ProPromotionCard(exploreProTapped: proPromotionTapped)
-        }
+        .padding(.horizontal)
+        .padding(.bottom)
       }
-      .padding()
+      .coordinateSpace(name: "gameAnalysisViewport")
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+      .background {
+        TeamColorBackground(
+          leftColor: detail.teamABibColor,
+          rightColor: detail.teamBBibColor
+        )
+        .ignoresSafeArea()
+      }
+      .preferredColorScheme(.dark)
     }
-    .background {
-      TeamColorBackground(
-        leftColor: detail.teamABibColor,
-        rightColor: detail.teamBBibColor
-      )
-      .ignoresSafeArea()
-    }
-    .preferredColorScheme(.dark)
   }
 }
 
