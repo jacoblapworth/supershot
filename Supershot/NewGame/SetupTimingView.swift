@@ -13,6 +13,20 @@ struct SetupTimingView: View {
         duration:store.timing.periodDuration, field:.quarter
       )
       
+      HStack {
+        Text("Start breaks")
+        Spacer()
+        Picker("Start breaks", selection: $store.timing.breakStartPolicy) {
+          Text("Automatically").tag(BreakStartPolicy.automatic)
+          Text("Manually").tag(BreakStartPolicy.manual)
+        }
+        .labelsHidden()
+      }
+      Text(store.timing.breakStartPolicy == .automatic
+        ? "Breaks start when a quarter ends."
+        : "Breaks wait for you to tap Start break.")
+        .font(.subheadline).foregroundStyle(.secondary)
+
       Divider()
       
       if store.timing.customizesBreaks {

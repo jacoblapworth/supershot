@@ -19,6 +19,71 @@ extension SupershotTestSuite {
   @Suite(.dependencies {
     $0.uuid = .incrementing
   }) struct GameTimerTests {
+    @Test(arguments: [false, true])
+    func manualBreakWaitsAcrossRecoveryThenStartsPausesResumesAndSkips(endsEarly: Bool) async throws {
+      let seed = Self.makeScoringStore()
+      let database = seed.dependencies.defaultDatabase
+      let now = LockIsolated(Date(timeIntervalSince1970: 1_000))
+      let plans = LockIsolated<[[ScheduledGameAlarm]]>([])
+      try await database.write { db in
+        try Game.find(UUID(3)).update { $0.breakStartPolicy = #bind(BreakStartPolicy.manual) }.execute(db)
+        try GamePeriod.find(testGamePeriodID(gameID: UUID(3), position: 0))
+          .update { $0.breakAfterDurationSeconds = #bind(120) }.execute(db)
+      }
+      try await withDependencies {
+        $0.defaultDatabase = database
+        $0.date = DateGenerator { now.value }
+        $0.proSubscription = .pro
+        $0.alarmClient = AlarmClient(
+          scheduleAlarm: { snapshot in
+            plans.withValue { $0.append(ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.progress)) }
+            return false
+          }, updateActivity: { _, _ in }, cancelAlarm: { _, _ in }, endActivity: { _ in })
+      } operation: {
+        let client = GameTimerClient.live
+        _ = try await client.startOrResume(UUID(3), 0)
+        #expect(plans.value.first?.map(\.phaseIndex) == [0])
+        now.setValue(Date(timeIntervalSince1970: endsEarly ? 1_050 : 5_000))
+        let waiting = endsEarly
+          ? try await client.skip(UUID(3), 0)
+          : try await client.reconcile(UUID(3))
+        #expect(waiting.game.currentPhaseIndex == 1)
+        #expect(waiting.game.countdown == GameCountdown())
+        #expect(waiting.game.isAwaitingCentrePassConfirmation)
+        #expect(waiting.game.lateScoringPeriodNumber == 1)
+        #expect(plans.value.count == 1)
+        let stale = try await client.startOrResume(UUID(3), 0)
+        #expect(stale.snapshot.game.timerEndsAt == nil)
+        now.setValue(Date(timeIntervalSince1970: 10_000))
+        let recovered = try await client.reconcile(UUID(3))
+        #expect(recovered.game.breakStartPolicy == .manual)
+        #expect(recovered.game.countdown == GameCountdown())
+        let ui = ScoringFeature.State(snapshot: recovered)
+        #expect(ui.clockPhase == .breakTime)
+        #expect(ui.timeRemainingSeconds == 120)
+        #expect(ui.scoringPeriod?.number == 1)
+        let started = try await client.startOrResume(UUID(3), 1)
+        #expect(started.snapshot.game.timerEndsAt == Date(timeIntervalSince1970: 10_120))
+        #expect(started.snapshot.game.isAwaitingCentrePassConfirmation)
+        #expect(plans.value.last?.map(\.phaseIndex) == [1])
+        now.setValue(Date(timeIntervalSince1970: 10_030))
+        let paused = try await client.pause(UUID(3), 1)
+        #expect(paused.game.elapsedSeconds == 30)
+        #expect(paused.game.timerEndsAt == nil)
+        try await database.write { db in
+          try Game.find(UUID(3)).update { $0.isAwaitingCentrePassConfirmation = false }.execute(db)
+        }
+        let corrected = try await client.setRemainingTime(UUID(3), 1, 75)
+        #expect(corrected.game.elapsedSeconds == 45)
+        now.setValue(Date(timeIntervalSince1970: 11_000))
+        let resumed = try await client.startOrResume(UUID(3), 1)
+        #expect(resumed.snapshot.game.timerEndsAt == Date(timeIntervalSince1970: 11_075))
+        let next = try await client.skip(UUID(3), 1)
+        #expect(next.game.currentPhaseIndex == 2)
+        #expect(next.game.countdown == GameCountdown())
+      }
+    }
+
     @Test
     func timerMathUsesCeilingAndClampsInvalidValues() {
       let now = Date(timeIntervalSince1970: 1_000)
@@ -161,6 +226,7 @@ extension SupershotTestSuite {
     @Test
     func timeEditorCoordinatesSheetsAndRestoresControlsDetent() async {
       let store = Self.makeScoringStore()
+      let originalDetent = store.state.presentationDetent
       await store.send(.editTimeButtonTapped) {
         $0.editedPhaseIndex = 0
         $0.controlsPresentation = .dismissingForTimeInput
@@ -178,7 +244,7 @@ extension SupershotTestSuite {
         $0.editedPhaseIndex = nil
         $0.controlsPresentation = .shown
       }
-      #expect(store.state.presentationDetent == .height(84))
+      #expect(store.state.presentationDetent == originalDetent)
       #expect(store.state.elapsedSeconds == 0)
     }
 

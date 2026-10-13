@@ -15,6 +15,7 @@ extension SupershotTestSuite {
     func newGamesDefaultToEightMinuteQuartersAndOneMinuteBreaks() {
       let state = NewGameFeature.State()
 
+      #expect(state.timing.breakStartPolicy == .automatic)
       #expect(state.firstCentrePass == .teamA)
       #expect(state.periodDuration.totalSeconds == 8 * 60)
       #expect(state.firstBreakDuration.totalSeconds == 60)
@@ -25,10 +26,16 @@ extension SupershotTestSuite {
     @Test
     func newGamesUseSavedDefaultTimes() {
       @Dependency(\.defaultAppStorage) var defaults
+      defaults.set("manual", forKey: "defaultBreakStartPolicy")
       defaults.set(12 * 60, forKey: "defaultPeriodDurationSeconds")
       defaults.set(2 * 60, forKey: "defaultBreakDurationSeconds")
 
       let state = NewGameFeature.State()
+
+      #expect(state.timing.breakStartPolicy == .manual)
+      defaults.set("automatic", forKey: "defaultBreakStartPolicy")
+      #expect(state.timing.breakStartPolicy == .manual)
+      #expect(NewGameFeature.State().timing.breakStartPolicy == .automatic)
 
       expectNoDifference(state.periodDuration.totalSeconds, 12 * 60)
       expectNoDifference(state.firstBreakDuration.totalSeconds, 2 * 60)
@@ -197,11 +204,12 @@ extension SupershotTestSuite {
       #expect(!store.state.isSaving)
     }
 
-    @Test(arguments: [0, 60])
-    func startGameUsesPersistedTeamsAndGameSpecificBibColors(breakSeconds: Int) async throws {
+    @Test(arguments: [0, 60], [BreakStartPolicy.automatic, .manual])
+    func startGameUsesPersistedTeamsAndGameSpecificBibColors(breakSeconds: Int, policy: BreakStartPolicy) async throws {
       let ravens = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
       let swifts = Team(id: UUID(2), name: "Swifts", colorHex: ColorPalette.red.hex())
       var state = NewGameFeature.State()
+      state.timing.breakStartPolicy = policy
       state.firstCentrePass = .teamB
       state.firstBreakDuration = .init(totalSeconds: breakSeconds)
       state.halfTimeDuration = .init(totalSeconds: breakSeconds)
@@ -250,6 +258,7 @@ extension SupershotTestSuite {
           try GamePeriod.order { $0.position }.fetchAll(db)
         )
       }
+      #expect(game?.breakStartPolicy == policy)
       expectNoDifference(game?.teamAID, ravens.id)
       expectNoDifference(game?.teamBID, swifts.id)
       expectNoDifference(game?.teamABibColorHex, "#AF52DE")

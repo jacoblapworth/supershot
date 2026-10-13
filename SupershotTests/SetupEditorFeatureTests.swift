@@ -65,7 +65,14 @@ extension SupershotTestSuite {
         timing.periodDuration = .init(totalSeconds: 900)
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))
       }
+      await store.send(.destination(.presented(.timingEditor(.binding(.set(\.timing.breakStartPolicy, .manual)))))) {
+        var timing = $0.timing
+        timing.periodDuration = .init(totalSeconds: 900)
+        timing.breakStartPolicy = .manual
+        $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))
+      }
       #expect(store.state.periodDuration.totalSeconds == 480)
+      #expect(store.state.timing.breakStartPolicy == .automatic)
       await store.send(.destination(.presented(.timingEditor(.doneButtonTapped))))
       await store.receive {
         guard case .destination(.presented(.timingEditor(.delegate(.committed)))) = $0 else {
@@ -74,6 +81,7 @@ extension SupershotTestSuite {
         return true
       } assert: {
         $0.periodDuration = .init(totalSeconds: 900)
+        $0.timing.breakStartPolicy = .manual
         $0.destination = nil
       }
     }
@@ -82,6 +90,7 @@ extension SupershotTestSuite {
       var state = NewGameFeature.State()
       var draft = state.timing
       draft.periodDuration = .init(totalSeconds: 900)
+      draft.breakStartPolicy = .manual
       state.destination = .timingEditor(SetupTimingFeature.State(timing: draft))
       let store = TestStore(initialState: state) { NewGameFeature() }
       await store.send(.destination(.presented(.timingEditor(.cancelButtonTapped))))
@@ -94,16 +103,19 @@ extension SupershotTestSuite {
         $0.destination = nil
       }
       #expect(store.state.periodDuration.totalSeconds == 480)
+      #expect(store.state.timing.breakStartPolicy == .automatic)
     }
 
     @Test func swipingTimingSheetDiscardsDraft() async {
       var state = NewGameFeature.State()
       var draft = state.timing
       draft.periodDuration = .init(totalSeconds: 900)
+      draft.breakStartPolicy = .manual
       state.destination = .timingEditor(SetupTimingFeature.State(timing: draft))
       let store = TestStore(initialState: state) { NewGameFeature() }
       await store.send(.destination(.dismiss)) { $0.destination = nil }
       #expect(store.state.periodDuration.totalSeconds == 480)
+      #expect(store.state.timing.breakStartPolicy == .automatic)
     }
 
     @Test func pendingColourWriteBlocksDoneAndReplacement() async {

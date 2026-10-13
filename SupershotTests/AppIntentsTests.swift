@@ -3,6 +3,7 @@ import Dependencies
 import DependenciesTestSupport
 import Foundation
 import SQLiteData
+import Sharing
 import Testing
 
 @testable import Supershot
@@ -14,8 +15,10 @@ extension SupershotTestSuite {
     $0.date.now = Date(timeIntervalSince1970: 1_000)
   })
   struct AppIntentsTests {
-    @Test
-    func createsPausedGameWithFourQuartersAndResolvesEntities() async throws {
+    @Test(arguments: [BreakStartPolicy.automatic, .manual])
+    func createsPausedGameWithFourQuartersAndResolvesEntities(policy: BreakStartPolicy) async throws {
+      @Dependencies.Dependency(\.defaultAppStorage) var defaults
+      defaults.set(policy.rawValue, forKey: "defaultBreakStartPolicy")
       @Dependencies.Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
       let teamA = Team(id: UUID(-1), name: "Ravens", colorHex: "#34C759")
@@ -33,6 +36,7 @@ extension SupershotTestSuite {
       let entity = try #require(result.value)
       let games = try await database.read { try Game.fetchAll($0) }
       let game = try #require(games.first)
+      #expect(game.breakStartPolicy == policy)
       #expect(games.count == 1)
       #expect(entity.id == game.id)
       #expect(game.centrePassTeamID == teamB.id)

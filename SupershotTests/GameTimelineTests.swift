@@ -9,6 +9,45 @@ import Testing
 extension SupershotTestSuite {
   @MainActor
   struct GameTimelineTests {
+    @Test(arguments: [BreakStartPolicy.automatic, .manual], [0.0, 50.0, 1_000.0])
+    func breakStartPolicyControlsDelayedReconciliation(policy: BreakStartPolicy, delay: Double) throws {
+      let timeline = try #require(GameTimeline(periods:
+        testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)))
+      let boundary = Date(timeIntervalSince1970: 1_000)
+      var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: boundary),
+        isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
+      let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
+      #expect(plan.map(\.phaseIndex) == (policy == .automatic ? [0, 1] : [0]))
+      progress.reconcile(in: timeline, now: boundary.addingTimeInterval(delay))
+      #expect(progress.isAwaitingCentrePassConfirmation)
+      #expect(progress.lateScoringPeriodNumber == 1)
+      if policy == .manual {
+        #expect(progress.phaseIndex == 1)
+        #expect(progress.countdown == GameCountdown())
+        #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress).isEmpty)
+      } else if delay < 120 {
+        #expect(progress.phaseIndex == 1)
+        #expect(progress.countdown.endsAt == boundary.addingTimeInterval(120))
+        #expect(progress.countdown.elapsedSeconds == Int(delay))
+      } else {
+        #expect(progress.phaseIndex == 2)
+        #expect(progress.countdown == GameCountdown())
+      }
+    }
+
+    @Test(arguments: [BreakStartPolicy.automatic, .manual])
+    func policyDoesNotCreateOmittedOrFinalBreaks(policy: BreakStartPolicy) throws {
+      let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
+      var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
+        isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
+      progress.complete(in: timeline, boundary: .distantPast)
+      #expect(progress.phaseIndex == 1)
+      #expect(progress.countdown == GameCountdown())
+      progress.complete(in: timeline, boundary: .distantPast)
+      #expect(progress.isFinalPeriodComplete(in: timeline))
+      #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress).isEmpty)
+    }
+
     @Test
     func unorderedPeriodsProducePhasesWithStableIdentityAndIndividualDurations() throws {
       var periods = testGamePeriods(gameID: UUID(3), count: 3, breakDurations: [120, 300])

@@ -55,6 +55,7 @@ nonisolated struct GameProgress: Equatable, Sendable {
   var countdown: GameCountdown
   var isAwaitingCentrePassConfirmation: Bool
   var lateScoringPeriodNumber: Int?
+  var breakStartPolicy = BreakStartPolicy.automatic
 
   func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {
     guard let phase = timeline.phase(at: phaseIndex) else { return false }
@@ -83,7 +84,7 @@ nonisolated struct GameProgress: Equatable, Sendable {
     countdown = GameCountdown()
     let next = timeline.phases[phaseIndex]
     // Playing periods always wait for an explicit start, even when a break is omitted.
-    if next.isBreak {
+    if next.isBreak, breakStartPolicy == .automatic {
       countdown.endsAt = boundary.addingTimeInterval(TimeInterval(next.durationSeconds))
     }
   }
@@ -99,7 +100,7 @@ nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
       return []
     }
     var result = [Self(date: endsAt, phase: phase, phaseIndex: progress.phaseIndex)]
-    if phase.isPlayingPeriod, let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0 {
+    if progress.breakStartPolicy == .automatic, phase.isPlayingPeriod, let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0 {
       result.append(Self(
         date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
         phase: next, phaseIndex: progress.phaseIndex + 1

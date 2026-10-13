@@ -64,6 +64,7 @@ extension SupershotTestSuite {
       let elapsed = complete ? duration : 0
       try await database.write { db in
         try Game.find(UUID(3)).update {
+          $0.breakStartPolicy = #bind(BreakStartPolicy.manual)
           $0.elapsedSeconds = elapsed
           $0.isAwaitingCentrePassConfirmation = pending
           $0.timerEndsAt = #bind(nil as Date?)

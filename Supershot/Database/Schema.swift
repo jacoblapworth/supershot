@@ -12,6 +12,11 @@ import OSLog
 import SQLiteData
 import CasePaths
 
+nonisolated enum BreakStartPolicy: String, Codable, CaseIterable, Sendable, QueryBindable {
+  case automatic
+  case manual
+}
+
 @Table
 nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   let id: UUID
@@ -31,6 +36,7 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   var currentPhaseIndex = 0
   var elapsedSeconds = 0
   var timerEndsAt: Date? = nil
+  var breakStartPolicy = BreakStartPolicy.automatic
   
   var countdown: GameCountdown {
     get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
@@ -46,13 +52,15 @@ extension Game {
     get {
       GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
         isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: lateScoringPeriodNumber)
+        lateScoringPeriodNumber: lateScoringPeriodNumber,
+        breakStartPolicy: breakStartPolicy)
     }
     set {
       currentPhaseIndex = newValue.phaseIndex
       countdown = newValue.countdown
       isAwaitingCentrePassConfirmation = newValue.isAwaitingCentrePassConfirmation
       lateScoringPeriodNumber = newValue.lateScoringPeriodNumber
+      breakStartPolicy = newValue.breakStartPolicy
     }
   }
 }
@@ -180,6 +188,8 @@ extension DependencyValues {
           "currentPhaseIndex" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
           "timerEndsAt" TEXT,
+          "breakStartPolicy" TEXT NOT NULL DEFAULT 'automatic'
+            CHECK ("breakStartPolicy" IN ('automatic', 'manual')),
           CHECK ("teamAID" != "teamBID")
         ) STRICT
         """)
