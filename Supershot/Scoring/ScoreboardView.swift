@@ -56,17 +56,13 @@ private struct TeamScore: View {
         }
       }
       Text("\(score)")
-        .font(.system(size: 64, weight: .bold))
+        .font(.system(size: 80, weight: .bold))
         .fontWidth(.compressed)
         .monospacedDigit()
-        .foregroundStyle(color)
+        .teamScoreStyle(color: color)
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: frameAlignment)
-    .background(
-      Color.white,
-      in: RoundedRectangle(cornerRadius: 12)
-    )
     .opacity(isEnabled ? 1 : 0.65)
     
   }

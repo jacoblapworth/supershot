@@ -41,19 +41,19 @@ nonisolated extension LocationClient {
     longitude: -0.2796,
     pointOfInterestName: "Wembley Arena"
   )
-
+  
   static let preview = Self(
     authorizationStatus: { .authorized },
     currentLocation: { previewLocation },
     requestAuthorization: { .authorized }
   )
-
+  
   static let unavailable = Self(
     authorizationStatus: { .denied },
     currentLocation: { throw LocationClientError.authorizationDenied },
     requestAuthorization: { .denied }
   )
-
+  
   static var live: Self {
     Self(
       authorizationStatus: {
@@ -69,6 +69,19 @@ nonisolated extension LocationClient {
           center: location.coordinate,
           radius: 5_000
         )
+        
+        request.pointOfInterestFilter = .init(including: [
+          .school,
+          .university,
+          .fitnessCenter,
+          .park,
+          .basketball,
+          .soccer,
+          .stadium,
+          .tennis,
+          .volleyball
+        ])
+        
         let response = try? await MKLocalSearch(request: request).start()
         let nearestPointOfInterest = response?.mapItems
           .filter { item in
@@ -78,7 +91,7 @@ nonisolated extension LocationClient {
           .min { lhs, rhs in
             location.distance(from: lhs.location) < location.distance(from: rhs.location)
           }
-
+        
         return GameLocation(
           latitude: location.coordinate.latitude,
           longitude: location.coordinate.longitude,
@@ -103,51 +116,51 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
   private var authorizationContinuation: CheckedContinuation<LocationAuthorizationStatus, Never>?
   private var locationContinuation: CheckedContinuation<CLLocation, any Error>?
   private let manager: CLLocationManager
-
+  
   override init() {
     manager = CLLocationManager()
     super.init()
     manager.delegate = self
     manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
   }
-
+  
   var authorizationStatus: CLAuthorizationStatus {
     manager.authorizationStatus
   }
-
+  
   func requestAuthorization() async -> LocationAuthorizationStatus {
     let status = LocationAuthorizationStatus(manager.authorizationStatus)
     guard status == .notDetermined else { return status }
-
+    
     return await withCheckedContinuation { continuation in
       authorizationContinuation = continuation
       manager.requestWhenInUseAuthorization()
     }
   }
-
+  
   func requestLocation() async throws -> CLLocation {
     guard manager.authorizationStatus.isAuthorized else {
       throw LocationClientError.authorizationDenied
     }
-
+    
     return try await withCheckedThrowingContinuation { continuation in
       locationContinuation = continuation
       manager.requestLocation()
     }
   }
-
+  
   func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
     let status = LocationAuthorizationStatus(manager.authorizationStatus)
     guard status != .notDetermined else { return }
     authorizationContinuation?.resume(returning: status)
     authorizationContinuation = nil
-
+    
     if status == .denied {
       locationContinuation?.resume(throwing: LocationClientError.authorizationDenied)
       locationContinuation = nil
     }
   }
-
+  
   func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     guard let location = locations.last(where: { $0.horizontalAccuracy >= 0 }) else {
       locationContinuation?.resume(throwing: LocationClientError.locationUnavailable)
@@ -157,7 +170,7 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
     locationContinuation?.resume(returning: location)
     locationContinuation = nil
   }
-
+  
   func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
     locationContinuation?.resume(throwing: error)
     locationContinuation = nil

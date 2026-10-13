@@ -7,35 +7,22 @@ import UIKit
 struct SetupLocationView: View {
   @Environment(\.openURL) private var openURL
   let store: StoreOf<NewGameFeature>
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      HStack {
-        Label("Location", systemImage: "location.fill")
-          .font(.headline)
-
-        Spacer()
-
-        if case .loaded = store.location {
-          Button("Refresh", systemImage: "arrow.clockwise") {
-            store.send(.locationButtonTapped)
-          }
-          .font(.subheadline)
-        }
-      }
-
       switch store.location {
       case .idle:
-        VStack(alignment: .leading, spacing: 12) {
-          Text("Remember where you played")
-            .font(.headline)
+        
+        ContentUnavailableView {
+          Label("Remember where you played", systemImage: "mappin.and.ellipse")
+        } description: {
           Text("Add your current location to save the venue with this game.")
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
+        } actions: {
           Button("Add location") { store.send(.locationButtonTapped) }
-            .buttonStyle(.bordered)
+            .fontWeight(.medium)
+            .buttonStyle(.glassProminent)
         }
-
+      
       case .denied:
         Text("Allow location access to save where you played.")
           .foregroundStyle(.secondary)
@@ -52,11 +39,11 @@ struct SetupLocationView: View {
         Text("Allow location access for Supershot in Privacy & Security → Location Services.")
           .font(.caption).foregroundStyle(.secondary)
 #endif
-
+        
       case .restricted:
         Text("Location access is restricted on this device. You can start the game without a location.")
           .foregroundStyle(.secondary)
-
+        
       case .requesting, .loading:
         HStack(spacing: 12) {
           ProgressView()
@@ -64,20 +51,29 @@ struct SetupLocationView: View {
             .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 80)
-
+        
       case let .loaded(location):
         GameLocationMap(location: location)
-        Label {
-          if let pointOfInterestName = location.pointOfInterestName {
-            Text(pointOfInterestName)
-          } else {
-            Text("Game location")
+        HStack {
+          
+          Label {
+            if let pointOfInterestName = location.pointOfInterestName {
+              Text(pointOfInterestName)
+            } else {
+              Text("Game location")
+            }
+          } icon: {
+            Image(systemName: "mappin.and.ellipse")
           }
-        } icon: {
-          Image(systemName: "mappin.and.ellipse")
+          .font(.subheadline.weight(.semibold))
+          Spacer()
+          Button("Refresh", systemImage: "arrow.clockwise") {
+            store.send(.locationButtonTapped)
+          }
+          .labelStyle(.iconOnly)
+          .font(.subheadline)
         }
-        .font(.subheadline.weight(.semibold))
-
+        
       case .failed:
         VStack(alignment: .leading, spacing: 12) {
           Label("Couldn’t find your location. You can start the game without it.", systemImage: "location.slash")
@@ -94,6 +90,20 @@ struct SetupLocationView: View {
 #Preview("Loaded") {
   var state = NewGameFeature.State.previewReady
   let _ = { state.location = .loaded(LocationClient.previewLocation) }()
+  SetupLocationView(store: setupPreviewStore(state))
+    .padding()
+}
+
+#Preview("Loading") {
+  var state = NewGameFeature.State.previewReady
+  let _ = { state.location = .loading }()
+  SetupLocationView(store: setupPreviewStore(state))
+    .padding()
+}
+
+#Preview("Idle") {
+  var state = NewGameFeature.State.previewReady
+  let _ = { state.location = .idle }()
   SetupLocationView(store: setupPreviewStore(state))
     .padding()
 }
