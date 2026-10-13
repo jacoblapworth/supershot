@@ -9,8 +9,10 @@ enum GameAnalysisTab: String, CaseIterable, Identifiable {
 
 struct GameAnalysisControl: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var isPinned = false
   @Namespace private var selectionAnimation
   @Binding var selection: GameAnalysisTab
+  var pinnedSelectionChanged: () -> Void = {}
 
   var body: some View {
     HStack(spacing: 4) {
@@ -40,8 +42,30 @@ struct GameAnalysisControl: View {
       }
     }
     .padding(4)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+    .background {
+      if !isPinned {
+        RoundedRectangle(cornerRadius: 16)
+          .fill(.regularMaterial)
+      }
+    }
     .padding(.vertical, 8)
+    .background {
+      if isPinned {
+        Rectangle()
+          .fill(.bar)
+          .padding(.horizontal, -16)
+      }
+    }
+    .onGeometryChange(for: Bool.self) { geometry in
+      geometry.frame(in: .named("gameAnalysisViewport")).minY <= 0.5
+    } action: { isPinned = $0 }
+    .onChange(of: selection) {
+      DispatchQueue.main.async { pinnedSelectionChanged() }
+    }
+#if os(iOS)
+    .toolbarBackground(.bar, for: .navigationBar)
+    .toolbarBackground(isPinned ? .visible : .automatic, for: .navigationBar)
+#endif
   }
 }
 

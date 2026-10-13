@@ -5,9 +5,6 @@ struct GameStatisticsView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Text("Statistics")
-        .font(.title2.bold())
-
       VStack(spacing: 16) {
         HStack(alignment: .top, spacing: 16) {
           TeamStatisticsHeader(

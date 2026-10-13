@@ -8,33 +8,43 @@ struct GameDetailContentView: View {
   var proPromotionTapped: () -> Void
 
   var body: some View {
-    ScrollView {
-      LazyVStack(alignment: .leading, spacing: 28, pinnedViews: [.sectionHeaders]) {
-        GameOverviewView(detail: detail)
-        if let location = detail.location {
-          GameLocationSection(location: location)
-        }
-        Section {
-          GameAnalysisContentView(analysis: detail.analysis, selection: selectedAnalysis)
-            .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
-          if showsProPromotion {
-            ProPromotionCard(exploreProTapped: proPromotionTapped)
+    ScrollViewReader { scrollProxy in
+      ScrollView {
+        LazyVStack(alignment: .leading, spacing: 28, pinnedViews: [.sectionHeaders]) {
+          GameOverviewView(detail: detail)
+            .padding(.top)
+          if let location = detail.location {
+            GameLocationSection(location: location)
           }
-        } header: {
-          GameAnalysisControl(selection: $selectedAnalysis)
+          Section {
+            GameAnalysisContentView(analysis: detail.analysis, selection: selectedAnalysis)
+              .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+            if showsProPromotion {
+              ProPromotionCard(exploreProTapped: proPromotionTapped)
+            }
+          } header: {
+            GameAnalysisControl(selection: $selectedAnalysis) {
+              withAnimation(nil) {
+                scrollProxy.scrollTo("gameAnalysis", anchor: .top)
+              }
+            }
+            .id("gameAnalysis")
+          }
         }
+        .padding(.horizontal)
+        .padding(.bottom)
       }
-      .padding()
+      .coordinateSpace(name: "gameAnalysisViewport")
+      .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
+      .background {
+        TeamColorBackground(
+          leftColor: detail.teamABibColor,
+          rightColor: detail.teamBBibColor
+        )
+        .ignoresSafeArea()
+      }
+      .preferredColorScheme(.dark)
     }
-    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { viewportHeight = $0 }
-    .background {
-      TeamColorBackground(
-        leftColor: detail.teamABibColor,
-        rightColor: detail.teamBBibColor
-      )
-      .ignoresSafeArea()
-    }
-    .preferredColorScheme(.dark)
   }
 }
 
