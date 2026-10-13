@@ -23,3 +23,9 @@ extension SharedKey where Self == AppStorageKey<Int>.Default {
     Self[.appStorage("defaultPeriodDurationSeconds"), default: 8 * 60]
   }
 }
+
+extension SharedKey where Self == AppStorageKey<BreakStartPolicy>.Default {
+  static var defaultBreakStartPolicy: Self {
+    Self[.appStorage("defaultBreakStartPolicy"), default: .automatic]
+  }
+}

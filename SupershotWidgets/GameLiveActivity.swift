@@ -370,7 +370,7 @@ private struct TimerControl: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(.orange)
-        .accessibilityLabel("Resume timer")
+        .accessibilityLabel(state.isInBreak && state.elapsedSeconds == 0 ? "Start break" : "Resume timer")
       }
     }
   }

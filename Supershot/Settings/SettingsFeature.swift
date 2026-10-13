@@ -8,6 +8,7 @@ struct SettingsFeature {
   struct State: Equatable {
     @Presents var timeInput: TimeInputFeature.State?
     var editedDefault: DurationDefault?
+    @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
     @Shared(.defaultPeriodDurationSeconds) var defaultPeriodDurationSeconds
     @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
     var isCustomerCenterPresented = false
@@ -30,6 +31,7 @@ struct SettingsFeature {
   enum DurationDefault: Equatable { case quarter, breakTime }
 
   enum Action {
+    case breakStartPolicyChanged(BreakStartPolicy)
     case editDefaultButtonTapped(DurationDefault)
     case timeInput(PresentationAction<TimeInputFeature.Action>)
     case customerCenterPresentationChanged(Bool)
@@ -59,6 +61,9 @@ struct SettingsFeature {
   var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case .breakStartPolicyChanged(let policy):
+        state.$defaultBreakStartPolicy.withLock { $0 = policy }
+        return .none
       case .editDefaultButtonTapped(let field):
         guard !state.isCustomerCenterPresented else { return .none }
         #if DEBUG

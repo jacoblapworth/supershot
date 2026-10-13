@@ -182,16 +182,20 @@ private struct FeedbackSettingsSection: View {
 }
 
 private struct GameDefaultsSettingsSection: View {
-  let store: StoreOf<SettingsFeature>
+  @Bindable var store: StoreOf<SettingsFeature>
   
   var body: some View {
     Section {
       durationRow("Quarter length", seconds: store.defaultPeriodDurationSeconds, field: .quarter)
       durationRow("Break length", seconds: store.defaultBreakDurationSeconds, field: .breakTime)
+      Picker("Start breaks", selection: $store.defaultBreakStartPolicy.sending(\.breakStartPolicyChanged)) {
+        Text("Automatically").tag(BreakStartPolicy.automatic)
+        Text("Manually").tag(BreakStartPolicy.manual)
+      }
     } header: {
       Text("New game defaults")
     } footer: {
-      Text("These times are used when you set up a new game and can still be changed before it starts.")
+      Text("These settings are used for new games and can be changed during setup. Automatic breaks start when a quarter ends; manual breaks wait for you to tap Start break.")
     }
   }
   private func durationRow(_ title: String, seconds: Int, field: SettingsFeature.DurationDefault)

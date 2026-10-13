@@ -8,6 +8,20 @@ import Testing
 extension SupershotTestSuite {
   @MainActor
   @Suite struct SettingsFeatureTests {
+    @Test
+    func breakStartDefaultIsSavedForNewGames() async {
+      let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() }
+      #expect(store.state.defaultBreakStartPolicy == .automatic)
+      await store.send(.breakStartPolicyChanged(.manual)) {
+        $0.$defaultBreakStartPolicy.withLock { $0 = .manual }
+      }
+      #expect(NewGameFeature.State().timing.breakStartPolicy == .manual)
+      await store.send(.breakStartPolicyChanged(.automatic)) {
+        $0.$defaultBreakStartPolicy.withLock { $0 = .automatic }
+      }
+      #expect(NewGameFeature.State().timing.breakStartPolicy == .automatic)
+    }
+
 #if DEBUG
     @Test
     func databaseExportPresentsSnapshotAndCanBeCancelled() async {

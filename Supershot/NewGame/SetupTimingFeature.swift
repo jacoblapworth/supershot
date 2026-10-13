@@ -2,6 +2,7 @@ import ComposableArchitecture
 import SwiftUI
 
 nonisolated struct SetupTiming: Equatable, Sendable {
+  var breakStartPolicy = BreakStartPolicy.automatic
   var customizesBreaks = false
   var firstBreakDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
   var halfTimeDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
@@ -135,6 +136,8 @@ struct SetupTimingSummaryView: View {
         Button("Edit", action: edit).accessibilityLabel("Edit timing")
       }
       Text(timing.summary).font(.subheadline).foregroundStyle(.secondary)
+      Text(timing.breakStartPolicy == .automatic ? "Breaks start automatically" : "Breaks start manually")
+        .font(.subheadline).foregroundStyle(.secondary)
     }
     .setupCardStyle()
   }

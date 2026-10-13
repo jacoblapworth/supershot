@@ -37,7 +37,7 @@ struct TimerView: View {
             .contentTransition(.numericText())
             .foregroundStyle(.white)
           Spacer()
-          if !isInitial {
+          if !isInitial && !isBreakNotStarted {
             TimerButton(type: isTimerRunning ? .pause : .play) {
               withAnimation {
                 if isTimerRunning {
@@ -64,7 +64,15 @@ struct TimerView: View {
       
       if isInitial {
         startQuarterButton
-      } else if isBreakPaused {
+      }
+      if isBreakNotStarted {
+        Button("Start break", systemImage: "play.fill", action: startTimerTapped)
+          .frame(maxWidth: .infinity)
+          .buttonStyle(.borderedProminent)
+          .controlSize(.large)
+          .tint(.green)
+      }
+      if isBreakPaused {
         Button(action: skipBreakTapped) {
           Label("Skip break", systemImage: "forward.end.fill")
             .frame(maxWidth: .infinity)
@@ -85,6 +93,10 @@ struct TimerView: View {
     && elapsedSeconds == 0
   }
   
+  private var isBreakNotStarted: Bool {
+    isBreakPaused && elapsedSeconds == 0
+  }
+
   private var isBreakEnded: Bool {
     clockPhase == .breakTime && isPeriodComplete
   }

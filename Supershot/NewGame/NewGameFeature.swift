@@ -91,6 +91,8 @@ struct NewGameFeature {
     }
 
     init() {
+      @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
+      timing.breakStartPolicy = defaultBreakStartPolicy
       @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
       @Shared(.defaultPeriodDurationSeconds) var defaultPeriodDurationSeconds
 
@@ -434,6 +436,7 @@ struct NewGameFeature {
     state.errorMessage = nil
     state.isSaving = true
     return startGameEffect(
+      breakStartPolicy: state.timing.breakStartPolicy,
       centrePassTeamID: centrePassTeamID,
       gameID: gameID,
       location: location,
@@ -445,6 +448,7 @@ struct NewGameFeature {
   }
 
   private func startGameEffect(
+    breakStartPolicy: BreakStartPolicy,
     centrePassTeamID: Team.ID,
     gameID: Game.ID,
     location: GameLocation?,
@@ -484,7 +488,8 @@ struct NewGameFeature {
               isAwaitingCentrePassConfirmation: false,
               currentPhaseIndex: 0,
               elapsedSeconds: 0,
-              timerEndsAt: nil
+              timerEndsAt: nil,
+              breakStartPolicy: breakStartPolicy
             )
           }
           .execute(db)

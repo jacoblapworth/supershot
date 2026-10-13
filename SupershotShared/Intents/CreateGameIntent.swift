@@ -2,6 +2,7 @@ import AppIntents
 import Dependencies
 import Foundation
 import SQLiteData
+import Sharing
 
 struct CreateGameIntent: AppIntent {
   static let title: LocalizedStringResource = "Create Game"
@@ -40,6 +41,8 @@ struct CreateGameIntent: AppIntent {
       (0...5999).contains(breakDurationSeconds)
     else { throw CreateGameError.invalidDuration }
 
+    @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
+    let breakStartPolicy = defaultBreakStartPolicy
     let gameID = uuid()
     let startedAt = now
     let teamAID = teamA.id
@@ -61,7 +64,8 @@ struct CreateGameIntent: AppIntent {
       let game = Game(
         id: gameID, startedAt: startedAt, teamAID: teamAID,
         teamABibColorHex: teamA.colorHex, teamBID: teamBID,
-        teamBBibColorHex: teamB.colorHex, centrePassTeamID: centrePassID
+        teamBBibColorHex: teamB.colorHex, centrePassTeamID: centrePassID,
+        breakStartPolicy: breakStartPolicy
       )
       try Game.insert { game }.execute(db)
       try GamePeriod.insert { periods }.execute(db)
