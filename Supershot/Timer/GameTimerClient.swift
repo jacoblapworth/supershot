@@ -1,13 +1,13 @@
 import Dependencies
 import Foundation
-import SQLiteData
+import IssueReporting
 
 nonisolated struct GameTimerUpdate: Equatable, Sendable {
   var alarmSchedulingFailed = false
   var snapshot: GameSnapshot
 }
 
-/// For managing game alarms and live activities
+/// UI and intent adapter for timing commands and post-commit presentation.
 nonisolated struct GameTimerClient: Sendable {
   var cancelAlarm: @Sendable (Game.ID) async -> Void
   var endPresentation: @Sendable (Game.ID) async -> Void
@@ -32,212 +32,107 @@ extension DependencyValues {
 }
 
 private nonisolated enum GameTimerClientKey: DependencyKey {
-  static var liveValue: GameTimerClient {
-    @Dependency(\.alarmClient) var alarmClient
-    @Dependency(\.proSubscription) var proSubscription
-    return GameTimerClient.live
-  }
-
-  static var previewValue: GameTimerClient {
-    GameTimerClient.live
-  }
-
-  static var testValue: GameTimerClient {
-    GameTimerClient.live
-  }
+  static var liveValue: GameTimerClient { .live }
+  static var previewValue: GameTimerClient { .live }
+  static var testValue: GameTimerClient { .unimplemented }
 }
 
-
-
+/// Stable UI/intent adapter: commands commit through gameSession, then presentation runs.
 nonisolated extension GameTimerClient {
   static var live: Self {
     Self(
       cancelAlarm: { gameID in
-        @Dependency(\.alarmClient) var alarms
-        await alarms.cancelAlarm(gameID, await phaseCount(for: gameID))
+        @Dependency(\.gamePresentation) var presentation
+        await presentation.cancelAlarm(gameID)
       },
       endPresentation: { gameID in
-        @Dependency(\.alarmClient) var alarms
-        await alarms.cancelAlarm(gameID, await phaseCount(for: gameID))
-        await alarms.endActivity(gameID)
+        @Dependency(\.gamePresentation) var presentation
+        await presentation.end(gameID)
       },
       pause: { gameID, expectedPhaseIndex in
-        @Dependency(\.date) var date
-        @Dependency(\.gameSession) var session
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.proSubscription) var proSubscription
-        
-        let now = date.now
-        let update = try await session.execute(gameID, .timing(.pause, expectedPhaseIndex: expectedPhaseIndex), now)
-        let snapshot = update.snapshot
-        let didPause = update.outcome == .applied
-        
-        if await hasActiveProAccess(proSubscription) {
-          if didPause { await alarms.cancelAlarm(gameID, snapshot.phases.count) }
-          await alarms.updateActivity(snapshot, true)
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-        }
-        return snapshot
+        try await perform(gameID, command: .timing(.pause, expectedPhaseIndex: expectedPhaseIndex))
+          .snapshot
       },
       reconcile: { gameID in
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.date.now) var now
-        @Dependency(\.gameSession) var session
-        @Dependency(\.proSubscription) var proSubscription
-
-        let update = try await session.execute(gameID, .reconcile, now)
-        let snapshot = update.snapshot
-        if await hasActiveProAccess(proSubscription) {
-          await alarms.updateActivity(snapshot, true)
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-        }
-        return snapshot
+        try await perform(gameID, command: .reconcile).snapshot
       },
       refreshActivity: { gameID in
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.defaultDatabase) var database
-        @Dependency(\.proSubscription) var proSubscription
-        
-        guard
-          let snapshot = try? await database.read({ db in
-            try GameSnapshot.fetch(db, gameID: gameID)
-          })
-        else { return }
-        if await hasActiveProAccess(proSubscription) {
-          await alarms.updateActivity(snapshot, true)
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-        }
+        @Dependency(\.gamePresentation) var presentation
+        await presentation.refresh(gameID)
       },
       scheduleAlarm: { gameID in
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.defaultDatabase) var database
-        @Dependency(\.proSubscription) var proSubscription
-        
-        guard let snapshot = try? await database.read({ db in
-            try GameSnapshot.fetch(db, gameID: gameID)
-          }),
-          snapshot.game.timerEndsAt != nil
-        else { return false }
-        if await hasActiveProAccess(proSubscription) {
-          return await alarms.scheduleAlarm(snapshot)
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-          return false
-        }
+        @Dependency(\.gamePresentation) var presentation
+        return await presentation.scheduleAlarm(gameID)
       },
       skip: { gameID, expectedPhaseIndex in
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.date) var date
-        @Dependency(\.gameSession) var session
-        @Dependency(\.proSubscription) var proSubscription
-        
-        let now = date.now
-        let update = try await session.execute(gameID, .timing(.skip, expectedPhaseIndex: expectedPhaseIndex), now)
-        let snapshot = update.snapshot
-        let didSkip = update.outcome == .applied
-        if await hasActiveProAccess(proSubscription) {
-          if didSkip {
-            await alarms.cancelAlarm(gameID, snapshot.phases.count)
-            if snapshot.game.timerEndsAt != nil {
-              _ = await alarms.scheduleAlarm(snapshot)
-            }
-          }
-          await alarms.updateActivity(snapshot, true)
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-        }
-        return snapshot
+        try await perform(gameID, command: .timing(.skip, expectedPhaseIndex: expectedPhaseIndex))
+          .snapshot
       },
-      setRemainingTime: { gameID, expectedPhaseIndex, remainingSeconds in
-        @Dependency(\.date.now) var now
-        @Dependency(\.gameSession) var session
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.proSubscription) var proSubscription
-        let update = try await session.execute(gameID, .timing(.setRemainingTime(remainingSeconds), expectedPhaseIndex: expectedPhaseIndex), now)
-        guard case .applied = update.outcome else { throw GameTimerError.invalidCorrection }
-        let updated = update.snapshot
-        await alarms.cancelAlarm(gameID, updated.phases.count)
-        if await hasActiveProAccess(proSubscription) {
-          await alarms.updateActivity(updated, true)
-        } else {
-          await alarms.endActivity(gameID)
-        }
-        return updated
+      setRemainingTime: { gameID, expectedPhaseIndex, seconds in
+        try await perform(
+          gameID,
+          command: .timing(.setRemainingTime(seconds), expectedPhaseIndex: expectedPhaseIndex)
+        ).snapshot
       },
       startOrResume: { gameID, expectedPhaseIndex in
-        @Dependency(\.alarmClient) var alarms
-        @Dependency(\.date) var date
-        @Dependency(\.gameSession) var session
-        @Dependency(\.proSubscription) var proSubscription
-        
-        let now = date.now
-        let update = try await session.execute(gameID, .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex), now)
-        let snapshot = update.snapshot
-        let didStart = update.outcome == .applied
-
-        let alarmSchedulingFailed: Bool
-        if await hasActiveProAccess(proSubscription) {
-          await alarms.updateActivity(snapshot, true)
-          alarmSchedulingFailed = didStart
-            ? await alarms.scheduleAlarm(snapshot)
-            : false
-        } else {
-          await endPremiumPresentation(alarms: alarms, snapshot: snapshot)
-          alarmSchedulingFailed = false
-        }
-        return GameTimerUpdate(
-          alarmSchedulingFailed: alarmSchedulingFailed,
-          snapshot: snapshot
-        )
+        try await perform(
+          gameID, command: .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex))
       }
     )
   }
-}
 
-private nonisolated func hasActiveProAccess(
-  _ proSubscription: SubscriptionClient
-) async -> Bool {
-  (try? await proSubscription.currentAccess()) == .pro
-}
+  static var unimplemented: Self {
+    Self(
+      cancelAlarm: { _ in reportIssue("GameTimerClient.cancelAlarm is unimplemented") },
+      endPresentation: { _ in reportIssue("GameTimerClient.endPresentation is unimplemented") },
+      pause: { _, _ in
+        reportIssue("GameTimerClient.pause is unimplemented")
+        throw GameSessionRejection.stalePhase
+      },
+      reconcile: { _ in
+        reportIssue("GameTimerClient.reconcile is unimplemented")
+        throw GameSessionRejection.stalePhase
+      },
+      refreshActivity: { _ in reportIssue("GameTimerClient.refreshActivity is unimplemented") },
+      scheduleAlarm: { _ in
+        reportIssue("GameTimerClient.scheduleAlarm is unimplemented")
+        return false
+      },
+      skip: { _, _ in
+        reportIssue("GameTimerClient.skip is unimplemented")
+        throw GameSessionRejection.stalePhase
+      },
+      setRemainingTime: { _, _, _ in
+        reportIssue("GameTimerClient.setRemainingTime is unimplemented")
+        throw GameTimerError.invalidCorrection
+      },
+      startOrResume: { _, _ in
+        reportIssue("GameTimerClient.startOrResume is unimplemented")
+        throw GameSessionRejection.stalePhase
+      }
+    )
+  }
 
-private nonisolated func endPremiumPresentation(
-  alarms: AlarmClient,
-  snapshot: GameSnapshot
-) async {
-  await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
-  await alarms.endActivity(snapshot.game.id)
-}
-
-private nonisolated func phaseCount(for gameID: Game.ID) async -> Int {
-  @Dependency(\.defaultDatabase) var database
-  return (try? await database.read { db in
-    let periods = try GamePeriod
-      .where { $0.gameID.eq(gameID) }
-      .fetchAll(db)
-    return GameTimeline(periods: periods)?.phases.count ?? 0
-  }) ?? 0
-}
-
-nonisolated func reconciledGame(_ storedGame: Game, timeline: GameTimeline, now: Date) -> Game {
-  guard storedGame.endedAt == nil else { return storedGame }
-  var game = storedGame
-  game.progress.reconcile(in: timeline, now: now)
-  return game
+  private static func perform(_ gameID: Game.ID, command: GameSessionCommand) async throws
+    -> GameTimerUpdate
+  {
+    @Dependency(\.date.now) var now
+    @Dependency(\.gameSession) var session
+    @Dependency(\.gamePresentation) var presentation
+    let update = try await session.execute(gameID, command, now)
+    if case .timing(.setRemainingTime, _) = command, update.outcome != .applied {
+      throw GameTimerError.invalidCorrection
+    }
+    let schedulingFailed = await presentation.update(update, command)
+    return GameTimerUpdate(alarmSchedulingFailed: schedulingFailed, snapshot: update.snapshot)
+  }
 }
 
 private nonisolated enum GameTimerError: Error, LocalizedError {
-  case gameNotFound
   case invalidCorrection
 
   var errorDescription: String? {
-    switch self {
-    case .gameNotFound: "The game could not be found."
-    case .invalidCorrection:
-      "The clock has changed. Close the editor and pause the current clock before trying again."
-    }
+    "The clock has changed. Close the editor and pause the current clock before trying again."
   }
 }
 
@@ -251,12 +146,13 @@ extension GameTimerClient {
     GameCountdown(elapsedSeconds: persistedElapsedSeconds, endsAt: timerEndsAt)
       .projection(durationSeconds: durationSeconds, now: now).elapsedSeconds
   }
-  
+
   static nonisolated func endDate(
     durationSeconds: Int,
     elapsedSeconds: Int,
     now: Date
   ) -> Date? {
-    GameCountdown(elapsedSeconds: elapsedSeconds).endDate(durationSeconds: durationSeconds, now: now)
+    GameCountdown(elapsedSeconds: elapsedSeconds).endDate(
+      durationSeconds: durationSeconds, now: now)
   }
 }

@@ -15,6 +15,7 @@ extension SupershotTestSuite {
   @MainActor
   @Suite(.dependencies {
     $0.uuid = .incrementing
+    $0.date.now = Date(timeIntervalSince1970: 1_000)
   }) struct ScoringFeatureTests {
 #if os(iOS)
     @Test(arguments: [0, 1, 6])

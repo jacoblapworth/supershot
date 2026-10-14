@@ -70,19 +70,19 @@ nonisolated struct GameScoringClient: Sendable {
     Self(
       recordGoal: { _ in
         reportIssue("GameScoringClient.recordGoal is unimplemented")
-        throw ScoringPersistenceError.goalUnavailable
+        throw GameScoringError.unavailable
       },
       undo: { _ in
         reportIssue("GameScoringClient.undo is unimplemented")
-        throw ScoringPersistenceError.goalUnavailable
+        throw GameScoringError.unavailable
       },
       selectCentrePass: { _, _ in
         reportIssue("GameScoringClient.selectCentrePass is unimplemented")
-        throw ScoringPersistenceError.goalUnavailable
+        throw GameScoringError.unavailable
       },
       resolveCentrePass: { _, _, _ in
         reportIssue("GameScoringClient.resolveCentrePass is unimplemented")
-        throw ScoringPersistenceError.goalUnavailable
+        throw GameScoringError.unavailable
       }
     )
   }

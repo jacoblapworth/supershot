@@ -5,7 +5,6 @@ import Foundation
 
 #if !WIDGET_EXTENSION
 import Dependencies
-import SQLiteData
 #endif
 
 struct PauseGameTimerIntent: LiveActivityIntent {

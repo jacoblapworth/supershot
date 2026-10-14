@@ -13,6 +13,8 @@ import Testing
     try $0.bootstrapDatabase()
     $0.gameScoring = .live
     $0.gameSession = .live
+    $0.gameTimer = .live
+    $0.gamePresentation = .live
   }
 )
 struct SupershotTestSuite {}

@@ -46,7 +46,7 @@ nonisolated struct GameScoringState: Equatable, Sendable {
     teamAID: Team.ID, teamBID: Team.ID
   ) throws -> Goal {
     guard command.teamID == teamAID || command.teamID == teamBID else {
-      throw ScoringPersistenceError.goalUnavailable
+      throw GameScoringError.invalidTeam
     }
     let goal = Goal(
       id: command.goalID, gameID: command.gameID, gamePeriodID: opportunity.periodID,
@@ -78,4 +78,9 @@ nonisolated extension GameTimeline {
   func scoringPeriod(for context: GameScoringContext) -> GamePeriod? {
     periods.first { $0.number == context.periodNumber }
   }
+}
+
+nonisolated enum GameScoringError: Error {
+  case invalidTeam
+  case unavailable
 }
