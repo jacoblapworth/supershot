@@ -42,7 +42,7 @@ struct ScoreGoalIntent: LiveActivityIntent {
     guard let gameID = UUID(uuidString: gameID),
       let teamID = UUID(uuidString: teamID)
     else { return .result() }
-    @Dependencies.Dependency(\.defaultDatabase) var database
+    @Dependencies.Dependency(\.gameScoring) var gameScoring
     @Dependencies.Dependency(\.date.now) var now
     @Dependencies.Dependency(\.uuid) var uuid
     @Dependencies.Dependency(\.gameTimer) var gameTimer
@@ -51,12 +51,9 @@ struct ScoreGoalIntent: LiveActivityIntent {
     let phaseIndex = expectedPhaseIndex
     let scoringContext = completedPeriodNumber.map { GameScoringContext.completedPeriod(number: $0) }
     do {
-      _ = try await database.write { db in
-        try ScoringFeature.insertGoal(
-          db, gameID: gameID, teamID: teamID,
-          expectedPhaseIndex: phaseIndex, goalID: goalID, createdAt: createdAt, scoringContext: scoringContext
-        )
-      }
+      _ = try await gameScoring.recordGoal(RecordGoalCommand(
+        gameID: gameID, teamID: teamID, expectedPhaseIndex: phaseIndex,
+        goalID: goalID, createdAt: createdAt, scoringContext: scoringContext))
     } catch {
       _ = try? await gameTimer.reconcile(gameID)
       throw GoalScoringIntentError.unavailable
