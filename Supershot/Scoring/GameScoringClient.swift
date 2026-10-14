@@ -1,7 +1,6 @@
 import Dependencies
 import Foundation
 import IssueReporting
-import SQLiteData
 
 nonisolated struct GameScoreSnapshot: Equatable, Sendable {
   var canUndo = false
@@ -34,31 +33,35 @@ nonisolated struct GameScoringClient: Sendable {
   static var live: Self {
     Self(
       recordGoal: { command in
-        @Dependency(\.defaultDatabase) var database
-        return try await database.write { db in
-          try ScoringPersistence.insertGoal(
-            db, gameID: command.gameID, teamID: command.teamID,
-            expectedPhaseIndex: command.expectedPhaseIndex, goalID: command.goalID,
-            createdAt: command.createdAt, points: command.points,
-            scoringContext: command.scoringContext)
-        }
+        @Dependency(\.gameSession) var session
+        return GameScoreSnapshot(
+          snapshot: try await session.execute(
+            command.gameID, .recordGoal(command), command.createdAt
+          ).acceptedSnapshot())
       },
       undo: { gameID in
-        @Dependency(\.defaultDatabase) var database
-        return try await database.write { try ScoringPersistence.undo($0, gameID: gameID) }
+        @Dependency(\.gameSession) var session
+        @Dependency(\.date.now) var now
+        return GameScoreSnapshot(
+          snapshot: try await session.execute(gameID, .undoGoal, now).acceptedSnapshot())
       },
       selectCentrePass: { gameID, teamID in
-        @Dependency(\.defaultDatabase) var database
-        return try await database.write {
-          try ScoringPersistence.selectCentrePass($0, gameID: gameID, teamID: teamID)
-        }
+        @Dependency(\.gameSession) var session
+        @Dependency(\.date.now) var now
+        _ = try await session.execute(gameID, .selectCentrePass(teamID), now).acceptedSnapshot()
+        return teamID
       },
       resolveCentrePass: { gameID, period, taken in
-        @Dependency(\.defaultDatabase) var database
-        return try await database.write {
-          try ScoringPersistence.resolveCentrePass(
-            $0, gameID: gameID, completedPeriod: period, wasLastCentrePassTaken: taken)
-        }
+        @Dependency(\.gameSession) var session
+        @Dependency(\.date.now) var now
+        let snapshot = try await session.execute(
+          gameID,
+          .resolveCentrePass(completedPeriod: period, taken: taken), now
+        ).acceptedSnapshot()
+        return LastCentrePassSnapshot(
+          centrePassTeamID:
+            snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
+        )
       }
     )
   }
@@ -95,4 +98,15 @@ extension DependencyValues {
 private nonisolated enum GameScoringClientKey: DependencyKey {
   static var liveValue: GameScoringClient { .live }
   static var testValue: GameScoringClient { .unimplemented }
+}
+
+nonisolated extension GameScoreSnapshot {
+  init(snapshot: GameSnapshot) {
+    self.init(
+      canUndo: !snapshot.goals.isEmpty,
+      canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
+      centrePassTeamID: snapshot.game.scoring.centrePass(
+        teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id),
+      teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore)
+  }
 }

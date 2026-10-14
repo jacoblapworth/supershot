@@ -12,6 +12,7 @@ import Testing
   .dependencies {
     try $0.bootstrapDatabase()
     $0.gameScoring = .live
+    $0.gameSession = .live
   }
 )
 struct SupershotTestSuite {}
