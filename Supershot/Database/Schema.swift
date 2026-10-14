@@ -49,18 +49,10 @@ nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
 
 extension Game {
   nonisolated var progress: GameProgress {
-    get {
-      GameProgress(phaseIndex: currentPhaseIndex, countdown: countdown,
-        isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: lateScoringPeriodNumber,
-        breakStartPolicy: breakStartPolicy)
-    }
+    get { GameProgress(timing: timing, scoring: scoring) }
     set {
-      currentPhaseIndex = newValue.phaseIndex
-      countdown = newValue.countdown
-      isAwaitingCentrePassConfirmation = newValue.isAwaitingCentrePassConfirmation
-      lateScoringPeriodNumber = newValue.lateScoringPeriodNumber
-      breakStartPolicy = newValue.breakStartPolicy
+      timing = newValue.timing
+      scoring = newValue.scoring
     }
   }
 }

@@ -2,22 +2,44 @@ import Foundation
 
 /// Composed game progress. Clock transitions are pure; this projection applies their scoring consequences.
 nonisolated struct GameProgress: Equatable, Sendable {
-  var phaseIndex: Int
-  var countdown: GameCountdown
-  var isAwaitingCentrePassConfirmation: Bool
-  var lateScoringPeriodNumber: Int?
-  var breakStartPolicy = BreakStartPolicy.automatic
+  var timing: GameTimingState
+  var scoring: GameScoringState
 
-  var timing: GameTimingState {
-    get {
-      GameTimingState(
-        phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
-    }
-    set {
-      phaseIndex = newValue.phaseIndex
-      countdown = newValue.countdown
-      breakStartPolicy = newValue.breakStartPolicy
-    }
+  init(timing: GameTimingState, scoring: GameScoringState) {
+    self.timing = timing
+    self.scoring = scoring
+  }
+
+  init(
+    phaseIndex: Int, countdown: GameCountdown, isAwaitingCentrePassConfirmation: Bool,
+    lateScoringPeriodNumber: Int? = nil, breakStartPolicy: BreakStartPolicy = .automatic
+  ) {
+    timing = GameTimingState(
+      phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
+    scoring = GameScoringState(
+      isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
+      lateScoringPeriodNumber: lateScoringPeriodNumber)
+  }
+
+  var phaseIndex: Int {
+    get { timing.phaseIndex }
+    set { timing.phaseIndex = newValue }
+  }
+  var countdown: GameCountdown {
+    get { timing.countdown }
+    set { timing.countdown = newValue }
+  }
+  var isAwaitingCentrePassConfirmation: Bool {
+    get { scoring.isAwaitingCentrePassConfirmation }
+    set { scoring.isAwaitingCentrePassConfirmation = newValue }
+  }
+  var lateScoringPeriodNumber: Int? {
+    get { scoring.lateScoringPeriodNumber }
+    set { scoring.lateScoringPeriodNumber = newValue }
+  }
+  var breakStartPolicy: BreakStartPolicy {
+    get { timing.breakStartPolicy }
+    set { timing.breakStartPolicy = newValue }
   }
 
   func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {

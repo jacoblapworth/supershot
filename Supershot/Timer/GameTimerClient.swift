@@ -63,32 +63,14 @@ nonisolated extension GameTimerClient {
       },
       pause: { gameID, expectedPhaseIndex in
         @Dependency(\.date) var date
-        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.gameSession) var session
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.proSubscription) var proSubscription
         
         let now = date.now
-        let (didPause, snapshot) = try await database.write { db in
-          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let storedGame = storedSnapshot.game
-          let timeline = storedSnapshot.timeline
-          var game = reconciledGame(storedGame, timeline: timeline, now: now)
-          guard
-            game.endedAt == nil,
-            expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex
-          else {
-            if storedGame != game { try persistTimerState(game, in: db) }
-            return (false, try snapshot(db, replacing: game))
-          }
-
-          guard game.timerEndsAt != nil else {
-            if storedGame != game { try persistTimerState(game, in: db) }
-            return (false, try snapshot(db, replacing: game))
-          }
-          _ = game.timing.apply(.pause, in: timeline, expectedPhaseIndex: expectedPhaseIndex, now: now)
-          try persistTimerState(game, in: db)
-          return (true, try snapshot(db, replacing: game))
-        }
+        let update = try await session.execute(gameID, .timing(.pause, expectedPhaseIndex: expectedPhaseIndex), now)
+        let snapshot = update.snapshot
+        let didPause = update.outcome == .applied
         
         if await hasActiveProAccess(proSubscription) {
           if didPause { await alarms.cancelAlarm(gameID, snapshot.phases.count) }
@@ -101,22 +83,11 @@ nonisolated extension GameTimerClient {
       reconcile: { gameID in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.date.now) var now
-        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.gameSession) var session
         @Dependency(\.proSubscription) var proSubscription
 
-        let snapshot = try await database.write { db in
-          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let storedGame = storedSnapshot.game
-          let game = reconciledGame(
-            storedGame,
-            timeline: storedSnapshot.timeline,
-            now: now
-          )
-          if storedGame != game {
-            try persistTimerState(game, in: db)
-          }
-          return try snapshot(db, replacing: game)
-        }
+        let update = try await session.execute(gameID, .reconcile, now)
+        let snapshot = update.snapshot
         if await hasActiveProAccess(proSubscription) {
           await alarms.updateActivity(snapshot, true)
         } else {
@@ -160,30 +131,13 @@ nonisolated extension GameTimerClient {
       skip: { gameID, expectedPhaseIndex in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.date) var date
-        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.gameSession) var session
         @Dependency(\.proSubscription) var proSubscription
         
         let now = date.now
-        let (didSkip, snapshot) = try await database.write { db in
-          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let storedGame = storedSnapshot.game
-          let timeline = storedSnapshot.timeline
-          var game = reconciledGame(storedGame, timeline: timeline, now: now)
-          guard
-            game.endedAt == nil,
-            expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
-            !game.progress.isFinalPeriodComplete(in: timeline)
-          else {
-            if storedGame != game { try persistTimerState(game, in: db) }
-            return (false, try snapshot(db, replacing: game))
-          }
-
-          let transitions = game.timing.apply(.skip, in: timeline,
-            expectedPhaseIndex: expectedPhaseIndex, now: now).transitions
-          game.progress.apply(transitions)
-          try persistTimerState(game, in: db)
-          return (true, try snapshot(db, replacing: game))
-        }
+        let update = try await session.execute(gameID, .timing(.skip, expectedPhaseIndex: expectedPhaseIndex), now)
+        let snapshot = update.snapshot
+        let didSkip = update.outcome == .applied
         if await hasActiveProAccess(proSubscription) {
           if didSkip {
             await alarms.cancelAlarm(gameID, snapshot.phases.count)
@@ -198,25 +152,13 @@ nonisolated extension GameTimerClient {
         return snapshot
       },
       setRemainingTime: { gameID, expectedPhaseIndex, remainingSeconds in
-        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.date.now) var now
+        @Dependency(\.gameSession) var session
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.proSubscription) var proSubscription
-        let updated = try await database.write { db in
-          let stored = try GameSnapshot.fetch(db, gameID: gameID)
-          var game = stored.game
-          guard game.endedAt == nil,
-            game.currentPhaseIndex == expectedPhaseIndex,
-            game.timerEndsAt == nil,
-            !game.isAwaitingCentrePassConfirmation,
-            let phase = stored.timeline.phase(at: expectedPhaseIndex),
-            game.elapsedSeconds < phase.durationSeconds,
-            (1...phase.durationSeconds).contains(remainingSeconds)
-          else { throw GameTimerError.invalidCorrection }
-          _ = game.timing.apply(.setRemainingTime(remainingSeconds), in: stored.timeline,
-            expectedPhaseIndex: expectedPhaseIndex, now: .distantPast)
-          try persistTimerState(game, in: db)
-          return try snapshot(db, replacing: game)
-        }
+        let update = try await session.execute(gameID, .timing(.setRemainingTime(remainingSeconds), expectedPhaseIndex: expectedPhaseIndex), now)
+        guard case .applied = update.outcome else { throw GameTimerError.invalidCorrection }
+        let updated = update.snapshot
         await alarms.cancelAlarm(gameID, updated.phases.count)
         if await hasActiveProAccess(proSubscription) {
           await alarms.updateActivity(updated, true)
@@ -228,33 +170,13 @@ nonisolated extension GameTimerClient {
       startOrResume: { gameID, expectedPhaseIndex in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.date) var date
-        @Dependency(\.defaultDatabase) var database
+        @Dependency(\.gameSession) var session
         @Dependency(\.proSubscription) var proSubscription
         
         let now = date.now
-        let (didStart, snapshot) = try await database.write { db in
-          let storedSnapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let storedGame = storedSnapshot.game
-          let timeline = storedSnapshot.timeline
-          var game = reconciledGame(storedGame, timeline: timeline, now: now)
-          let phase = timeline.phase(at: game.currentPhaseIndex)!
-          guard
-            game.endedAt == nil,
-            expectedPhaseIndex == nil || expectedPhaseIndex == game.currentPhaseIndex,
-            game.elapsedSeconds < phase.durationSeconds,
-            phase.isBreak || !game.isAwaitingCentrePassConfirmation,
-            game.timerEndsAt == nil
-          else {
-            if storedGame != game { try persistTimerState(game, in: db) }
-            return (false, try snapshot(db, replacing: game))
-          }
-
-          let transitions = game.timing.apply(.startOrResume, in: timeline,
-            expectedPhaseIndex: expectedPhaseIndex, now: now).transitions
-          game.progress.apply(transitions)
-          try persistTimerState(game, in: db)
-          return (game.timerEndsAt != nil, try snapshot(db, replacing: game))
-        }
+        let update = try await session.execute(gameID, .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex), now)
+        let snapshot = update.snapshot
+        let didStart = update.outcome == .applied
 
         let alarmSchedulingFailed: Bool
         if await hasActiveProAccess(proSubscription) {
@@ -304,31 +226,6 @@ nonisolated func reconciledGame(_ storedGame: Game, timeline: GameTimeline, now:
   var game = storedGame
   game.progress.reconcile(in: timeline, now: now)
   return game
-}
-
-private nonisolated func persistTimerState(_ game: Game, in db: Database) throws {
-  try Game.find(game.id).update {
-    $0.lateScoringPeriodNumber = #bind(game.lateScoringPeriodNumber)
-    $0.currentPhaseIndex = game.currentPhaseIndex
-    $0.elapsedSeconds = game.elapsedSeconds
-    $0.isAwaitingCentrePassConfirmation = game.isAwaitingCentrePassConfirmation
-    $0.timerEndsAt = #bind(game.timerEndsAt)
-  }
-  .execute(db)
-}
-
-private nonisolated func snapshot(
-  _ db: Database,
-  replacing game: Game
-) throws -> GameSnapshot {
-  let snapshot = try GameSnapshot.fetch(db, gameID: game.id)
-  return GameSnapshot(
-    game: game,
-    goals: snapshot.goals,
-    periods: snapshot.periods,
-    teamA: snapshot.teamA,
-    teamB: snapshot.teamB
-  )
 }
 
 private nonisolated enum GameTimerError: Error, LocalizedError {
