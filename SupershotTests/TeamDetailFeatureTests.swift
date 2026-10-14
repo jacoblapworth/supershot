@@ -116,9 +116,144 @@ extension SupershotTestSuite {
             id: UUID(-1),
             name: "Ravens",
             colorHex: ColorPalette.blue.hex()
-          )
+          ),
+          statistics: TeamStatistics(wins: 1, pointsScored: 2)
         )
       )
+    }
+
+    @Test
+    func statisticsUseCompletedGamesAndParticipantIDs() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let date = Date(timeIntervalSince1970: 1_000)
+      try await database.write { db in
+        try db.seed {
+          Team(id: UUID(-1), name: "Ravens")
+          Team(id: UUID(-2), name: "Ravens")
+          Team(id: UUID(-3), name: "Other")
+        }
+        for index in 1...6 {
+          let gameID = UUID(-index)
+          try Game.insert {
+            Game(
+              id: gameID, startedAt: date,
+              endedAt: index == 5 ? nil : date.addingTimeInterval(100),
+              teamAID: index == 6 ? UUID(-3) : (index == 2 ? UUID(-2) : UUID(-1)),
+              teamBID: index == 2 ? UUID(-1) : UUID(-2)
+            )
+          }.execute(db)
+          try GamePeriod.insert {
+            testGamePeriods(gameID: gameID, durationSeconds: 600)
+          }.execute(db)
+        }
+        let scoring: [(Int, Int, Int)] = [
+          (1, -1, 2), (1, -1, 1), (1, -2, 1), (1, -3, 100),
+          (2, -1, 1), (2, -2, 2),
+          (3, -1, 2), (3, -2, 2),
+          (5, -1, 100), (6, -2, 100),
+        ]
+        for (index, event) in scoring.enumerated() {
+          try Goal.insert {
+            Goal(
+              id: UUID(-index - 1), gameID: UUID(-event.0),
+              gamePeriodID: testGamePeriodID(gameID: UUID(-event.0), position: 0),
+              teamID: UUID(event.1), elapsedSeconds: index,
+              points: event.2, createdAt: date
+            )
+          }.execute(db)
+        }
+      }
+      let request = TeamDetailRequest(teamID: UUID(-1))
+      let value = try await database.read { try request.fetch($0) }
+      expectNoDifference(
+        value.statistics,
+        TeamStatistics(wins: 1, losses: 1, draws: 2, pointsScored: 6, pointsAgainst: 5)
+      )
+      #expect(value.statistics.gamesPlayed == 4)
+      #expect(value.statistics.pointsDifference == 1)
+      #expect(value.statistics.winRate == 0.25)
+      #expect(value.games.count == 5)
+
+      try await database.write { db in
+        try Team.find(UUID(-1)).update {
+          $0.name = "Renamed"
+          $0.colorHex = "#34C759"
+        }.execute(db)
+      }
+      let renamed = try await database.read { try request.fetch($0) }
+      expectNoDifference(renamed.statistics, value.statistics)
+      #expect(renamed.team?.name == "Renamed")
+    }
+
+    @Test
+    func statisticsObserveFinishingScoringAndDeletingGames() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let date = Date(timeIntervalSince1970: 1_000)
+      try await database.write { db in
+        try db.seed {
+          Team(id: UUID(-1), name: "Ravens")
+          Team(id: UUID(-2), name: "Swifts")
+          Game(id: UUID(-1), startedAt: date, teamAID: UUID(-1), teamBID: UUID(-2))
+        }
+        try GamePeriod.insert {
+          testGamePeriods(gameID: UUID(-1), durationSeconds: 600)
+        }.execute(db)
+      }
+      let request = TeamDetailRequest(teamID: UUID(-1))
+      var updates = ValueObservation.tracking { db in
+        try request.fetch(db)
+      }.values(in: database).makeAsyncIterator()
+      let initial = try #require(await updates.next())
+      expectNoDifference(initial.statistics, TeamStatistics())
+      #expect(initial.statistics.winRate == nil)
+      #expect(initial.games.count == 1)
+
+      try await database.write { db in
+        try Game.find(UUID(-1)).update {
+          $0.endedAt = #bind(date.addingTimeInterval(100))
+        }.execute(db)
+      }
+      let finished = try #require(await updates.next())
+      expectNoDifference(finished.statistics, TeamStatistics(draws: 1))
+      #expect(finished.statistics.winRate == 0)
+
+      try await database.write { db in
+        try Goal.insert {
+          Goal(
+            id: UUID(-1), gameID: UUID(-1),
+            gamePeriodID: testGamePeriodID(gameID: UUID(-1), position: 0),
+            teamID: UUID(-2), elapsedSeconds: 10, points: 2, createdAt: date
+          )
+        }.execute(db)
+      }
+      let scored = try #require(await updates.next())
+      expectNoDifference(scored.statistics, TeamStatistics(losses: 1, pointsAgainst: 2))
+      #expect(scored.statistics.pointsDifference == -2)
+
+      try await database.write { db in
+        try Game.find(UUID(-1)).delete().execute(db)
+      }
+      let deleted = try #require(await updates.next())
+      expectNoDifference(deleted.statistics, TeamStatistics())
+      #expect(deleted.games.isEmpty)
+    }
+
+    @Test
+    func emptyAndMissingTeamsHaveNoStatistics() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      try await database.write { db in
+        try Team.insert { Team(id: UUID(-1), name: "Ravens") }.execute(db)
+      }
+      let empty = try await database.read { try TeamDetailRequest(teamID: UUID(-1)).fetch($0) }
+      expectNoDifference(empty.statistics, TeamStatistics())
+      #expect(empty.statistics.winRate == nil)
+      #expect(empty.games.isEmpty)
+      #expect(empty.team != nil)
+      let missing = try await database.read { try TeamDetailRequest(teamID: UUID(-2)).fetch($0) }
+      expectNoDifference(missing, TeamDetailRequest.Value())
     }
   }
 }

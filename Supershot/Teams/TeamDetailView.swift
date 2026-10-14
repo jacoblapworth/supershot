@@ -60,30 +60,13 @@ struct TeamDetailView: View {
 
   private func teamContent(_ team: Team) -> some View {
     List {
-      Section {
-        HStack(spacing: 16) {
-          Circle()
-            .fill(team.color)
-            .frame(width: 44, height: 44)
-            .accessibilityHidden(true)
-
-          VStack(alignment: .leading, spacing: 4) {
-            Text(team.name)
-              .font(.title2.bold())
-            Text(response.games.count == 1 ? "1 game" : "\(response.games.count) games")
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
-          }
-        }
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-      }
-
+      TeamStatisticsSection(statistics: response.statistics)
       Section("Games") {
         Button("New game", systemImage: "plus") {
           store.send(.newGameButtonTapped(team))
         }
         .disabled(isResumingGame)
+        
 
         if response.games.isEmpty {
           ContentUnavailableView(
@@ -99,12 +82,48 @@ struct TeamDetailView: View {
             } label: {
               GameRow(game: game)
             }
+            .listRowInsets(.all, 0)
+            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .buttonStyle(.plain)
             .disabled(isResumingGame)
           }
         }
       }
     }
+  }
+}
+
+private struct TeamStatisticsSection: View {
+  let statistics: TeamStatistics
+
+  var body: some View {
+    Section {
+      LabeledContent("Played", value: statistics.gamesPlayed.formatted())
+      LabeledContent("Wins", value: statistics.wins.formatted())
+      LabeledContent("Losses", value: statistics.losses.formatted())
+      LabeledContent("Draws", value: statistics.draws.formatted())
+      LabeledContent("Points scored", value: statistics.pointsScored.formatted())
+      LabeledContent("Points against", value: statistics.pointsAgainst.formatted())
+      LabeledContent("Points difference", value: statistics.pointsDifference.formatted())
+      LabeledContent("Win percentage") {
+        if let winRate = statistics.winRate {
+          Text(winRate, format: .percent.precision(.fractionLength(0)))
+        } else {
+          Text("—")
+            .accessibilityLabel("Unavailable")
+        }
+      }
+    } header: {
+      Text("Statistics")
+    } footer: {
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Completed games · All time")
+        if statistics.gamesPlayed == 0 {
+          Text("No completed games yet")
+        }
+      }
+    }
+    .monospacedDigit()
   }
 }
 
