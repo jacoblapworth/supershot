@@ -6,6 +6,7 @@ struct GoalTimelineView: View {
   var teamBBibColor: Color
   var teamBName: String
   var timeline: GoalTimeline
+  var teamAOnLeft = true
 
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -13,7 +14,8 @@ struct GoalTimelineView: View {
         teamABibColor: teamABibColor,
         teamAName: teamAName,
         teamBBibColor: teamBBibColor,
-        teamBName: teamBName
+        teamBName: teamBName,
+        teamAOnLeft: teamAOnLeft
       )
 
       LazyVStack(spacing: 20) {
@@ -23,7 +25,8 @@ struct GoalTimelineView: View {
             teamABibColor: teamABibColor,
             teamAName: teamAName,
             teamBBibColor: teamBBibColor,
-            teamBName: teamBName
+            teamBName: teamBName,
+            teamAOnLeft: teamAOnLeft
           )
         }
       }
@@ -37,41 +40,44 @@ private struct GoalTimelineLegend: View {
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
+  var teamAOnLeft: Bool
 
   var body: some View {
     HStack(alignment: .top, spacing: 16) {
-      HStack(alignment: .top, spacing: 8) {
-        teamColor(teamABibColor)
-        VStack(alignment: .leading, spacing: 2) {
-          Text(teamAName)
-            .font(.subheadline.weight(.semibold))
-            .fixedSize(horizontal: false, vertical: true)
-          Text("Left")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-
-      HStack(alignment: .top, spacing: 8) {
-        VStack(alignment: .trailing, spacing: 2) {
-          Text(teamBName)
-            .font(.subheadline.weight(.semibold))
-            .multilineTextAlignment(.trailing)
-            .fixedSize(horizontal: false, vertical: true)
-          Text("Right")
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        }
-        teamColor(teamBBibColor)
-      }
-      .frame(maxWidth: .infinity, alignment: .trailing)
+      teamLabel(
+        name: teamAOnLeft ? teamAName : teamBName,
+        color: teamAOnLeft ? teamABibColor : teamBBibColor,
+        isLeft: true
+      )
+      teamLabel(
+        name: teamAOnLeft ? teamBName : teamAName,
+        color: teamAOnLeft ? teamBBibColor : teamABibColor,
+        isLeft: false
+      )
     }
     .padding(.horizontal, 4)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
-      "\(teamAName) is on the left. \(teamBName) is on the right."
+      "\(teamAOnLeft ? teamAName : teamBName) is on the left. "
+        + "\(teamAOnLeft ? teamBName : teamAName) is on the right."
     )
+  }
+
+  private func teamLabel(name: String, color: Color, isLeft: Bool) -> some View {
+    HStack(alignment: .top, spacing: 8) {
+      if isLeft { teamColor(color) }
+      VStack(alignment: isLeft ? .leading : .trailing, spacing: 2) {
+        Text(name)
+          .font(.subheadline.weight(.semibold))
+          .multilineTextAlignment(isLeft ? .leading : .trailing)
+          .fixedSize(horizontal: false, vertical: true)
+        Text(isLeft ? "Left" : "Right")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      if !isLeft { teamColor(color) }
+    }
+    .frame(maxWidth: .infinity, alignment: isLeft ? .leading : .trailing)
   }
 
   private func teamColor(_ color: Color) -> some View {
@@ -89,6 +95,7 @@ private struct GoalTimelineQuarterView: View {
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
+  var teamAOnLeft: Bool
 
   var body: some View {
     VStack(spacing: 12) {
@@ -97,7 +104,8 @@ private struct GoalTimelineQuarterView: View {
         teamABibColor: teamABibColor,
         teamAName: teamAName,
         teamBBibColor: teamBBibColor,
-        teamBName: teamBName
+        teamBName: teamBName,
+        teamAOnLeft: teamAOnLeft
       )
 
       if quarter.goals.isEmpty {
@@ -113,7 +121,8 @@ private struct GoalTimelineQuarterView: View {
             GoalTimelineRow(
               goal: goal,
               teamAName: teamAName,
-              teamBName: teamBName
+              teamBName: teamBName,
+              teamAOnLeft: teamAOnLeft
             )
           }
         }
@@ -135,10 +144,14 @@ private struct GoalTimelineQuarterHeader: View {
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
+  var teamAOnLeft: Bool
 
   var body: some View {
     HStack(spacing: 12) {
-      score(quarter.teamAQuarterScore, color: teamABibColor)
+      score(
+        teamAOnLeft ? quarter.teamAQuarterScore : quarter.teamBQuarterScore,
+        color: teamAOnLeft ? teamABibColor : teamBBibColor
+      )
 
       Spacer(minLength: 0)
 
@@ -152,7 +165,10 @@ private struct GoalTimelineQuarterHeader: View {
 
       Spacer(minLength: 0)
 
-      score(quarter.teamBQuarterScore, color: teamBBibColor)
+      score(
+        teamAOnLeft ? quarter.teamBQuarterScore : quarter.teamAQuarterScore,
+        color: teamAOnLeft ? teamBBibColor : teamABibColor
+      )
     }
     .padding(12)
     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
@@ -184,33 +200,18 @@ private struct GoalTimelineRow: View {
   var goal: GoalTimelineItem
   var teamAName: String
   var teamBName: String
+  var teamAOnLeft: Bool
 
   var body: some View {
-    Group {
-      switch goal.scoringTeamSide {
-      case .teamA:
-        HStack(alignment: .top, spacing: 8) {
-          eventCard
-          marker
-          Color.clear
-            .frame(maxWidth: .infinity)
-        }
-
-      case .teamB:
-        HStack(alignment: .top, spacing: 8) {
-          Color.clear
-            .frame(maxWidth: .infinity)
-          marker
-          eventCard
-        }
-
-      case .unknown:
-        HStack(alignment: .top, spacing: 8) {
-          Color.clear
-            .frame(maxWidth: .infinity)
-          marker
-          eventCard
-        }
+    HStack(alignment: .top, spacing: 8) {
+      if isOnLeft {
+        eventCard
+        marker
+        Color.clear.frame(maxWidth: .infinity)
+      } else {
+        Color.clear.frame(maxWidth: .infinity)
+        marker
+        eventCard
       }
     }
     .accessibilityElement(children: .ignore)
@@ -222,9 +223,17 @@ private struct GoalTimelineRow: View {
     )
   }
 
+  private var isOnLeft: Bool {
+    switch goal.scoringTeamSide {
+    case .teamA: teamAOnLeft
+    case .teamB: !teamAOnLeft
+    case .unknown: false
+    }
+  }
+
   private var eventCard: some View {
     VStack(
-      alignment: goal.scoringTeamSide == .teamA ? .trailing : .leading,
+      alignment: isOnLeft ? .trailing : .leading,
       spacing: 5
     ) {
       Text(goal.scoringTeamName)
@@ -239,15 +248,15 @@ private struct GoalTimelineRow: View {
         .foregroundStyle(.secondary)
         .monospacedDigit()
 
-      Text("Match \(goal.teamAScore)–\(goal.teamBScore)")
+      Text("Match \(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)")
         .font(.caption.weight(.semibold))
         .monospacedDigit()
     }
-    .multilineTextAlignment(goal.scoringTeamSide == .teamA ? .trailing : .leading)
+    .multilineTextAlignment(isOnLeft ? .trailing : .leading)
     .padding(10)
     .frame(
       maxWidth: .infinity,
-      alignment: goal.scoringTeamSide == .teamA ? .trailing : .leading
+      alignment: isOnLeft ? .trailing : .leading
     )
     .background(
       goal.scoringTeamBibColor.opacity(0.12),

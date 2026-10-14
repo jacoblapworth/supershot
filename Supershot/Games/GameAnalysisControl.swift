@@ -72,6 +72,7 @@ struct GameAnalysisControl: View {
 struct GameAnalysisContentView: View {
   var analysis: GameAnalysis
   var selection: GameAnalysisTab
+  var teamAOnLeft = true
 
   var body: some View {
     switch selection {
@@ -81,7 +82,8 @@ struct GameAnalysisContentView: View {
         teamAName: analysis.teamAName,
         teamBBibColor: analysis.teamBBibColor,
         teamBName: analysis.teamBName,
-        timeline: analysis.goalTimeline
+        timeline: analysis.goalTimeline,
+        teamAOnLeft: teamAOnLeft
       )
     case .stats:
       GameStatisticsView(detail: analysis)

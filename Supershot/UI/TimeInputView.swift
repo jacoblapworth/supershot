@@ -8,9 +8,9 @@ struct TimeInputView: View {
     NavigationStack {
       VStack(spacing: 16) {
         TimeInputDisplay(store: store)
-        TimeInputKeypad(store: store)
         if let error = store.errorMessage {
-          Text(error).foregroundStyle(.red)
+          Label(error, systemImage: "exclamationmark.triangle.fill")
+            .foregroundStyle(.red)
         } else if !store.isValid {
           Text(
             "Enter a time between \(formatted(store.allowedSeconds.lowerBound)) and \(formatted(store.allowedSeconds.upperBound))."
@@ -18,6 +18,7 @@ struct TimeInputView: View {
           .foregroundStyle(.red)
         }
         if store.isSaving { ProgressView("Saving time…") }
+        TimeInputKeypad(store: store)
       }
       .padding(24)
       .frame(maxWidth: 560)
@@ -51,14 +52,21 @@ private struct TimeInputDisplay: View {
   let store: StoreOf<TimeInputFeature>
   
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .top, spacing: 8) {
       field(.minutes, value: store.minutes, label: "Minutes")
       Text(":").font(.system(size: 56, weight: .bold, design: .rounded))
         .accessibilityHidden(true)
         .padding(.vertical, 12)
       field(.seconds, value: store.seconds, label: "Seconds")
     }
+    .frame(maxWidth: .infinity)
     .glassEffect(in: RoundedRectangle(cornerRadius: 28))
+    .overlay(content: {
+      if store.errorMessage != nil {
+        RoundedRectangle(cornerRadius: 28)
+          .stroke(.red, lineWidth: 1)
+      }
+    })
     .environment(\.layoutDirection, .leftToRight)
   }
   
@@ -73,13 +81,16 @@ private struct TimeInputDisplay: View {
           .minimumScaleFactor(0.5)
           .lineLimit(1)
           .padding(.horizontal, 12)
+//          .background(content: {
+//            RoundedRectangle(cornerSize: 8)
+//              .fill(.thickMaterial)
+//          })
           .overlay {
             RoundedRectangle(cornerRadius: 20)
               .strokeBorder(store.selectedUnit == unit ? Color.accentColor : .clear, lineWidth: 3)
           }
         Text(label).font(.subheadline)
       }
-      .frame(maxWidth: .infinity)
       .padding(.vertical, 12)
     }
     .buttonStyle(.plain)
@@ -176,3 +187,25 @@ private struct TimeInputKeypad: View {
         ) { TimeInputFeature() })
     }
 }
+
+#Preview("Invalid") {
+  let state = {
+    var state = TimeInputFeature.State(
+      title: "Quarter length",
+      totalSeconds: 480,
+      allowedSeconds: 1...5999
+    )
+    state.errorMessage="Invalid"
+    return state
+  }()
+  
+  NavigationStack {}
+    .sheet(isPresented: .constant(true)) {
+      TimeInputView(
+        store: Store(initialState: state) {
+          TimeInputFeature()
+        }
+      )
+    }
+}
+

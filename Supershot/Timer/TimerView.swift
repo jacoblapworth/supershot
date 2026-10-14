@@ -16,41 +16,47 @@ struct TimerView: View {
   
   var body: some View {
     VStack(spacing: 12) {
-      
       VStack(alignment: .leading, spacing: 0) {
         HStack {
           Text(title)
             .font(.footnote)
             .foregroundStyle(.white)
-          Spacer()
-          Button("Edit", action: editTimeTapped)
-            .font(.subheadline)
-            .foregroundStyle(.white)
-            .disabled(!canEditTime)
-            .accessibilityLabel("Edit remaining time")
+          if canEditTime {
+            Label("Edit", systemImage: "pencil")
+              .font(.footnote)
+              .labelStyle(.iconOnly)
+              .foregroundStyle(.white.opacity(0.8))
+          }
         }
-        
         HStack {
-          Text(formattedTime(timeRemainingSeconds))
-            .font(.system(size: 56, weight: .bold, design: .rounded))
-            .monospacedDigit()
-            .contentTransition(.numericText())
-            .foregroundStyle(.white)
-          Spacer()
-          if !isInitial && !isBreakNotStarted {
-            TimerButton(type: isTimerRunning ? .pause : .play) {
-              withAnimation {
-                if isTimerRunning {
-                  pauseTimerTapped()
-                } else {
-                  startTimerTapped()
+          HStack {
+            Text(formattedTime(timeRemainingSeconds))
+              .font(.system(size: 56, weight: .bold, design: .rounded))
+              .monospacedDigit()
+              .contentTransition(.numericText())
+              .foregroundStyle(.white)
+    
+          }
+          Spacer(minLength: 0)
+          HStack(spacing: 4) {
+            if isBreakPaused {
+              TimerButton(type: .skip, action: skipBreakTapped)
+            }
+            if !isInitial && !isBreakNotStarted {
+              TimerButton(type: isTimerRunning ? .pause : .play) {
+                withAnimation {
+                  if isTimerRunning {
+                    pauseTimerTapped()
+                  } else {
+                    startTimerTapped()
+                  }
                 }
               }
-            }
-            .disabled(
-              isPeriodComplete
+              .disabled(
+                isPeriodComplete
                 || (clockPhase == .quarter && isShowingLastCentrePassBanner)
-            )
+              )
+            }
           }
         }
         
@@ -62,28 +68,36 @@ struct TimerView: View {
         .controlSize(.large)
       }
       
-      if isInitial {
-        startQuarterButton
-      }
-      if isBreakNotStarted {
-        Button("Start break", systemImage: "play.fill", action: startTimerTapped)
-          .frame(maxWidth: .infinity)
-          .buttonStyle(.borderedProminent)
-          .controlSize(.large)
-          .tint(.green)
-      }
-      if isBreakPaused {
-        Button(action: skipBreakTapped) {
-          Label("Skip break", systemImage: "forward.end.fill")
-            .frame(maxWidth: .infinity)
+      if isInitial || isBreakNotStarted {
+        HStack {
+          if isInitial {
+            Button(action: startTimerTapped) {
+              Label(
+                isBreakEnded ? "Start Quarter \(period + 1)" : "Start Quarter \(period)",
+                systemImage: "play.fill"
+              )
+              .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .fontWeight(.medium)
+            .tint(.green)
+            .disabled(clockPhase == .quarter && isShowingLastCentrePassBanner)
+          }
+          if isBreakNotStarted {
+            Button("Start break", systemImage: "play.fill", action: startTimerTapped)
+              .frame(maxWidth: .infinity)
+              .buttonStyle(.borderedProminent)
+              .controlSize(.large)
+              .tint(.green)
+          }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-        .fontWeight(.medium)
       }
     }
     .padding()
-    .background(.black, in: RoundedRectangle(cornerRadius: 16))
+    .background(.black, in: RoundedRectangle(cornerRadius: 24))
+    .onTapGesture(perform: editTimeTapped)
+    .accessibilityLabel("Edit remaining time")
   }
   
   private var isInitial: Bool {
@@ -96,7 +110,7 @@ struct TimerView: View {
   private var isBreakNotStarted: Bool {
     isBreakPaused && elapsedSeconds == 0
   }
-
+  
   private var isBreakEnded: Bool {
     clockPhase == .breakTime && isPeriodComplete
   }
@@ -107,21 +121,6 @@ struct TimerView: View {
   
   private var title: String {
     clockPhase == .breakTime ? "Quarter \(period) break" : "Quarter \(period)"
-  }
-  
-  private var startQuarterButton: some View {
-    Button(action: startTimerTapped) {
-      Label(
-        isBreakEnded ? "Start Quarter \(period + 1)" : "Start Quarter \(period)",
-        systemImage: "play.fill"
-      )
-      .frame(maxWidth: .infinity)
-    }
-    .buttonStyle(.borderedProminent)
-    .controlSize(.large)
-    .fontWeight(.medium)
-    .tint(.green)
-    .disabled(clockPhase == .quarter && isShowingLastCentrePassBanner)
   }
   
   private var timeRemainingSeconds: Int {
@@ -146,9 +145,9 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: false,
     isTimerRunning: false,
     period: 1,
-    pauseTimerTapped: {},
-    skipBreakTapped: {},
-    startTimerTapped: {}
+    pauseTimerTapped: { print("Pause") },
+    skipBreakTapped: { print("Skip") },
+    startTimerTapped: { print("Start") }
   )
   .padding()
 }
@@ -162,9 +161,9 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: false,
     isTimerRunning: true,
     period: 1,
-    pauseTimerTapped: {},
-    skipBreakTapped: {},
-    startTimerTapped: {}
+    pauseTimerTapped: { print("Pause") },
+    skipBreakTapped: { print("Skip") },
+    startTimerTapped: { print("Start") }
   )
   .padding()
 }
@@ -178,9 +177,27 @@ struct TimerView: View {
     isShowingLastCentrePassBanner: true,
     isTimerRunning: false,
     period: 1,
-    pauseTimerTapped: {},
-    skipBreakTapped: {},
-    startTimerTapped: {}
+    pauseTimerTapped: { print("Pause") },
+    skipBreakTapped: { print("Skip") },
+    startTimerTapped: { print("Start") }
   )
   .padding()
 }
+
+#Preview("Break") {
+  TimerView(
+    editTimeTapped: { print("Edit") },
+    clockPhase: .breakTime,
+    currentDurationSeconds: 15 * 60,
+    elapsedSeconds: 245,
+    isPeriodComplete: false,
+    isShowingLastCentrePassBanner: false,
+    isTimerRunning: false,
+    period: 2,
+    pauseTimerTapped: { print("Pause") },
+    skipBreakTapped: { print("Skip") },
+    startTimerTapped: { print("Start") }
+  )
+  .padding()
+}
+

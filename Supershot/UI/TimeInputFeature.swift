@@ -20,7 +20,8 @@ struct TimeInputFeature {
     var errorMessage: String?
 
     init(
-      title: String, totalSeconds: Int, allowedSeconds: ClosedRange<Int>,
+      title: String, totalSeconds: Int, 
+      allowedSeconds: ClosedRange<Int>,
       selectedUnit: Unit = .minutes
     ) {
       self.title = title

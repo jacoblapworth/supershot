@@ -49,7 +49,7 @@ private actor SoundEffectsPlayer {
     #endif
 
     if goalPlayer == nil {
-      guard let url = Bundle.main.url(forResource: "success_blip", withExtension: "mp3") else {
+      guard let url = Bundle.main.url(forResource: "success", withExtension: "aif") else {
         return
       }
       goalPlayer = try? AVAudioPlayer(contentsOf: url)

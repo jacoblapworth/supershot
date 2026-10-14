@@ -69,14 +69,6 @@ struct ScoringView: View {
 
           }
           .padding(.top)
-
-#if os(iOS)
-          AlarmPermissionCard(
-            store: store.scope(state: \.alarms, action: \.alarms),
-            proAccess: proAccess,
-            hidesWhenAuthorized: true
-          )
-  #endif
           if store.isShowingLastCentrePassBanner {
             LastCentrePassBanner(
               centrePassTeam: store.centrePassTeam,
@@ -108,7 +100,8 @@ struct ScoringView: View {
           Section {
             GameAnalysisContentView(
               analysis: analysisResponse.analysis,
-              selection: selectedAnalysis
+              selection: selectedAnalysis,
+              teamAOnLeft: store.courtLayout.left.team.id == store.teamA.id
             )
             .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
           } header: {
@@ -182,7 +175,6 @@ struct ScoringView: View {
         isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
         onDismiss: { store.send(.controlsSheetDidDismiss) },
         content: {
-          ScrollView {
             VStack(alignment: .leading, spacing: 12) {
               if store.canScoreGoal {
                 HStack(spacing: 16) {
@@ -200,11 +192,9 @@ struct ScoringView: View {
               }
             }
             .padding()
-          }
-          .scrollDisabled(true)
           .buttonSizing(.flexible)
           .buttonStyle(.glassProminent)
-          .presentationDetents(store.detents, selection: $store.presentationDetent)
+          .presentationDetents(.sizeToFit)
           .presentationBackgroundInteraction(.enabled)
           .presentationBackground(alignment: .topLeading) {}
           .interactiveDismissDisabled()

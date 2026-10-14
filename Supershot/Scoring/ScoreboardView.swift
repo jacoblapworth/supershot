@@ -51,6 +51,7 @@ private struct TeamScore: View {
         Text(name)
           .font(.title3)
           .lineLimit(1)
+          .truncationMode(.middle)
         if hasCentrePass && alignment == .trailing {
           CentrePassIndicator(direction: .trailing)
         }
