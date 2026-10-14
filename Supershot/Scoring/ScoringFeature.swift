@@ -1,7 +1,6 @@
 import ApplicationDependency
 import ComposableArchitecture
 import Foundation
-import SQLiteData
 import Sharing
 import SwiftUI
 
@@ -215,7 +214,7 @@ struct ScoringFeature {
 #endif
   @Dependency(\.continuousClock) var clock
   @Dependency(\.date.now) var now
-  @Dependency(\.defaultDatabase) var database
+  @Dependency(\.gameSession) var gameSession
   @Dependency(\.gameTimer) var gameTimer
   @Dependency(\.gameScoring) var gameScoring
   @Dependency(\.soundEffects) var soundEffects
@@ -324,17 +323,7 @@ struct ScoringFeature {
         let gameID = state.gameID
         return .run { send in
           let result = await Result {
-            try await database.write { db in
-              guard let game = try Game.find(gameID).fetchOne(db) else {
-                throw ScoringPersistenceError.gameNotFound
-              }
-              let swapSides = !game.swapSides
-              try Game.find(gameID).update {
-                $0.swapSides = #bind(swapSides)
-              }
-              .execute(db)
-              return swapSides
-            }
+            try await gameSession.execute(gameID, .swapSides, now).acceptedSnapshot().game.swapSides
           }
           await send(.swapSidesResponse(result))
         }
@@ -633,22 +622,7 @@ struct ScoringFeature {
 
     return .run { send in
       let result = await Result {
-        try await database.write { db in
-          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = reconciledGame(snapshot.game, timeline: snapshot.timeline, now: endedAt)
-          guard game.endedAt == nil,
-            game.progress.isFinalPeriodComplete(in: snapshot.timeline),
-            !game.isAwaitingCentrePassConfirmation
-          else { throw ScoringPersistenceError.goalUnavailable }
-          try Game.find(gameID).update {
-            $0.currentPhaseIndex = game.currentPhaseIndex
-            $0.elapsedSeconds = game.elapsedSeconds
-            $0.endedAt = #bind(endedAt)
-            $0.isAwaitingCentrePassConfirmation = false
-            $0.timerEndsAt = #bind(nil as Date?)
-          }
-          .execute(db)
-        }
+        _ = try await gameSession.execute(gameID, .finish, endedAt).acceptedSnapshot()
         await gameTimer.endPresentation(gameID)
         return gameID
       }
