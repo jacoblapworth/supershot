@@ -36,7 +36,7 @@ extension SupershotTestSuite {
         $0.proSubscription = .pro
         $0.alarmClient = AlarmClient(
           scheduleAlarm: { snapshot in
-            plans.withValue { $0.append(ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.progress)) }
+            plans.withValue { $0.append(ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)) }
             return false
           }, updateActivity: { _, _ in }, cancelAlarm: { _, _ in }, endActivity: { _ in })
       } operation: {
@@ -179,7 +179,7 @@ extension SupershotTestSuite {
         let timeline = GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: duration))!
         let progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: end),
           isAwaitingCentrePassConfirmation: false)
-        let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
+        let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing)
         #expect(plan.count == (duration > 0 ? 2 : 1))
         #expect(plan.first?.date == end)
         #expect(plan.first?.phaseIndex == 0)
@@ -188,8 +188,7 @@ extension SupershotTestSuite {
           #expect(plan.last?.phase == .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120))
         }
         #expect(ScheduledGameAlarm.plan(timeline: timeline,
-          progress: GameProgress(phaseIndex: 0, countdown: GameCountdown(),
-            isAwaitingCentrePassConfirmation: false)).isEmpty)
+          progress: GameTimingState(phaseIndex: 0, countdown: GameCountdown())).isEmpty)
       }
     }
 

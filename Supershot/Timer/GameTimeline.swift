@@ -32,7 +32,7 @@ nonisolated struct GameTimeline: Equatable, Sendable {
   }
 
   func activePlayingPeriod(at index: Int) -> GamePeriod? {
-    guard case let .period(reference, _) = phase(at: index) else { return nil }
+    guard case .period(let reference, _) = phase(at: index) else { return nil }
     return periods.first { $0.id == reference.id }
   }
 
@@ -44,50 +44,6 @@ nonisolated struct GameTimeline: Equatable, Sendable {
     return periods.first { $0.number == phase.associatedPeriod.number - 1 }
   }
 
-  func scoringPeriod(for context: GameScoringContext) -> GamePeriod? {
-    periods.first { $0.number == context.periodNumber }
-  }
-}
-
-/// Timing transitions are independent of storage, UI, and system presentations.
-nonisolated struct GameProgress: Equatable, Sendable {
-  var phaseIndex: Int
-  var countdown: GameCountdown
-  var isAwaitingCentrePassConfirmation: Bool
-  var lateScoringPeriodNumber: Int?
-  var breakStartPolicy = BreakStartPolicy.automatic
-
-  func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {
-    guard let phase = timeline.phase(at: phaseIndex) else { return false }
-    return phaseIndex == timeline.phases.count - 1
-      && countdown.projection(durationSeconds: phase.durationSeconds).status == .complete
-      && !countdown.isRunning
-  }
-
-  mutating func reconcile(in timeline: GameTimeline, now: Date) {
-    guard timeline.phase(at: phaseIndex) != nil else { return }
-    while let boundary = countdown.endsAt, boundary <= now {
-      complete(in: timeline, boundary: boundary)
-    }
-    countdown.elapsedSeconds = countdown.projection(
-      durationSeconds: timeline.phases[phaseIndex].durationSeconds, now: now
-    ).elapsedSeconds
-  }
-
-  mutating func complete(in timeline: GameTimeline, boundary: Date) {
-    guard let phase = timeline.phase(at: phaseIndex) else { return }
-    countdown = GameCountdown(elapsedSeconds: phase.durationSeconds)
-    if phase.isPlayingPeriod { lateScoringPeriodNumber = phase.associatedPeriod.number }
-    guard phaseIndex + 1 < timeline.phases.count else { return }
-    if phase.isPlayingPeriod { isAwaitingCentrePassConfirmation = true }
-    phaseIndex += 1
-    countdown = GameCountdown()
-    let next = timeline.phases[phaseIndex]
-    // Playing periods always wait for an explicit start, even when a break is omitted.
-    if next.isBreak, breakStartPolicy == .automatic {
-      countdown.endsAt = boundary.addingTimeInterval(TimeInterval(next.durationSeconds))
-    }
-  }
 }
 
 nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
@@ -95,16 +51,21 @@ nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
   var phase: GamePhase
   var phaseIndex: Int
 
-  static func plan(timeline: GameTimeline, progress: GameProgress) -> [Self] {
-    guard let phase = timeline.phase(at: progress.phaseIndex), let endsAt = progress.countdown.endsAt else {
+  static func plan(timeline: GameTimeline, progress: GameTimingState) -> [Self] {
+    guard let phase = timeline.phase(at: progress.phaseIndex),
+      let endsAt = progress.countdown.endsAt
+    else {
       return []
     }
     var result = [Self(date: endsAt, phase: phase, phaseIndex: progress.phaseIndex)]
-    if progress.breakStartPolicy == .automatic, phase.isPlayingPeriod, let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0 {
-      result.append(Self(
-        date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
-        phase: next, phaseIndex: progress.phaseIndex + 1
-      ))
+    if progress.breakStartPolicy == .automatic, phase.isPlayingPeriod,
+      let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0
+    {
+      result.append(
+        Self(
+          date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
+          phase: next, phaseIndex: progress.phaseIndex + 1
+        ))
     }
     return result
   }
