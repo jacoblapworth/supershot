@@ -43,7 +43,7 @@ struct TimerButton: View {
       case .pause:
         return .orange
       case .skip:
-        return .gray
+        return Color(hex: "#F14848")
       }
     }
   }

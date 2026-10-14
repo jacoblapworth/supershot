@@ -16,7 +16,7 @@ struct LastCentrePassBanner: View {
   var lastCentrePassTakenTapped: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
+    VStack(alignment: .center, spacing: 14) {
       Text("Quarter \(period)")
         .font(.headline)
 
@@ -47,7 +47,7 @@ struct LastCentrePassBanner: View {
     }
     .padding()
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
+    .glassEffect(in: RoundedRectangle(cornerRadius: 24))
     .accessibilityElement(children: .contain)
   }
 }
