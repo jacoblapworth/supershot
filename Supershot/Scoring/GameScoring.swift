@@ -73,3 +73,9 @@ extension Game {
     }
   }
 }
+
+nonisolated extension GameTimeline {
+  func scoringPeriod(for context: GameScoringContext) -> GamePeriod? {
+    periods.first { $0.number == context.periodNumber }
+  }
+}

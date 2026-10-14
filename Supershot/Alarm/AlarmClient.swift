@@ -42,7 +42,7 @@ nonisolated extension AlarmClient {
         guard manager.authorizationState == .authorized else { return false }
 
         cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
-        let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.progress)
+        let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)
 
         for alarm in alarms {
           let presentation = AlarmPresentation(

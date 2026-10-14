@@ -16,7 +16,7 @@ extension SupershotTestSuite {
       let boundary = Date(timeIntervalSince1970: 1_000)
       var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: boundary),
         isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
-      let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
+      let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing)
       #expect(plan.map(\.phaseIndex) == (policy == .automatic ? [0, 1] : [0]))
       progress.reconcile(in: timeline, now: boundary.addingTimeInterval(delay))
       #expect(progress.isAwaitingCentrePassConfirmation)
@@ -24,7 +24,7 @@ extension SupershotTestSuite {
       if policy == .manual {
         #expect(progress.phaseIndex == 1)
         #expect(progress.countdown == GameCountdown())
-        #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress).isEmpty)
+        #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing).isEmpty)
       } else if delay < 120 {
         #expect(progress.phaseIndex == 1)
         #expect(progress.countdown.endsAt == boundary.addingTimeInterval(120))
@@ -45,7 +45,7 @@ extension SupershotTestSuite {
       #expect(progress.countdown == GameCountdown())
       progress.complete(in: timeline, boundary: .distantPast)
       #expect(progress.isFinalPeriodComplete(in: timeline))
-      #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress).isEmpty)
+      #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing).isEmpty)
     }
 
     @Test
@@ -114,7 +114,7 @@ extension SupershotTestSuite {
       #expect(progress.phaseIndex == 1)
       #expect(timeline.phase(at: 1)?.associatedPeriod.id == testGamePeriodID(gameID: UUID(3), position: 1))
       progress.countdown.endsAt = boundary
-      let alarms = ScheduledGameAlarm.plan(timeline: timeline, progress: progress)
+      let alarms = ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing)
       #expect(alarms.map(\.phaseIndex) == [1, 2])
       #expect(alarms.map(\.date) == [boundary, boundary.addingTimeInterval(120)])
       progress.reconcile(in: timeline, now: boundary.addingTimeInterval(121))
@@ -158,7 +158,7 @@ extension SupershotTestSuite {
       #expect(progress.isFinalPeriodComplete(in: timeline))
       #expect(progress.lateScoringPeriodNumber == 2)
       #expect(!progress.isAwaitingCentrePassConfirmation)
-      #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress).isEmpty)
+      #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing).isEmpty)
     }
 
     @Test

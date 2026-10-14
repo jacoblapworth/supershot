@@ -85,13 +85,7 @@ nonisolated extension GameTimerClient {
             if storedGame != game { try persistTimerState(game, in: db) }
             return (false, try snapshot(db, replacing: game))
           }
-          game.elapsedSeconds = GameTimerClient.elapsedSeconds(
-            durationSeconds: timeline.phase(at: game.currentPhaseIndex)!.durationSeconds,
-            persistedElapsedSeconds: game.elapsedSeconds,
-            timerEndsAt: game.timerEndsAt,
-            now: now
-          )
-          game.timerEndsAt = nil
+          _ = game.timing.apply(.pause, in: timeline, expectedPhaseIndex: expectedPhaseIndex, now: now)
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
@@ -184,9 +178,9 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
 
-          game.elapsedSeconds = timeline.phase(at: game.currentPhaseIndex)!.durationSeconds
-          game.timerEndsAt = nil
-          game.progress.complete(in: timeline, boundary: now)
+          let transitions = game.timing.apply(.skip, in: timeline,
+            expectedPhaseIndex: expectedPhaseIndex, now: now).transitions
+          game.progress.apply(transitions)
           try persistTimerState(game, in: db)
           return (true, try snapshot(db, replacing: game))
         }
@@ -218,7 +212,8 @@ nonisolated extension GameTimerClient {
             game.elapsedSeconds < phase.durationSeconds,
             (1...phase.durationSeconds).contains(remainingSeconds)
           else { throw GameTimerError.invalidCorrection }
-          game.elapsedSeconds = phase.durationSeconds - remainingSeconds
+          _ = game.timing.apply(.setRemainingTime(remainingSeconds), in: stored.timeline,
+            expectedPhaseIndex: expectedPhaseIndex, now: .distantPast)
           try persistTimerState(game, in: db)
           return try snapshot(db, replacing: game)
         }
@@ -254,12 +249,9 @@ nonisolated extension GameTimerClient {
             return (false, try snapshot(db, replacing: game))
           }
 
-          if phase.isPlayingPeriod { game.lateScoringPeriodNumber = nil }
-          game.timerEndsAt = GameTimerClient.endDate(
-            durationSeconds: phase.durationSeconds,
-            elapsedSeconds: game.elapsedSeconds,
-            now: now
-          )
+          let transitions = game.timing.apply(.startOrResume, in: timeline,
+            expectedPhaseIndex: expectedPhaseIndex, now: now).transitions
+          game.progress.apply(transitions)
           try persistTimerState(game, in: db)
           return (game.timerEndsAt != nil, try snapshot(db, replacing: game))
         }
