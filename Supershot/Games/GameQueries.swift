@@ -192,11 +192,8 @@ nonisolated struct GameSnapshot: Equatable, Sendable {
   }
 
   var canUndoDuringConfirmation: Bool {
-    guard let completed = game.lateScoringPeriodNumber,
-      let latest = goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }),
-      latest.isLate
-    else { return false }
-    return periods.first(where: { $0.id == latest.gamePeriodID })?.number == completed
+    game.scoring.canUndoDuringConfirmation(
+      latestGoal: goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }), periods: periods)
   }
 
   var teamAScore: Int {

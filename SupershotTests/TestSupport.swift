@@ -11,6 +11,7 @@ import Testing
   .serialized,
   .dependencies {
     try $0.bootstrapDatabase()
+    $0.gameScoring = .live
   }
 )
 struct SupershotTestSuite {}

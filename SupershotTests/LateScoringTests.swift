@@ -95,7 +95,7 @@ extension SupershotTestSuite {
       #expect(!ScoringFeature.State(snapshot: paused).canScoreGoal)
       await #expect(throws: (any Error).self) {
         try await database.write {
-          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+          try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1),
             expectedPhaseIndex: game.currentPhaseIndex, goalID: UUID(10),
             createdAt: Date(timeIntervalSince1970: 1_000), scoringContext: .completedPeriod(number: 1))
         }
@@ -124,7 +124,7 @@ extension SupershotTestSuite {
       #expect(completed.game.isAwaitingCentrePassConfirmation)
       await #expect(throws: (any Error).self) {
         try await database.write {
-          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 0,
+          try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 0,
             goalID: UUID(9), createdAt: Date(timeIntervalSince1970: 1_000),
             scoringContext: .completedPeriod(number: 1))
         }
@@ -132,7 +132,7 @@ extension SupershotTestSuite {
       let staleTimer = try await client.startOrResume(game.id, 0)
       expectNoDifference(staleTimer.snapshot.game.countdown, completed.game.countdown)
       _ = try await database.write {
-        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 1,
+        try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 1,
           goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
           scoringContext: .completedPeriod(number: 1))
       }
@@ -151,7 +151,7 @@ extension SupershotTestSuite {
       }
       await #expect(throws: (any Error).self) {
         try await database.write {
-          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+          try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1),
             expectedPhaseIndex: reason == "phase" ? 0 : 1, goalID: UUID(10),
             createdAt: Date(timeIntervalSince1970: reason == "expiredBreak" ? 1_100 : 1_000),
             scoringContext: .completedPeriod(number: reason == "period" ? 2 : 1))
@@ -193,7 +193,7 @@ extension SupershotTestSuite {
       let game = try seed(window: .runningBreak, pending: pending)
       let record = {
         try await database.write {
-          try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+          try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1),
             expectedPhaseIndex: 1, goalID: UUID(10),
             createdAt: Date(timeIntervalSince1970: timestamp),
             scoringContext: .completedPeriod(number: 1))
@@ -215,7 +215,7 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .runningBreak, pending: true)
       _ = try await database.write {
-        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1),
+        try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1),
           expectedPhaseIndex: 1, goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
           scoringContext: .completedPeriod(number: 1))
       }
@@ -241,7 +241,7 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .finalQuarter, pending: false)
       _ = try await database.write {
-        try ScoringFeature.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 6,
+        try ScoringPersistence.insertGoal($0, gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 6,
           goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
           scoringContext: .completedPeriod(number: 4))
       }

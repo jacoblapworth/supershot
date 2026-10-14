@@ -462,7 +462,7 @@ extension SupershotTestSuite {
       await store.send(
         .goalResponse(
           .success(
-            ScoringFeature.ScoreSnapshot(
+            GameScoreSnapshot(
               canUndo: true,
               centrePassTeamID: UUID(2),
               teamAScore: 1

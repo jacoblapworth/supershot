@@ -43,7 +43,7 @@ extension SupershotTestSuite {
       try seedGame(reason: reason)
       await #expect(throws: (any Error).self) {
         try await database.write { db in
-          try ScoringFeature.insertGoal(
+          try ScoringPersistence.insertGoal(
             db, gameID: UUID(3), teamID: reason == "team" ? UUID(99) : UUID(1),
             expectedPhaseIndex: reason == "phase" ? 2 : reason == "break" ? 1 : 0,
             goalID: UUID(4), createdAt: Date(timeIntervalSince1970: 1_000)

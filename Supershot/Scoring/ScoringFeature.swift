@@ -20,18 +20,6 @@ struct ScoringFeature {
     case quarter
   }
 
-  struct ScoreSnapshot: Equatable, Sendable {
-    var canUndo = false
-    var canUndoDuringConfirmation = false
-    var centrePassTeamID: Team.ID
-    var teamAScore = 0
-    var teamBScore = 0
-  }
-
-  struct LastCentrePassSnapshot: Equatable, Sendable {
-    var centrePassTeamID: Team.ID
-  }
-
   struct Team: Equatable, Identifiable, Sendable {
     let id: UUID
     var bibColor = ColorPalette.blue
@@ -184,7 +172,7 @@ struct ScoringFeature {
     case finishGameButtonTapped
     case finishGameResponse(Result<Game.ID, any Error>)
     case goalButtonTapped(Team.ID)
-    case goalResponse(Result<ScoreSnapshot, any Error>)
+    case goalResponse(Result<GameScoreSnapshot, any Error>)
     case keepScreenAwakeTask
     case lastCentrePassNotTakenButtonTapped
     case lastCentrePassResponse(Result<LastCentrePassSnapshot, any Error>)
@@ -203,7 +191,7 @@ struct ScoringFeature {
     case timerReconcileResponse(Result<GameSnapshot, any Error>)
     case timerStartResponse(Result<GameTimerUpdate, any Error>)
     case undoButtonTapped
-    case undoResponse(Result<ScoreSnapshot, any Error>)
+    case undoResponse(Result<GameScoreSnapshot, any Error>)
 
     case binding(BindingAction<State>)
     
@@ -229,6 +217,7 @@ struct ScoringFeature {
   @Dependency(\.date.now) var now
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.gameTimer) var gameTimer
+  @Dependency(\.gameScoring) var gameScoring
   @Dependency(\.soundEffects) var soundEffects
   @Dependency(\.uuid) var uuid
 
@@ -575,7 +564,7 @@ struct ScoringFeature {
     .ifLet(\.$alert, action: \.alert)
   }
 
-  private func apply(_ snapshot: ScoreSnapshot, to state: inout State) {
+  private func apply(_ snapshot: GameScoreSnapshot, to state: inout State) {
     state.canUndo = snapshot.canUndo
     state.canUndoDuringConfirmation = snapshot.canUndoDuringConfirmation
     state.centrePassTeamID = snapshot.centrePassTeamID
@@ -634,28 +623,7 @@ struct ScoringFeature {
     let gameID = state.gameID
     let completedPeriod = state.lastCompletedQuarterNumber
     return .run { send in
-      let result = await Result {
-        try await database.write { db in
-          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = snapshot.game
-          guard game.endedAt == nil, snapshot.precedingPeriod?.number == completedPeriod else {
-            throw ScoringPersistenceError.goalUnavailable
-          }
-          var centrePassTeamID = resolvedCentrePassTeamID(game.centrePassTeamID,
-            teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
-          // Read ownership inside the same write as the answer, so concurrent late goals are retained.
-          if game.isAwaitingCentrePassConfirmation && wasLastCentrePassTaken {
-            centrePassTeamID = opposingTeamID(centrePassTeamID,
-              teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
-          }
-          try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(centrePassTeamID)
-            $0.isAwaitingCentrePassConfirmation = false
-          }.execute(db)
-          return LastCentrePassSnapshot(centrePassTeamID: centrePassTeamID)
-        }
-      }
-      await send(.lastCentrePassResponse(result))
+      await send(.lastCentrePassResponse(await Result { try await gameScoring.resolveCentrePass(gameID, completedPeriod, wasLastCentrePassTaken) }))
     }
   }
 
@@ -696,13 +664,9 @@ struct ScoringFeature {
     let scoringContext = state.scoringContext
     return .run { send in
       let result = await Result {
-        try await database.write { db in
-          try Self.insertGoal(
-            db, gameID: gameID, teamID: teamID,
-            expectedPhaseIndex: expectedPhaseIndex, goalID: goalID,
-            createdAt: createdAt, points: points, scoringContext: scoringContext
-          )
-        }
+        try await gameScoring.recordGoal(RecordGoalCommand(
+          gameID: gameID, teamID: teamID, expectedPhaseIndex: expectedPhaseIndex,
+          goalID: goalID, createdAt: createdAt, points: points, scoringContext: scoringContext))
       }
       await send(.goalResponse(result))
     }
@@ -772,50 +736,8 @@ struct ScoringFeature {
 
   private func undoGoalEffect(state: State) -> Effect<Action> {
     let gameID = state.gameID
-    let teamAID = state.teamA.id
-    let teamBID = state.teamB.id
-
     return .run { send in
-      let result = await Result {
-        try await database.write { db in
-          let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-          let game = snapshot.game
-          guard game.endedAt == nil,
-            !game.isAwaitingCentrePassConfirmation || snapshot.canUndoDuringConfirmation
-          else { throw ScoringPersistenceError.goalUnavailable }
-          let latestGoal = try Goal
-            .where { $0.gameID.eq(gameID) }
-            .order { ($0.createdAt.desc(), $0.id.desc()) }
-            .fetchOne(db)
-
-          if let latestGoal {
-            try Goal.find(latestGoal.id).delete().execute(db)
-            let centrePassTeamID = resolvedCentrePassTeamID(
-              game.centrePassTeamID,
-              teamAID: teamAID,
-              teamBID: teamBID
-            )
-            try Game.find(gameID).update {
-              $0.centrePassTeamID = #bind(
-                opposingTeamID(
-                  centrePassTeamID,
-                  teamAID: teamAID,
-                  teamBID: teamBID
-                )
-              )
-            }
-            .execute(db)
-          }
-
-          return try ScoreSnapshot.fetch(
-            db,
-            gameID: gameID,
-            teamAID: teamAID,
-            teamBID: teamBID
-          )
-        }
-      }
-      await send(.undoResponse(result))
+      await send(.undoResponse(await Result { try await gameScoring.undo(gameID) }))
     }
   }
 
@@ -832,22 +754,11 @@ struct ScoringFeature {
     gameID: Game.ID,
     teamID: Team.ID
   ) -> Effect<Action> {
-    .run { send in
-      let result = await Result {
-        try await database.write { db in
-          guard try Game.find(gameID).fetchOne(db) != nil else {
-            throw ScoringPersistenceError.gameNotFound
-          }
-          try Game.find(gameID).update {
-            $0.centrePassTeamID = #bind(teamID)
-          }
-          .execute(db)
-        }
-        return teamID
-      }
-      await send(.centrePassTeamResponse(result))
+    return .run { send in
+      await send(.centrePassTeamResponse(await Result { try await gameScoring.selectCentrePass(gameID, teamID) }))
     }
   }
+
 }
 
 extension AlertState where Action == ScoringFeature.Alert {
@@ -863,117 +774,5 @@ extension AlertState where Action == ScoringFeature.Alert {
         "The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer."
       )
     }
-  }
-}
-
-extension ScoringFeature.ScoreSnapshot {
-  nonisolated static func fetch(
-    _ db: Database,
-    gameID: Game.ID,
-    teamAID: Team.ID,
-    teamBID: Team.ID
-  ) throws -> Self {
-    let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    return Self(
-      canUndo: !snapshot.goals.isEmpty,
-      canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
-      centrePassTeamID: resolvedCentrePassTeamID(snapshot.game.centrePassTeamID,
-        teamAID: teamAID, teamBID: teamBID),
-      teamAScore: snapshot.teamAScore,
-      teamBScore: snapshot.teamBScore
-    )
-  }
-}
-
-private nonisolated enum ScoringPersistenceError: Error {
-  case gameNotFound
-  case goalUnavailable
-}
-
-private nonisolated func opposingTeamID(
-  _ teamID: Team.ID,
-  teamAID: Team.ID,
-  teamBID: Team.ID
-) -> Team.ID {
-  teamID == teamAID ? teamBID : teamAID
-}
-
-private nonisolated func resolvedCentrePassTeamID(
-  _ teamID: Team.ID?,
-  teamAID: Team.ID,
-  teamBID: Team.ID
-) -> Team.ID {
-  teamID == teamBID ? teamBID : teamAID
-}
-
-extension ScoringFeature {
-  nonisolated static func insertGoal(
-    _ db: Database,
-    gameID: UUID,
-    teamID: UUID,
-    expectedPhaseIndex: Int,
-    goalID: UUID,
-    createdAt: Date,
-    points: Int = 1,
-    scoringContext requestedContext: GameScoringContext? = nil
-  ) throws -> ScoreSnapshot {
-    let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    let game = reconciledGame(snapshot.game, timeline: snapshot.timeline, now: createdAt)
-    let teamAID = snapshot.teamA.id
-    let teamBID = snapshot.teamB.id
-    // createdAt is the tap/recording time. A queued live tap is not silently converted to a late goal.
-    guard
-      game.endedAt == nil,
-      teamID == teamAID || teamID == teamBID,
-      game.currentPhaseIndex == expectedPhaseIndex,
-      let phase = snapshot.timeline.phase(at: game.currentPhaseIndex),
-      let context = GameScoringContext.resolve(
-        phase: phase, countdown: game.countdown,
-        isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: createdAt),
-      context == (requestedContext ?? .livePeriod(number: phase.associatedPeriod.number)),
-      let targetPeriod = snapshot.timeline.scoringPeriod(for: context)
-    else { throw ScoringPersistenceError.goalUnavailable }
-    let elapsedSeconds = context.isLate ? targetPeriod.durationSeconds : game.countdown.projection(
-      durationSeconds: targetPeriod.durationSeconds, now: createdAt
-    ).elapsedSeconds
-
-    let centrePassTeamID = resolvedCentrePassTeamID(
-      game.centrePassTeamID,
-      teamAID: teamAID,
-      teamBID: teamBID
-    )
-    try Goal.insert {
-      Goal(
-        id: goalID,
-        gameID: gameID,
-        gamePeriodID: targetPeriod.id,
-        centrePassTeamID: centrePassTeamID,
-        teamID: teamID,
-        elapsedSeconds: elapsedSeconds,
-        isLate: context.isLate,
-        points: points,
-        createdAt: createdAt
-      )
-    }
-    .execute(db)
-
-    try Game.find(gameID).update {
-      $0.centrePassTeamID = #bind(
-        opposingTeamID(
-          centrePassTeamID,
-          teamAID: teamAID,
-          teamBID: teamBID
-        )
-      )
-    }
-    .execute(db)
-
-    return try ScoreSnapshot.fetch(
-      db,
-      gameID: gameID,
-      teamAID: teamAID,
-      teamBID: teamBID
-    )
   }
 }
