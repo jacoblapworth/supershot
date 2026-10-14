@@ -269,11 +269,17 @@ nonisolated struct GamesRequest: FetchKeyRequest {
     let games = try Game
       .order { games in (games.startedAt.desc(), games.id.desc()) }
       .fetchAll(db)
-    let goals = try Goal.fetchAll(db)
+    return try fetch(db, games: games, goals: Goal.fetchAll(db))
+  }
+
+  fileprivate func fetch(_ db: Database, games: [Game], goals: [Goal]) throws -> Value {
+    let gameIDs = games.map(\.id)
+    let teamIDs = Set(games.flatMap { [$0.teamAID, $0.teamBID] })
     let periods = try GamePeriod
+      .where { $0.gameID.in(gameIDs) }
       .order { ($0.gameID, $0.position, $0.id) }
       .fetchAll(db)
-    let teams = try Team.fetchAll(db)
+    let teams = try Team.find(Array(teamIDs)).fetchAll(db)
 
     let goalsByGame = Dictionary(grouping: goals, by: \.gameID)
     let periodsByGame = Dictionary(grouping: periods, by: \.gameID)
@@ -342,10 +348,66 @@ nonisolated struct TeamsRequest: FetchKeyRequest {
   }
 }
 
+nonisolated struct TeamStatistics: Equatable, Sendable {
+  var wins = 0
+  var losses = 0
+  var draws = 0
+  var pointsScored = 0
+  var pointsAgainst = 0
+
+  var gamesPlayed: Int { wins + losses + draws }
+  var pointsDifference: Int { pointsScored - pointsAgainst }
+  var winRate: Double? {
+    gamesPlayed == 0 ? nil : Double(wins) / Double(gamesPlayed)
+  }
+
+  init(
+    wins: Int = 0,
+    losses: Int = 0,
+    draws: Int = 0,
+    pointsScored: Int = 0,
+    pointsAgainst: Int = 0
+  ) {
+    self.wins = wins
+    self.losses = losses
+    self.draws = draws
+    self.pointsScored = pointsScored
+    self.pointsAgainst = pointsAgainst
+  }
+
+  init(teamID: Team.ID, games: [Game], goals: [Goal]) {
+    self.init()
+    let goalsByGame = Dictionary(grouping: goals, by: \.gameID)
+    for game in games where game.endedAt != nil
+      && (game.teamAID == teamID || game.teamBID == teamID) {
+      let opponentID = game.teamAID == teamID ? game.teamBID : game.teamAID
+      var scored = 0
+      var against = 0
+      for goal in goalsByGame[game.id, default: []] {
+        if goal.teamID == teamID {
+          scored += goal.points
+        } else if goal.teamID == opponentID {
+          against += goal.points
+        }
+      }
+      pointsScored += scored
+      pointsAgainst += against
+      if scored > against {
+        wins += 1
+      } else if scored < against {
+        losses += 1
+      } else {
+        draws += 1
+      }
+    }
+  }
+}
+
 nonisolated struct TeamDetailRequest: FetchKeyRequest {
   struct Value: Equatable, Sendable {
     var games: [GameListItem] = []
     var team: Team?
+    var statistics = TeamStatistics()
   }
 
   let teamID: Team.ID
@@ -354,14 +416,17 @@ nonisolated struct TeamDetailRequest: FetchKeyRequest {
     guard let team = try Team.find(teamID).fetchOne(db) else {
       return Value()
     }
-    let gameIDs = Set(
-      try Game.fetchAll(db)
-        .filter { $0.teamAID == teamID || $0.teamBID == teamID }
-        .map(\.id)
+    let games = try Game
+      .where { $0.teamAID.eq(teamID) || $0.teamBID.eq(teamID) }
+      .order { ($0.startedAt.desc(), $0.id.desc()) }
+      .fetchAll(db)
+    let gameIDs = games.map(\.id)
+    let goals = try Goal.where { $0.gameID.in(gameIDs) }.fetchAll(db)
+    return Value(
+      games: try GamesRequest().fetch(db, games: games, goals: goals).games,
+      team: team,
+      statistics: TeamStatistics(teamID: teamID, games: games, goals: goals)
     )
-    let games = try GamesRequest().fetch(db).games
-      .filter { gameIDs.contains($0.id) }
-    return Value(games: games, team: team)
   }
 }
 
