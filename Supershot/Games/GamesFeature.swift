@@ -22,6 +22,7 @@ struct GamesFeature {
   @ObservableState
   struct State: Equatable {
     @Presents var alert: AlertState<Alert>?
+    var filter = GamesFilter.all
     var path = StackState<GamesPath.State>()
     var pendingGameResume: PendingGameResume?
 
@@ -37,6 +38,7 @@ struct GamesFeature {
     case alert(PresentationAction<Alert>)
     case delegate(Delegate)
     case deleteGameButtonTapped(Game.ID)
+    case filterButtonTapped(GamesFilter)
     case gameDeepLinkOpened(Game.ID)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
@@ -69,6 +71,10 @@ struct GamesFeature {
 
       case let .deleteGameButtonTapped(gameID):
         return deleteGameEffect(gameID: gameID)
+
+      case let .filterButtonTapped(filter):
+        state.filter = filter
+        return .none
 
       case let .gameDeepLinkOpened(gameID):
         for (id, destination) in zip(state.path.ids, state.path) {
