@@ -100,7 +100,7 @@ struct GamesHomeView: View {
     }
     .navigationTitle("Games")
     .toolbar {
-      ToolbarItem(placement: .principal) {
+      ToolbarItem(placement: .largeSubtitle) {
         GamesFilterControl(selection: store.filter) { filter in
           store.send(.filterButtonTapped(filter))
         }

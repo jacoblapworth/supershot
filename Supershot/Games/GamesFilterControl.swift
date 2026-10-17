@@ -13,30 +13,30 @@ struct GamesFilterControl: View {
               filterTapped(filter)
             } label: {
               HStack(spacing: 4) {
-                if selection == filter {
-                  Image(systemName: "checkmark")
-                }
                 Text(filter.title)
               }
-              .font(.caption.weight(.semibold))
+              .font(.footnote.weight(.semibold))
               .fixedSize()
-              .padding(.horizontal, 10)
-              .frame(minHeight: 44)
+//              .padding(.horizontal, 8)
+//              .padding(.vertical, 8)
               .contentShape(.capsule)
             }
-            .buttonStyle(.plain)
-            .glassEffect(
-              .regular.tint(selection == filter ? .accentColor.opacity(0.25) : .clear)
-                .interactive(),
-              in: .capsule
-            )
+            .controlSize(.small)
+            .buttonStyle(.glass)
+//            .glassEffect(
+//              .regular.tint(selection == filter ? .accentColor.opacity(0.25) : .clear)
+//                .interactive(),
+//              in: .capsule
+//            )
+            .tint(selection == filter ? .blue : nil)
             .accessibilityLabel(Text(filter.title))
             .accessibilityAddTraits(selection == filter ? [.isSelected] : [])
             .accessibilityIdentifier("gamesFilter.\(filter.rawValue)")
           }
+          Spacer()
         }
-        .fixedSize(horizontal: true, vertical: false)
       }
+      .padding(.vertical, 4)
 
       Menu {
         ForEach(GamesFilter.allCases) { filter in
