@@ -53,7 +53,7 @@
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* Supershot Netball.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Supershot Netball.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WhatToTest.en-NZ.txt"; sourceTree = "<group>"; };
+		1297BAC5304879120041BCEC /* WhatToTest.en-GB.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WhatToTest.en-GB.txt"; sourceTree = "<group>"; };
 		12B00003301F000000000001 /* SupershotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SupershotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		12C000033020000000000001 /* SupershotWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SupershotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -193,7 +193,7 @@
 		1297BAC4304878FE0041BCEC /* TestFlight */ = {
 			isa = PBXGroup;
 			children = (
-				1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */,
+				1297BAC5304879120041BCEC /* WhatToTest.en-GB.txt */,
 			);
 			path = TestFlight;
 			sourceTree = "<group>";
