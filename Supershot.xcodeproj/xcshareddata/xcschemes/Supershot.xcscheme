@@ -39,47 +39,159 @@
                ReferencedContainer = "container:Supershot.xcodeproj">
             </BuildableReference>
          </TestableReference>
-               <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="AppFeatureTests" BuildableName="AppFeatureTests" BlueprintName="AppFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "AppFeatureTests"
+               BuildableName = "AppFeatureTests"
+               BlueprintName = "AppFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="DatabaseTests" BuildableName="DatabaseTests" BlueprintName="DatabaseTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "DatabaseTests"
+               BuildableName = "DatabaseTests"
+               BlueprintName = "DatabaseTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameCoreTests" BuildableName="GameCoreTests" BlueprintName="GameCoreTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "GameCoreTests"
+               BuildableName = "GameCoreTests"
+               BlueprintName = "GameCoreTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameDetailFeatureTests" BuildableName="GameDetailFeatureTests" BlueprintName="GameDetailFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "GameDetailFeatureTests"
+               BuildableName = "GameDetailFeatureTests"
+               BlueprintName = "GameDetailFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameServicesTests" BuildableName="GameServicesTests" BlueprintName="GameServicesTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "GameServicesTests"
+               BuildableName = "GameServicesTests"
+               BlueprintName = "GameServicesTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GamesFeatureTests" BuildableName="GamesFeatureTests" BlueprintName="GamesFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "GamesFeatureTests"
+               BuildableName = "GamesFeatureTests"
+               BlueprintName = "GamesFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="NewGameFeatureTests" BuildableName="NewGameFeatureTests" BlueprintName="NewGameFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "NewGameFeatureTests"
+               BuildableName = "NewGameFeatureTests"
+               BlueprintName = "NewGameFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="PaywallFeatureTests" BuildableName="PaywallFeatureTests" BlueprintName="PaywallFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PaywallFeatureTests"
+               BuildableName = "PaywallFeatureTests"
+               BlueprintName = "PaywallFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="PreviewSupportTests" BuildableName="PreviewSupportTests" BlueprintName="PreviewSupportTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "PreviewSupportTests"
+               BuildableName = "PreviewSupportTests"
+               BlueprintName = "PreviewSupportTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="ScoringFeatureTests" BuildableName="ScoringFeatureTests" BlueprintName="ScoringFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "ScoringFeatureTests"
+               BuildableName = "ScoringFeatureTests"
+               BlueprintName = "ScoringFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="SettingsFeatureTests" BuildableName="SettingsFeatureTests" BlueprintName="SettingsFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "SettingsFeatureTests"
+               BuildableName = "SettingsFeatureTests"
+               BlueprintName = "SettingsFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="StyleguideTests" BuildableName="StyleguideTests" BlueprintName="StyleguideTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "StyleguideTests"
+               BuildableName = "StyleguideTests"
+               BlueprintName = "StyleguideTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="TeamEditingFeatureTests" BuildableName="TeamEditingFeatureTests" BlueprintName="TeamEditingFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TeamEditingFeatureTests"
+               BuildableName = "TeamEditingFeatureTests"
+               BlueprintName = "TeamEditingFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
-         <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="TeamsFeatureTests" BuildableName="TeamsFeatureTests" BlueprintName="TeamsFeatureTests" ReferencedContainer="container:SupershotPackage"/>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "TeamsFeatureTests"
+               BuildableName = "TeamsFeatureTests"
+               BlueprintName = "TeamsFeatureTests"
+               ReferencedContainer = "container:SupershotPackage">
+            </BuildableReference>
          </TestableReference>
       </Testables>
    </TestAction>
