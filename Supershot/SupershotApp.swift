@@ -1,6 +1,10 @@
+import Database
+import AlarmClient
+import AppFeature
+import PreviewSupport
 import SwiftUI
 import SQLiteData
-import ComposableArchitecture
+import Dependencies
 import RevenueCat
 
 @main struct SupershotApp: App {
@@ -26,6 +30,7 @@ import RevenueCat
     Purchases.shared.logIn("dev") { _,_,_  in }
 #endif
     try! prepareDependencies {
+      $0.alarmClient = .live
       try $0.bootstrapDatabase()
 //      try $0.defaultSyncEngine = SyncEngine.init(
 //        for: $0.defaultDatabase,
@@ -41,16 +46,5 @@ import RevenueCat
     WindowGroup {
       SupershotRootView()
     }
-  }
-}
-
-/// Retain each window’s store when shared preferences change during onboarding.
-private struct SupershotRootView: View {
-  @State private var store = Store(initialState: AppFeature.State()) {
-    AppFeature()
-  }
-
-  var body: some View {
-    AppView(store: store)
   }
 }

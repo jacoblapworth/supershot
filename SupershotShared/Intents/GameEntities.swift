@@ -1,3 +1,4 @@
+import GameCore
 import AppIntents
 import Dependencies
 import Foundation
