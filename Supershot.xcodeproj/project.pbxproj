@@ -8,18 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 121C048F302213DA00ED9B54 /* RevenueCat */; };
-		121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 121C0491302213DA00ED9B54 /* RevenueCatUI */; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
 		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
-		12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60A301E25CB00094D7C /* DependenciesMacros */; };
 		12A4C610301E295200094D7C /* SQLiteData in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60F301E295200094D7C /* SQLiteData */; };
-		12A4C612301E295800094D7C /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C611301E295800094D7C /* ComposableArchitecture */; };
-		12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C613301E296700094D7C /* SwiftUINavigation */; };
 		12B00001301F000000000001 /* DependenciesTestSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C60C301E25CB00094D7C /* DependenciesTestSupport */; };
 		12B00002301F000000000001 /* CustomDump in Frameworks */ = {isa = PBXBuildFile; productRef = 12B0000D301F000000000001 /* CustomDump */; };
 		12C000013020000000000001 /* SupershotWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 12C000033020000000000001 /* SupershotWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		12C147E43059644E008F9513 /* LazyState in Frameworks */ = {isa = PBXBuildFile; productRef = 12C147E33059644E008F9513 /* LazyState */; };
-		12D13302305B000000000001 /* DependenciesAdditions in Frameworks */ = {isa = PBXBuildFile; productRef = 12D13301305B000000000001 /* DependenciesAdditions */; };
+		244FAF23EF373EA2C188709F /* GameCore in Frameworks */ = {isa = PBXBuildFile; productRef = 922E2245A32A8198BACADF15 /* GameCore */; };
+		2D23371DC6CC8C0669370FF6 /* GameServices in Frameworks */ = {isa = PBXBuildFile; productRef = C6945378D1EA058F030C68D3 /* GameServices */; };
+		5CFB796D395E156131C53E34 /* WidgetSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 1A87D79D3CD2D5DA8A3389AD /* WidgetSupport */; };
+		773574D86917BC5085581203 /* Database in Frameworks */ = {isa = PBXBuildFile; productRef = 2EDB2F27C9D8103BD0AFF9F5 /* Database */; };
+		7A5D4F043C4425250786154B /* PreviewSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 81C4C0E196C5A3DC26DAFF1E /* PreviewSupport */; };
+		91F83F68F45EF54243736E77 /* AlarmClient in Frameworks */ = {isa = PBXBuildFile; productRef = 2B8C3AE31BD7ABBFDFB94041 /* AlarmClient */; };
+		A629A319BF3253EC1B424ED1 /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 248BC6B3295197D260AEAB4B /* SharedModels */; };
+		C05BAC51BA8C4A78EA7D5A65 /* AppFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 4622DC45095B9F572121EC50 /* AppFeature */; };
+		D395ABE09DE04CF32368BA10 /* SharedModels in Frameworks */ = {isa = PBXBuildFile; productRef = 773D6867058C5E8AF89C649E /* SharedModels */; };
+		DAD9F8689DC3970E8290197A /* AppSettings in Frameworks */ = {isa = PBXBuildFile; productRef = 66D04B399B1BF2AAADAA9EF6 /* AppSettings */; };
+		FE0000000000000000000002 /* SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE0000000000000000000001 /* SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -56,6 +61,7 @@
 		1297BAC5304879120041BCEC /* WhatToTest.en-NZ.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "WhatToTest.en-NZ.txt"; sourceTree = "<group>"; };
 		12B00003301F000000000001 /* SupershotTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SupershotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		12C000033020000000000001 /* SupershotWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SupershotWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FE0000000000000000000001 /* SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -67,13 +73,6 @@
 				Intents/SupershotShortcuts.swift,
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
-		};
-		12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				GamePhaseLabel.swift,
-			);
-			target = 000000000000000100000000 /* Supershot */;
 		};
 		12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -92,14 +91,6 @@
 			);
 			target = 12C000073020000000000001 /* SupershotWidgets */;
 		};
-		12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Database/Models.swift,
-				UI/AvatarView.swift,
-			);
-			target = 12C000073020000000000001 /* SupershotWidgets */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -107,7 +98,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				12C0000F3020000000000001 /* Exceptions for "Supershot" folder in "Supershot" target */,
-				12FBA5EC302647BA0000AF1C /* Exceptions for "Supershot" folder in "SupershotWidgets" target */,
 			);
 			path = Supershot;
 			sourceTree = "<group>";
@@ -128,7 +118,6 @@
 		12C000053020000000000001 /* SupershotWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				12347D0C305AC21C0091C4D3 /* Exceptions for "SupershotWidgets" folder in "Supershot" target */,
 				12C000103020000000000001 /* Exceptions for "SupershotWidgets" folder in "SupershotWidgets" target */,
 			);
 			path = SupershotWidgets;
@@ -140,16 +129,18 @@
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				12D13302305B000000000001 /* DependenciesAdditions in Frameworks */,
-				12C147E43059644E008F9513 /* LazyState in Frameworks */,
+				C05BAC51BA8C4A78EA7D5A65 /* AppFeature in Frameworks */,
+				244FAF23EF373EA2C188709F /* GameCore in Frameworks */,
+				773574D86917BC5085581203 /* Database in Frameworks */,
+				2D23371DC6CC8C0669370FF6 /* GameServices in Frameworks */,
+				91F83F68F45EF54243736E77 /* AlarmClient in Frameworks */,
+				D395ABE09DE04CF32368BA10 /* SharedModels in Frameworks */,
+				DAD9F8689DC3970E8290197A /* AppSettings in Frameworks */,
+				7A5D4F043C4425250786154B /* PreviewSupport in Frameworks */,
 				12715897300D144600B14CCB /* Sharing in Frameworks */,
 				12A4C609301E25CB00094D7C /* Dependencies in Frameworks */,
 				121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */,
-				12A4C612301E295800094D7C /* ComposableArchitecture in Frameworks */,
-				121C0492302213DA00ED9B54 /* RevenueCatUI in Frameworks */,
 				12A4C610301E295200094D7C /* SQLiteData in Frameworks */,
-				12A4C60B301E25CB00094D7C /* DependenciesMacros in Frameworks */,
-				12A4C614301E296700094D7C /* SwiftUINavigation in Frameworks */,
 			);
 		};
 		12B00005301F000000000001 /* Frameworks */ = {
@@ -162,6 +153,8 @@
 		12C000063020000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				A629A319BF3253EC1B424ED1 /* SharedModels in Frameworks */,
+				5CFB796D395E156131C53E34 /* WidgetSupport in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -170,6 +163,7 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				FE0000000000000000000001 /* SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift */,
 				1297BAC4304878FE0041BCEC /* TestFlight */,
 				000000000000000000000010 /* Supershot */,
 				12C000043020000000000001 /* SupershotShared */,
@@ -228,16 +222,18 @@
 			);
 			name = Supershot;
 			packageProductDependencies = (
-				12D13301305B000000000001 /* DependenciesAdditions */,
+				4622DC45095B9F572121EC50 /* AppFeature */,
+				922E2245A32A8198BACADF15 /* GameCore */,
+				2EDB2F27C9D8103BD0AFF9F5 /* Database */,
+				C6945378D1EA058F030C68D3 /* GameServices */,
+				2B8C3AE31BD7ABBFDFB94041 /* AlarmClient */,
+				773D6867058C5E8AF89C649E /* SharedModels */,
+				66D04B399B1BF2AAADAA9EF6 /* AppSettings */,
+				81C4C0E196C5A3DC26DAFF1E /* PreviewSupport */,
 				12715896300D144600B14CCB /* Sharing */,
 				12A4C608301E25CB00094D7C /* Dependencies */,
-				12A4C60A301E25CB00094D7C /* DependenciesMacros */,
 				12A4C60F301E295200094D7C /* SQLiteData */,
-				12A4C611301E295800094D7C /* ComposableArchitecture */,
-				12A4C613301E296700094D7C /* SwiftUINavigation */,
 				121C048F302213DA00ED9B54 /* RevenueCat */,
-				121C0491302213DA00ED9B54 /* RevenueCatUI */,
-				12C147E33059644E008F9513 /* LazyState */,
 			);
 			productName = MyApp;
 			productReference = 000000000000000000000120 /* Supershot Netball.app */;
@@ -283,6 +279,10 @@
 				12C000053020000000000001 /* SupershotWidgets */,
 			);
 			name = SupershotWidgets;
+			packageProductDependencies = (
+				248BC6B3295197D260AEAB4B /* SharedModels */,
+				1A87D79D3CD2D5DA8A3389AD /* WidgetSupport */,
+			);
 			productName = SupershotWidgets;
 			productReference = 12C000033020000000000001 /* SupershotWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -319,15 +319,11 @@
 			mainGroup = 000000000000000000000001;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */,
-				1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */,
-				12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */,
 				12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */,
 				12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */,
 				12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */,
 				12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */,
 				121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
-				12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 000000000000000000000020 /* Products */;
@@ -368,6 +364,7 @@
 		12B00007301F000000000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				FE0000000000000000000002 /* SupershotPackage/Sources/TestSupport/DatabaseTestHelpers.swift in Sources */,
 			);
 		};
 		12C000093020000000000001 /* Sources */ = {
@@ -792,24 +789,6 @@
 				minimumVersion = 5.83.0;
 			};
 		};
-		1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-composable-architecture";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.26.1;
-			};
-			traits = (
-			);
-		};
-		12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swift-navigation";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.10.3;
-			};
-		};
 		12715895300D144600B14CCB /* XCRemoteSwiftPackageReference "swift-sharing" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/pointfreeco/swift-sharing";
@@ -846,22 +825,6 @@
 				minimumVersion = 1.6.1;
 			};
 		};
-		12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pointfreeco/swiftui-lazy-state";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-		12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/tgrapperon/swift-dependencies-additions";
-			requirement = {
-				kind = revision;
-				revision = 0afff683710e63433847641562da5908fe01205f;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -869,11 +832,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
-		};
-		121C0491302213DA00ED9B54 /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCatUI;
 		};
 		12715896300D144600B14CCB /* Sharing */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -885,11 +843,6 @@
 			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
 			productName = Dependencies;
 		};
-		12A4C60A301E25CB00094D7C /* DependenciesMacros */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
-			productName = DependenciesMacros;
-		};
 		12A4C60C301E25CB00094D7C /* DependenciesTestSupport */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 12A4C607301E25CB00094D7C /* XCRemoteSwiftPackageReference "swift-dependencies" */;
@@ -900,30 +853,50 @@
 			package = 12A4C5FA301E253000094D7C /* XCRemoteSwiftPackageReference "sqlite-data" */;
 			productName = SQLiteData;
 		};
-		12A4C611301E295800094D7C /* ComposableArchitecture */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1271588D300BEFFD00B14CCB /* XCRemoteSwiftPackageReference "swift-composable-architecture" */;
-			productName = ComposableArchitecture;
-		};
-		12A4C613301E296700094D7C /* SwiftUINavigation */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 12715894300D140800B14CCB /* XCRemoteSwiftPackageReference "swift-navigation" */;
-			productName = SwiftUINavigation;
-		};
 		12B0000D301F000000000001 /* CustomDump */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 12B0000C301F000000000001 /* XCRemoteSwiftPackageReference "swift-custom-dump" */;
 			productName = CustomDump;
 		};
-		12C147E33059644E008F9513 /* LazyState */ = {
+		1A87D79D3CD2D5DA8A3389AD /* WidgetSupport */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 12C147E23059644E008F9513 /* XCRemoteSwiftPackageReference "swiftui-lazy-state" */;
-			productName = LazyState;
+			productName = WidgetSupport;
 		};
-		12D13301305B000000000001 /* DependenciesAdditions */ = {
+		248BC6B3295197D260AEAB4B /* SharedModels */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 12D13300305B000000000001 /* XCRemoteSwiftPackageReference "swift-dependencies-additions" */;
-			productName = DependenciesAdditions;
+			productName = SharedModels;
+		};
+		2B8C3AE31BD7ABBFDFB94041 /* AlarmClient */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AlarmClient;
+		};
+		2EDB2F27C9D8103BD0AFF9F5 /* Database */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Database;
+		};
+		4622DC45095B9F572121EC50 /* AppFeature */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppFeature;
+		};
+		66D04B399B1BF2AAADAA9EF6 /* AppSettings */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppSettings;
+		};
+		773D6867058C5E8AF89C649E /* SharedModels */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SharedModels;
+		};
+		81C4C0E196C5A3DC26DAFF1E /* PreviewSupport */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PreviewSupport;
+		};
+		922E2245A32A8198BACADF15 /* GameCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GameCore;
+		};
+		C6945378D1EA058F030C68D3 /* GameServices */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GameServices;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

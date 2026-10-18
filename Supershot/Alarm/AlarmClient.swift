@@ -1,5 +1,7 @@
-import Dependencies
-import DependenciesMacros
+import AlarmClient
+import Database
+import GameCore
+import SharedModels
 import Foundation
 
 #if os(iOS)
@@ -7,30 +9,6 @@ import ActivityKit
 import AlarmKit
 import SwiftUI
 #endif
-
-nonisolated struct AlarmClient: Sendable {
-  var scheduleAlarm: @Sendable (GameSnapshot) async -> Bool
-  var updateActivity: @Sendable (GameSnapshot, Bool) async -> Void
-  var cancelAlarm: @Sendable (Game.ID, Int) async -> Void
-  var endActivity: @Sendable (Game.ID) async -> Void
-}
-
-extension DependencyValues {
-  @DependencyEntry(
-    liveValue: AlarmClient.live,
-    previewValue: AlarmClient.noop
-  )
-  nonisolated var alarmClient: AlarmClient = .noop
-}
-
-nonisolated extension AlarmClient {
-  static let noop = Self(
-    scheduleAlarm: { _ in false },
-    updateActivity: { _, _ in },
-    cancelAlarm: { _, _ in },
-    endActivity: { _ in }
-  )
-}
 
 nonisolated extension AlarmClient {
   static var live: Self {

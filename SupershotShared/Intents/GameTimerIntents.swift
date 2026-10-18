@@ -1,3 +1,8 @@
+import SharedModels
+#if !WIDGET_EXTENSION
+import GameCore
+import GameServices
+#endif
 #if os(iOS)
 import AlarmKit
 import AppIntents
@@ -61,7 +66,4 @@ struct ResumeGameTimerIntent: LiveActivityIntent {
   }
 }
 
-extension Notification.Name {
-  static let openSupershotGame = Self("OpenSupershotGame")
-}
 #endif

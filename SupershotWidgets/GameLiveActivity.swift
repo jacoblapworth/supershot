@@ -1,3 +1,5 @@
+import SharedModels
+import WidgetSupport
 import ActivityKit
 import AppIntents
 import SwiftUI

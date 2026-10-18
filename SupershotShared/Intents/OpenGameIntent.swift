@@ -1,3 +1,4 @@
+import SharedModels
 //
 //  OpenGameIntent.swift
 //  Supershot

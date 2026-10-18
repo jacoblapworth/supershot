@@ -1,3 +1,8 @@
+import SharedModels
+#if !WIDGET_EXTENSION
+import GameCore
+import GameServices
+#endif
 //
 //  ScoreGoalIntent.swift
 //  Supershot
