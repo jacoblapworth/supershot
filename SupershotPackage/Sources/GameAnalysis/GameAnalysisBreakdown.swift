@@ -1,6 +1,6 @@
 import Database
 
-package enum GameAnalysisBreakdown: Hashable, Identifiable {
+nonisolated package enum GameAnalysisBreakdown: Hashable, Identifiable, Sendable {
   case wholeGame
   case period(Int)
 

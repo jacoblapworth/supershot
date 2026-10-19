@@ -61,6 +61,10 @@ package struct GameStatisticsView: View {
 
         GoalProgressChartView(detail: detail, breakdown: breakdown)
 
+        Divider()
+
+        ScoreDifferenceChartView(detail: detail, breakdown: breakdown)
+
         Text(
           "Conversion and turnovers are inferred from which team scored after each centre pass. "
             + "Goal time starts at the previous goal or quarter start."

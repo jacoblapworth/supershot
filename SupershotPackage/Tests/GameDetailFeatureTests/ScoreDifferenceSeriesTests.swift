@@ -27,6 +27,41 @@ import Testing
     expectNoDifference(series.nearestMoment(to: 10)?.difference, 0)
   }
 
+  @Test func quarterUsesOnlyItsPointsAndLocalPlayingTime() {
+    let value = analysis(events: [
+      (1, 10, 2, 0), (1, 20, 2, 1),
+      (2, 10, 2, 3), (2, 20, 3, 3), (2, 30, 3, 4),
+    ])
+    let quarter = ScoreDifferenceSeries(analysis: value, breakdown: .period(2))
+    expectNoDifference(quarter.points.map(\.difference), [0, -2, -1, -2])
+    expectNoDifference(quarter.moments.map(\.teamAScore), [0, 1, 1])
+    expectNoDifference(quarter.moments.map(\.teamBScore), [2, 2, 3])
+    expectNoDifference(quarter.points.map(\.elapsedSeconds), [0, 10, 20, 30])
+    expectNoDifference(quarter.duration, 90)
+    expectNoDifference(quarter.periodEndOffsets, [])
+    expectNoDifference(
+      ScoreDifferenceSeries(analysis: value).points.map(\.difference),
+      [0, 2, 1, -1, 0, -1])
+  }
+
+  @Test func emptyQuarterDoesNotShowGoalsFromOtherQuarters() {
+    let series = ScoreDifferenceSeries(
+      analysis: analysis(events: [(1, 10, 2, 0)]), breakdown: .period(2))
+    #expect(series.moments.isEmpty)
+    expectNoDifference(series.points.map(\.difference), [0])
+    expectNoDifference(series.duration, 90)
+    expectNoDifference(series.extent, 1)
+  }
+
+  @Test func completedQuarterExtendsToItsOwnEnd() {
+    var value = analysis(events: [(1, 10, 2, 0), (2, 10, 2, 3)])
+    value.isComplete = true
+    let series = ScoreDifferenceSeries(analysis: value, breakdown: .period(1))
+    expectNoDifference(series.points.last?.elapsedSeconds, 60)
+    expectNoDifference(series.points.last?.difference, 2)
+    expectNoDifference(series.points.last?.period, 1)
+  }
+
   @Test func periodOffsetsExcludeBreaksAndKeepLateGoalsAtBoundary() {
     var value = analysis(events: [(1, 60, 1, 0), (2, 0, 1, 2), (2, 20, 2, 2)])
     value.periods.reverse()
@@ -99,10 +134,14 @@ import Testing
       GamePeriod(id: UUID(2), gameID: gameID, position: 1, durationSeconds: 90),
     ]
     let goals = events.enumerated().map { index, event in
-      GoalTimelineItem(
+      let previousA = index > 0 ? events[index - 1].a : 0
+      let previousB = index > 0 ? events[index - 1].b : 0
+      let teamA = event.a > previousA
+      return GoalTimelineItem(
         clockSecondsRemaining: periods[event.period - 1].durationSeconds - event.elapsed,
-        id: UUID(index + 10), period: event.period, points: 1,
-        scoringTeamName: "Team", scoringTeamSide: .teamA,
+        id: UUID(index + 10), period: event.period,
+        points: teamA ? event.a - previousA : event.b - previousB,
+        scoringTeamName: "Team", scoringTeamSide: teamA ? .teamA : .teamB,
         teamAScore: event.a, teamBScore: event.b
       )
     }

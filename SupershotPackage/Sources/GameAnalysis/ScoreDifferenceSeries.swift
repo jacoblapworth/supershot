@@ -1,7 +1,7 @@
 import Database
 import GameCore
 
-/// A whole-game projection. Team identities stay fixed when court sides change.
+/// Team identities stay fixed when court sides change; quarter scores start at zero.
 nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
   package struct Point: Equatable, Identifiable, Sendable {
     package enum ID: Hashable, Sendable {
@@ -26,8 +26,10 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
   package let periodEndOffsets: [Int]
   package let extent: Int
 
-  package init(analysis: GameAnalysis) {
-    let periods = analysis.periods.sorted { $0.position < $1.position }
+  package init(analysis: GameAnalysis, breakdown: GameAnalysisBreakdown = .wholeGame) {
+    let periods = analysis.periods
+      .filter { breakdown.period == nil || $0.number == breakdown.period }
+      .sorted { $0.position < $1.position }
     var offsets: [Int: Int] = [:]
     var duration = 0
     var boundaries: [Int] = []
@@ -40,21 +42,35 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
     self.periodEndOffsets = Array(boundaries.dropLast())
 
     // Timeline presentation is newest first, including its same-second tie breaks.
-    let moments = analysis.goalTimeline.quarters.reversed().flatMap { quarter in
-      quarter.goals.reversed().compactMap { goal -> Point? in
-        guard let period = periods.first(where: { $0.number == goal.period }),
-          let offset = offsets[goal.period]
-        else { return nil }
-        let elapsed = min(
-          max(period.durationSeconds - goal.clockSecondsRemaining, 0),
-          period.durationSeconds)
-        return Point(
-          id: .goal(goal.id), elapsedSeconds: offset + elapsed,
-          period: goal.period, periodElapsedSeconds: elapsed,
-          teamAScore: goal.teamAScore, teamBScore: goal.teamBScore
-        )
+    var teamAScore = 0
+    var teamBScore = 0
+    let moments = analysis.goalTimeline.quarters
+      .filter { breakdown.period == nil || $0.period == breakdown.period }
+      .reversed().flatMap { quarter in
+        quarter.goals.reversed().compactMap { goal -> Point? in
+          guard let period = periods.first(where: { $0.number == goal.period }),
+            let offset = offsets[goal.period]
+          else { return nil }
+          let elapsed = min(
+            max(period.durationSeconds - goal.clockSecondsRemaining, 0),
+            period.durationSeconds)
+          if breakdown == .wholeGame {
+            teamAScore = goal.teamAScore
+            teamBScore = goal.teamBScore
+          } else {
+            switch goal.scoringTeamSide {
+            case .teamA: teamAScore += goal.points
+            case .teamB: teamBScore += goal.points
+            case .unknown: break
+            }
+          }
+          return Point(
+            id: .goal(goal.id), elapsedSeconds: offset + elapsed,
+            period: goal.period, periodElapsedSeconds: elapsed,
+            teamAScore: teamAScore, teamBScore: teamBScore
+          )
+        }
       }
-    }
     self.moments = moments
     var points =
       [
