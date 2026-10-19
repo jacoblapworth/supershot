@@ -1,5 +1,6 @@
 import AlarmClient
 import ComposableArchitecture
+import FeatureFlagsClient
 import Styleguide
 import SubscriptionClient
 
@@ -38,6 +39,7 @@ package struct AlarmPermissionFeature {
   }
 
   @Dependency(\.alarmAuthorization) package var alarmAuthorization
+  @Dependency(\.featureFlags) package var featureFlags
 
   package var body: some Reducer<State, Action> {
     Reduce { state, action in
@@ -55,14 +57,16 @@ package struct AlarmPermissionFeature {
         let previous = state.authorization
         state.authorization = status
         if state.authorization != previous { state.errorMessage = nil }
-        if state.access == .pro, previous != .authorized, state.authorization == .authorized {
+        if featureFlags.isEnabled(.timerAlerts, state.access), previous != .authorized,
+          state.authorization == .authorized
+        {
           return .send(.delegate(.authorized))
         }
         return .none
 
       case .enableButtonTapped:
         guard !state.isRequesting, state.access != .unknown else { return .none }
-        guard state.access == .pro else {
+        guard featureFlags.isEnabled(.timerAlerts, state.access) else {
           return .send(.delegate(.proPromotionTapped))
         }
         guard state.authorization == .notDetermined else { return .none }
@@ -78,7 +82,9 @@ package struct AlarmPermissionFeature {
       case .authorizationResponse(.success(let status)):
         state.isRequesting = false
         state.authorization = status
-        if status == .authorized { return .send(.delegate(.authorized)) }
+        if status == .authorized, featureFlags.isEnabled(.timerAlerts, state.access) {
+          return .send(.delegate(.authorized))
+        }
         return .none
 
       case .authorizationResponse(.failure):

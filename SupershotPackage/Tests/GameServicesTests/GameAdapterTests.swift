@@ -4,6 +4,7 @@ import CustomDump
 import Dependencies
 import DependenciesTestSupport
 import Foundation
+import FeatureFlagsClient
 import Testing
 
 import TestSupport
@@ -106,6 +107,75 @@ struct GameAdapterTests {
     _ = await task.value
     activityStarted.continuation.finish()
     expectNoDifference(calls.value, ["refresh"])
+  }
+
+  @Test(arguments: [true, false], [true, false])
+  func capabilitiesAreIndependentWhenStarting(showsActivity: Bool, allowsAlerts: Bool) async {
+    let calls = LockIsolated<[String]>([])
+    let expected = snapshot(running: true)
+    let failed = await withDependencies {
+      $0.featureFlags = FeatureFlagsClient { feature, _ in
+        switch feature {
+        case .liveActivities: return showsActivity
+        case .timerAlerts: return allowsAlerts
+        }
+      }
+      $0.alarmClient = AlarmClient(
+        scheduleAlarm: { snapshot in
+          expectNoDifference(snapshot, expected)
+          calls.withValue { $0.append("schedule") }
+          return true
+        },
+        updateActivity: { snapshot, _ in
+          expectNoDifference(snapshot, expected)
+          calls.withValue { $0.append("refresh") }
+        },
+        cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
+        endActivity: { _ in calls.withValue { $0.append("end") } })
+    } operation: {
+      await GamePresentationClient.live.update(
+        GameSessionUpdate(outcome: .applied, snapshot: expected),
+        .timing(.startOrResume, expectedPhaseIndex: 0))
+    }
+    expectNoDifference(failed, allowsAlerts)
+    expectNoDifference(calls.value.filter { $0 == "refresh" }.count, showsActivity ? 1 : 0)
+    expectNoDifference(calls.value.filter { $0 == "end" }.count, showsActivity ? 0 : 1)
+    expectNoDifference(calls.value.filter { $0 == "schedule" }.count, allowsAlerts ? 1 : 0)
+    expectNoDifference(calls.value.filter { $0 == "cancel" }.count, allowsAlerts ? 0 : 1)
+  }
+
+  @Test(arguments: [SubscriptionEntitlement.free, .unknown])
+  func nonProAccessCleansUpBothPresentations(access: SubscriptionEntitlement) async {
+    let calls = LockIsolated<[String]>([])
+    await withDependencies {
+      $0.proSubscription.currentAccess = { access }
+      $0.alarmClient = AlarmClient(
+        scheduleAlarm: { _ in Issue.record("Unexpected scheduling"); return false },
+        updateActivity: { _, _ in Issue.record("Unexpected activity") },
+        cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
+        endActivity: { _ in calls.withValue { $0.append("end") } })
+    } operation: {
+      _ = await GamePresentationClient.live.update(
+        GameSessionUpdate(outcome: .unchanged, snapshot: snapshot(running: true)), .reconcile)
+    }
+    expectNoDifference(Set(calls.value), ["cancel", "end"])
+  }
+
+  @Test func finishingAlwaysCleansUpEvenWithIndependentOverrides() async {
+    let calls = LockIsolated<[String]>([])
+    await withDependencies {
+      $0.featureFlags = FeatureFlagsClient { _, _ in true }
+      $0.proSubscription.currentAccess = { Issue.record("Finish must not fetch access"); return .pro }
+      $0.alarmClient = AlarmClient(
+        scheduleAlarm: { _ in Issue.record("Unexpected scheduling"); return false },
+        updateActivity: { _, _ in Issue.record("Unexpected activity") },
+        cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
+        endActivity: { _ in calls.withValue { $0.append("end") } })
+    } operation: {
+      _ = await GamePresentationClient.live.update(
+        GameSessionUpdate(outcome: .applied, snapshot: snapshot()), .finish)
+    }
+    expectNoDifference(calls.value, ["cancel", "end"])
   }
 
   private func snapshot(running: Bool = false) -> GameSnapshot {

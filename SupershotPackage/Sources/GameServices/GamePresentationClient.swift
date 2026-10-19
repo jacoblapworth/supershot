@@ -1,6 +1,7 @@
 import AlarmClient
 import Database
 import Dependencies
+import FeatureFlagsClient
 import Foundation
 import GameCore
 import IssueReporting
@@ -22,33 +23,38 @@ nonisolated public struct GamePresentationClient: Sendable {
       update: { update, command in
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.proSubscription) var subscription
+        @Dependency(\.featureFlags) var featureFlags
         let snapshot = update.snapshot
         let applied = update.outcome == .applied
         if command == .finish, applied {
           await end(alarms, snapshot: snapshot)
           return false
         }
-        guard (try? await subscription.currentAccess()) == .pro else {
-          await end(alarms, snapshot: snapshot)
-          return false
+        let access = (try? await subscription.currentAccess()) ?? .unknown
+        let showsActivity = featureFlags.isEnabled(.liveActivities, access)
+        let schedulesAlerts = featureFlags.isEnabled(.timerAlerts, access)
+        if !schedulesAlerts {
+          await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
         }
+        if !showsActivity { await alarms.endActivity(snapshot.game.id) }
+        guard showsActivity || schedulesAlerts else { return false }
         switch command {
         case .timing(.startOrResume, _) where applied:
-          await alarms.updateActivity(snapshot, true)
+          if showsActivity { await alarms.updateActivity(snapshot, true) }
           // A newer pause/reconcile can cancel the start effect after its commit.
-          guard !Task.isCancelled else { return false }
+          guard !Task.isCancelled, schedulesAlerts else { return false }
           return await alarms.scheduleAlarm(snapshot)
-        case .timing(.pause, _) where applied:
+        case .timing(.pause, _) where applied && schedulesAlerts:
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
-        case .timing(.skip, _) where applied:
+        case .timing(.skip, _) where applied && schedulesAlerts:
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
           if snapshot.game.timerEndsAt != nil { _ = await alarms.scheduleAlarm(snapshot) }
-        case .timing(.setRemainingTime, _) where applied:
+        case .timing(.setRemainingTime, _) where applied && schedulesAlerts:
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
         default:
           break
         }
-        await alarms.updateActivity(snapshot, true)
+        if showsActivity { await alarms.updateActivity(snapshot, true) }
         return false
       },
       cancelAlarm: { gameID in
@@ -73,12 +79,14 @@ nonisolated public struct GamePresentationClient: Sendable {
         @Dependency(\.defaultDatabase) var database
         @Dependency(\.alarmClient) var alarms
         @Dependency(\.proSubscription) var subscription
+        @Dependency(\.featureFlags) var featureFlags
         guard
           let snapshot = try? await database.read({ try GameSnapshot.fetch($0, gameID: gameID) }),
           snapshot.game.timerEndsAt != nil
         else { return false }
-        guard (try? await subscription.currentAccess()) == .pro else {
-          await end(alarms, snapshot: snapshot)
+        let access = (try? await subscription.currentAccess()) ?? .unknown
+        guard featureFlags.isEnabled(.timerAlerts, access) else {
+          await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
           return false
         }
         return await alarms.scheduleAlarm(snapshot)

@@ -1,5 +1,6 @@
 import AlarmClient
 import ComposableArchitecture
+import FeatureFlagsClient
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -9,6 +10,7 @@ import SwiftUI
 #endif
 
 package struct AlarmPermissionCard: View {
+  @Dependency(\.featureFlags) private var featureFlags
   @Environment(\.scenePhase) private var scenePhase
   @Environment(\.openURL) private var openURL
   package let store: StoreOf<AlarmPermissionFeature>
@@ -18,10 +20,10 @@ package struct AlarmPermissionCard: View {
   package var body: some View {
     Group {
       if proAccess != .unknown,
-        !(hidesWhenAuthorized && proAccess == .pro && store.authorization == .authorized)
+        !(hidesWhenAuthorized && timerAlertsEnabled && store.authorization == .authorized)
       {
         VStack(alignment: .leading, spacing: 12) {
-          if proAccess == .pro, store.authorization == .authorized {
+          if timerAlertsEnabled, store.authorization == .authorized {
             #if os(macOS)
               Label("Notifications enabled", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.secondary)
@@ -33,7 +35,7 @@ package struct AlarmPermissionCard: View {
             HStack {
               Label("Never miss the quarter", systemImage: "alarm.fill")
                 .font(.headline)
-              if proAccess == .free {
+              if !timerAlertsEnabled {
                 Text("PRO")
                   .font(.caption.bold())
                   .foregroundStyle(Color.accentColor)
@@ -58,7 +60,7 @@ package struct AlarmPermissionCard: View {
                 ProgressView()
                 Text("Requesting access…")
               }
-            } else if proAccess == .pro, store.authorization == .denied {
+            } else if timerAlertsEnabled, store.authorization == .denied {
               #if os(macOS)
                 Text("Allow notifications for Supershot in System Settings → Notifications.")
                   .font(.caption).foregroundStyle(.secondary)
@@ -79,7 +81,7 @@ package struct AlarmPermissionCard: View {
               .buttonStyle(.bordered)
             } else {
               Button(
-                proAccess == .free
+                !timerAlertsEnabled
                   ? "Explore Supershot Pro"
                   : store.errorMessage == nil ? enableTitle : "Try again"
               ) {
@@ -97,6 +99,10 @@ package struct AlarmPermissionCard: View {
     .onChange(of: scenePhase) { _, phase in
       if phase == .active { store.send(.refresh(proAccess)) }
     }
+  }
+
+  private var timerAlertsEnabled: Bool {
+    featureFlags.isEnabled(.timerAlerts, proAccess)
   }
 
   private var enableTitle: String {
