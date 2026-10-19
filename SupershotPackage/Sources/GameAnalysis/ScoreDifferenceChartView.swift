@@ -70,7 +70,7 @@ private struct ScoreDifferenceChart: View {
               )
             )
             .alignsMarkStylesWithPlotArea()
-            .interpolationMethod(.stepEnd)
+            .interpolationMethod(.monotone)
           }
 
           RuleMark(y: .value("Scores level", 0))
@@ -89,7 +89,7 @@ private struct ScoreDifferenceChart: View {
               y: .value("Difference", series.plottedDifference(for: point))
             )
             .foregroundStyle(Color.primary)
-            .interpolationMethod(.stepEnd)
+            .interpolationMethod(.monotone)
           }
 
           ForEach(series.moments) { moment in
@@ -135,18 +135,12 @@ private struct ScoreDifferenceChart: View {
           }
         }
         .frame(height: 220)
+//        .chartXSelection(value: <#T##Binding<P?>#>)
         .chartOverlay { proxy in
           GeometryReader { geometry in
-            Rectangle()
-              .fill(.clear)
-              .contentShape(Rectangle())
-              .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                  .onChanged { value in
-                    selectionChanged(at: value.location, proxy: proxy, geometry: geometry)
-                  }
-                  .onEnded { _ in selectedMoment = nil }
-              )
+            ChartSelectionOverlay { location in
+              selectionChanged(at: location, proxy: proxy, geometry: geometry)
+            }
           }
         }
         .accessibilityElement(children: .ignore)
@@ -163,7 +157,7 @@ private struct ScoreDifferenceChart: View {
             moment: selectedMoment, teamAName: teamAName, teamBName: teamBName
           )
         } else {
-          Text("Press and hold the chart to inspect the score.")
+          Text("Drag horizontally across the chart to inspect the score.")
             .font(.caption)
             .foregroundStyle(.secondary)
         }
@@ -195,8 +189,8 @@ private struct ScoreDifferenceChart: View {
     .onChange(of: breakdown) { selectedMoment = nil }
   }
 
-  private func selectionChanged(at location: CGPoint, proxy: ChartProxy, geometry: GeometryProxy) {
-    guard let plotFrame = proxy.plotFrame else {
+  private func selectionChanged(at location: CGPoint?, proxy: ChartProxy, geometry: GeometryProxy) {
+    guard let location, let plotFrame = proxy.plotFrame else {
       selectedMoment = nil
       return
     }
