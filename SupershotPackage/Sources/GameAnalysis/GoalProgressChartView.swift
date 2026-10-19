@@ -207,22 +207,9 @@ package struct GoalProgressChartView: View {
         .frame(height: 220)
         .chartOverlay { proxy in
           GeometryReader { geometry in
-            Rectangle()
-              .fill(.clear)
-              .contentShape(Rectangle())
-              .gesture(
-                DragGesture(minimumDistance: 0)
-                  .onChanged { value in
-                    updateSelectedMoment(
-                      at: value.location,
-                      proxy: proxy,
-                      geometry: geometry
-                    )
-                  }
-                  .onEnded { _ in
-                    selectedMoment = nil
-                  }
-              )
+            ChartSelectionOverlay { location in
+              updateSelectedMoment(at: location, proxy: proxy, geometry: geometry)
+            }
           }
         }
         .accessibilityElement(children: .ignore)
@@ -254,11 +241,11 @@ package struct GoalProgressChartView: View {
   }
 
   private func updateSelectedMoment(
-    at location: CGPoint,
+    at location: CGPoint?,
     proxy: ChartProxy,
     geometry: GeometryProxy
   ) {
-    guard let plotFrame = proxy.plotFrame else {
+    guard let location, let plotFrame = proxy.plotFrame else {
       selectedMoment = nil
       return
     }

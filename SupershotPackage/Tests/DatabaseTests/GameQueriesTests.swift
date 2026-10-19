@@ -146,6 +146,7 @@ extension SupershotTestSuite {
       #expect(initial.teamABibColor == ColorPalette.purple)
       #expect(initial.goalTimeline.quarters.first?.goals.isEmpty == true)
       #expect(initial.statistics.teamA.averageTimeToGoalSeconds == nil)
+      #expect(!initial.isComplete)
 
       try await database.write { db in
         try Goal.insert {
@@ -170,6 +171,20 @@ extension SupershotTestSuite {
         try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis
       }
       expectNoDifference(undone, initial)
+
+      try await database.write { db in
+        try Game.find(UUID(-1)).update {
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 5_000))
+        }.execute(db)
+      }
+      let completed = try await database.read { db in
+        (
+          try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis,
+          try GameDetailRequest(gameID: UUID(-1)).fetch(db).detail?.analysis
+        )
+      }
+      #expect(completed.0.isComplete)
+      #expect(completed.1?.isComplete == true)
     }
 
     @Test
