@@ -2,6 +2,7 @@ import ComposableArchitecture
 import Dependencies
 import DependenciesTestSupport
 import Foundation
+import FeatureFlagsClient
 import Sharing
 import SQLiteData
 import OrderedCollections
@@ -178,6 +179,55 @@ extension SupershotTestSuite {
       }
       await store.send(.enableButtonTapped)
       await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
+    }
+
+    @Test
+    func deniedTimerAlertPolicyPromotesEvenForPro() async {
+      let store = TestStore(initialState: AlarmPermissionFeature.State(access: .pro)) {
+        AlarmPermissionFeature()
+      } withDependencies: {
+        $0.featureFlags = FeatureFlagsClient { _, _ in false }
+        $0.alarmAuthorization.request = { Issue.record("Unexpected request"); return .authorized }
+      }
+      await store.send(.enableButtonTapped)
+      await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
+    }
+
+    @Test
+    func allowedTimerAlertPolicyCanRequestWithoutPro() async {
+      let store = TestStore(initialState: AlarmPermissionFeature.State(access: .free)) {
+        AlarmPermissionFeature()
+      } withDependencies: {
+        $0.featureFlags = FeatureFlagsClient { feature, _ in feature == .timerAlerts }
+        $0.alarmAuthorization.request = { .authorized }
+      }
+      await store.send(.enableButtonTapped) { $0.isRequesting = true }
+      await store.receive(\.authorizationResponse) {
+        $0.isRequesting = false
+        $0.authorization = .authorized
+      }
+      await store.receive { if case .delegate(.authorized) = $0 { true } else { false } }
+    }
+
+    @Test
+    func accessLossDuringPermissionRequestDoesNotEnableAlerts() async {
+      let clock = TestClock()
+      let store = TestStore(initialState: AlarmPermissionFeature.State(access: .pro)) {
+        AlarmPermissionFeature()
+      } withDependencies: {
+        $0.alarmAuthorization.request = {
+          try await clock.sleep(for: .seconds(1))
+          return .authorized
+        }
+      }
+      await store.send(.enableButtonTapped) { $0.isRequesting = true }
+      await store.send(.refresh(.free)) { $0.access = .free }
+      await clock.advance(by: .seconds(1))
+      await store.receive(\.authorizationResponse) {
+        $0.isRequesting = false
+        $0.authorization = .authorized
+      }
+      await store.finish()
     }
 
     @Test

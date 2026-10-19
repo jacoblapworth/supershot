@@ -3,6 +3,10 @@
   import Foundation
   import Dependencies
   import Testing
+  import CustomDump
+  import FeatureFlagsClient
+  import SQLiteData
+  import SubscriptionClient
   import TestSupport
   @testable import AlarmClient
   @testable import Database
@@ -23,6 +27,35 @@
         periods: testGamePeriods(
           gameID: game.id, count: 2, durationSeconds: 100, breakDurationSeconds: 60),
         teamA: Team(id: UUID(1), name: "Ravens"), teamB: Team(id: UUID(2), name: "Swifts"))
+    }
+
+    @Test func delayedSchedulingRechecksFeatureAccess() async throws {
+      let harness = NotificationHarness()
+      let allowed = LockIsolated(true)
+      let current = snapshot()
+      try await withDependencies {
+        try $0.bootstrapDatabase()
+        try clearDatabase($0.defaultDatabase)
+        try $0.defaultDatabase.write { db in
+          try Team.insert { current.teamA; current.teamB }.execute(db)
+          try Game.insert { current.game }.execute(db)
+          try GamePeriod.insert { current.periods }.execute(db)
+        }
+        $0.date.now = Date(timeIntervalSince1970: 1000)
+        // Allowing a free subscriber proves this uses the injected capability policy.
+        $0.proSubscription = .free
+        $0.featureFlags = FeatureFlagsClient { feature, _ in
+          feature == .timerAlerts && allowed.value
+        }
+      } operation: {
+        let client = AlarmClient.macNotifications(delivery: harness.client)
+        expectNoDifference(await client.scheduleAlarm(current), false)
+        expectNoDifference(await harness.requests.count, 2)
+        await client.cancelAlarm(current.game.id, current.phases.count)
+        allowed.setValue(false)
+        expectNoDifference(await client.scheduleAlarm(current), false)
+        expectNoDifference(await harness.requests.isEmpty, true)
+      }
     }
 
     @Test(arguments: [BreakStartPolicy.automatic, .manual])

@@ -1,6 +1,7 @@
 #if os(macOS)
   import Database
   import Dependencies
+  import FeatureFlagsClient
   import Foundation
   import GameCore
   import SharedModels
@@ -158,11 +159,17 @@
   }
 
   nonisolated extension AlarmClient {
-    public static var macNotifications: Self {
+    public static var macNotifications: Self { macNotifications(delivery: .live) }
+
+    package static func macNotifications(delivery: NotificationDeliveryClient) -> Self {
       @Dependency(\.defaultDatabase) var database
       @Dependency(\.proSubscription) var subscription
-      let scheduler = MacNotificationScheduler(delivery: .live) { snapshot in
-        guard !Task.isCancelled, (try? await subscription.currentAccess()) == .pro else {
+      @Dependency(\.featureFlags) var featureFlags
+      @Dependency(\.date) var date
+      let scheduler = MacNotificationScheduler(delivery: delivery, now: { date.now }) { snapshot in
+        guard !Task.isCancelled,
+          featureFlags.isEnabled(.timerAlerts, (try? await subscription.currentAccess()) ?? .unknown)
+        else {
           return false
         }
         // A delayed start effect must not restore notifications after a newer game transaction.

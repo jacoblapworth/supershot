@@ -29,6 +29,7 @@ let package = Package(
     .library(name: "PreviewSupport", targets: ["PreviewSupport"]),
     .library(name: "AlarmClient", targets: ["AlarmClient"]),
     .library(name: "SubscriptionClient", targets: ["SubscriptionClient"]),
+    .library(name: "FeatureFlagsClient", targets: ["FeatureFlagsClient"]),
     .library(name: "LocationClient", targets: ["LocationClient"]),
     .library(name: "SoundEffectsClient", targets: ["SoundEffectsClient"]),
     .library(name: "GameServices", targets: ["GameServices"]),
@@ -128,9 +129,27 @@ let package = Package(
     .target(
       name: "AlarmClient",
       dependencies: [
+        "FeatureFlagsClient",
         "SharedModels", "GameCore", "Database", "SubscriptionClient",
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "DependenciesMacros", package: "swift-dependencies"),
+      ],
+      swiftSettings: appSwiftSettings
+    ),
+    .target(
+      name: "FeatureFlagsClient",
+      dependencies: [
+        "SubscriptionClient",
+        .product(name: "Dependencies", package: "swift-dependencies"),
+      ],
+      swiftSettings: appSwiftSettings
+    ),
+    .testTarget(
+      name: "FeatureFlagsClientTests",
+      dependencies: [
+        "FeatureFlagsClient",
+        .product(name: "CustomDump", package: "swift-custom-dump"),
+        .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
       ],
       swiftSettings: appSwiftSettings
     ),
@@ -158,6 +177,7 @@ let package = Package(
     .target(
       name: "GameServices",
       dependencies: [
+        "FeatureFlagsClient",
         "SharedModels", "GameCore", "Database", "AlarmClient", "SubscriptionClient",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "Dependencies", package: "swift-dependencies"),
@@ -185,6 +205,7 @@ let package = Package(
     .target(
       name: "PermissionsFeature",
       dependencies: [
+        "FeatureFlagsClient",
         "SubscriptionClient", "AlarmClient", "Styleguide",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ],
@@ -273,6 +294,7 @@ let package = Package(
     .target(
       name: "AppFeature",
       dependencies: [
+        "FeatureFlagsClient",
         "PreviewSupport",
         "SharedModels", "GameCore", "Database", "GameServices", "AlarmClient", "AppSettings",
         "SubscriptionClient", "Styleguide", "GamesFeature", "TeamsFeature", "SettingsFeature",

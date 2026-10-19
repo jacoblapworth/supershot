@@ -2,6 +2,7 @@ import AlarmClient
 import AppSettings
 import ComposableArchitecture
 import Database
+import FeatureFlagsClient
 import Foundation
 import GameCore
 import GameServices
@@ -64,6 +65,7 @@ package struct AppFeature {
   @Dependency(\.alarmClient) package var alarmClient
   @Dependency(\.defaultDatabase) package var database
   @Dependency(\.gameTimer) package var gameTimer
+  @Dependency(\.featureFlags) package var featureFlags
   @Dependency(\.proSubscription) package var proSubscription
 
   package var body: some Reducer<State, Action> {
@@ -185,13 +187,13 @@ package struct AppFeature {
 
     switch access {
     case .free:
-      return cleanUpPremiumPresentations()
+      return synchronizePremiumPresentations(access)
 
     case .pro:
       if state.destination?.proPaywall != nil {
         state.destination = nil
       }
-      return synchronizePremiumPresentations()
+      return synchronizePremiumPresentations(access)
 
     case .unknown:
       return .none
@@ -208,13 +210,21 @@ package struct AppFeature {
     }
   }
 
-  private func synchronizePremiumPresentations() -> Effect<Action> {
-    .run { _ in
-      let schedulesAlerts = await alarmAuthorization.status() == .authorized
+  private func synchronizePremiumPresentations(_ access: SubscriptionEntitlement) -> Effect<Action> {
+    let showsActivity = featureFlags.isEnabled(.liveActivities, access)
+    let allowsAlerts = featureFlags.isEnabled(.timerAlerts, access)
+    guard showsActivity || allowsAlerts else { return cleanUpPremiumPresentations() }
+    return .run { _ in
+      let authorization = allowsAlerts ? await alarmAuthorization.status() : .notDetermined
+      let schedulesAlerts = allowsAlerts && authorization == .authorized
       let gameIDs = try await unfinishedGameIDs()
       await alarmClient.reconcileAlarms(schedulesAlerts ? Set(gameIDs) : [])
       for gameID in gameIDs {
-        await gameTimer.refreshActivity(gameID)
+        if showsActivity {
+          await gameTimer.refreshActivity(gameID)
+        } else {
+          await alarmClient.endActivity(gameID)
+        }
         if schedulesAlerts {
           _ = await gameTimer.scheduleAlarm(gameID)
         }

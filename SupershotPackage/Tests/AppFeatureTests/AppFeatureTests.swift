@@ -3,6 +3,7 @@ import ComposableArchitecture
 import CustomDump
 import Dependencies
 import Foundation
+import FeatureFlagsClient
 import GRDB
 import OrderedCollections
 import SQLiteData
@@ -256,6 +257,50 @@ extension SupershotTestSuite {
       }
       await store.finish()
       expectNoDifference(events.value, ["cleanup"])
+    }
+
+    @Test(arguments: [true, false])
+    func reconciliationRespectsIndependentCapabilities(showsActivity: Bool) async throws {
+      let seedStore = Self.makeAppScoringStore()
+      let database = seedStore.dependencies.defaultDatabase
+      let before = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      let events = LockIsolated<[String]>([])
+      var timer = GameTimerClient.live
+      timer.refreshActivity = { _ in events.withValue { $0.append("activity") } }
+      timer.scheduleAlarm = { _ in events.withValue { $0.append("alarm") }; return false }
+      timer.endPresentation = { _ in Issue.record("Must not end both capabilities") }
+      let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
+        $0.defaultDatabase = database
+        $0.gameTimer = timer
+        $0.featureFlags = FeatureFlagsClient { feature, _ in
+          feature == .liveActivities ? showsActivity : !showsActivity
+        }
+        $0.alarmAuthorization = .authorized
+        $0.alarmClient.reconcileAlarms = { ids in
+          expectNoDifference(ids, showsActivity ? [] : [UUID(3)])
+        }
+        $0.alarmClient.endActivity = { _ in events.withValue { $0.append("endActivity") } }
+      }
+      await store.send(.proAccessUpdated(.pro)) { $0.proAccess = .pro }
+      await store.finish()
+      expectNoDifference(events.value, showsActivity ? ["activity"] : ["endActivity", "alarm"])
+      let after = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      expectNoDifference(after, before)
+    }
+
+    @Test func foregroundLookupFailurePreservesAccessAndPresentations() async {
+      let events = LockIsolated(0)
+      var state = AppFeature.State()
+      state.hasStartedSubscriptionObservation = true
+      state.proAccess = .pro
+      let store = TestStore(initialState: state) { AppFeature() } withDependencies: {
+        $0.proSubscription.currentAccess = { throw SubscriptionTestError.unavailable }
+        $0.alarmClient.reconcileAlarms = { _ in events.withValue { $0 += 1 } }
+      }
+      await store.send(.sceneBecameActive)
+      await store.finish()
+      expectNoDifference(store.state.proAccess, .pro)
+      expectNoDifference(events.value, 0)
     }
 
     @Test
