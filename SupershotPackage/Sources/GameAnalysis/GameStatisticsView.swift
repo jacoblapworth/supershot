@@ -10,9 +10,26 @@ import WidgetSupport
 
 package struct GameStatisticsView: View {
   package var detail: GameAnalysis
+  @State private var breakdown = GameAnalysisBreakdown.wholeGame
+
+  private var breakdownOptions: [GameAnalysisBreakdown] {
+    [.wholeGame] + detail.periods.sorted { $0.position < $1.position }.map { .period($0.number) }
+  }
+
+  private var statistics: CompletedGameStatistics {
+    breakdown.statistics(in: detail)
+  }
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
+      Picker("Breakdown", selection: $breakdown) {
+        ForEach(breakdownOptions) { option in
+          Text(option.title).tag(option)
+        }
+      }
+      .pickerStyle(.segmented)
+      .accessibilityIdentifier("gameAnalysis.breakdown")
+
       VStack(spacing: 16) {
         HStack(alignment: .top, spacing: 16) {
           TeamStatisticsHeader(
@@ -29,37 +46,20 @@ package struct GameStatisticsView: View {
 
         Divider()
 
-        StatisticComparisonRow(
-          teamAName: detail.teamAName,
-          teamAValue: centrePassConversion(detail.statistics.teamA),
-          teamBName: detail.teamBName,
-          teamBValue: centrePassConversion(detail.statistics.teamB),
-          title: "Centre pass conversion"
-        )
+        ForEach(GameStatistic.allCases) { metric in
+          StatisticComparisonRow(
+            teamAName: detail.teamAName,
+            teamAColor: detail.teamABibColor,
+            teamAStatistics: statistics.teamA,
+            teamBName: detail.teamBName,
+            teamBColor: detail.teamBBibColor,
+            teamBStatistics: statistics.teamB,
+            metric: metric
+          )
+          Divider()
+        }
 
-        Divider()
-
-        GoalProgressChartView(detail: detail)
-
-        Divider()
-
-        StatisticComparisonRow(
-          teamAName: detail.teamAName,
-          teamAValue: averageTimeToGoal(detail.statistics.teamA),
-          teamBName: detail.teamBName,
-          teamBValue: averageTimeToGoal(detail.statistics.teamB),
-          title: "Avg time to goal"
-        )
-
-        Divider()
-
-        StatisticComparisonRow(
-          teamAName: detail.teamAName,
-          teamAValue: inferredTurnovers(detail.statistics.teamA),
-          teamBName: detail.teamBName,
-          teamBValue: inferredTurnovers(detail.statistics.teamB),
-          title: "Turnovers"
-        )
+        GoalProgressChartView(detail: detail, breakdown: breakdown)
 
         Text(
           "Conversion and turnovers are inferred from which team scored after each centre pass. "
@@ -74,67 +74,75 @@ package struct GameStatisticsView: View {
     }
   }
 
-  private func averageTimeToGoal(_ statistics: TeamGameStatistics) -> String {
-    guard let average = statistics.averageTimeToGoalSeconds else { return "—" }
-    let seconds = max(Int(average.rounded()), 0)
-    return "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
-  }
-
-  private func centrePassConversion(_ statistics: TeamGameStatistics) -> String {
-    guard
-      let centrePass = statistics.centrePass,
-      centrePass.opportunities > 0
-    else { return "—" }
-    let percentage = Int(
-      (Double(centrePass.conversions) / Double(centrePass.opportunities) * 100).rounded()
-    )
-    return "\(centrePass.conversions)/\(centrePass.opportunities) · \(percentage)%"
-  }
-
-  private func inferredTurnovers(_ statistics: TeamGameStatistics) -> String {
-    statistics.centrePass.map { "\($0.inferredTurnovers)" } ?? "—"
-  }
-
-  package init(detail: GameAnalysis) {
+  package init(detail: GameAnalysis, breakdown: GameAnalysisBreakdown = .wholeGame) {
     self.detail = detail
+    self._breakdown = State(initialValue: breakdown)
   }
 }
 
 private struct StatisticComparisonRow: View {
   var teamAName: String
-  var teamAValue: String
+  var teamAColor: Color
+  var teamAStatistics: TeamGameStatistics
   var teamBName: String
-  var teamBValue: String
-  var title: String
+  var teamBColor: Color
+  var teamBStatistics: TeamGameStatistics
+  var metric: GameStatistic
 
   var body: some View {
     VStack(spacing: 8) {
-      Text(title)
+      Text(metric.rawValue)
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(.secondary)
 
       HStack(spacing: 16) {
-        Text(teamAValue)
+        Text(metric.text(teamAStatistics))
           .frame(maxWidth: .infinity)
 
         Divider()
           .frame(height: 24)
 
-        Text(teamBValue)
+        Text(metric.text(teamBStatistics))
           .frame(maxWidth: .infinity)
       }
       .font(.system(.title3, design: .rounded, weight: .bold))
       .monospacedDigit()
+
+      StatisticComparisonBar(
+        teamAFraction: metric.teamAFraction(teamA: teamAStatistics, teamB: teamBStatistics),
+        teamAColor: teamAColor,
+        teamBColor: teamBColor
+      )
     }
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(
-      "\(title), \(teamAName), \(accessible(teamAValue)), "
-        + "\(teamBName), \(accessible(teamBValue))"
+      "\(metric.rawValue), \(teamAName), \(metric.accessibleText(teamAStatistics)), "
+        + "\(teamBName), \(metric.accessibleText(teamBStatistics))"
     )
   }
 
-  private func accessible(_ value: String) -> String {
-    value == "—" ? "unavailable" : value
+}
+
+private struct StatisticComparisonBar: View {
+  var teamAFraction: Double?
+  var teamAColor: Color
+  var teamBColor: Color
+
+  var body: some View {
+    GeometryReader { geometry in
+      ZStack(alignment: .leading) {
+        Rectangle().fill(.quaternary)
+        if let teamAFraction {
+          HStack(spacing: 0) {
+            teamAColor.frame(width: geometry.size.width * teamAFraction)
+            teamBColor.frame(width: geometry.size.width * (1 - teamAFraction))
+          }
+        }
+      }
+      .clipShape(Capsule())
+    }
+    .frame(height: 8)
+    .accessibilityHidden(true)
   }
 }
 
@@ -168,4 +176,24 @@ private struct TeamStatisticsHeader: View {
 #Preview("Game statistics") {
   GameStatisticsView(detail: CompletedGameDetail.previewCompleted.analysis)
     .padding()
+}
+
+#Preview("Empty statistics") {
+  var analysis = CompletedGameDetail.previewNoGoals.analysis
+  analysis.periods = CompletedGameDetail.previewCompleted.periods
+  return GameStatisticsView(detail: analysis)
+    .padding()
+}
+
+#Preview("Quarter comparison with unavailable centre passes") {
+  var analysis = CompletedGameDetail.previewCompleted.analysis
+  analysis.statisticsByPeriod[1] = CompletedGameStatistics(
+    teamA: TeamGameStatistics(
+      averageTimeToGoalSeconds: 20.25, biggestLead: 4, longestScoringRun: 2),
+    teamB: TeamGameStatistics(averageTimeToGoalSeconds: 45.75, biggestLead: 1, longestScoringRun: 3)
+  )
+  return ScrollView {
+    GameStatisticsView(detail: analysis, breakdown: .period(1))
+      .padding()
+  }
 }
