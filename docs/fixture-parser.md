@@ -66,7 +66,9 @@ xcodebuild test -workspace SupershotWorkspace.xcworkspace \
 On 19 October 2026, the final focused macOS Debug run passed all 21 test cases
 (including parameterized invalid dates/times). These use stubbed generation and
 verify validation, source ordering, punctuation, partial rows, limits, dependency
-injection and cancellation. They do not establish live inference quality.
+injection and cancellation. The same 21 cases also passed through the **Supershot Dev**
+Debug app scheme on the iPhone 17 / iOS 27.2 simulator (zero failures or skips).
+These tests do not establish live inference quality.
 
 Separately, the live harness ran on the development Mac running macOS 27.2
 (26B5112a), built with Xcode 27.2 (27B5028f). Model availability was `available`.
