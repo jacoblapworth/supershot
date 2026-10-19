@@ -175,6 +175,7 @@ nonisolated package struct CompletedGameStatistics: Equatable, Sendable {
 /// The same analysis data is used for live and completed games.
 nonisolated package struct GameAnalysis: Equatable, Sendable {
   package var goalTimeline = GoalTimeline()
+  package var isComplete = false
   package var periods: [GamePeriod] = []
   package var statistics = CompletedGameStatistics()
   package var statisticsByPeriod: [Int: CompletedGameStatistics] = [:]
@@ -184,13 +185,15 @@ nonisolated package struct GameAnalysis: Equatable, Sendable {
   package var teamBName = ""
 
   package init(
-    goalTimeline: GoalTimeline = GoalTimeline(), periods: [GamePeriod] = [],
+    goalTimeline: GoalTimeline = GoalTimeline(), isComplete: Bool = false,
+    periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColorHex: String = "#007AFF", teamAName: String = "",
     teamBBibColorHex: String = "#FF3B30", teamBName: String = ""
   ) {
     self.goalTimeline = goalTimeline
+    self.isComplete = isComplete
     self.periods = periods
     self.statistics = statistics
     self.statisticsByPeriod = statisticsByPeriod
@@ -220,6 +223,7 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
   package var analysis: GameAnalysis {
     GameAnalysis(
       goalTimeline: goalTimeline,
+      isComplete: true,
       periods: periods,
       statistics: statistics,
       statisticsByPeriod: statisticsByPeriod,
@@ -642,6 +646,7 @@ nonisolated package struct GameAnalysisRequest: FetchKeyRequest {
     return Value(
       analysis: GameAnalysis(
         goalTimeline: goalTimeline(snapshot: snapshot),
+        isComplete: snapshot.game.endedAt != nil,
         periods: snapshot.periods,
         statistics: completedGameStatistics(
           goals: snapshot.goals,
