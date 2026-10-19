@@ -164,7 +164,8 @@ nonisolated package enum GameSessionTransaction {
           outcome = .rejected(.stalePhase)
         } else if let opportunity = scoringOpportunity(
           game: game, timeline: stored.timeline,
-          requestedContext: goalCommand.scoringContext, now: commandDate)
+          requestedContext: goalCommand.scoringContext, now: commandDate),
+          goalCommand.source != .liveActivity || !opportunity.isLate
         {
           let goal = try game.scoring.recordGoal(
             goalCommand, opportunity: opportunity,

@@ -50,9 +50,10 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       try seedGame(reason: reason)
       await #expect(throws: (any Error).self) {
-        try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: UUID(3), teamID: reason == "team" ? UUID(99) : UUID(1),
-            expectedPhaseIndex: reason == "phase" ? 2 : reason == "break" ? 1 : 0,
-            goalID: UUID(4), createdAt: Date(timeIntervalSince1970: 1_000)))
+        try await ScoreGoalIntent(
+          gameID: UUID(3), teamID: reason == "team" ? UUID(99) : UUID(1),
+          expectedPhaseIndex: reason == "phase" ? 2 : reason == "break" ? 1 : 0
+        ).perform()
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
       #expect(snapshot.goals.isEmpty)
@@ -88,6 +89,50 @@ extension SupershotTestSuite {
       let stored = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
       #expect((stored.game.timerEndsAt != nil) == canResume)
       #expect(stored.game.isAwaitingCentrePassConfirmation == pending)
+    }
+
+    @Test(
+      arguments: [(false, false), (false, true), (true, false), (true, true)],
+      [(false, false), (false, true), (true, false), (true, true)])
+    func scoringControlsRequireRunningPlayingTime(
+      phaseAndTimer: (Bool, Bool), confirmationAndCompletion: (Bool, Bool)
+    ) async throws {
+      let (isBreak, running) = phaseAndTimer
+      let (pending, complete) = confirmationAndCompletion
+      try seedGame(reason: isBreak ? "break" : "running")
+      @Dependency(\.defaultDatabase) var database
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      let duration = isBreak ? 120 : 900
+      let content = GameActivityAttributes.ContentState(
+        centrePassTeamID: UUID(1), elapsedSeconds: complete ? duration : 0,
+        phaseIndex: snapshot.game.currentPhaseIndex, phase: snapshot.currentPhase,
+        teamAScore: 0, teamBScore: 0,
+        timerEndsAt: running ? Date(timeIntervalSince1970: complete ? 1_000 : 1_100) : nil,
+        isAwaitingCentrePassConfirmation: pending,
+        lateScoringPeriodNumber: isBreak || complete ? 1 : nil)
+      #expect(content.canScoreGoal == (!isBreak && running && !pending && !complete))
+    }
+
+    @Test
+    func rejectedIntentRefreshesActivityEvenIfReconciliationFails() async throws {
+      try seedGame(reason: "paused")
+      let refreshes = ActivityRefreshes()
+      await withDependencies {
+        $0.gameTimer.reconcile = { _ in throw GameScoringError.unavailable }
+        $0.gameTimer.refreshActivity = { await refreshes.record($0) }
+      } operation: {
+        await #expect(throws: (any Error).self) {
+          try await ScoreGoalIntent(
+            gameID: UUID(3), teamID: UUID(1), expectedPhaseIndex: 0
+          ).perform()
+        }
+      }
+      #expect(await refreshes.gameIDs == [UUID(3)])
+    }
+
+    private actor ActivityRefreshes {
+      var gameIDs: [UUID] = []
+      func record(_ gameID: UUID) { gameIDs.append(gameID) }
     }
 
     private func seedGame(reason: String = "running") throws {

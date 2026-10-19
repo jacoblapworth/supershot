@@ -20,31 +20,28 @@ extension SupershotTestSuite {
   })
   struct LateScoringIntentTests {
     enum Window: CaseIterable {
-      case runningBreak, pausedBreak, waitingQuarter, finalQuarter
+      case runningBreak, pausedBreak, manualBreak, waitingQuarter, finalQuarter
     }
 
     @Test(arguments: Window.allCases, [false, true])
-    func lateGoalsPreserveClockAndConfirmation(window: Window, pending: Bool) async throws {
+    func rejectsLegacyLateGoalsWithoutChangingScoreClockOrConfirmation(window: Window, pending: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: window, pending: pending)
       let completed = game.lateScoringPeriodNumber!
       for team in [UUID(1), UUID(2)] {
-        _ = try await ScoreGoalIntent(gameID: game.id, teamID: team,
-          expectedPhaseIndex: game.currentPhaseIndex, completedPeriodNumber: completed).perform()
+        await #expect(throws: (any Error).self) {
+          try await ScoreGoalIntent(gameID: game.id, teamID: team,
+            expectedPhaseIndex: game.currentPhaseIndex, completedPeriodNumber: completed).perform()
+        }
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
-      expectNoDifference(snapshot.teamAScore, 1)
-      expectNoDifference(snapshot.teamBScore, 1)
+      expectNoDifference(snapshot.teamAScore, 0)
+      expectNoDifference(snapshot.teamBScore, 0)
       expectNoDifference(snapshot.game.countdown, game.countdown)
       expectNoDifference(snapshot.game.currentPhaseIndex, game.currentPhaseIndex)
       expectNoDifference(snapshot.game.isAwaitingCentrePassConfirmation, pending)
       expectNoDifference(snapshot.game.centrePassTeamID, game.centrePassTeamID)
-      for goal in snapshot.goals {
-        expectNoDifference(goal.gamePeriodID, testGamePeriodID(gameID: game.id, position: completed - 1))
-        expectNoDifference(goal.elapsedSeconds, 900)
-        expectNoDifference(goal.createdAt, Date(timeIntervalSince1970: 1_000))
-        #expect(goal.isLate)
-      }
+      #expect(snapshot.goals.isEmpty)
       let content = GameActivityAttributes.ContentState(
         centrePassTeamID: snapshot.game.centrePassTeamID!,
         elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
@@ -52,6 +49,7 @@ extension SupershotTestSuite {
         timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
         lateScoringPeriodNumber: completed)
       expectNoDifference(content.scoringContext, .completedPeriod(number: completed))
+      #expect(!content.canScoreGoal)
     }
 
     private func seed(window: Window, pending: Bool) throws -> Game {
@@ -63,7 +61,7 @@ extension SupershotTestSuite {
         isAwaitingCentrePassConfirmation: pending,
         lateScoringPeriodNumber: window == .finalQuarter ? 4 : 1,
         currentPhaseIndex: window == .finalQuarter ? 6 : window == .waitingQuarter ? 2 : 1,
-        elapsedSeconds: window == .finalQuarter ? 900 : window == .waitingQuarter ? 0 : 20,
+        elapsedSeconds: window == .finalQuarter ? 900 : (window == .waitingQuarter || window == .manualBreak) ? 0 : 20,
         timerEndsAt: window == .runningBreak ? Date(timeIntervalSince1970: 1_100) : nil
       )
       try database.write { db in

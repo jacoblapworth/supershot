@@ -57,9 +57,10 @@ struct ScoreGoalIntent: LiveActivityIntent {
     do {
       _ = try await gameScoring.recordGoal(RecordGoalCommand(
         gameID: gameID, teamID: teamID, expectedPhaseIndex: phaseIndex,
-        goalID: goalID, createdAt: createdAt, scoringContext: scoringContext))
+        goalID: goalID, createdAt: createdAt, scoringContext: scoringContext, source: .liveActivity))
     } catch {
       _ = try? await gameTimer.reconcile(gameID)
+      await gameTimer.refreshActivity(gameID)
       throw GoalScoringIntentError.unavailable
     }
     await gameTimer.refreshActivity(gameID)
