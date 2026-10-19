@@ -1,7 +1,7 @@
 import Database
 import GameCore
 
-/// Team identities stay fixed when court sides change; quarter scores start at zero.
+/// Quarter scores start at zero; the selected breakdown's winner is plotted above zero.
 nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
   package struct Point: Equatable, Identifiable, Sendable {
     package enum ID: Hashable, Sendable {
@@ -25,6 +25,7 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
   package let duration: Int
   package let periodEndOffsets: [Int]
   package let extent: Int
+  package let positiveTeamIsTeamA: Bool
 
   package init(analysis: GameAnalysis, breakdown: GameAnalysisBreakdown = .wholeGame) {
     let periods = analysis.periods
@@ -72,6 +73,8 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
         }
       }
     self.moments = moments
+    // A tie has no winner, so keep a deterministic Team A reference.
+    self.positiveTeamIsTeamA = (moments.last?.difference ?? 0) >= 0
     var points =
       [
         Point(
@@ -101,5 +104,9 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
     moments.reversed().min {
       abs($0.elapsedSeconds - elapsedSeconds) < abs($1.elapsedSeconds - elapsedSeconds)
     }
+  }
+
+  package func plottedDifference(for point: Point) -> Int {
+    positiveTeamIsTeamA ? point.difference : -point.difference
   }
 }

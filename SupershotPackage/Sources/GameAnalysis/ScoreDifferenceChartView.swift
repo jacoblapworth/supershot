@@ -29,6 +29,11 @@ private struct ScoreDifferenceChart: View {
   let teamBColor: Color
   @State private var selectedMoment: ScoreDifferenceSeries.Point?
 
+  private var positiveTeamName: String { series.positiveTeamIsTeamA ? teamAName : teamBName }
+  private var negativeTeamName: String { series.positiveTeamIsTeamA ? teamBName : teamAName }
+  private var positiveTeamColor: Color { series.positiveTeamIsTeamA ? teamAColor : teamBColor }
+  private var negativeTeamColor: Color { series.positiveTeamIsTeamA ? teamBColor : teamAColor }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       VStack(spacing: 4) {
@@ -48,6 +53,26 @@ private struct ScoreDifferenceChart: View {
         .frame(maxWidth: .infinity)
       } else {
         Chart {
+          ForEach(series.points) { point in
+            AreaMark(
+              x: .value("Playing time", point.elapsedSeconds),
+              yStart: .value("Scores level", 0),
+              yEnd: .value("Difference", series.plottedDifference(for: point))
+            )
+            .foregroundStyle(
+              LinearGradient(
+                stops: [
+                  .init(color: positiveTeamColor.opacity(0.5), location: 0),
+                  .init(color: .clear, location: 0.5),
+                  .init(color: negativeTeamColor.opacity(0.5), location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom
+              )
+            )
+            .alignsMarkStylesWithPlotArea()
+            .interpolationMethod(.stepEnd)
+          }
+
           RuleMark(y: .value("Scores level", 0))
             .foregroundStyle(Color.secondary)
             .lineStyle(StrokeStyle(lineWidth: 1.5))
@@ -61,7 +86,7 @@ private struct ScoreDifferenceChart: View {
           ForEach(series.points) { point in
             LineMark(
               x: .value("Playing time", point.elapsedSeconds),
-              y: .value("Difference", point.difference)
+              y: .value("Difference", series.plottedDifference(for: point))
             )
             .foregroundStyle(Color.primary)
             .interpolationMethod(.stepEnd)
@@ -70,7 +95,7 @@ private struct ScoreDifferenceChart: View {
           ForEach(series.moments) { moment in
             PointMark(
               x: .value("Playing time", moment.elapsedSeconds),
-              y: .value("Difference", moment.difference)
+              y: .value("Difference", series.plottedDifference(for: moment))
             )
             .foregroundStyle(
               moment.difference > 0 ? teamAColor : moment.difference < 0 ? teamBColor : .primary
@@ -146,14 +171,14 @@ private struct ScoreDifferenceChart: View {
 
       VStack(alignment: .leading, spacing: 6) {
         Label {
-          Text("Positive: \(teamAName) leads")
+          Text("Positive: \(positiveTeamName) leads")
         } icon: {
-          Image(systemName: "plus.circle.fill").foregroundStyle(teamAColor)
+          Image(systemName: "plus.circle.fill").foregroundStyle(positiveTeamColor)
         }
         Label {
-          Text("Negative: \(teamBName) leads")
+          Text("Negative: \(negativeTeamName) leads")
         } icon: {
-          Image(systemName: "minus.circle.fill").foregroundStyle(teamBColor)
+          Image(systemName: "minus.circle.fill").foregroundStyle(negativeTeamColor)
         }
         if breakdown == .wholeGame {
           Text("0 means scores level. Dashed lines mark quarter boundaries.")

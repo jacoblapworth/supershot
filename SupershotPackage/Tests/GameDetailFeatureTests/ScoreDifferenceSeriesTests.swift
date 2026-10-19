@@ -53,6 +53,26 @@ import Testing
     expectNoDifference(series.extent, 1)
   }
 
+  @Test func winnerIsPositiveEvenWhenTheOtherTeamLedEarlier() {
+    let series = ScoreDifferenceSeries(
+      analysis: analysis(events: [(1, 10, 2, 0), (1, 20, 2, 3)]))
+    #expect(!series.positiveTeamIsTeamA)
+    expectNoDifference(series.points.map { series.plottedDifference(for: $0) }, [0, -2, 1])
+    // Keep actual scores and team-relative margins available for inspection.
+    expectNoDifference(series.moments.map(\.difference), [2, -1])
+  }
+
+  @Test func eachBreakdownUsesItsOwnWinnerAndTiesKeepTeamA() {
+    let value = analysis(events: [(1, 10, 4, 0), (2, 10, 4, 2)])
+    let game = ScoreDifferenceSeries(analysis: value)
+    let quarter = ScoreDifferenceSeries(analysis: value, breakdown: .period(2))
+    #expect(game.positiveTeamIsTeamA)
+    #expect(!quarter.positiveTeamIsTeamA)
+    expectNoDifference(quarter.points.map { quarter.plottedDifference(for: $0) }, [0, 2])
+    let tie = ScoreDifferenceSeries(analysis: analysis(events: [(1, 10, 1, 1)]))
+    #expect(tie.positiveTeamIsTeamA)
+  }
+
   @Test func completedQuarterExtendsToItsOwnEnd() {
     var value = analysis(events: [(1, 10, 2, 0), (2, 10, 2, 3)])
     value.isComplete = true
