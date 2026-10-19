@@ -2,7 +2,7 @@
 
 ## Database schema
 
-Supershot has not shipped, so `Supershot/Schema.swift` must define the complete current
+Supershot has not shipped, so `SupershotPackage/Sources/Database/Schema.swift` must define the complete current
 database schema in its single `Create schema` migration. Update that migration directly
 when changing the schema; do not add incremental migrations or migration tests.
 

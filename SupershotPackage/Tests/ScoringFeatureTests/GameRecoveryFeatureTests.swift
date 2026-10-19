@@ -1,0 +1,124 @@
+import CustomDump
+import Dependencies
+import Foundation
+import GRDB
+import SQLiteData
+import Testing
+
+import TestSupport
+@testable import AlarmClient
+@testable import AppSettings
+@testable import Database
+@testable import GameAnalysis
+@testable import GameCore
+@testable import GameServices
+@testable import PermissionsFeature
+@testable import PreviewSupport
+@testable import ScoringFeature
+@testable import SharedModels
+@testable import SoundEffectsClient
+@testable import Styleguide
+@testable import SubscriptionClient
+@testable import WidgetSupport
+import DependenciesTestSupport
+
+extension SupershotTestSuite {
+  @MainActor
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameRecoveryFeatureTests {
+    @Test
+    func multipleUnfinishedGamesRehydrateIndependentlyAndPaused() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let firstGameID = UUID(-10)
+      let secondGameID = UUID(-20)
+
+      try await database.write { db in
+        try db.seed {
+          Team(id: UUID(-1), name: "Ravens")
+          Team(id: UUID(-2), name: "Swifts")
+          Team(id: UUID(-3), name: "Foxes")
+          Team(id: UUID(-4), name: "Owls")
+          Game(
+            id: firstGameID,
+            startedAt: Date(timeIntervalSince1970: 1_000),
+            endedAt: nil,
+            teamAID: UUID(-1),
+            teamBID: UUID(-2),
+            swapSides: true,
+            currentPhaseIndex: 2,
+            elapsedSeconds: 42,
+            timerEndsAt: nil
+          )
+          Game(
+            id: secondGameID,
+            startedAt: Date(timeIntervalSince1970: 2_000),
+            endedAt: nil,
+            teamAID: UUID(-3),
+            teamBID: UUID(-4),
+            currentPhaseIndex: 1,
+            elapsedSeconds: 75,
+            timerEndsAt: nil
+          )
+        }
+        let periods = [
+          testGamePeriods(gameID: firstGameID, durationSeconds: 900),
+          testGamePeriods(gameID: secondGameID, durationSeconds: 600),
+        ].flatMap { $0 }
+        try GamePeriod.insert { periods }.execute(db)
+        try Goal.insert {
+          Goal(
+            id: UUID(-1),
+            gameID: firstGameID,
+            gamePeriodID: testGamePeriodID(gameID: firstGameID, position: 1),
+            teamID: UUID(-2),
+            elapsedSeconds: 30,
+            points: 1,
+            createdAt: Date(timeIntervalSince1970: 1_100)
+          )
+          Goal(
+            id: UUID(-2),
+            gameID: secondGameID,
+            gamePeriodID: testGamePeriodID(gameID: secondGameID, position: 0),
+            teamID: UUID(-3),
+            elapsedSeconds: 20,
+            points: 2,
+            createdAt: Date(timeIntervalSince1970: 2_100)
+          )
+        }
+        .execute(db)
+      }
+
+      let snapshots = try await database.read { db in
+        (
+          try GameSnapshot.fetch(db, gameID: firstGameID),
+          try GameSnapshot.fetch(db, gameID: secondGameID)
+        )
+      }
+      let first = ScoringFeature.State(snapshot: snapshots.0)
+      let second = ScoringFeature.State(snapshot: snapshots.1)
+
+      expectNoDifference(first.period, 3)
+      expectNoDifference(first.elapsedSeconds, 42)
+      expectNoDifference(first.teamAScore, 0)
+      expectNoDifference(first.teamBScore, 1)
+      expectNoDifference(first.canUndo, true)
+      expectNoDifference(first.centrePassTeamID, UUID(-1))
+      expectNoDifference(first.isTimerRunning, false)
+      expectNoDifference(first.swapSides, true)
+      expectNoDifference(first.courtLayout.left.id, UUID(-2))
+      expectNoDifference(first.courtLayout.left.score, 1)
+      expectNoDifference(second.period, 2)
+      expectNoDifference(second.elapsedSeconds, 75)
+      expectNoDifference(second.teamAScore, 2)
+      expectNoDifference(second.teamBScore, 0)
+      expectNoDifference(second.canUndo, true)
+      expectNoDifference(second.centrePassTeamID, UUID(-3))
+      expectNoDifference(second.isTimerRunning, false)
+      expectNoDifference(second.swapSides, false)
+      expectNoDifference(second.courtLayout.left.id, UUID(-4))
+      expectNoDifference(second.courtLayout.right.score, 2)
+    }
+  }
+}

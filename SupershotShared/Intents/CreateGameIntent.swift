@@ -1,3 +1,5 @@
+import GameCore
+import AppSettings
 import AppIntents
 import Dependencies
 import Foundation
@@ -31,6 +33,7 @@ struct CreateGameIntent: AppIntent {
   @Dependencies.Dependency(\.defaultDatabase) private var database
   @Dependencies.Dependency(\.date.now) private var now
   @Dependencies.Dependency(\.uuid) private var uuid
+  @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
 
   func perform() async throws -> some IntentResult & ReturnsValue<GameEntity> {
     guard teamA.id != teamB.id else { throw CreateGameError.duplicateTeams }
@@ -41,7 +44,6 @@ struct CreateGameIntent: AppIntent {
       (0...5999).contains(breakDurationSeconds)
     else { throw CreateGameError.invalidDuration }
 
-    @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
     let breakStartPolicy = defaultBreakStartPolicy
     let gameID = uuid()
     let startedAt = now
