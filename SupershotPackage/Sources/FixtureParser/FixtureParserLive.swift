@@ -7,7 +7,7 @@ nonisolated extension FixtureParser {
       availability: {
         switch SystemLanguageModel.default.availability {
         case .available: return .available
-        case let .unavailable(reason):
+        case .unavailable(let reason):
           switch reason {
           case .deviceNotEligible: return .deviceNotEligible
           case .appleIntelligenceNotEnabled: return .intelligenceNotEnabled
@@ -38,7 +38,8 @@ nonisolated extension FixtureParser {
             throw FixtureParserError.outputTooLong(maximumFixtures: Self.maximumFixtures)
           }
           return response.content.fixtures.map {
-            ExtractedFixture(source: $0.source, firstTeam: $0.firstTeam, secondTeam: $0.secondTeam,
+            ExtractedFixture(
+              source: $0.source, firstTeam: $0.firstTeam, secondTeam: $0.secondTeam,
               date: $0.date, time: $0.time, division: $0.division, court: $0.court)
           }
         } catch let error as LanguageModelError {
@@ -61,19 +62,25 @@ nonisolated extension FixtureParser {
 private nonisolated struct GeneratedFixtures {
   @Guide(description: "True if the input contains more than 12 fixtures; do not silently truncate.")
   var exceedsFixtureLimit: Bool
-  @Guide(description: "Fixtures in source order; empty for irrelevant text. At most 12 fixtures.", .maximumCount(12))
+  @Guide(
+    description: "Fixtures in source order; empty for irrelevant text. At most 12 fixtures.",
+    .maximumCount(12))
   var fixtures: [GeneratedFixture]
 }
 
 @Generable
 private nonisolated struct GeneratedFixture {
-  @Guide(description: "Exact contiguous excerpt for this row, including metadata. Never rewrite it.")
+  @Guide(
+    description: "Exact contiguous excerpt for this row, including metadata. Never rewrite it.")
   var source: String
   @Guide(description: "First team name copied exactly; nil if missing.")
   var firstTeam: String?
   @Guide(description: "Second team name copied exactly; nil if missing.")
   var secondTeam: String?
-  @Guide(description: "Date text copied exactly; nil when absent. Never infer a date.")
+  @Guide(
+    description:
+      "Calendar date text copied exactly; nil when absent. HH:mm is a clock time, NEVER a date. Never infer a date."
+  )
   var date: String?
   @Guide(description: "Time text copied exactly; nil when absent.")
   var time: String?

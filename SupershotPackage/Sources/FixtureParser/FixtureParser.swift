@@ -16,7 +16,9 @@ nonisolated package struct FixtureParser: Sendable {
     self.generate = generate
   }
 
-  package func parse(_ text: String, context: FixtureParsingContext? = nil) async throws -> [FixtureDraft] {
+  package func parse(_ text: String, context: FixtureParsingContext? = nil) async throws
+    -> [FixtureDraft]
+  {
     do {
       try Task.checkCancellation()
       guard text.utf8.count <= Self.maximumInputBytes else {
@@ -34,17 +36,22 @@ nonisolated package struct FixtureParser: Sendable {
       }
       guard !rows.isEmpty else { throw FixtureParserError.unsupportedInput }
       // Require exact, non-overlapping source excerpts, and restore source order independently of generation.
-      var remaining = text.startIndex..<text.endIndex
       var located: [(Range<String.Index>, ExtractedFixture)] = []
-      for row in rows.sorted(by: { (text.range(of: $0.source)?.lowerBound ?? text.endIndex)
-        < (text.range(of: $1.source)?.lowerBound ?? text.endIndex) }) {
-        guard !row.source.isEmpty,
-          let range = text.range(of: row.source, range: remaining)
-        else { throw FixtureParserError.generationFailed }
+      for row in rows {
+        guard !row.source.isEmpty else { throw FixtureParserError.generationFailed }
+        var search = text.startIndex..<text.endIndex
+        var match: Range<String.Index>?
+        while let range = text.range(of: row.source, range: search) {
+          if !located.contains(where: { $0.0.overlaps(range) }) {
+            match = range
+            break
+          }
+          search = range.upperBound..<text.endIndex
+        }
+        guard let range = match else { throw FixtureParserError.generationFailed }
         located.append((range, row))
-        remaining = range.upperBound..<text.endIndex
       }
-      return located.map { range, row in
+      return located.sorted { $0.0.lowerBound < $1.0.lowerBound }.map { range, row in
         row.validated(
           sourceLine: text[..<range.lowerBound].filter { $0 == "\n" }.count + 1,
           context: context
@@ -53,6 +60,7 @@ nonisolated package struct FixtureParser: Sendable {
     } catch is CancellationError {
       throw FixtureParserError.cancelled
     } catch let error as FixtureParserError {
+      if Task.isCancelled { throw FixtureParserError.cancelled }
       throw error
     } catch {
       if Task.isCancelled { throw FixtureParserError.cancelled }
@@ -71,8 +79,10 @@ nonisolated package struct ExtractedFixture: Sendable {
   package var division: String?
   package var court: String?
 
-  package init(source: String, firstTeam: String? = nil, secondTeam: String? = nil,
-    date: String? = nil, time: String? = nil, division: String? = nil, court: String? = nil) {
+  package init(
+    source: String, firstTeam: String? = nil, secondTeam: String? = nil,
+    date: String? = nil, time: String? = nil, division: String? = nil, court: String? = nil
+  ) {
     self.source = source
     self.firstTeam = firstTeam
     self.secondTeam = secondTeam

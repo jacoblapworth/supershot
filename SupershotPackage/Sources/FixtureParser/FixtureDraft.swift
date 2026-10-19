@@ -57,12 +57,15 @@ nonisolated package enum FixtureParserError: Error, Equatable, Sendable, Localiz
   package var errorDescription: String? {
     switch self {
     case .unavailable(.deviceNotEligible): "Use a device that supports Apple Intelligence."
-    case .unavailable(.intelligenceNotEnabled): "Enable Apple Intelligence in Settings, then try again."
-    case .unavailable(.modelNotReady): "Wait for the on-device model to finish downloading, then try again."
-    case .unavailable: "The on-device model is unavailable. Try again later or enter fixtures manually."
+    case .unavailable(.intelligenceNotEnabled):
+      "Enable Apple Intelligence in Settings, then try again."
+    case .unavailable(.modelNotReady):
+      "Wait for the on-device model to finish downloading, then try again."
+    case .unavailable:
+      "The on-device model is unavailable. Try again later or enter fixtures manually."
     case .unsupportedInput: "Paste a matchup or fixture list containing team names."
-    case let .inputTooLong(maximum): "Paste a shorter list (at most \(maximum) UTF-8 bytes)."
-    case let .outputTooLong(maximum): "Split the list into batches of at most \(maximum) fixtures."
+    case .inputTooLong(let maximum): "Paste a shorter list (at most \(maximum) UTF-8 bytes)."
+    case .outputTooLong(let maximum): "Split the list into batches of at most \(maximum) fixtures."
     case .generationFailed: "The fixture list could not be extracted. Try a shorter, simpler list."
     case .cancelled: "Fixture extraction was cancelled."
     }

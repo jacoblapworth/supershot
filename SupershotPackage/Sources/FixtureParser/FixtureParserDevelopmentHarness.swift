@@ -38,9 +38,10 @@ nonisolated package enum FixtureParserDevelopmentHarness {
     let start = clock.now
     let availability = parser.availability()
     let result: Result<[FixtureDraft], FixtureParserError>
-    do { result = .success(try await parser.parse(text, context: context)) }
-    catch let error as FixtureParserError { result = .failure(error) }
-    catch { result = .failure(.generationFailed) }
-    return Report(availability: availability, elapsed: start.duration(to: clock.now), result: result)
+    do { result = .success(try await parser.parse(text, context: context)) } catch let error
+      as FixtureParserError
+    { result = .failure(error) } catch { result = .failure(.generationFailed) }
+    return Report(
+      availability: availability, elapsed: start.duration(to: clock.now), result: result)
   }
 }
