@@ -70,6 +70,37 @@ Package feature schemes can be built independently from the workspace, and their
 `#Preview` declarations use the same reducers and scenario fixtures as before extraction.
 Use Xcode for iOS testing; plain `swift test` runs against the host platform.
 
+## Pull request CI
+
+GitHub Actions runs every test enabled in the `Supershot Dev` scheme, including the
+package suites and app-hosted App Intent/Live Activity suites. The workflow uses one
+`xcode-27` macOS runner with Xcode 27.2 and an iPhone 17 simulator on iOS 27.0.
+It runs when a pull request is opened, updated or reopened, and can also be started
+manually from Actions. New runs cancel older runs for the same pull request.
+
+CI caches package downloads using the runner architecture, Xcode version and committed
+dependency lockfiles. Dependency versions remain pinned. Each run has a 45-minute
+timeout and uploads its build log and `.xcresult` bundle for seven days, including
+when tests fail.
+
+To run the equivalent suite locally, select Xcode 27.2, use `xcrun simctl list devices
+available` to find an iPhone simulator UUID, and run:
+
+```sh
+set -o pipefail
+xcodebuild test \
+  -workspace SupershotWorkspace.xcworkspace \
+  -scheme 'Supershot Dev' -configuration Debug \
+  -destination 'platform=iOS Simulator,id=<simulator-id>' \
+  -onlyUsePackageVersionsFromResolvedFile \
+  -skipMacroValidation \
+  -resultBundlePath /tmp/Supershot-CI-Tests.xcresult \
+  2>&1 | tee /tmp/Supershot-CI-Tests.log
+```
+
+Run from the repository root and choose a new result-bundle path for each run.
+CI specifically requires iOS 27.0; a newer installed iOS runtime can be used locally.
+
 ## Schema changes
 
 The app has not shipped. Edit the single `Create schema` migration in
