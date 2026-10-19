@@ -69,6 +69,22 @@ extension SupershotTestSuite {
       #expect(state.canUndoGoal)
     }
 
+    @Test(arguments: Window.allCases, [false, true])
+    func liveActivityCannotRecordLateGoals(window: Window, pending: Bool) async throws {
+      @Dependency(\.defaultDatabase) var database
+      let game = try seed(window: window, pending: pending)
+      await #expect(throws: (any Error).self) {
+        try await GameScoringClient.live.recordGoal(RecordGoalCommand(
+          gameID: game.id, teamID: UUID(1), expectedPhaseIndex: game.currentPhaseIndex,
+          goalID: UUID(20), createdAt: Date(timeIntervalSince1970: 1_000),
+          scoringContext: .completedPeriod(number: game.lateScoringPeriodNumber!),
+          source: .liveActivity))
+      }
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      #expect(snapshot.goals.isEmpty)
+      expectNoDifference(snapshot.game, game)
+    }
+
     @Test
     func appLateGoalAndUndoPreservePendingQuestionAndBreak() async throws {
       @Dependency(\.defaultDatabase) var database

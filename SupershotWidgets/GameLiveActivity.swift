@@ -39,11 +39,15 @@ struct GameLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           HStack(spacing: 14) {
-            GoalButton(context: context, isTeamA: true)
+            if !context.isStale, context.state.canScoreGoal {
+              GoalButton(context: context, isTeamA: true)
+            }
             TimerText(state: context.state, isStale: context.isStale)
               .font(.title2.bold())
               .frame(maxWidth: .infinity, alignment: .leading)
-            GoalButton(context: context, isTeamA: false)
+            if !context.isStale, context.state.canScoreGoal {
+              GoalButton(context: context, isTeamA: false)
+            }
           }
         }
       } compactLeading: {
@@ -301,9 +305,7 @@ private struct GoalButton: View {
     Button(intent: ScoreGoalIntent(
       gameID: context.attributes.gameID,
       teamID: isTeamA ? context.attributes.teamAID : context.attributes.teamBID,
-      expectedPhaseIndex: context.state.phaseIndex,
-      completedPeriodNumber: context.state.scoringContext?.isLate == true
-        ? context.state.scoringContext?.periodNumber : nil
+      expectedPhaseIndex: context.state.phaseIndex
     )) {
       Label("Goal", systemImage: "plus")
         .font(.title3.bold())
@@ -315,7 +317,7 @@ private struct GoalButton: View {
     .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
     .disabled(
       context.isStale
-        || context.state.scoringContext == nil
+        || !context.state.canScoreGoal
     )
   }
 }
@@ -324,7 +326,9 @@ private struct GoalControls: View {
   let context: ActivityViewContext<GameActivityAttributes>
   var body: some View {
     HStack {
-      GoalButton(context: context, isTeamA: true)
+      if !context.isStale, context.state.canScoreGoal {
+        GoalButton(context: context, isTeamA: true)
+      }
       Spacer()
       VStack(alignment: .center, spacing: 0) {
         Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
@@ -335,7 +339,9 @@ private struct GoalControls: View {
       }
       TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
       Spacer()
-      GoalButton(context: context, isTeamA: false)
+      if !context.isStale, context.state.canScoreGoal {
+        GoalButton(context: context, isTeamA: false)
+      }
     }
   }
 }
@@ -421,6 +427,17 @@ private extension GameActivityAttributes.ContentState {
     timerEndsAt: Date.now.addingTimeInterval(655)
   )
 
+  static func breakPreview(elapsed: Int, running: Bool) -> Self {
+    Self(
+      centrePassTeamID: GameActivityAttributes.preview.teamAID,
+      elapsedSeconds: elapsed, phaseIndex: 3,
+      phase: .breakTime(
+        after: GamePeriodReference(id: UUID(), number: 2), durationSeconds: 120),
+      teamAScore: 18, teamBScore: 16,
+      timerEndsAt: running ? Date.now.addingTimeInterval(TimeInterval(120 - elapsed)) : nil,
+      isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 2)
+  }
+
   static let endedPreview = Self(
     centrePassTeamID: GameActivityAttributes.preview.teamAID,
     elapsedSeconds: 900,
@@ -488,4 +505,20 @@ private extension Int {
   GameLiveActivity()
 } contentStates: {
   GameActivityAttributes.ContentState.runningPreview
+}
+
+#Preview("Breaks", as: .content, using: GameActivityAttributes.preview) {
+  GameLiveActivity()
+} contentStates: {
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
+}
+
+#Preview("Breaks Expanded", as: .dynamicIsland(.expanded), using: GameActivityAttributes.preview) {
+  GameLiveActivity()
+} contentStates: {
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
 }

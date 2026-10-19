@@ -64,6 +64,8 @@
         isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
         lateScoringPeriodNumber: lateScoringPeriodNumber)
     }
+    /// Live Activity scoring is restricted to running playing time; late goals belong in the app.
+    public var canScoreGoal: Bool { scoringContext?.isLate == false }
     public var isInBreak: Bool { phase.isBreak }
     public var canControlTimer: Bool {
       !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation)

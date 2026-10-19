@@ -2,6 +2,12 @@ import Foundation
 import SharedModels
 
 nonisolated public struct RecordGoalCommand: Equatable, Sendable {
+  public enum Source: Equatable, Sendable {
+    case app
+    case liveActivity
+  }
+
+  public var source: Source
   public var gameID: Game.ID
   public var teamID: Team.ID
   public var expectedPhaseIndex: Int
@@ -12,8 +18,9 @@ nonisolated public struct RecordGoalCommand: Equatable, Sendable {
 
   public init(
     gameID: Game.ID, teamID: Team.ID, expectedPhaseIndex: Int, goalID: Goal.ID, createdAt: Date,
-    points: Int = 1, scoringContext: GameScoringContext? = nil
+    points: Int = 1, scoringContext: GameScoringContext? = nil, source: Source = .app
   ) {
+    self.source = source
     self.gameID = gameID
     self.teamID = teamID
     self.expectedPhaseIndex = expectedPhaseIndex
