@@ -36,6 +36,7 @@ package struct AppFeature {
     package var hasLoadedAccess = false
     package var hasStartedSubscriptionObservation = false
     package var proAccess = SubscriptionEntitlement.unknown
+    package var paywallFromSettings = false
     package var selectedTab = Tab.games
 
     package init() {
@@ -60,6 +61,7 @@ package struct AppFeature {
   }
 
   @Dependency(\.alarmAuthorization) package var alarmAuthorization
+  @Dependency(\.alarmClient) package var alarmClient
   @Dependency(\.defaultDatabase) package var database
   @Dependency(\.gameTimer) package var gameTimer
   @Dependency(\.proSubscription) package var proSubscription
@@ -96,9 +98,14 @@ package struct AppFeature {
           state.selectedTab = .games
           return .send(.games(.gameDeepLinkOpened(gameID)))
 
-        case .games(.delegate(.proPromotionTapped)),
-          .settings(.delegate(.proPromotionTapped)),
-          .teams(.delegate(.proPromotionTapped)):
+        case .settings(.delegate(.proPromotionTapped)):
+          #if os(macOS)
+            state.paywallFromSettings = true
+          #endif
+          return .send(.proPromotionTapped)
+
+        case .games(.delegate(.proPromotionTapped)), .teams(.delegate(.proPromotionTapped)):
+          state.paywallFromSettings = false
           return .send(.proPromotionTapped)
 
         case .settings(.delegate(.proAccessChanged(let access))):
@@ -181,13 +188,10 @@ package struct AppFeature {
       return cleanUpPremiumPresentations()
 
     case .pro:
-      let alarmAuthorization = alarmAuthorization.status()
       if state.destination?.proPaywall != nil {
         state.destination = nil
       }
-      return synchronizePremiumPresentations(
-        schedulesAlerts: alarmAuthorization == .authorized
-      )
+      return synchronizePremiumPresentations()
 
     case .unknown:
       return .none
@@ -197,17 +201,18 @@ package struct AppFeature {
   private func cleanUpPremiumPresentations() -> Effect<Action> {
     .run { _ in
       let gameIDs = try await unfinishedGameIDs()
+      await alarmClient.reconcileAlarms([])
       for gameID in gameIDs {
         await gameTimer.endPresentation(gameID)
       }
     }
   }
 
-  private func synchronizePremiumPresentations(
-    schedulesAlerts: Bool
-  ) -> Effect<Action> {
+  private func synchronizePremiumPresentations() -> Effect<Action> {
     .run { _ in
+      let schedulesAlerts = await alarmAuthorization.status() == .authorized
       let gameIDs = try await unfinishedGameIDs()
+      await alarmClient.reconcileAlarms(schedulesAlerts ? Set(gameIDs) : [])
       for gameID in gameIDs {
         await gameTimer.refreshActivity(gameID)
         if schedulesAlerts {
@@ -226,7 +231,7 @@ package struct AppFeature {
   }
 
   private func gameID(from url: URL) -> Game.ID? {
-    guard url.scheme == "supershot", url.host == "game" else { return nil }
+    guard ["supershot", Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot-dev"].contains(url.scheme ?? ""), url.host == "game" else { return nil }
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 

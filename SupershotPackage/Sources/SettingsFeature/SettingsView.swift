@@ -79,6 +79,9 @@ private struct SettingsContent: View {
       #endif
     }
     .navigationTitle("Settings")
+    #if os(macOS)
+      .formStyle(.grouped)
+    #endif
   }
 }
 
@@ -182,9 +185,11 @@ private struct FeedbackSettingsSection: View {
       Toggle(isOn: Binding($soundEffectsEnabled)) {
         Label("Goal sounds", systemImage: "speaker.wave.2")
       }
+      #if os(iOS)
       Toggle(isOn: Binding($hapticsEnabled)) {
         Label("Goal haptics", systemImage: "iphone.radiowaves.left.and.right")
       }
+      #endif
     } header: {
       Text("Feedback")
     } footer: {

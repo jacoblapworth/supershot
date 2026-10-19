@@ -98,6 +98,8 @@ nonisolated extension AlarmClient {
         }
       }
     )
+    #elseif os(macOS)
+    .macNotifications
     #else
     .noop
     #endif

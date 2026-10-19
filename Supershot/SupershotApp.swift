@@ -9,6 +9,9 @@ import RevenueCat
 
 @main struct SupershotApp: App {
   @Dependency(\.context) var context
+  #if os(macOS)
+    @NSApplicationDelegateAdaptor(MacNotificationDelegate.self) private var notificationDelegate
+  #endif
   
   init() {
     guard
@@ -30,8 +33,8 @@ import RevenueCat
     Purchases.shared.logIn("dev") { _,_,_  in }
 #endif
     try! prepareDependencies {
-      $0.alarmClient = .live
       try $0.bootstrapDatabase()
+      $0.alarmClient = .live
 //      try $0.defaultSyncEngine = SyncEngine.init(
 //        for: $0.defaultDatabase,
 //        tables: Team.self, Game.self, GamePeriod.self, Goal.self
@@ -43,8 +46,10 @@ import RevenueCat
   }
   
   var body: some Scene {
-    WindowGroup {
-      SupershotRootView()
-    }
+    #if os(macOS)
+      SupershotMacScenes()
+    #else
+      WindowGroup { SupershotRootView() }
+    #endif
   }
 }

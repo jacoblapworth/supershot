@@ -60,6 +60,9 @@ package struct SetupTeamView: View {
         .presentationBackground(.thinMaterial)
       }
     }
+    #if os(macOS)
+      .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)
+    #endif
     .interactiveDismissDisabled(store.isSaving)
     .presentationDetents([.medium, .large])
     .presentationBackground(.thinMaterial)

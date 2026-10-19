@@ -61,6 +61,7 @@ package struct TimeInputFeature {
     case doneButtonTapped
     case quickAddButtonTapped(Int)
     case unitButtonTapped(Unit)
+    case textChanged(Unit, String)
 
     @CasePathable
     package enum Delegate {
@@ -98,6 +99,10 @@ package struct TimeInputFeature {
         state.minutes = String(total / 60)
         state.seconds = String(total % 60)
         state.replacesNextDigit = true
+        state.errorMessage = nil
+      case let .textChanged(unit, text):
+        let digits = String(text.filter { $0.isASCII && $0.isNumber }.prefix(2))
+        if unit == .minutes { state.minutes = digits } else { state.seconds = digits }
         state.errorMessage = nil
       case .unitButtonTapped(let unit):
         state.normalize()

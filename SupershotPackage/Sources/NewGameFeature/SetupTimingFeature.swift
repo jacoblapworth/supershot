@@ -223,6 +223,9 @@ package struct SetupTimingEditorView: View {
       }
     }
     .presentationDetents([.large])
+    #if os(macOS)
+      .frame(width: 560, height: 520)
+    #endif
   }
 
   package init(store: StoreOf<SetupTimingFeature>) {

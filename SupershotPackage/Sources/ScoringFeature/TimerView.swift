@@ -35,10 +35,17 @@ package struct TimerView: View {
             .font(.footnote)
             .foregroundStyle(.white)
           if canEditTime {
-            Label("Edit", systemImage: "pencil")
-              .font(.footnote)
-              .labelStyle(.iconOnly)
-              .foregroundStyle(.white.opacity(0.8))
+            #if os(macOS)
+              Button("Edit remaining time", systemImage: "pencil", action: editTimeTapped)
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
+                .help("Edit remaining time")
+            #else
+              Label("Edit", systemImage: "pencil")
+                .font(.footnote)
+                .labelStyle(.iconOnly)
+                .foregroundStyle(.white.opacity(0.8))
+            #endif
           }
         }
         HStack {
@@ -109,8 +116,10 @@ package struct TimerView: View {
     }
     .padding()
     .background(.black, in: RoundedRectangle(cornerRadius: 24))
-    .onTapGesture(perform: editTimeTapped)
-    .accessibilityLabel("Edit remaining time")
+    #if os(iOS)
+      .onTapGesture(perform: editTimeTapped)
+      .accessibilityLabel("Edit remaining time")
+    #endif
   }
 
   private var isInitial: Bool {

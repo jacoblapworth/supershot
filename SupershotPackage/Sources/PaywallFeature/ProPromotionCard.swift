@@ -12,7 +12,7 @@ package struct ProPromotionCard: View {
         .foregroundStyle(Color.accentColor)
 
       Text(
-        "Get Live Activities and alarm alerts on iPhone and iPad, "
+        "Get quarter and break notifications on Mac, plus Live Activities and alarm alerts on iPhone and iPad, "
           + "so every quarter stays on time."
       )
       .font(.subheadline)

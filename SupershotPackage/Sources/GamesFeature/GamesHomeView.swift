@@ -58,6 +58,9 @@ package struct GamesHomeView: View {
           ProPromotionCard(
             exploreProTapped: { store.send(.proPromotionTapped) }
           )
+          #if os(macOS)
+            .fixedSize(horizontal: false, vertical: true)
+          #endif
           .listRowBackground(Color.clear)
           .listRowInsets(.all, 0)
         }
@@ -103,6 +106,11 @@ package struct GamesHomeView: View {
             .listRowInsets(.all, 0)
             .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .disabled(store.pendingGameResume != nil)
+            .contextMenu {
+              Button("Delete", systemImage: "trash", role: .destructive) {
+                store.send(.deleteGameButtonTapped(game.id))
+              }
+            }
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
               Button("Delete", systemImage: "trash", role: .destructive) {
                 store.send(.deleteGameButtonTapped(game.id))
@@ -114,7 +122,7 @@ package struct GamesHomeView: View {
     }
     .navigationTitle("Games")
     .toolbar {
-      ToolbarItem(placement: .largeSubtitle) {
+      ToolbarItem(placement: filterPlacement) {
         GamesFilterControl(selection: store.filter) { filter in
           store.send(.filterButtonTapped(filter))
         }
@@ -131,6 +139,14 @@ package struct GamesHomeView: View {
         .disabled(store.pendingGameResume != nil)
       }
     }
+  }
+
+  private var filterPlacement: ToolbarItemPlacement {
+    #if os(macOS)
+      .principal
+    #else
+      .largeSubtitle
+    #endif
   }
 
   package init(

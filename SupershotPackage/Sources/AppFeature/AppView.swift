@@ -34,7 +34,15 @@ package struct AppView: View {
       }
     }
     .sheet(
-      item: $store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
+      item: Binding(
+        get: {
+          #if os(macOS)
+            guard !store.paywallFromSettings else { return nil as StoreOf<PaywallFeature>? }
+          #endif
+          return store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
+        },
+        set: { if $0 == nil { store.send(.destination(.dismiss)) } }
+      )
     ) { paywallStore in
       PaywallView(store: paywallStore)
     }
@@ -54,6 +62,9 @@ package struct AppView: View {
   }
 
   private var tabs: some View {
+    #if os(macOS)
+      MacNavigationView(store: store)
+    #else
     TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
       Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
         GamesHomeView(
@@ -76,6 +87,7 @@ package struct AppView: View {
         )
       }
     }
+    #endif
   }
 
   package init(store: StoreOf<AppFeature>) {

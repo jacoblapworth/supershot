@@ -12,6 +12,31 @@ import TestSupport
 extension SupershotTestSuite {
   @MainActor
   @Suite struct TimeInputFeatureTests {
+    @Test func typedTimeFiltersInputAndCommitsOnlyWhenValid() async {
+      let store = TestStore(initialState: TimeInputFeature.State(
+        title: "Time", totalSeconds: 480, allowedSeconds: 1...5999)) { TimeInputFeature() }
+      await store.send(.textChanged(.minutes, "a12b3")) { $0.minutes = "12" }
+      await store.send(.textChanged(.seconds, "90")) { $0.seconds = "90" }
+      #expect(store.state.totalSeconds == 810)
+      await store.send(.doneButtonTapped) { $0.minutes = "13"; $0.seconds = "30" }
+      await store.receive(\.delegate.committed)
+      await store.send(.textChanged(.minutes, "")) { $0.minutes = "" }
+      await store.send(.textChanged(.seconds, "")) { $0.seconds = "" }
+      #expect(!store.state.isValid)
+      await store.send(.doneButtonTapped)
+      await store.send(.cancelButtonTapped)
+      await store.receive(\.delegate.cancelled)
+    }
+
+    @Test func typedTimeCannotChangeWhileSaving() async {
+      var state = TimeInputFeature.State(title: "Time", totalSeconds: 480, allowedSeconds: 1...5999)
+      state.isSaving = true
+      let store = TestStore(initialState: state) { TimeInputFeature() }
+      await store.send(.textChanged(.minutes, "12"))
+      await store.send(.doneButtonTapped)
+      await store.send(.cancelButtonTapped)
+    }
+
     @Test func digitsReplaceThenAppendAndSecondsCarry() async {
       let store = TestStore(
         initialState: TimeInputFeature.State(

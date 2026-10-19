@@ -602,6 +602,62 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
+    #if os(macOS)
+    @Test func macTimeEditorOpensWithoutControlsSheetDismissal() async {
+      let store = TestStore(initialState: Self.state()) { ScoringFeature() }
+      await store.send(.editTimeButtonTapped) {
+        $0.editedPhaseIndex = 0
+        $0.controlsPresentation = .hiddenForTimeInput
+        $0.timeInput = .init(title: "Edit remaining time", totalSeconds: 900,
+          allowedSeconds: 1...900, selectedUnit: .seconds)
+      }
+      await store.send(.timeInput(.presented(.cancelButtonTapped)))
+      await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
+      await store.send(.timeInputSheetDidDismiss) {
+        $0.editedPhaseIndex = nil
+        $0.controlsPresentation = .shown
+      }
+    }
+
+    @Test func macPaywallDoesNotWaitForControlsSheetDismissal() async {
+      let store = TestStore(initialState: Self.state()) { ScoringFeature() }
+      await store.send(.alarms(.delegate(.proPromotionTapped))) {
+        $0.controlsPresentation = .hiddenForPaywall
+      }
+      await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
+      await store.send(.proPaywallDidDismiss) { $0.controlsPresentation = .shown }
+    }
+
+    @Test func macCommandsFollowCourtSidesAndDisableDuringEditing() {
+      var state = Self.state()
+      state.elapsedSeconds = 1
+      state.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+      state.canUndo = true
+      let store = Store(initialState: state) { ScoringFeature() }
+      let commands = ScoringCommandContext(store: store, isPresentingPaywall: false)
+      #expect(commands.canScore)
+      #expect(commands.canToggleTimer)
+      #expect(commands.canUndo)
+      #expect(commands.leftTitle.contains("Ravens"))
+      #expect(commands.rightTitle.contains("Swifts"))
+      state.swapSides = true
+      let swappedStore = Store(initialState: state) { ScoringFeature() }
+      let swapped = ScoringCommandContext(store: swappedStore, isPresentingPaywall: false)
+      #expect(swapped.leftTitle.contains("Swifts"))
+      #expect(swapped.rightTitle.contains("Ravens"))
+      state.timerEndsAt = nil
+      state.controlsPresentation = .hiddenForTimeInput
+      state.timeInput = .init(title: "Time", totalSeconds: 899, allowedSeconds: 1...900)
+      let editingStore = Store(initialState: state) { ScoringFeature() }
+      let editing = ScoringCommandContext(store: editingStore, isPresentingPaywall: false)
+      #expect(!editing.canScore)
+      #expect(!editing.canUndo)
+      #expect(!editing.canToggleTimer)
+      let paywallCommands = ScoringCommandContext(store: store, isPresentingPaywall: true)
+      #expect(!paywallCommands.isEnabled)
+    }
+    #endif
+
     private nonisolated static func game() -> Game {
       Game(
         id: UUID(3),

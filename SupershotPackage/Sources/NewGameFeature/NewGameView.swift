@@ -35,14 +35,16 @@ package struct NewGameView: View {
 
         SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
 
-        #if os(iOS)
           AlarmPermissionCard(
             store: store.scope(state: \.alarms, action: \.alarms),
             proAccess: proAccess
           )
-        #endif
         SetupLocationView(store: store)
       }
+      #if os(macOS)
+        .frame(maxWidth: 680)
+        .frame(maxWidth: .infinity)
+      #endif
       .padding()
     }
     .navigationTitle("New game")
