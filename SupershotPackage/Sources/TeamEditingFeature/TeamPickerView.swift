@@ -137,9 +137,9 @@ private struct TeamSelectionRow: View {
         Image(systemName: "chevron.right")
           .foregroundStyle(.secondary)
       }
+      .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .contentShape(.rect)
   }
 }
 
