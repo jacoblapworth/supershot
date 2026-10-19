@@ -337,48 +337,9 @@ private struct GoalControls: View {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.title.bold())
       }
-      TimerControl(attributes: context.attributes, isStale: context.isStale, state: context.state)
       Spacer()
       if !context.isStale, context.state.canScoreGoal {
         GoalButton(context: context, isTeamA: false)
-      }
-    }
-  }
-}
-
-private struct TimerControl: View {
-  var attributes: GameActivityAttributes
-  var isStale: Bool
-  var state: GameActivityAttributes.ContentState
-
-  var body: some View {
-    if !isStale, state.canControlTimer {
-      if state.timerEndsAt != nil {
-        Button(
-          intent: PauseGameTimerIntent(
-            gameID: attributes.gameID,
-            expectedPhaseIndex: state.phaseIndex
-          )
-        ) {
-          Image(systemName: "pause.fill")
-            .frame(width: 32, height: 32)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.orange)
-        .accessibilityLabel("Pause timer")
-      } else {
-        Button(
-          intent: ResumeGameTimerIntent(
-            gameID: attributes.gameID,
-            expectedPhaseIndex: state.phaseIndex
-          )
-        ) {
-          Image(systemName: "play.fill")
-            .frame(width: 32, height: 32)
-        }
-        .buttonStyle(.borderedProminent)
-        .tint(.orange)
-        .accessibilityLabel(state.isInBreak && state.elapsedSeconds == 0 ? "Start break" : "Resume timer")
       }
     }
   }
@@ -485,6 +446,8 @@ private extension Int {
   GameLiveActivity()
 } contentStates: {
   GameActivityAttributes.ContentState.runningPreview
+  GameActivityAttributes.ContentState.pausedPreview
+  GameActivityAttributes.ContentState.endedPreview
 }
 
 #Preview(
@@ -513,6 +476,7 @@ private extension Int {
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 120, running: false)
 }
 
 #Preview("Breaks Expanded", as: .dynamicIsland(.expanded), using: GameActivityAttributes.preview) {
@@ -521,4 +485,5 @@ private extension Int {
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 120, running: false)
 }
