@@ -145,10 +145,17 @@ nonisolated package struct CentrePassStatistics: Equatable, Sendable {
 nonisolated package struct TeamGameStatistics: Equatable, Sendable {
   package var averageTimeToGoalSeconds: Double?
   package var centrePass: CentrePassStatistics?
+  package var biggestLead = 0
+  package var longestScoringRun = 0
 
-  package init(averageTimeToGoalSeconds: Double? = nil, centrePass: CentrePassStatistics? = nil) {
+  package init(
+    averageTimeToGoalSeconds: Double? = nil, centrePass: CentrePassStatistics? = nil,
+    biggestLead: Int = 0, longestScoringRun: Int = 0
+  ) {
     self.averageTimeToGoalSeconds = averageTimeToGoalSeconds
     self.centrePass = centrePass
+    self.biggestLead = biggestLead
+    self.longestScoringRun = longestScoringRun
   }
 }
 
@@ -170,6 +177,7 @@ nonisolated package struct GameAnalysis: Equatable, Sendable {
   package var goalTimeline = GoalTimeline()
   package var periods: [GamePeriod] = []
   package var statistics = CompletedGameStatistics()
+  package var statisticsByPeriod: [Int: CompletedGameStatistics] = [:]
   package var teamABibColorHex = "#007AFF"
   package var teamAName = ""
   package var teamBBibColorHex = "#FF3B30"
@@ -178,12 +186,14 @@ nonisolated package struct GameAnalysis: Equatable, Sendable {
   package init(
     goalTimeline: GoalTimeline = GoalTimeline(), periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
+    statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColorHex: String = "#007AFF", teamAName: String = "",
     teamBBibColorHex: String = "#FF3B30", teamBName: String = ""
   ) {
     self.goalTimeline = goalTimeline
     self.periods = periods
     self.statistics = statistics
+    self.statisticsByPeriod = statisticsByPeriod
     self.teamABibColorHex = teamABibColorHex
     self.teamAName = teamAName
     self.teamBBibColorHex = teamBBibColorHex
@@ -199,6 +209,7 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
   package var periods: [GamePeriod] = []
   package let startedAt: Date
   package var statistics = CompletedGameStatistics()
+  package var statisticsByPeriod: [Int: CompletedGameStatistics] = [:]
   package var teamABibColorHex = "#007AFF"
   package let teamAName: String
   package let teamAScore: Int
@@ -211,6 +222,7 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
       goalTimeline: goalTimeline,
       periods: periods,
       statistics: statistics,
+      statisticsByPeriod: statisticsByPeriod,
       teamABibColorHex: teamABibColorHex,
       teamAName: teamAName,
       teamBBibColorHex: teamBBibColorHex,
@@ -236,6 +248,7 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
     endedAt: Date, goalTimeline: GoalTimeline, id: Game.ID, location: GameLocation? = nil,
     periods: [GamePeriod] = [], startedAt: Date,
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
+    statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
     teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int
   ) {
@@ -246,6 +259,7 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
     self.periods = periods
     self.startedAt = startedAt
     self.statistics = statistics
+    self.statisticsByPeriod = statisticsByPeriod
     self.teamABibColorHex = teamABibColorHex
     self.teamAName = teamAName
     self.teamAScore = teamAScore
@@ -634,6 +648,7 @@ nonisolated package struct GameAnalysisRequest: FetchKeyRequest {
           teamAID: snapshot.teamA.id,
           teamBID: snapshot.teamB.id
         ),
+        statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
         teamABibColorHex: snapshot.game.teamABibColorHex,
         teamAName: snapshot.teamA.name,
         teamBBibColorHex: snapshot.game.teamBBibColorHex,
@@ -676,6 +691,7 @@ nonisolated package struct GameDetailRequest: FetchKeyRequest {
           teamAID: snapshot.teamA.id,
           teamBID: snapshot.teamB.id
         ),
+        statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
         teamABibColorHex: snapshot.game.teamABibColorHex,
         teamAName: snapshot.teamA.name,
         teamAScore: snapshot.teamAScore,
@@ -769,12 +785,34 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   )
 }
 
-private nonisolated func completedGameStatistics(
+private nonisolated func statisticsByPeriod(
+  snapshot: GameSnapshot
+) -> [Int: CompletedGameStatistics] {
+  Dictionary(
+    uniqueKeysWithValues: snapshot.periods.map { period in
+      (
+        period.number,
+        completedGameStatistics(
+          goals: snapshot.goals.filter { $0.gamePeriodID == period.id },
+          teamAID: snapshot.teamA.id,
+          teamBID: snapshot.teamB.id
+        )
+      )
+    })
+}
+
+// Goals must be supplied in GameSnapshot chronological order.
+nonisolated func completedGameStatistics(
   goals: [Goal],
   teamAID: Team.ID,
   teamBID: Team.ID
 ) -> CompletedGameStatistics {
   var goalDurationsByTeamID: [Team.ID: [Int]] = [:]
+  var scores: [Team.ID: Int] = [:]
+  var biggestLeads: [Team.ID: Int] = [:]
+  var longestRuns: [Team.ID: Int] = [:]
+  var runTeamID: Team.ID?
+  var runLength = 0
   var previousGoalElapsedSecondsByPeriod: [GamePeriod.ID: Int] = [:]
 
   for goal in goals {
@@ -787,6 +825,22 @@ private nonisolated func completedGameStatistics(
 
     if goal.teamID == teamAID || goal.teamID == teamBID {
       goalDurationsByTeamID[goal.teamID, default: []].append(duration)
+      scores[goal.teamID, default: 0] += goal.points
+      biggestLeads[teamAID] = max(
+        biggestLeads[teamAID, default: 0],
+        scores[teamAID, default: 0] - scores[teamBID, default: 0]
+      )
+      biggestLeads[teamBID] = max(
+        biggestLeads[teamBID, default: 0],
+        scores[teamBID, default: 0] - scores[teamAID, default: 0]
+      )
+      runLength = runTeamID == goal.teamID ? runLength + 1 : 1
+      runTeamID = goal.teamID
+      longestRuns[goal.teamID] = max(longestRuns[goal.teamID, default: 0], runLength)
+    } else {
+      // An unidentified scorer cannot establish a consecutive run for either team.
+      runTeamID = nil
+      runLength = 0
     }
   }
 
@@ -811,7 +865,9 @@ private nonisolated func completedGameStatistics(
       averageTimeToGoalSeconds: durations.isEmpty
         ? nil
         : Double(durations.reduce(0, +)) / Double(durations.count),
-      centrePass: centrePassStatistics(for: teamID)
+      centrePass: centrePassStatistics(for: teamID),
+      biggestLead: biggestLeads[teamID, default: 0],
+      longestScoringRun: longestRuns[teamID, default: 0]
     )
   }
 

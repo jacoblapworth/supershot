@@ -11,15 +11,11 @@ import WidgetSupport
 
 package struct GoalProgressChartView: View {
   package var detail: GameAnalysis
-  @State private var breakdown = GoalProgressBreakdown.wholeGame
+  package var breakdown = GameAnalysisBreakdown.wholeGame
   @State private var selectedMoment: GoalProgressMoment?
 
   private var orderedPeriods: [GamePeriod] {
     detail.periods.sorted { $0.position < $1.position }
-  }
-
-  private var breakdownOptions: [GoalProgressBreakdown] {
-    [.wholeGame] + orderedPeriods.map { .period($0.number) }
   }
 
   private var periodEndOffsets: [Int] {
@@ -31,10 +27,8 @@ package struct GoalProgressChartView: View {
   private var goals: [GoalTimelineItem] {
     detail.goalTimeline.quarters
       .filter { breakdown.period == nil || $0.period == breakdown.period }
-      .sorted(using: KeyPathComparator(\.period))
-      .flatMap { quarter in
-        quarter.goals.sorted { $0.clockSecondsRemaining > $1.clockSecondsRemaining }
-      }
+      .reversed()
+      .flatMap { $0.goals.reversed() }
   }
 
   private var progress: GoalProgress {
@@ -132,14 +126,6 @@ package struct GoalProgressChartView: View {
         .frame(maxWidth: .infinity, alignment: .center)
         .font(.subheadline.weight(.semibold))
         .foregroundStyle(.secondary)
-
-      Picker("Breakdown", selection: $breakdown) {
-        ForEach(breakdownOptions) { breakdown in
-          Text(breakdown.title).tag(breakdown)
-        }
-      }
-      .pickerStyle(.segmented)
-      .onChange(of: breakdown) { selectedMoment = nil }
 
       if progress.moments.isEmpty {
         ContentUnavailableView(
@@ -248,8 +234,9 @@ package struct GoalProgressChartView: View {
       }
 
       GoalProgressLegend(detail: detail)
-
     }
+    .onChange(of: breakdown) { selectedMoment = nil }
+    .onChange(of: detail.goalTimeline) { selectedMoment = nil }
   }
 
   private func color(for team: GoalProgressTeam) -> Color {
@@ -294,8 +281,9 @@ package struct GoalProgressChartView: View {
     }
   }
 
-  package init(detail: GameAnalysis) {
+  package init(detail: GameAnalysis, breakdown: GameAnalysisBreakdown = .wholeGame) {
     self.detail = detail
+    self.breakdown = breakdown
   }
 }
 
@@ -330,27 +318,6 @@ private struct GoalProgressLegend: View {
 private enum GoalProgressTeam: String {
   case teamA
   case teamB
-}
-
-private enum GoalProgressBreakdown: Hashable, Identifiable {
-  case wholeGame
-  case period(Int)
-
-  var id: Self { self }
-
-  var period: Int? {
-    guard case .period(let period) = self else { return nil }
-    return period
-  }
-
-  var title: String {
-    switch self {
-    case .wholeGame:
-      "Game"
-    case .period(let period):
-      "Q\(period)"
-    }
-  }
 }
 
 private struct GoalProgress {

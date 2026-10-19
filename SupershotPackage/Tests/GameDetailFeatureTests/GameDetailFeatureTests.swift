@@ -1,13 +1,14 @@
-import SwiftUI
 import ComposableArchitecture
 import CustomDump
 import Dependencies
+import DependenciesTestSupport
 import Foundation
 import GRDB
 import SQLiteData
+import SwiftUI
+import TestSupport
 import Testing
 
-import TestSupport
 @testable import AlarmClient
 @testable import Database
 @testable import GameAnalysis
@@ -19,13 +20,14 @@ import TestSupport
 @testable import Styleguide
 @testable import SubscriptionClient
 @testable import WidgetSupport
-import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite(.dependencies {
-    $0.uuid = .incrementing
-  }) struct GameDetailFeatureTests {
+  @Suite(
+    .dependencies {
+      $0.uuid = .incrementing
+    }) struct GameDetailFeatureTests
+  {
     @Test
     func completedGameDetailBuildsReverseChronologicalQuarterTimeline() async throws {
       @Dependency(\.defaultDatabase) var database
@@ -175,7 +177,9 @@ extension SupershotTestSuite {
                 conversions: 1,
                 inferredTurnovers: 1,
                 opportunities: 2
-              )
+              ),
+              biggestLead: 2,
+              longestScoringRun: 1
             ),
             teamB: TeamGameStatistics(
               averageTimeToGoalSeconds: 65,
@@ -183,9 +187,50 @@ extension SupershotTestSuite {
                 conversions: 1,
                 inferredTurnovers: 0,
                 opportunities: 1
-              )
+              ),
+              longestScoringRun: 2
             )
           ),
+          statisticsByPeriod: [
+            1: CompletedGameStatistics(
+              teamA: TeamGameStatistics(
+                averageTimeToGoalSeconds: 100,
+                centrePass: CentrePassStatistics(
+                  conversions: 1, inferredTurnovers: 1, opportunities: 2),
+                biggestLead: 2, longestScoringRun: 1
+              ),
+              teamB: TeamGameStatistics(
+                averageTimeToGoalSeconds: 100,
+                centrePass: CentrePassStatistics(
+                  conversions: 0, inferredTurnovers: 0, opportunities: 0),
+                longestScoringRun: 1
+              )
+            ),
+            2: CompletedGameStatistics(
+              teamA: TeamGameStatistics(
+                centrePass: CentrePassStatistics(
+                  conversions: 0, inferredTurnovers: 0, opportunities: 0)
+              ),
+              teamB: TeamGameStatistics(
+                averageTimeToGoalSeconds: 30,
+                centrePass: CentrePassStatistics(
+                  conversions: 1, inferredTurnovers: 0, opportunities: 1),
+                biggestLead: 1, longestScoringRun: 1
+              )
+            ),
+            3: CompletedGameStatistics(
+              teamA: TeamGameStatistics(
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+              teamB: TeamGameStatistics(
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
+            ),
+            4: CompletedGameStatistics(
+              teamA: TeamGameStatistics(
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+              teamB: TeamGameStatistics(
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
+            ),
+          ],
           teamABibColor: ColorPalette.blue,
           teamAName: "Ravens",
           teamAScore: 2,
@@ -315,7 +360,9 @@ extension SupershotTestSuite {
         CompletedGameStatistics(
           teamA: TeamGameStatistics(
             averageTimeToGoalSeconds: 42,
-            centrePass: nil
+            centrePass: nil,
+            biggestLead: 1,
+            longestScoringRun: 1
           ),
           teamB: TeamGameStatistics(
             averageTimeToGoalSeconds: nil,
