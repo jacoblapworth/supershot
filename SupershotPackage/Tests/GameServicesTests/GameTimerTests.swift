@@ -23,7 +23,9 @@ import TestSupport
 @testable import Styleguide
 @testable import SubscriptionClient
 @testable import WidgetSupport
+#if os(iOS)
 internal import AlarmKit
+#endif
 import DependenciesTestSupport
 
 extension SupershotTestSuite {
@@ -177,11 +179,13 @@ extension SupershotTestSuite {
       #expect(progress.phaseIndex == 1)
       #expect(progress.countdown == GameCountdown())
       #expect(progress.isAwaitingCentrePassConfirmation)
+      #if os(iOS)
       let state = GameActivityAttributes.ContentState(
         centrePassTeamID: UUID(1), elapsedSeconds: 0,
         phaseIndex: 1, phase: timeline.phases[1], teamAScore: 0, teamBScore: 0)
       #expect(!state.isInBreak)
       #expect(state.period == 2)
+      #endif
     }
 
     @Test
@@ -238,17 +242,7 @@ extension SupershotTestSuite {
     func timeEditorCoordinatesSheetsAndRestoresControlsDetent() async {
       let store = Self.makeScoringStore()
       let originalDetent = store.state.presentationDetent
-      await store.send(.editTimeButtonTapped) {
-        $0.editedPhaseIndex = 0
-        $0.controlsPresentation = .dismissingForTimeInput
-      }
-      #expect(store.state.timeInput == nil)
-      await store.send(.controlsSheetDidDismiss) {
-        $0.controlsPresentation = .hiddenForTimeInput
-        $0.timeInput = .init(
-          title: "Edit remaining time", totalSeconds: 900,
-          allowedSeconds: 1...900, selectedUnit: .seconds)
-      }
+      await Self.openTimeEditor(store)
       await store.send(.timeInput(.presented(.cancelButtonTapped)))
       await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
       await store.send(.timeInputSheetDidDismiss) {
@@ -265,16 +259,7 @@ extension SupershotTestSuite {
       store.dependencies.gameTimer.setRemainingTime = { _, _, _ in
         throw CocoaError(.fileWriteNoPermission)
       }
-      await store.send(.editTimeButtonTapped) {
-        $0.editedPhaseIndex = 0
-        $0.controlsPresentation = .dismissingForTimeInput
-      }
-      await store.send(.controlsSheetDidDismiss) {
-        $0.controlsPresentation = .hiddenForTimeInput
-        $0.timeInput = .init(
-          title: "Edit remaining time", totalSeconds: 900,
-          allowedSeconds: 1...900, selectedUnit: .seconds)
-      }
+      await Self.openTimeEditor(store)
       await store.send(.timeInput(.presented(.delegate(.committed(120))))) {
         $0.timeInput?.isSaving = true
       }
@@ -300,15 +285,7 @@ extension SupershotTestSuite {
       let events = LockIsolated<[TimerSystemEvent]>([])
       store.dependencies.alarmClient = Self.alarmClient(events: events)
       store.dependencies.proSubscription = .pro
-      await store.send(.editTimeButtonTapped) {
-        $0.editedPhaseIndex = state.currentPhaseIndex
-        $0.controlsPresentation = .dismissingForTimeInput
-      }
-      await store.send(.controlsSheetDidDismiss) {
-        $0.controlsPresentation = .hiddenForTimeInput
-        $0.timeInput = .init(title: "Edit remaining time", totalSeconds: state.currentDurationSeconds,
-          allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
-      }
+      await Self.openTimeEditor(store)
       await store.send(.timeInput(.presented(.delegate(.committed(60))))) {
         $0.timeInput?.isSaving = true
       }
@@ -679,8 +656,12 @@ extension SupershotTestSuite {
       gamesStore.exhaustivity = .off(showSkippedAssertions: false)
       await gamesStore.send(.path(.element(id: games.path.ids[0], action: .scoring(.alarms(.enableButtonTapped)))))
       await gamesStore.receive(\.path)
-      #expect(gamesStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
-      await gamesStore.send(.path(.element(id: games.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      #if os(iOS)
+        #expect(gamesStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
+        await gamesStore.send(.path(.element(id: games.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      #else
+        #expect(gamesStore.state.path[0].scoring?.controlsPresentation == .hiddenForPaywall)
+      #endif
       await gamesStore.receive(\.delegate)
       var teams = TeamsFeature.State()
       teams.path.append(.scoring(scoring))
@@ -688,11 +669,40 @@ extension SupershotTestSuite {
       teamsStore.exhaustivity = .off(showSkippedAssertions: false)
       await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.alarms(.enableButtonTapped)))))
       await teamsStore.receive(\.path)
-      #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
-      await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      #if os(iOS)
+        #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .dismissingForPaywall)
+        await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.controlsSheetDidDismiss))))
+      #else
+        #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .hiddenForPaywall)
+      #endif
       await teamsStore.receive(\.delegate)
       await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .scoring(.proPaywallDidDismiss))))
       #expect(teamsStore.state.path[0].scoring?.controlsPresentation == .shown)
+    }
+
+    private static func openTimeEditor(_ store: TestStore<ScoringFeature.State, ScoringFeature.Action>) async {
+      let phaseIndex = store.state.currentPhaseIndex
+      let duration = store.state.currentDurationSeconds
+      let remaining = store.state.timeRemainingSeconds
+      #if os(macOS)
+        await store.send(.editTimeButtonTapped) {
+          $0.editedPhaseIndex = phaseIndex
+          $0.controlsPresentation = .hiddenForTimeInput
+          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: remaining,
+            allowedSeconds: 1...duration, selectedUnit: .seconds)
+        }
+      #else
+        await store.send(.editTimeButtonTapped) {
+          $0.editedPhaseIndex = phaseIndex
+          $0.controlsPresentation = .dismissingForTimeInput
+        }
+        #expect(store.state.timeInput == nil)
+        await store.send(.controlsSheetDidDismiss) {
+          $0.controlsPresentation = .hiddenForTimeInput
+          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: remaining,
+            allowedSeconds: 1...duration, selectedUnit: .seconds)
+        }
+      #endif
     }
 
     private nonisolated static func alarmClient(

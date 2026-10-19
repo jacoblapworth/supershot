@@ -23,6 +23,9 @@ package struct TeamEditorView: View {
           title: "Team color"
         )
         .disabled(store.isSaving)
+        #if os(macOS)
+          .keyboardShortcut(.cancelAction)
+        #endif
       }
 
       Section {
@@ -45,7 +48,11 @@ package struct TeamEditorView: View {
     .navigationTitle(store.isCreating ? "New team" : "Edit team")
     #if os(iOS)
       .navigationBarTitleDisplayMode(.inline)
-      .interactiveDismissDisabled(store.isSaving)
+    #endif
+    .interactiveDismissDisabled(store.isSaving)
+    #if os(macOS)
+      .formStyle(.grouped)
+      .frame(minWidth: 440, idealWidth: 480, minHeight: 320)
     #endif
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
@@ -65,6 +72,9 @@ package struct TeamEditorView: View {
           }
         }
         .disabled(!store.canSave)
+        #if os(macOS)
+          .keyboardShortcut(.defaultAction)
+        #endif
       }
     }
   }

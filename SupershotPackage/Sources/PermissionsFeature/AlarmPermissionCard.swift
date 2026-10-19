@@ -6,80 +6,113 @@ import SwiftUI
 
 #if os(iOS)
   import UIKit
+#endif
 
-  package struct AlarmPermissionCard: View {
-    @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.openURL) private var openURL
-    package let store: StoreOf<AlarmPermissionFeature>
-    package let proAccess: SubscriptionEntitlement
-    package var hidesWhenAuthorized = false
+package struct AlarmPermissionCard: View {
+  @Environment(\.scenePhase) private var scenePhase
+  @Environment(\.openURL) private var openURL
+  package let store: StoreOf<AlarmPermissionFeature>
+  package let proAccess: SubscriptionEntitlement
+  package var hidesWhenAuthorized = false
 
-    package var body: some View {
-      Group {
-        if proAccess != .unknown,
-          !(hidesWhenAuthorized && proAccess == .pro && store.authorization == .authorized)
-        {
-          VStack(alignment: .leading, spacing: 12) {
-            if proAccess == .pro, store.authorization == .authorized {
+  package var body: some View {
+    Group {
+      if proAccess != .unknown,
+        !(hidesWhenAuthorized && proAccess == .pro && store.authorization == .authorized)
+      {
+        VStack(alignment: .leading, spacing: 12) {
+          if proAccess == .pro, store.authorization == .authorized {
+            #if os(macOS)
+              Label("Notifications enabled", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.secondary)
+            #else
               Label("Alarms enabled", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.secondary)
-            } else {
-              HStack {
-                Label("Never miss the quarter", systemImage: "alarm.fill")
-                  .font(.headline)
-                if proAccess == .free {
-                  Text("PRO")
-                    .font(.caption.bold())
-                    .foregroundStyle(Color.accentColor)
-                }
+            #endif
+          } else {
+            HStack {
+              Label("Never miss the quarter", systemImage: "alarm.fill")
+                .font(.headline)
+              if proAccess == .free {
+                Text("PRO")
+                  .font(.caption.bold())
+                  .foregroundStyle(Color.accentColor)
               }
+            }
+            #if os(macOS)
+              Text(
+                "Get a notification when each quarter or break ends. Delivery follows your Mac’s notification and Focus settings."
+              )
+              .font(.subheadline)
+              .foregroundStyle(.secondary)
+            #else
               Text("Get an alarm when each quarter or break ends, even when your iPhone is locked.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-              if let error = store.errorMessage {
-                Text(error).font(.caption).foregroundStyle(.red)
+            #endif
+            if let error = store.errorMessage {
+              Text(error).font(.caption).foregroundStyle(.red)
+            }
+            if store.isRequesting {
+              HStack {
+                ProgressView()
+                Text("Requesting access…")
               }
-              if store.isRequesting {
-                HStack {
-                  ProgressView()
-                  Text("Requesting access…")
-                }
-              } else if proAccess == .pro, store.authorization == .denied {
+            } else if proAccess == .pro, store.authorization == .denied {
+              #if os(macOS)
+                Text("Allow notifications for Supershot in System Settings → Notifications.")
+                  .font(.caption).foregroundStyle(.secondary)
+              #else
                 Text("Allow alarms for Supershot in Settings.")
                   .font(.caption).foregroundStyle(.secondary)
-                Button("Open Settings") {
+              #endif
+              Button("Open Settings") {
+                #if os(macOS)
+                  openURL(
+                    URL(
+                      string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
+                    )!)
+                #else
                   openURL(URL(string: UIApplication.openSettingsURLString)!)
-                }
-                .buttonStyle(.bordered)
-              } else {
-                Button(
-                  proAccess == .free
-                    ? "Explore Supershot Pro"
-                    : store.errorMessage == nil ? "Enable alarms" : "Try again"
-                ) {
-                  store.send(.enableButtonTapped)
-                }
-                .buttonStyle(.bordered)
+                #endif
               }
+              .buttonStyle(.bordered)
+            } else {
+              Button(
+                proAccess == .free
+                  ? "Explore Supershot Pro"
+                  : store.errorMessage == nil ? enableTitle : "Try again"
+              ) {
+                store.send(.enableButtonTapped)
+              }
+              .buttonStyle(.bordered)
             }
           }
-          .fixedSize(horizontal: false, vertical: true)
-          .setupCardStyle()
         }
-      }
-      .task(id: proAccess) { store.send(.refresh(proAccess)) }
-      .onChange(of: scenePhase) { _, phase in
-        if phase == .active { store.send(.refresh(proAccess)) }
+        .fixedSize(horizontal: false, vertical: true)
+        .setupCardStyle()
       }
     }
-
-    package init(
-      store: StoreOf<AlarmPermissionFeature>, proAccess: SubscriptionEntitlement,
-      hidesWhenAuthorized: Bool = false
-    ) {
-      self.store = store
-      self.proAccess = proAccess
-      self.hidesWhenAuthorized = hidesWhenAuthorized
+    .task(id: proAccess) { store.send(.refresh(proAccess)) }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active { store.send(.refresh(proAccess)) }
     }
   }
-#endif
+
+  private var enableTitle: String {
+    #if os(macOS)
+      "Enable notifications"
+    #else
+      "Enable alarms"
+    #endif
+  }
+
+  package init(
+    store: StoreOf<AlarmPermissionFeature>, proAccess: SubscriptionEntitlement,
+    hidesWhenAuthorized: Bool = false
+  ) {
+    self.store = store
+    self.proAccess = proAccess
+    self.hidesWhenAuthorized = hidesWhenAuthorized
+  }
+}

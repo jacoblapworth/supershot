@@ -92,7 +92,12 @@ package struct TeamsListView: View {
             TeamRow(team: team)
           }
           .buttonStyle(.plain)
-          .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+          .contextMenu {
+              Button("Delete", systemImage: "trash", role: .destructive) {
+                store.send(.deleteTeamButtonTapped(team.id))
+              }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Delete", systemImage: "trash", role: .destructive) {
               store.send(.deleteTeamButtonTapped(team.id))
             }

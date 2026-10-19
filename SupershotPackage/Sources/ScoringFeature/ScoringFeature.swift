@@ -309,13 +309,25 @@ package struct ScoringFeature {
       switch action {
       case .alarms(.delegate(.proPromotionTapped)):
         guard state.controlsPresentation == .shown else { return .none }
-        state.controlsPresentation = .dismissingForPaywall
-        return .none
+        #if os(macOS)
+          state.controlsPresentation = .hiddenForPaywall
+          return .send(.delegate(.proPromotionTapped))
+        #else
+          state.controlsPresentation = .dismissingForPaywall
+          return .none
+        #endif
 
       case .editTimeButtonTapped:
         guard state.canEditTime, state.controlsPresentation == .shown else { return .none }
         state.editedPhaseIndex = state.currentPhaseIndex
-        state.controlsPresentation = .dismissingForTimeInput
+        #if os(macOS)
+          state.controlsPresentation = .hiddenForTimeInput
+          state.timeInput = .init(
+            title: "Edit remaining time", totalSeconds: state.timeRemainingSeconds,
+            allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
+        #else
+          state.controlsPresentation = .dismissingForTimeInput
+        #endif
         return .none
 
       case .timeInput(.presented(.delegate(.committed(let seconds)))):
@@ -840,9 +852,11 @@ extension AlertState where Action == ScoringFeature.Alert {
         TextState("OK")
       }
     } message: {
-      TextState(
-        "The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer."
-      )
+      #if os(macOS)
+        TextState("The game timer will keep running, but Supershot couldn’t schedule its notifications. Try pausing and resuming the timer.")
+      #else
+        TextState("The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer.")
+      #endif
     }
   }
 }

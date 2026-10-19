@@ -10,7 +10,11 @@ package struct TimeInputView: View {
   package var body: some View {
     NavigationStack {
       VStack(spacing: 16) {
-        TimeInputDisplay(store: store)
+        #if os(macOS)
+          MacTimeInputFields(store: store)
+        #else
+          TimeInputDisplay(store: store)
+        #endif
         if let error = store.errorMessage {
           Label(error, systemImage: "exclamationmark.triangle.fill")
             .foregroundStyle(.red)
@@ -21,7 +25,9 @@ package struct TimeInputView: View {
           .foregroundStyle(.red)
         }
         if store.isSaving { ProgressView("Saving time…") }
-        TimeInputKeypad(store: store)
+        #if os(iOS)
+          TimeInputKeypad(store: store)
+        #endif
       }
       .padding(24)
       .frame(maxWidth: 560)
@@ -34,16 +40,21 @@ package struct TimeInputView: View {
         ToolbarItem(placement: .cancellationAction) {
           Button("Cancel", systemImage: "xmark") { store.send(.cancelButtonTapped) }
             .disabled(store.isSaving)
+            .keyboardShortcut(.cancelAction)
         }
         ToolbarItem(placement: .confirmationAction) {
           Button("Done", systemImage: "checkmark") { store.send(.doneButtonTapped) }
             .disabled(!store.isValid || store.isSaving)
+            .keyboardShortcut(.defaultAction)
         }
       }
     }
     .presentationDetents([.medium])
     .presentationBackground(.regularMaterial)
     .interactiveDismissDisabled(store.isSaving)
+    #if os(macOS)
+      .frame(width: 440, height: 260)
+    #endif
   }
 
   private func formatted(_ seconds: Int) -> String {

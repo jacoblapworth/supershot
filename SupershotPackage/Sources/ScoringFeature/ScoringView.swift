@@ -82,6 +82,12 @@ package struct ScoringView: View {
 
           }
           .padding(.top)
+          #if os(macOS)
+            MacScoringControls(store: store)
+            AlarmPermissionCard(
+              store: store.scope(state: \.alarms, action: \.alarms),
+              proAccess: proAccess, hidesWhenAuthorized: true)
+          #endif
           if store.isShowingLastCentrePassBanner {
             LastCentrePassBanner(
               centrePassTeam: store.centrePassTeam,
@@ -126,6 +132,10 @@ package struct ScoringView: View {
             .id("gameAnalysis")
           }
         }
+        #if os(macOS)
+          .frame(maxWidth: 960)
+          .frame(maxWidth: .infinity)
+        #endif
         .padding(.horizontal)
         .padding(.bottom)
 
@@ -137,11 +147,13 @@ package struct ScoringView: View {
         viewportHeight = $0
       }
       .coordinateSpace(name: "scoringViewport")
+      #if os(iOS)
       .safeAreaInset(edge: .bottom, spacing: 0) {
         Color
           .clear
           .frame(height: 112)
       }
+      #endif
       .background {
         TeamColorBackground(
           leftColor: store.courtLayout.left.team.bibColor,
@@ -188,6 +200,7 @@ package struct ScoringView: View {
         }
 
       }
+      #if os(iOS)
       .sheet(
         isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
         onDismiss: { store.send(.controlsSheetDidDismiss) },
@@ -224,6 +237,7 @@ package struct ScoringView: View {
           #endif
         }
       )
+      #endif
       .sheet(
         item: $store.scope(state: \.timeInput, action: \.timeInput),
         onDismiss: { store.send(.timeInputSheetDidDismiss) }
@@ -251,6 +265,9 @@ package struct ScoringView: View {
         store.send(.sceneBecameActive)
       }
       .onChange(of: scenePhase, scenePhaseChanged)
+      #if os(macOS)
+        .focusedSceneValue(\.scoringCommands, ScoringCommandContext(store: store, isPresentingPaywall: isPresentingPaywall))
+      #endif
     }
   }
 

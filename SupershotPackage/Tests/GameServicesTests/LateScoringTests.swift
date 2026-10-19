@@ -55,6 +55,7 @@ extension SupershotTestSuite {
         expectNoDifference(goal.createdAt, Date(timeIntervalSince1970: 1_000))
         #expect(goal.isLate)
       }
+      #if os(iOS)
       let content = GameActivityAttributes.ContentState(
         centrePassTeamID: snapshot.game.centrePassTeamID!,
         elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
@@ -62,6 +63,7 @@ extension SupershotTestSuite {
         timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
         lateScoringPeriodNumber: completed)
       expectNoDifference(content.scoringContext, .completedPeriod(number: completed))
+      #endif
       let state = ScoringFeature.State(snapshot: snapshot)
       #expect(state.canScoreGoal)
       #expect(state.canUndoGoal)

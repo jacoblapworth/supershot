@@ -32,7 +32,9 @@ import TestSupport
 @testable import TeamEditingFeature
 @testable import TeamsFeature
 @testable import WidgetSupport
+#if os(iOS)
 internal import AlarmKit
+#endif
 import DependenciesTestSupport
 
 extension SupershotTestSuite {
@@ -41,6 +43,25 @@ extension SupershotTestSuite {
     $0.uuid = .incrementing
     $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
   }) struct AppFeatureTests {
+    #if os(macOS)
+    @Test func macNavigationDisablesDuringNestedPresentationsAndPendingSaves() {
+      var state = AppFeature.State()
+      #expect(!state.macHasBlockingPresentation)
+      var setup = NewGameFeature.State()
+      setup.isSaving = true
+      state.games.path.append(.setup(setup))
+      #expect(state.macHasBlockingPresentation)
+      state.games.path.removeAll()
+      var teamDetail = TeamDetailFeature.State(teamID: UUID(1))
+      teamDetail.editor = TeamEditorFeature.State(team: Team(id: UUID(1), name: "Ravens"))
+      state.teams.path.append(.teamDetail(teamDetail))
+      #expect(state.macHasBlockingPresentation)
+      state.teams.path.removeAll()
+      state.destination = .proPaywall(PaywallFeature.State())
+      #expect(state.macHasBlockingPresentation)
+    }
+    #endif
+
     @Test
     func failedSubscriptionLookupFallsBackToFree() async {
       let store = TestStore(initialState: AppFeature.State()) {
@@ -255,8 +276,8 @@ extension SupershotTestSuite {
       }
     }
 
-    @Test
-    func gameDeepLinkReconcilesAndRestoresRunningScoringRoute() async {
+    @Test(arguments: ["supershot", "supershot-dev"])
+    func gameDeepLinkReconcilesAndRestoresRunningScoringRoute(scheme: String) async {
       var scoring = Self.appScoringState()
       scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
       let seedStore = Self.makeAppScoringStore(state: scoring)
@@ -271,7 +292,7 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
 
       await store.send(
-        .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
+        .deepLinkOpened(URL(string: "\(scheme)://game/\(UUID(3).uuidString)")!)
       )
       await store.receive {
         guard case let .games(.resumeGameResponse(request, .success)) = $0 else {

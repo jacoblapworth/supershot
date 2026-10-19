@@ -84,3 +84,33 @@ jobs:
           path: ${{ runner.temp }}/test-results
           retention-days: 7
           if-no-files-found: warn
+
+  macos-build:
+    name: macOS build
+    runs-on: xcode-27
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build native Mac app
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -workspace SupershotWorkspace.xcworkspace \
+            -scheme 'Supershot Dev' \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/MacDerivedData" \
+            -onlyUsePackageVersionsFromResolvedFile \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee "$RUNNER_TEMP/macos-build.log" | xcbeautify
+      - name: Upload Mac build log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-build-log
+          path: ${{ runner.temp }}/macos-build.log
+          retention-days: 7

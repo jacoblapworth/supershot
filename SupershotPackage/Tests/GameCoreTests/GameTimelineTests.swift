@@ -166,6 +166,7 @@ extension SupershotTestSuite {
       #expect(ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing).isEmpty)
     }
 
+    #if os(iOS)
     @Test
     func liveActivityEncodingPreservesPhaseIdentityAndUsesItsDuration() throws {
       let phase = GamePhase.breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120)
@@ -180,6 +181,8 @@ extension SupershotTestSuite {
       let json = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
       #expect(json["currentDurationSeconds"] == nil)
     }
+
+    #endif
 
     @Test
     func invalidCursorDoesNotReportCompletionOrResolveAPeriod() throws {

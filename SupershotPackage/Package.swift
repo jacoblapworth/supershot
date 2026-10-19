@@ -107,7 +107,7 @@ let package = Package(
     .target(
       name: "AlarmClient",
       dependencies: [
-        "SharedModels", "GameCore", "Database",
+        "SharedModels", "GameCore", "Database", "SubscriptionClient",
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "DependenciesMacros", package: "swift-dependencies"),
       ],
@@ -255,7 +255,7 @@ let package = Package(
         "PreviewSupport",
         "SharedModels", "GameCore", "Database", "GameServices", "AlarmClient", "AppSettings",
         "SubscriptionClient", "Styleguide", "GamesFeature", "TeamsFeature", "SettingsFeature",
-        "PermissionsFeature", "PaywallFeature",
+        "PermissionsFeature", "PaywallFeature", "ScoringFeature",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "Dependencies", package: "swift-dependencies"),

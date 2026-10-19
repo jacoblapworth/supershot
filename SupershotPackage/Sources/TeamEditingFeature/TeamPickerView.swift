@@ -111,6 +111,9 @@ package struct TeamPickerView: View {
       }
     }
     .task { store.send(.task) }
+    #if os(macOS)
+      .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)
+    #endif
   }
 
   package init(store: StoreOf<TeamPickerFeature>) {
@@ -134,9 +137,9 @@ private struct TeamSelectionRow: View {
         Image(systemName: "chevron.right")
           .foregroundStyle(.secondary)
       }
+      .contentShape(.rect)
     }
     .buttonStyle(.plain)
-    .contentShape(.rect)
   }
 }
 

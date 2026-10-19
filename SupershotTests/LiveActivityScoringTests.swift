@@ -1,3 +1,4 @@
+#if os(iOS)
 import SharedModels
 import WidgetSupport
 import GameCore
@@ -117,3 +118,5 @@ extension SupershotTestSuite {
     }
   }
 }
+
+#endif

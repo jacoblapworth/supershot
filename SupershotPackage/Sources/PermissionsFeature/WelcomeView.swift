@@ -24,7 +24,7 @@ package struct WelcomeView: View {
           )
           WelcomeBenefit(
             title: "Follow every quarter",
-            detail: "Follow the score with Live Activities and get quarter and break alarms.",
+            detail: "Get quarter and break notifications on Mac, plus Live Activities and alarms on iPhone and iPad.",
             symbol: "alarm.fill",
             isPro: true
           )

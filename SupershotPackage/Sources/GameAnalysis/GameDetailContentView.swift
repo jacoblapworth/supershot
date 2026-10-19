@@ -39,6 +39,10 @@ package struct GameDetailContentView: View {
             .id("gameAnalysis")
           }
         }
+        #if os(macOS)
+          .frame(maxWidth: 960)
+          .frame(maxWidth: .infinity)
+        #endif
         .padding(.horizontal)
         .padding(.bottom)
       }

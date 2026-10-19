@@ -27,6 +27,7 @@ package struct AlarmPermissionFeature {
   package enum Action {
     case refresh(SubscriptionEntitlement)
     case enableButtonTapped
+    case statusResponse(AlarmAuthorizationStatus)
     case authorizationResponse(Result<AlarmAuthorizationStatus, any Error>)
     case delegate(Delegate)
 
@@ -44,10 +45,17 @@ package struct AlarmPermissionFeature {
       case .refresh(let access):
         state.access = access
         guard !state.isRequesting else { return .none }
+        return .run { send in
+          await send(.statusResponse(await alarmAuthorization.status()))
+        }
+        .cancellable(id: "authorizationStatus", cancelInFlight: true)
+
+      case .statusResponse(let status):
+        guard !state.isRequesting else { return .none }
         let previous = state.authorization
-        state.authorization = alarmAuthorization.status()
+        state.authorization = status
         if state.authorization != previous { state.errorMessage = nil }
-        if access == .pro, previous != .authorized, state.authorization == .authorized {
+        if state.access == .pro, previous != .authorized, state.authorization == .authorized {
           return .send(.delegate(.authorized))
         }
         return .none
@@ -60,10 +68,12 @@ package struct AlarmPermissionFeature {
         guard state.authorization == .notDetermined else { return .none }
         state.isRequesting = true
         state.errorMessage = nil
-        return .run { send in
-          await send(
-            .authorizationResponse(await Result { try await alarmAuthorization.request() }))
-        }
+        return .merge(
+          .cancel(id: "authorizationStatus"),
+          .run { send in
+            await send(.authorizationResponse(await Result { try await alarmAuthorization.request() }))
+          }
+        )
 
       case .authorizationResponse(.success(let status)):
         state.isRequesting = false
@@ -73,7 +83,11 @@ package struct AlarmPermissionFeature {
 
       case .authorizationResponse(.failure):
         state.isRequesting = false
-        state.errorMessage = "Supershot couldn’t request alarm access. Try again."
+        #if os(macOS)
+          state.errorMessage = "Supershot couldn’t request notification access. Try again."
+        #else
+          state.errorMessage = "Supershot couldn’t request alarm access. Try again."
+        #endif
         return .none
 
       case .delegate:

@@ -187,7 +187,9 @@ extension SupershotTestSuite {
         $0.alarmAuthorization.request = { Issue.record("Unexpected request"); return .denied }
       }
       await store.send(.refresh(.free)) { $0.access = .free }
+      await store.receive(\.statusResponse)
       await store.send(.refresh(.pro)) { $0.access = .pro }
+      await store.receive(\.statusResponse)
     }
 
     @Test(arguments: [AlarmAuthorizationStatus.authorized, .denied])
@@ -225,7 +227,11 @@ extension SupershotTestSuite {
       await store.send(.enableButtonTapped) { $0.isRequesting = true }
       await store.receive(\.authorizationResponse) {
         $0.isRequesting = false
-        $0.errorMessage = "Supershot couldn’t request alarm access. Try again."
+        #if os(macOS)
+          $0.errorMessage = "Supershot couldn’t request notification access. Try again."
+        #else
+          $0.errorMessage = "Supershot couldn’t request alarm access. Try again."
+        #endif
       }
       store.dependencies.alarmAuthorization.request = { .authorized }
       await store.send(.enableButtonTapped) { $0.isRequesting = true; $0.errorMessage = nil }
@@ -241,7 +247,8 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: state) { AlarmPermissionFeature() } withDependencies: {
         $0.alarmAuthorization.status = { .authorized }
       }
-      await store.send(.refresh(.pro)) { $0.authorization = .authorized }
+      await store.send(.refresh(.pro))
+      await store.receive(\.statusResponse) { $0.authorization = .authorized }
       await store.receive { if case .delegate(.authorized) = $0 { true } else { false } }
     }
 

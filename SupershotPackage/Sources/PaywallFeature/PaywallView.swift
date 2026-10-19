@@ -37,7 +37,7 @@ package struct PaywallView: View {
       .ignoresSafeArea()
     }
     #if os(macOS)
-      .frame(minWidth: 440, minHeight: 700)
+      .frame(minWidth: 440, idealWidth: 520, minHeight: 420, idealHeight: 600)
     #endif
     .interactiveDismissDisabled(store.operation != nil)
     .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
@@ -104,7 +104,7 @@ private struct ProBenefitCarousel: View {
           ProBenefitSlide(
             isActivity: true,
             title: "Live Activities",
-            detail: "Follow the score and timer from your Lock Screen and Dynamic Island.",
+            detail: "Follow the score and timer from your iPhone or iPad Lock Screen and Dynamic Island.",
             textHeight: textHeight
           )
           .containerRelativeFrame(.horizontal)
@@ -112,7 +112,7 @@ private struct ProBenefitCarousel: View {
           ProBenefitSlide(
             isActivity: false,
             title: "Alarm alerts",
-            detail: "Get quarter-end alerts, even when Supershot isn’t on screen.",
+            detail: "Get quarter and break notifications on Mac, and alarm alerts on iPhone and iPad.",
             textHeight: textHeight
           )
           .containerRelativeFrame(.horizontal)
