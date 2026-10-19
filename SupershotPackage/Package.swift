@@ -17,6 +17,8 @@ let package = Package(
   name: "SupershotPackage",
   platforms: [.iOS("27.0"), .macOS("27.0")],
   products: [
+    .library(name: "FixtureParser", targets: ["FixtureParser"]),
+    .executable(name: "FixtureParserHarness", targets: ["FixtureParserHarness"]),
     .library(name: "TestSupport", targets: ["TestSupport"]),
     .library(name: "SharedModels", targets: ["SharedModels"]),
     .library(name: "WidgetSupport", targets: ["WidgetSupport"]),
@@ -57,6 +59,25 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.11.0"),
   ],
   targets: [
+    .target(
+      name: "FixtureParser",
+      dependencies: [.product(name: "Dependencies", package: "swift-dependencies")],
+      swiftSettings: appSwiftSettings
+    ),
+    .executableTarget(
+      name: "FixtureParserHarness",
+      dependencies: ["FixtureParser"],
+      swiftSettings: appSwiftSettings
+    ),
+    .testTarget(
+      name: "FixtureParserTests",
+      dependencies: [
+        "FixtureParser",
+        .product(name: "CustomDump", package: "swift-custom-dump"),
+        .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
+      ],
+      swiftSettings: appSwiftSettings
+    ),
     .target(
       name: "SharedModels",
       dependencies: [],

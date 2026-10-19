@@ -29,6 +29,9 @@
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
       <Testables>
+         <TestableReference skipped="NO" parallelizable="YES">
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="FixtureParserTests" BuildableName="FixtureParserTests" BlueprintName="FixtureParserTests" ReferencedContainer="container:SupershotPackage"/>
+         </TestableReference>
          <TestableReference
             skipped = "NO"
             parallelizable = "YES">
