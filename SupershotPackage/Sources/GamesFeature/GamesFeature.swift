@@ -39,6 +39,7 @@ package struct GamesFeature {
   @ObservableState
   package struct State: Equatable {
     @Presents package var alert: AlertState<Alert>?
+    package var filter = GamesFilter.all
     package var path = StackState<GamesPath.State>()
     package var pendingGameResume: PendingGameResume?
 
@@ -51,10 +52,12 @@ package struct GamesFeature {
 
     package init(
       alert: AlertState<Alert>? = nil,
+      filter: GamesFilter = .all,
       path: StackState<GamesPath.State> = StackState<GamesPath.State>(),
       pendingGameResume: PendingGameResume? = nil
     ) {
       self.alert = alert
+      self.filter = filter
       self.path = path
       self.pendingGameResume = pendingGameResume
     }
@@ -64,6 +67,7 @@ package struct GamesFeature {
     case alert(PresentationAction<Alert>)
     case delegate(Delegate)
     case deleteGameButtonTapped(Game.ID)
+    case filterButtonTapped(GamesFilter)
     case gameDeepLinkOpened(Game.ID)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
@@ -96,6 +100,10 @@ package struct GamesFeature {
 
       case .deleteGameButtonTapped(let gameID):
         return deleteGameEffect(gameID: gameID)
+
+      case .filterButtonTapped(let filter):
+        state.filter = filter
+        return .none
 
       case .gameDeepLinkOpened(let gameID):
         for (id, destination) in zip(state.path.ids, state.path) {

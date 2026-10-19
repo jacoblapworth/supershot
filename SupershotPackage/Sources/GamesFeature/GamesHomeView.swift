@@ -51,7 +51,8 @@ package struct GamesHomeView: View {
   }
 
   private var gamesList: some View {
-    List {
+    let visibleGames = store.filter.games(from: gamesResponse.games)
+    return List {
       if proAccess == .free {
         Section {
           ProPromotionCard(
@@ -77,8 +78,21 @@ package struct GamesHomeView: View {
             .controlSize(.large)
           }
           .listRowBackground(Color.clear)
+        } else if visibleGames.isEmpty {
+          ContentUnavailableView {
+            Label(store.filter.emptyTitle, systemImage: "line.3.horizontal.decrease")
+          } description: {
+            Text("Choose another filter to see your game history.")
+          } actions: {
+            Button("Show all games") {
+              store.send(.filterButtonTapped(.all))
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("gamesFilter.showAll")
+          }
+          .listRowBackground(Color.clear)
         } else {
-          ForEach(gamesResponse.games) { game in
+          ForEach(visibleGames) { game in
             Button {
               store.send(.gameRowTapped(game))
             } label: {
@@ -100,6 +114,14 @@ package struct GamesHomeView: View {
     }
     .navigationTitle("Games")
     .toolbar {
+      ToolbarItem(placement: .largeSubtitle) {
+        GamesFilterControl(selection: store.filter) { filter in
+          store.send(.filterButtonTapped(filter))
+        }
+      }
+#if os(iOS)
+      .sharedBackgroundVisibility(.hidden)
+#endif
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.newGameButtonTapped)
@@ -129,6 +151,36 @@ package struct GamesHomeView: View {
   GamesHomeView(
     proAccess: .free,
     store: Store(initialState: GamesFeature.State()) {
+      GamesFeature()
+    }
+  )
+}
+
+#Preview("In progress") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
+  }
+  var state = GamesFeature.State()
+  state.filter = .inProgress
+  return GamesHomeView(
+    proAccess: .pro,
+    store: Store(initialState: state) {
+      GamesFeature()
+    }
+  )
+}
+
+#Preview("Completed") {
+  let _ = prepareDependencies {
+    try! $0.bootstrapDatabase()
+    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
+  }
+  var state = GamesFeature.State()
+  state.filter = .completed
+  return GamesHomeView(
+    proAccess: .pro,
+    store: Store(initialState: state) {
       GamesFeature()
     }
   )

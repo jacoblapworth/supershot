@@ -36,6 +36,96 @@ extension SupershotTestSuite {
     $0.uuid = .incrementing
   }) struct GamesFeatureTests {
     @Test
+    func filterSelectionSurvivesSetupNavigation() async {
+      let store = TestStore(initialState: GamesFeature.State()) {
+        GamesFeature()
+      }
+      expectNoDifference(store.state.filter, .all)
+
+      await store.send(.filterButtonTapped(.completed)) {
+        $0.filter = .completed
+      }
+      await store.send(.newGameButtonTapped) {
+        $0.path.append(.setup(NewGameFeature.State()))
+      }
+      let setupID = store.state.path.ids[0]
+      await store.send(.path(.popFrom(id: setupID))) {
+        $0.path.removeAll()
+      }
+      expectNoDifference(store.state.filter, .completed)
+      await store.send(.filterButtonTapped(.all)) {
+        $0.filter = .all
+      }
+    }
+
+    @Test
+    func filtersPreserveRowsAndOrdering() {
+      let completed = GameListItem.previewCompleted
+      let unfinished = GameListItem.previewInProgress
+      let otherCompleted = GameListItem(
+        endedAt: completed.endedAt,
+        id: UUID(4),
+        startedAt: completed.startedAt,
+        teamAName: "Foxes",
+        teamAScore: 20,
+        teamBName: "Owls",
+        teamBScore: 18
+      )
+      let games = [unfinished, completed, otherCompleted]
+
+      expectNoDifference(GamesFilter.all.games(from: games), games)
+      expectNoDifference(GamesFilter.inProgress.games(from: games), [unfinished])
+      expectNoDifference(GamesFilter.completed.games(from: games), [completed, otherCompleted])
+      for filter in GamesFilter.allCases {
+        expectNoDifference(filter.games(from: []), [])
+      }
+      expectNoDifference(GamesFilter.completed.games(from: [unfinished]), [])
+      expectNoDifference(GamesFilter.inProgress.games(from: [completed]), [])
+    }
+
+    @Test
+    func unfinishedGamesStayInProgressUntilPersistedFinish() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      try await database.write { db in
+        try Self.seedGameAndGoal(db)
+        for position in 0..<3 {
+          try GamePeriod.find(testGamePeriodID(gameID: UUID(3), position: position)).update {
+            $0.breakAfterDurationSeconds = #bind(60)
+          }.execute(db)
+        }
+      }
+
+      // Paused play, a break, and final-period confirmation all remain unfinished.
+      for phaseIndex in [0, 1, 6] {
+        try await database.write { db in
+          try Game.find(UUID(3)).update {
+            $0.currentPhaseIndex = #bind(phaseIndex)
+            $0.elapsedSeconds = #bind(phaseIndex == 6 ? 900 : 0)
+            $0.timerEndsAt = #bind(nil as Date?)
+          }.execute(db)
+        }
+        let games = try await database.read { try GamesRequest().fetch($0).games }
+        expectNoDifference(GamesFilter.inProgress.games(from: games).map(\.id), [UUID(3)])
+        expectNoDifference(GamesFilter.completed.games(from: games), [])
+      }
+
+      try await database.write { db in
+        try Game.find(UUID(3)).update {
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 2_000))
+        }.execute(db)
+      }
+      let finishedGames = try await database.read { try GamesRequest().fetch($0).games }
+      expectNoDifference(GamesFilter.inProgress.games(from: finishedGames), [])
+      expectNoDifference(GamesFilter.completed.games(from: finishedGames).map(\.id), [UUID(3)])
+      try await database.write { db in
+        try Game.find(UUID(3)).delete().execute(db)
+      }
+      let remainingGames = try await database.read { try GamesRequest().fetch($0).games }
+      expectNoDifference(GamesFilter.completed.games(from: remainingGames), [])
+    }
+
+    @Test
     func completedGameOpensDetail() async {
       let game = GameListItem(
         endedAt: Date(timeIntervalSince1970: 2_000),
@@ -100,6 +190,7 @@ extension SupershotTestSuite {
     @Test
     func finishingGameReplacesScoringWithDetailRoute() async {
       var state = GamesFeature.State()
+      state.filter = .inProgress
       state.path.append(.scoring(Self.scoringState()))
       let scoringID = state.path.ids[0]
       let store = TestStore(initialState: state) {
@@ -122,6 +213,7 @@ extension SupershotTestSuite {
         return
       }
       expectNoDifference(detail.gameID, UUID(3))
+      expectNoDifference(store.state.filter, .inProgress)
     }
 
     @Test

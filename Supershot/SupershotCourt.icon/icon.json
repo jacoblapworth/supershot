@@ -1,6 +1,6 @@
 {
   "fill" : {
-    "automatic-gradient" : "display-p3:0.96783,0.63784,0.00000,1.00000"
+    "automatic-gradient" : "display-p3:0.59631,0.23185,0.96783,1.00000"
   },
   "groups" : [
     {
@@ -41,7 +41,7 @@
       "layers" : [
         {
           "fill" : {
-            "solid" : "display-p3:0.89397,0.59647,0.01070,1.00000"
+            "solid" : "display-p3:0.74603,0.23708,0.89397,0.90000"
           },
           "image-name" : "bg 2.svg",
           "name" : "bg 2"
