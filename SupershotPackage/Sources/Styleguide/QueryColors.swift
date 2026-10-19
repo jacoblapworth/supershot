@@ -67,6 +67,7 @@ nonisolated extension GameAnalysis {
   package init(
     goalTimeline: GoalTimeline = GoalTimeline(), periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
+    statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColor: Color, teamAName: String = "",
     teamBBibColor: Color = ColorPalette.red, teamBName: String = ""
   ) {
@@ -74,6 +75,7 @@ nonisolated extension GameAnalysis {
       goalTimeline: goalTimeline,
       periods: periods,
       statistics: statistics,
+      statisticsByPeriod: statisticsByPeriod,
       teamABibColorHex: teamABibColor.hex(),
       teamAName: teamAName,
       teamBBibColorHex: teamBBibColor.hex(),
@@ -89,6 +91,7 @@ nonisolated extension CompletedGameDetail {
     endedAt: Date, goalTimeline: GoalTimeline, id: Game.ID, location: GameLocation? = nil,
     periods: [GamePeriod] = [], startedAt: Date,
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
+    statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColor: Color, teamAName: String, teamAScore: Int,
     teamBBibColor: Color = ColorPalette.red, teamBName: String, teamBScore: Int
   ) {
@@ -100,6 +103,7 @@ nonisolated extension CompletedGameDetail {
       periods: periods,
       startedAt: startedAt,
       statistics: statistics,
+      statisticsByPeriod: statisticsByPeriod,
       teamABibColorHex: teamABibColor.hex(),
       teamAName: teamAName,
       teamAScore: teamAScore,
