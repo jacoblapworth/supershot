@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: iOS tests
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Check Xcode and select simulator
+        id: environment
+        run: |
+          if [[ ! -d "$DEVELOPER_DIR" ]]; then
+            echo "::error::Xcode 27.2 is required at $DEVELOPER_DIR."
+            exit 1
+          fi
+          xcodebuild -version
+          xcode_version=$(xcodebuild -version | tr '\n ' '--')
+          echo "xcode-version=$xcode_version" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          simulator_id=$(python3 - "$RUNNER_TEMP/simulators.json" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1]) as source:
+              devices = json.load(source)["devices"]
+          for device in devices.get("com.apple.CoreSimulator.SimRuntime.iOS-27-0", []):
+              if device["name"] == "iPhone 17" and device.get("isAvailable", False):
+                  print(device["udid"])
+                  break
+          else:
+              sys.exit("::error::An available iPhone 17 simulator on iOS 27.0 is required.")
+          PY
+          )
+          echo "simulator-id=$simulator_id" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Swift packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-${{ hashFiles('SupershotPackage/Package.resolved', 'SupershotWorkspace.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Run all tests
+        env:
+          SIMULATOR_ID: ${{ steps.environment.outputs.simulator-id }}
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/test-results"
+          xcodebuild test \
+            -workspace SupershotWorkspace.xcworkspace \
+            -scheme 'Supershot Dev' \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -onlyUsePackageVersionsFromResolvedFile \
+            -skipMacroValidation \
+            -resultBundlePath "$RUNNER_TEMP/test-results/Tests.xcresult" \
+            2>&1 | tee "$RUNNER_TEMP/test-results/xcodebuild.log" | xcbeautify
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-test-results
+          path: ${{ runner.temp }}/test-results
+          retention-days: 7
+          if-no-files-found: warn
