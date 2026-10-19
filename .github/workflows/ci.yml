@@ -19,12 +19,9 @@ jobs:
     timeout-minutes: 45
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
-    defaults:
-      run:
-        shell: bash
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -56,7 +53,7 @@ jobs:
           echo "simulator-id=$simulator_id" >> "$GITHUB_OUTPUT"
 
       - name: Cache Swift packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/SourcePackages
           key: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-${{ hashFiles('SupershotPackage/Package.resolved', 'SupershotWorkspace.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
@@ -81,7 +78,7 @@ jobs:
 
       - name: Upload test results
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-test-results
           path: ${{ runner.temp }}/test-results
