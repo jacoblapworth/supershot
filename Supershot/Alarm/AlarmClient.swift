@@ -63,7 +63,7 @@ nonisolated extension AlarmClient {
         return false
       },
       updateActivity: { snapshot, startsIfNeeded in
-        guard snapshot.game.endedAt == nil else { return }
+        guard snapshot.game.isInProgress else { return }
         let content = ActivityContent(
           state: GameActivityAttributes.ContentState(snapshot: snapshot),
           staleDate: snapshot.game.timerEndsAt

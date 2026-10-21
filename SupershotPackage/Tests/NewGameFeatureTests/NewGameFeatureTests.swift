@@ -256,12 +256,15 @@ extension SupershotTestSuite {
       }
 
       await store.send(.startGameButtonTapped) {
+        $0.inFlightDraft = $0.draft
         $0.isSaving = true
       }
       await store.receive {
         guard case .startGameResponse(.success) = $0 else { return false }
         return true
       } assert: {
+        $0.inFlightDraft = nil
+        $0.hasStarted = true
         $0.isSaving = false
       }
       await store.receive {

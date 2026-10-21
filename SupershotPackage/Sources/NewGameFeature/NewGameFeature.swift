@@ -71,6 +71,18 @@ package struct NewGameFeature {
 
   @ObservableState
   package struct State: Equatable {
+    package var gameID: Game.ID
+    package var createdAt: Date
+    package var periodIDs: [GamePeriod.ID]
+    package var scheduledAt: Date?
+    package var court = ""
+    package var requiresExistingGame = false
+    package var lastSavedDraft: GameSetupDraft?
+    package var inFlightDraft: GameSetupDraft?
+    package var pendingSaveIntent: SaveIntent?
+    package var failedSaveIntent: SaveIntent?
+    package var closesAfterSave = false
+    package var hasStarted = false
     package var alarms = AlarmPermissionFeature.State()
     package var timing = SetupTiming()
     package var customizesBreaks: Bool {
@@ -103,6 +115,11 @@ package struct NewGameFeature {
     }
 
     package init() {
+      @Dependency(\.uuid) var uuid
+      @Dependency(\.date.now) var now
+      gameID = uuid()
+      createdAt = now
+      periodIDs = (0..<4).map { _ in uuid() }
       @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
       timing.breakStartPolicy = defaultBreakStartPolicy
       @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
@@ -113,6 +130,60 @@ package struct NewGameFeature {
       halfTimeDuration = defaultBreak
       periodDuration = DurationDraft(totalSeconds: defaultPeriodDurationSeconds)
       secondBreakDuration = defaultBreak
+    }
+
+    package init(snapshot: GameSnapshot) {
+      self.init()
+      gameID = snapshot.game.id
+      createdAt = snapshot.game.createdAt
+      periodIDs = snapshot.periods.map(\.id)
+      requiresExistingGame = true
+      scheduledAt = snapshot.game.scheduledAt
+      court = snapshot.game.court ?? ""
+      leftTeam.team = snapshot.teamA
+      leftTeam.bibColor = snapshot.game.teamABibColor
+      rightTeam.team = snapshot.teamB
+      rightTeam.bibColor = snapshot.game.teamBBibColor
+      firstCentrePass = snapshot.game.centrePassTeamID == snapshot.teamB.id ? .teamB : .teamA
+      timing.breakStartPolicy = snapshot.game.breakStartPolicy
+      if let first = snapshot.periods.first {
+        periodDuration = .init(totalSeconds: first.durationSeconds)
+      }
+      let breaks = snapshot.periods.dropLast().map { $0.breakAfterDurationSeconds ?? 0 }
+      firstBreakDuration = .init(totalSeconds: breaks.first ?? 0)
+      halfTimeDuration = .init(totalSeconds: breaks.dropFirst().first ?? 0)
+      secondBreakDuration = .init(totalSeconds: breaks.dropFirst(2).first ?? 0)
+      customizesBreaks = Set(breaks).count > 1
+      if let location = snapshot.game.location { self.location = .loaded(location) }
+      lastSavedDraft = draft
+    }
+
+    /// Only committed setup values are included; temporary child-editor edits stay transient.
+    package var draft: GameSetupDraft? {
+      guard let teamA = leftTeam.team, let teamB = rightTeam.team,
+        teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
+      else { return nil }
+      let court = court.trimmingCharacters(in: .whitespacesAndNewlines)
+      let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration]
+      return GameSetupDraft(
+        game: Game(
+          id: gameID, startedAt: nil, teamAID: teamA.id,
+          teamABibColorHex: leftTeam.bibColor.hex(), teamBID: teamB.id,
+          teamBBibColorHex: rightTeam.bibColor.hex(),
+          centrePassTeamID: firstCentrePass == .teamA ? teamA.id : teamB.id,
+          latitude: gameLocation?.latitude, longitude: gameLocation?.longitude,
+          pointOfInterestName: gameLocation?.pointOfInterestName,
+          breakStartPolicy: timing.breakStartPolicy, createdAt: createdAt,
+          scheduledAt: scheduledAt, court: court.isEmpty ? nil : court
+        ),
+        periods: periodIDs.enumerated().map { position, id in
+          GamePeriod(
+            id: id, gameID: gameID, position: position,
+            durationSeconds: periodDuration.totalSeconds!,
+            breakAfterDurationSeconds: position < breaks.count ? breaks[position].totalSeconds : nil
+          )
+        }
+      )
     }
 
     package var breakDurationsAreValid: Bool {
@@ -170,9 +241,22 @@ package struct NewGameFeature {
     }
   }
 
+  package enum SaveIntent: Equatable {
+    case autosave
+    case close
+    case start
+  }
+
   package enum Action: BindableAction {
     case alarms(AlarmPermissionFeature.Action)
     case binding(BindingAction<State>)
+    case closeButtonTapped
+    case configurationChanged
+    case sceneBecameInactive
+    case scheduleToggleChanged(Bool)
+    case saveGameButtonTapped
+    case retrySaveButtonTapped
+    case plannedGameResponse(Result<GameSnapshot, any Error>)
     case delegate(Delegate)
     case destination(PresentationAction<NewGameDestination.Action>)
     case destinationDidDismiss
@@ -189,25 +273,52 @@ package struct NewGameFeature {
 
     package enum Delegate {
       case gameStarted(ScoringFeature.State)
+      case gameSaved
       case proPromotionTapped
     }
-  }
-
-  private struct PreparedTeam: Sendable {
-    let bibColor: Color
-    let team: Team
   }
 
   @Dependency(\.date.now) package var now
   @Dependency(\.defaultDatabase) package var database
   @Dependency(\.locationClient) package var locationClient
-  @Dependency(\.uuid) package var uuid
 
   package var body: some Reducer<State, Action> {
     Scope(state: \.alarms, action: \.alarms) { AlarmPermissionFeature() }
     BindingReducer()
     Reduce { state, action in
       switch action {
+      case .scheduleToggleChanged(let scheduled):
+        state.scheduledAt = scheduled ? (state.scheduledAt ?? now) : nil
+        return .none
+
+      case .configurationChanged, .sceneBecameInactive:
+        guard !state.hasStarted, state.draft != state.lastSavedDraft else { return .none }
+        return save(state: &state, intent: .autosave)
+
+      case .closeButtonTapped, .saveGameButtonTapped:
+        return save(state: &state, intent: .close)
+
+      case .retrySaveButtonTapped:
+        return save(state: &state, intent: state.failedSaveIntent ?? .autosave)
+
+      case .plannedGameResponse(.success):
+        state.isSaving = false
+        state.requiresExistingGame = true
+        state.lastSavedDraft = state.inFlightDraft
+        state.inFlightDraft = nil
+        let intent = state.pendingSaveIntent ?? (state.closesAfterSave ? .close : .autosave)
+        state.pendingSaveIntent = nil
+        return save(state: &state, intent: intent)
+
+      case .plannedGameResponse(.failure):
+        state.closesAfterSave = state.closesAfterSave || state.pendingSaveIntent == .close
+        state.failedSaveIntent = state.closesAfterSave ? .close : .autosave
+        state.isSaving = false
+        state.inFlightDraft = nil
+        state.pendingSaveIntent = nil
+        state.errorMessage = "Could not save the game. Your changes are still here. Try again."
+        return .none
+
       case .binding:
         state.errorMessage = nil
         if !state.customizesBreaks {
@@ -240,6 +351,12 @@ package struct NewGameFeature {
         return loadLocation(state: &state, authorization: status)
 
       case .sceneBecameActive:
+        if state.requiresExistingGame {
+          switch state.location {
+          case .idle, .loaded: return .none
+          default: break
+          }
+        }
         guard state.location != .loading, state.location != .requesting else { return .none }
         if case .loaded = state.location, locationClient.authorizationStatus() == .authorized {
           return .none
@@ -344,7 +461,6 @@ package struct NewGameFeature {
         return .none
 
       case .startGameButtonTapped:
-        guard !state.isSaving else { return .none }
         guard state.leftTeam.team != nil, state.rightTeam.team != nil else {
           state.errorMessage = "Choose both teams."
           return .none
@@ -358,19 +474,19 @@ package struct NewGameFeature {
           return .none
         }
 
-        return beginStartingGame(state: &state)
+        return save(state: &state, intent: .start)
 
       case .startGameResponse(.success(let scoring)):
+        state.hasStarted = true
+        state.inFlightDraft = nil
         state.isSaving = false
         return .send(.delegate(.gameStarted(scoring)))
 
-      case .startGameResponse(.failure(let error)):
-        if case .duplicateTeam = error as? SetupPersistenceError {
-          state.errorMessage = "Choose two different teams."
-        } else {
-          state.errorMessage = "Could not start the game. Please choose the teams again."
-        }
+      case .startGameResponse(.failure):
+        state.failedSaveIntent = .start
+        state.errorMessage = "Could not start the game. Your changes are still here. Try again."
         state.isSaving = false
+        state.inFlightDraft = nil
         return .none
 
       case .swapTeamsButtonTapped:
@@ -386,7 +502,7 @@ package struct NewGameFeature {
         return .none
 
       case .task:
-        guard state.location == .idle else { return .none }
+        guard !state.requiresExistingGame, state.location == .idle else { return .none }
         return loadLocation(state: &state)
 
       }
@@ -405,126 +521,41 @@ package struct NewGameFeature {
     }
   }
 
-  private func beginStartingGame(state: inout State) -> Effect<Action> {
-    guard
-      let leftTeam = state.leftTeam.team,
-      let rightTeam = state.rightTeam.team,
-      let periodDurationSeconds = state.periodDuration.totalSeconds,
-      let firstBreakDurationSeconds = state.firstBreakDuration.totalSeconds,
-      let halfTimeDurationSeconds = state.halfTimeDuration.totalSeconds,
-      let secondBreakDurationSeconds = state.secondBreakDuration.totalSeconds
-    else { return .none }
-
-    let gameID = uuid()
-    let teamA = PreparedTeam(
-      bibColor: state.leftTeam.bibColor,
-      team: leftTeam
-    )
-    let teamB = PreparedTeam(
-      bibColor: state.rightTeam.bibColor,
-      team: rightTeam
-    )
-    let centrePassTeamID = state.firstCentrePass == .teamA ? teamA.team.id : teamB.team.id
-    let breakDurations = [
-      firstBreakDurationSeconds,
-      halfTimeDurationSeconds,
-      secondBreakDurationSeconds,
-    ]
-    let periods = (0..<4).map { position in
-      GamePeriod(
-        id: uuid(),
-        gameID: gameID,
-        position: position,
-        durationSeconds: periodDurationSeconds,
-        breakAfterDurationSeconds: breakDurations.indices.contains(position)
-          ? breakDurations[position]
-          : nil
-      )
+  private func save(state: inout State, intent: SaveIntent) -> Effect<Action> {
+    guard !state.hasStarted else { return .none }
+    if state.isSaving {
+      if intent != .autosave { state.pendingSaveIntent = intent }
+      return .none
     }
-    let startedAt = now
-    let location = state.gameLocation
-
+    guard let draft = state.draft else {
+      return intent == .close ? .send(.delegate(.gameSaved)) : .none
+    }
+    if intent != .start, draft == state.lastSavedDraft {
+      return intent == .close ? .send(.delegate(.gameSaved)) : .none
+    }
+    state.closesAfterSave = intent == .close
+    state.failedSaveIntent = nil
     state.errorMessage = nil
     state.isSaving = true
-    return startGameEffect(
-      breakStartPolicy: state.timing.breakStartPolicy,
-      centrePassTeamID: centrePassTeamID,
-      gameID: gameID,
-      location: location,
-      periods: periods,
-      startedAt: startedAt,
-      teamA: teamA,
-      teamB: teamB
-    )
-  }
-
-  private func startGameEffect(
-    breakStartPolicy: BreakStartPolicy,
-    centrePassTeamID: Team.ID,
-    gameID: Game.ID,
-    location: GameLocation?,
-    periods: [GamePeriod],
-    startedAt: Date,
-    teamA: PreparedTeam,
-    teamB: PreparedTeam
-  ) -> Effect<Action> {
-    .run { send in
+    state.inFlightDraft = draft
+    let requiresExistingGame = state.requiresExistingGame
+    let startedAt = intent == .start ? now : nil
+    return .run { send in
       let result = await Result {
         try await database.write { db in
-          guard teamA.team.id != teamB.team.id else {
-            throw SetupPersistenceError.duplicateTeam
-          }
-
-          let finalTeams = try Team.fetchAll(db)
-          let existingTeamIDs = Set(finalTeams.map(\.id))
-          for team in [teamA.team, teamB.team] {
-            guard existingTeamIDs.contains(team.id) else {
-              throw SetupPersistenceError.teamUnavailable
-            }
-          }
-
-          try Game.insert {
-            Game(
-              id: gameID,
-              startedAt: startedAt,
-              endedAt: nil,
-              teamAID: teamA.team.id,
-              teamABibColorHex: teamA.bibColor.hex(),
-              teamBID: teamB.team.id,
-              teamBBibColorHex: teamB.bibColor.hex(),
-              centrePassTeamID: centrePassTeamID,
-              latitude: location?.latitude,
-              longitude: location?.longitude,
-              pointOfInterestName: location?.pointOfInterestName,
-              isAwaitingCentrePassConfirmation: false,
-              currentPhaseIndex: 0,
-              elapsedSeconds: 0,
-              timerEndsAt: nil,
-              breakStartPolicy: breakStartPolicy
-            )
-          }
-          .execute(db)
-          try GamePeriod.insert { periods }.execute(db)
+          try draft.save(db, startingAt: startedAt, requiresExistingGame: requiresExistingGame)
         }
-
-        return await ScoringFeature.State(
-          centrePassTeamID: centrePassTeamID,
-          gameID: gameID,
-          periods: periods,
-          startedAt: startedAt,
-          teamA: ScoringFeature.Team(
-            id: teamA.team.id,
-            bibColor: teamA.bibColor,
-            name: teamA.team.name
-          ),
-          teamB: ScoringFeature.Team(
-            id: teamB.team.id,
-            bibColor: teamB.bibColor,
-            name: teamB.team.name
-          )
-        )
       }
-      await send(.startGameResponse(result))
+      if intent == .start {
+        switch result {
+        case .success(let snapshot):
+          await send(.startGameResponse(.success(await ScoringFeature.State(snapshot: snapshot))))
+        case .failure(let error):
+          await send(.startGameResponse(.failure(error)))
+        }
+      } else {
+        await send(.plannedGameResponse(result))
+      }
     }
   }
 
@@ -630,9 +661,4 @@ package struct NewGameTeamPicker {
   package init() {
 
   }
-}
-
-private nonisolated enum SetupPersistenceError: Error {
-  case duplicateTeam
-  case teamUnavailable
 }

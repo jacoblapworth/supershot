@@ -82,6 +82,22 @@ package struct ScoringView: View {
 
           }
           .padding(.top)
+          if store.scheduledAt != nil || store.court != nil {
+            VStack(spacing: 8) {
+              if let scheduledAt = store.scheduledAt {
+                LabeledContent("Scheduled") {
+                  Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
+                }
+              }
+              LabeledContent("Started") {
+                Text(store.startedAt.formatted(date: .abbreviated, time: .shortened))
+              }
+              if let court = store.court { LabeledContent("Court", value: court) }
+            }
+            .font(.subheadline)
+            .padding()
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+          }
           #if os(macOS)
             MacScoringControls(store: store)
             AlarmPermissionCard(

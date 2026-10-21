@@ -46,7 +46,7 @@ extension SupershotTestSuite {
         $0.filter = .completed
       }
       await store.send(.newGameButtonTapped) {
-        $0.path.append(.setup(NewGameFeature.State()))
+        $0.path.append(.setup(withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }))
       }
       let setupID = store.state.path.ids[0]
       await store.send(.path(.popFrom(id: setupID))) {
@@ -154,7 +154,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.newGameButtonTapped) {
-        $0.path.append(.setup(NewGameFeature.State()))
+        $0.path.append(.setup(withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }))
       }
     }
 

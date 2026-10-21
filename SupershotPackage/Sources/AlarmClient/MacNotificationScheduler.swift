@@ -168,7 +168,8 @@
       @Dependency(\.date) var date
       let scheduler = MacNotificationScheduler(delivery: delivery, now: { date.now }) { snapshot in
         guard !Task.isCancelled,
-          featureFlags.isEnabled(.timerAlerts, (try? await subscription.currentAccess()) ?? .unknown)
+          featureFlags.isEnabled(
+            .timerAlerts, (try? await subscription.currentAccess()) ?? .unknown)
         else {
           return false
         }
@@ -178,7 +179,7 @@
             try GameSnapshot.fetch($0, gameID: snapshot.game.id)
           })
         else { return false }
-        return current.game.endedAt == nil && current.game.timing == snapshot.game.timing
+        return current.game.isInProgress && current.game.timing == snapshot.game.timing
       }
       return Self(
         scheduleAlarm: { await scheduler.schedule($0) },

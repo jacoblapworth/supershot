@@ -22,6 +22,30 @@ extension SupershotTestSuite {
     $0.date.now = Date(timeIntervalSince1970: 1_000)
   })
   struct AppIntentsTests {
+    @Test func resolvesPlannedGameMetadataWithoutInventingAnActualStartDate() async throws {
+      @Dependencies.Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let scheduledAt = Date(timeIntervalSince1970: 2_000)
+      try await database.write { db in
+        try Team.insert {
+          Team(id: UUID(1), name: "A")
+          Team(id: UUID(2), name: "B")
+        }.execute(db)
+        try Game.insert {
+          Game(
+            id: UUID(3), startedAt: nil, teamAID: UUID(1), teamBID: UUID(2),
+            createdAt: Date(timeIntervalSince1970: 1_000), scheduledAt: scheduledAt, court: "A")
+        }.execute(db)
+      }
+      let entities = try await GameEntityQuery().entities(for: [UUID(3)])
+      let entity = try #require(entities.first)
+      #expect(entity.isPlanned)
+      #expect(entity.startedAt == nil)
+      #expect(entity.scheduledAt == scheduledAt)
+      #expect(entity.court == "A")
+      #expect(!entity.isCompleted)
+    }
+
     @Test(arguments: [BreakStartPolicy.automatic, .manual])
     func createsPausedGameWithFourQuartersAndResolvesEntities(policy: BreakStartPolicy) async throws {
       @Dependencies.Dependency(\.defaultAppStorage) var defaults

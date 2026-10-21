@@ -88,11 +88,11 @@ package struct AppFeature {
             return .none
           }
 
-          if state.games.hasScoringRoute(for: gameID) {
+          if state.games.hasGameRoute(for: gameID) {
             state.selectedTab = .games
             return .send(.games(.gameDeepLinkOpened(gameID)))
           }
-          if state.teams.hasScoringRoute(for: gameID) {
+          if state.teams.hasGameRoute(for: gameID) {
             state.selectedTab = .teams
             return .send(.teams(.gameDeepLinkOpened(gameID)))
           }
@@ -210,7 +210,8 @@ package struct AppFeature {
     }
   }
 
-  private func synchronizePremiumPresentations(_ access: SubscriptionEntitlement) -> Effect<Action> {
+  private func synchronizePremiumPresentations(_ access: SubscriptionEntitlement) -> Effect<Action>
+  {
     let showsActivity = featureFlags.isEnabled(.liveActivities, access)
     let allowsAlerts = featureFlags.isEnabled(.timerAlerts, access)
     guard showsActivity || allowsAlerts else { return cleanUpPremiumPresentations() }
@@ -235,13 +236,18 @@ package struct AppFeature {
   private func unfinishedGameIDs() async throws -> [Game.ID] {
     try await database.read { db in
       try Game.fetchAll(db)
-        .filter { $0.endedAt == nil }
+        .filter(\.isInProgress)
         .map(\.id)
     }
   }
 
   private func gameID(from url: URL) -> Game.ID? {
-    guard ["supershot", Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot-dev"].contains(url.scheme ?? ""), url.host == "game" else { return nil }
+    guard
+      [
+        "supershot",
+        Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot-dev",
+      ].contains(url.scheme ?? ""), url.host == "game"
+    else { return nil }
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 

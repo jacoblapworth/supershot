@@ -52,7 +52,18 @@ package struct GamesHomeView: View {
 
   private var gamesList: some View {
     let visibleGames = store.filter.games(from: gamesResponse.games)
+    let plannedGames = visibleGames.filter(\.isPlanned)
+    let historyGames = visibleGames.filter { !$0.isPlanned }
     return List {
+      #if os(iOS)
+        Section {
+          GamesFilterControl(selection: store.filter) { filter in
+            store.send(.filterButtonTapped(filter))
+          }
+          .listRowBackground(Color.clear)
+          .listRowInsets(.all, 0)
+        }
+      #endif
       if proAccess == .free {
         Section {
           ProPromotionCard(
@@ -66,12 +77,12 @@ package struct GamesHomeView: View {
         }
       }
 
-      Section {
+      Group {
         if gamesResponse.games.isEmpty {
           ContentUnavailableView {
             Label("No games yet", systemImage: "sportscourt")
           } description: {
-            Text("Start a game to keep score and build your history.")
+            Text("Create a game for later or start keeping score now.")
           } actions: {
             Button("New Game") {
               store.send(.newGameButtonTapped)
@@ -95,41 +106,31 @@ package struct GamesHomeView: View {
           }
           .listRowBackground(Color.clear)
         } else {
-          ForEach(visibleGames) { game in
-            Button {
-              store.send(.gameRowTapped(game))
-            } label: {
-              GameRow(game: game)
+          if store.filter == .all {
+            if !plannedGames.isEmpty {
+              Section("Planned") { gameRows(plannedGames) }
             }
-
-            .buttonStyle(.plain)
-            .listRowInsets(.all, 0)
-            .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
-            .disabled(store.pendingGameResume != nil)
-            .contextMenu {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                store.send(.deleteGameButtonTapped(game.id))
-              }
+            if !historyGames.isEmpty {
+              Section("Game history") { gameRows(historyGames) }
             }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                store.send(.deleteGameButtonTapped(game.id))
-              }
-            }
+          } else {
+            gameRows(visibleGames)
           }
         }
       }
     }
     .navigationTitle("Games")
+    #if os(iOS)
+      .navigationBarTitleDisplayMode(.large)
+    #endif
     .toolbar {
-      ToolbarItem(placement: filterPlacement) {
-        GamesFilterControl(selection: store.filter) { filter in
-          store.send(.filterButtonTapped(filter))
+      #if os(macOS)
+        ToolbarItem(placement: .principal) {
+          GamesFilterControl(selection: store.filter) { filter in
+            store.send(.filterButtonTapped(filter))
+          }
         }
-      }
-#if os(iOS)
-      .sharedBackgroundVisibility(.hidden)
-#endif
+      #endif
       ToolbarItem(placement: .primaryAction) {
         Button {
           store.send(.newGameButtonTapped)
@@ -141,12 +142,29 @@ package struct GamesHomeView: View {
     }
   }
 
-  private var filterPlacement: ToolbarItemPlacement {
-    #if os(macOS)
-      .principal
-    #else
-      .largeSubtitle
-    #endif
+  private func gameRows(_ games: [GameListItem]) -> some View {
+    ForEach(games) { game in
+      Button {
+        store.send(.gameRowTapped(game))
+      } label: {
+        GameRow(game: game)
+      }
+
+      .buttonStyle(.plain)
+      .listRowInsets(.all, 0)
+      .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+      .disabled(store.pendingGameResume != nil)
+      .contextMenu {
+        Button("Delete", systemImage: "trash", role: .destructive) {
+          store.send(.deleteGameButtonTapped(game.id))
+        }
+      }
+      .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+        Button("Delete", systemImage: "trash", role: .destructive) {
+          store.send(.deleteGameButtonTapped(game.id))
+        }
+      }
+    }
   }
 
   package init(

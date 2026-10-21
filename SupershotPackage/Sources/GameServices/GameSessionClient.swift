@@ -33,6 +33,7 @@ nonisolated public enum GameSessionCommand: Equatable, Sendable {
 
 nonisolated public enum GameSessionRejection: Error, Equatable, Sendable {
   case gameFinished
+  case gameNotStarted
   case stalePhase
   case scoringUnavailable
   case confirmationRequired
@@ -110,6 +111,9 @@ nonisolated package enum GameSessionTransaction {
     now: Date
   ) throws -> GameSessionUpdate {
     let stored = try GameSnapshot.fetch(db, gameID: gameID)
+    guard !stored.game.isPlanned else {
+      return GameSessionUpdate(outcome: .rejected(.gameNotStarted), snapshot: stored)
+    }
     var game = stored.game
     var outcome = GameSessionUpdate.Outcome.unchanged
     let commandDate: Date
