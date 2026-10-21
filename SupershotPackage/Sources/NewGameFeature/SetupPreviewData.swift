@@ -16,8 +16,8 @@ import SwiftUI
 import TeamEditingFeature
 import WidgetSupport
 
-extension NewGameFeature.State {
-  static package var previewReady: Self {
+package extension NewGameFeature.State {
+  static var previewReady: Self {
     var state = Self()
     state.firstCentrePass = .teamA
     state.leftTeam.team = Team.previewRavens
@@ -25,11 +25,11 @@ extension NewGameFeature.State {
     return state
   }
 
-  static package var previewLoading: Self {
+  static var previewLoading: Self {
     Self()
   }
 
-  static package var previewCustomTiming: Self {
+  static var previewCustomTiming: Self {
     var state = Self()
     state.customizesBreaks = true
     state.firstBreakDuration = .init(totalSeconds: 120)
@@ -38,7 +38,7 @@ extension NewGameFeature.State {
     return state
   }
 
-  static package var previewInvalidTiming: Self {
+  static var previewInvalidTiming: Self {
     var state = Self()
     state.periodDuration.minutesText = "abc"
     state.periodDuration.secondsText = "75"

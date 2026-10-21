@@ -4,10 +4,16 @@ import SharedModels
 import SwiftUI
 import WidgetSupport
 
-nonisolated extension GameListItem {
-  package var teamABibColor: Color { Color(hex: teamABibColorHex) }
-  package var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
-  package init(
+package nonisolated extension GameListItem {
+  var teamABibColor: Color {
+    Color(hex: teamABibColorHex)
+  }
+
+  var teamBBibColor: Color {
+    Color(hex: teamBBibColorHex)
+  }
+
+  init(
     currentQuarter: Int = 1, endedAt: Date? = nil, id: Game.ID, periods: [GamePeriod] = [],
     startedAt: Date, teamABibColor: Color, teamAName: String, teamAScore: Int,
     teamBBibColor: Color = ColorPalette.red, teamBName: String, teamBScore: Int
@@ -28,9 +34,12 @@ nonisolated extension GameListItem {
   }
 }
 
-nonisolated extension TeamListItem {
-  package var color: Color { Color(hex: colorHex) }
-  package init(color: Color, gameCount: Int, id: Team.ID, name: String) {
+package nonisolated extension TeamListItem {
+  var color: Color {
+    Color(hex: colorHex)
+  }
+
+  init(color: Color, gameCount: Int, id: Team.ID, name: String) {
     self.init(
       colorHex: color.hex(),
       gameCount: gameCount,
@@ -40,9 +49,12 @@ nonisolated extension TeamListItem {
   }
 }
 
-nonisolated extension GoalTimelineItem {
-  package var scoringTeamBibColor: Color { Color(hex: scoringTeamBibColorHex) }
-  package init(
+package nonisolated extension GoalTimelineItem {
+  var scoringTeamBibColor: Color {
+    Color(hex: scoringTeamBibColorHex)
+  }
+
+  init(
     clockSecondsRemaining: Int, id: Goal.ID, period: Int, points: Int,
     scoringTeamBibColor: Color, scoringTeamName: String,
     scoringTeamSide: GoalTimelineTeamSide, teamAScore: Int, teamBScore: Int
@@ -61,10 +73,16 @@ nonisolated extension GoalTimelineItem {
   }
 }
 
-nonisolated extension GameAnalysis {
-  package var teamABibColor: Color { Color(hex: teamABibColorHex) }
-  package var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
-  package init(
+package nonisolated extension GameAnalysis {
+  var teamABibColor: Color {
+    Color(hex: teamABibColorHex)
+  }
+
+  var teamBBibColor: Color {
+    Color(hex: teamBBibColorHex)
+  }
+
+  init(
     goalTimeline: GoalTimeline = GoalTimeline(), periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
@@ -84,10 +102,16 @@ nonisolated extension GameAnalysis {
   }
 }
 
-nonisolated extension CompletedGameDetail {
-  package var teamABibColor: Color { Color(hex: teamABibColorHex) }
-  package var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
-  package init(
+package nonisolated extension CompletedGameDetail {
+  var teamABibColor: Color {
+    Color(hex: teamABibColorHex)
+  }
+
+  var teamBBibColor: Color {
+    Color(hex: teamBBibColorHex)
+  }
+
+  init(
     endedAt: Date, goalTimeline: GoalTimeline, id: Game.ID, location: GameLocation? = nil,
     periods: [GamePeriod] = [], startedAt: Date,
     statistics: CompletedGameStatistics = CompletedGameStatistics(),

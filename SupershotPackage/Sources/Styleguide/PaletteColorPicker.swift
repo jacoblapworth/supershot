@@ -40,14 +40,13 @@ package struct PaletteColorPicker: View {
         )
         .labelsHidden()
       }
-
     }
   }
 
   package init(
     color: Binding<Color>, title: String, options: [ColorPalette.Option] = ColorPalette.options
   ) {
-    self._color = color
+    _color = color
     self.title = title
     self.options = options
   }

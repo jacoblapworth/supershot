@@ -16,7 +16,7 @@ import SubscriptionClient
       package let url: URL
       package var completion: (Result<Void, any Error>) -> Void
 
-      package func makeUIViewController(context: Context) -> UIActivityViewController {
+      package func makeUIViewController(context _: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(
           activityItems: [url], applicationActivities: nil
         )
@@ -30,7 +30,7 @@ import SubscriptionClient
         return controller
       }
 
-      package func updateUIViewController(_ controller: UIActivityViewController, context: Context)
+      package func updateUIViewController(_: UIActivityViewController, context _: Context)
       {}
 
       package init(url: URL, completion: @escaping (Result<Void, any Error>) -> Void) {
@@ -49,7 +49,7 @@ import SubscriptionClient
         Coordinator(completion: completion)
       }
 
-      package func makeNSView(context: Context) -> NSView {
+      package func makeNSView(context _: Context) -> NSView {
         NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 120))
       }
 
@@ -63,7 +63,7 @@ import SubscriptionClient
         }
       }
 
-      final package class Coordinator: NSObject, NSSharingServicePickerDelegate,
+      package final class Coordinator: NSObject, NSSharingServicePickerDelegate,
         NSSharingServiceDelegate
       {
         package var picker: NSSharingServicePicker?
@@ -74,25 +74,26 @@ import SubscriptionClient
         }
 
         package func sharingServicePicker(
-          _ sharingServicePicker: NSSharingServicePicker, didChoose service: NSSharingService?
+          _: NSSharingServicePicker, didChoose service: NSSharingService?
         ) {
-          if service == nil { completion(.success(())) }
+          if service == nil {
+            completion(.success(()))
+          }
         }
 
         package func sharingServicePicker(
-          _ sharingServicePicker: NSSharingServicePicker,
-          delegateFor sharingService: NSSharingService
+          _: NSSharingServicePicker,
+          delegateFor _: NSSharingService
         ) -> (any NSSharingServiceDelegate)? {
           self
         }
 
-        package func sharingService(_ sharingService: NSSharingService, didShareItems items: [Any])
-        {
+        package func sharingService(_: NSSharingService, didShareItems _: [Any]) {
           completion(.success(()))
         }
 
         package func sharingService(
-          _ sharingService: NSSharingService, didFailToShareItems items: [Any], error: any Error
+          _: NSSharingService, didFailToShareItems _: [Any], error: any Error
         ) {
           completion(.failure(error))
         }

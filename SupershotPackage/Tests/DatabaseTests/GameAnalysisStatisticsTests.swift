@@ -1,18 +1,17 @@
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
 import GameCore
-import SQLiteData
-import TestSupport
-import Testing
-
-@testable import Database
 @testable import SharedModels
+import SQLiteData
+import Testing
+import TestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct GameAnalysisStatisticsTests {
+  struct GameAnalysisStatisticsTests {
     private let teamAID = UUID(-1)
     private let teamBID = UUID(-2)
 
@@ -36,7 +35,8 @@ extension SupershotTestSuite {
         empty.teamA.centrePass,
         CentrePassStatistics(
           conversions: 0, inferredTurnovers: 0, opportunities: 0
-        ))
+        )
+      )
       let oneSided = summarize(makeGoals([(true, 2), (true, 1)]))
       expectNoDifference(oneSided.teamA.biggestLead, 3)
       expectNoDifference(oneSided.teamA.longestScoringRun, 2)
@@ -98,7 +98,8 @@ extension SupershotTestSuite {
           Team(id: teamBID, name: "B")
           Game(
             id: UUID(-1), startedAt: Date(timeIntervalSince1970: 0),
-            teamAID: teamAID, teamBID: teamBID)
+            teamAID: teamAID, teamBID: teamBID
+          )
         }
         try GamePeriod.insert { periods }.execute(db)
         // Deliberately insert backwards to verify snapshot ordering.
@@ -120,9 +121,10 @@ extension SupershotTestSuite {
       expectNoDifference(live.statisticsByPeriod[3]?.teamA.averageTimeToGoalSeconds, nil)
 
       try await database.write { db in
-        try Game.find(UUID(-1)).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1_000)) }
+        try Game.find(UUID(-1)).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1000)) }
           .execute(
-            db)
+            db
+          )
       }
       let completed = try await database.read {
         try GameDetailRequest(gameID: UUID(-1)).fetch($0).detail

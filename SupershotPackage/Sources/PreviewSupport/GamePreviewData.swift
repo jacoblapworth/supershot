@@ -8,12 +8,12 @@ import Styleguide
 import SwiftUI
 import WidgetSupport
 
-extension GameListItem {
-  static package let previewInProgress = Self(
+package extension GameListItem {
+  static let previewInProgress = Self(
     currentQuarter: 3,
     endedAt: nil,
     id: UUID(),
-    periods: MockGameData.periods(gameID: UUID(10), idOffset: 1_000),
+    periods: MockGameData.periods(gameID: UUID(10), idOffset: 1000),
     startedAt: Date(timeIntervalSince1970: 1_785_659_400),
     teamABibColor: ColorPalette.green,
     teamAName: "North London Ravens",
@@ -23,10 +23,10 @@ extension GameListItem {
     teamBScore: 16
   )
 
-  static package let previewCompleted = Self(
+  static let previewCompleted = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_575_100),
     id: UUID(),
-    periods: MockGameData.periods(gameID: UUID(11), idOffset: 1_010),
+    periods: MockGameData.periods(gameID: UUID(11), idOffset: 1010),
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     teamAName: "North London Ravens",
     teamAScore: 38,
@@ -35,19 +35,19 @@ extension GameListItem {
   )
 }
 
-extension Array where Element == GameListItem {
-  static package var previewGames: Self {
+package extension [GameListItem] {
+  static var previewGames: Self {
     [.previewInProgress, .previewCompleted]
   }
 }
 
-extension CompletedGameDetail {
-  static package let previewCompleted = Self(
+package extension CompletedGameDetail {
+  static let previewCompleted = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_575_100),
     goalTimeline: realisticPreviewTimeline,
     id: UUID(),
     location: LocationClient.previewLocation,
-    periods: MockGameData.periods(gameID: UUID(12), idOffset: 1_020),
+    periods: MockGameData.periods(gameID: UUID(12), idOffset: 1020),
     startedAt: Date(timeIntervalSince1970: 1_785_573_000),
     statistics: CompletedGameStatistics(
       teamA: TeamGameStatistics(
@@ -73,7 +73,7 @@ extension CompletedGameDetail {
     teamBScore: 38
   )
 
-  static package let previewDraw = Self(
+  static let previewDraw = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_580_200),
     goalTimeline: .previewEmpty,
     id: UUID(),
@@ -84,7 +84,7 @@ extension CompletedGameDetail {
     teamBScore: 24
   )
 
-  static package let previewNoGoals = Self(
+  static let previewNoGoals = Self(
     endedAt: Date(timeIntervalSince1970: 1_785_580_200),
     goalTimeline: .previewEmpty,
     id: UUID(),
@@ -146,7 +146,7 @@ private let realisticPreviewTimeline: GoalTimeline = {
   }
 
   return GoalTimeline(
-    quarters: (1...4).reversed().map { period in
+    quarters: (1 ... 4).reversed().map { period in
       let goals = goalsByPeriod[period, default: []]
       return GoalTimelineQuarter(
         goals: Array(goals.reversed()),
@@ -158,6 +158,6 @@ private let realisticPreviewTimeline: GoalTimeline = {
   )
 }()
 
-extension GoalTimeline {
-  static package let previewEmpty = Self.empty(through: 4)
+package extension GoalTimeline {
+  static let previewEmpty = Self.empty(through: 4)
 }

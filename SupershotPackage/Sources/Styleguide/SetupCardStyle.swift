@@ -1,9 +1,8 @@
 import SwiftUI
 
-extension View {
-  package func setupCardStyle() -> some View {
-    self
-      .padding()
+package extension View {
+  func setupCardStyle() -> some View {
+    padding()
       .frame(maxWidth: .infinity, alignment: .leading)
       .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
   }

@@ -1,18 +1,17 @@
-import SwiftUI
 import CustomDump
-import Dependencies
-import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import Database
-@testable import GameCore
-@testable import SharedModels
-@testable import Styleguide
-@testable import WidgetSupport
+import Dependencies
 import DependenciesTestSupport
+import Foundation
+@testable import GameCore
+import GRDB
+@testable import SharedModels
+import SQLiteData
+@testable import Styleguide
+import SwiftUI
+import Testing
+import TestSupport
+@testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -26,8 +25,8 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
 
-      let olderDate = Date(timeIntervalSince1970: 1_000)
-      let newerDate = Date(timeIntervalSince1970: 2_000)
+      let olderDate = Date(timeIntervalSince1970: 1000)
+      let newerDate = Date(timeIntervalSince1970: 2000)
       try await database.write { db in
         try db.seed {
           Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
@@ -45,7 +44,7 @@ extension SupershotTestSuite {
           Game(
             id: UUID(-2),
             startedAt: olderDate,
-            endedAt: Date(timeIntervalSince1970: 1_500),
+            endedAt: Date(timeIntervalSince1970: 1500),
             teamAID: UUID(-3),
             teamABibColorHex: "#34C759",
             teamBID: UUID(-4),
@@ -107,7 +106,7 @@ extension SupershotTestSuite {
             teamBScore: 0
           ),
           GameListItem(
-            endedAt: Date(timeIntervalSince1970: 1_500),
+            endedAt: Date(timeIntervalSince1970: 1500),
             id: UUID(-2),
             periods: testGamePeriods(gameID: UUID(-2), durationSeconds: 900),
             startedAt: olderDate,
@@ -132,7 +131,7 @@ extension SupershotTestSuite {
           Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
           Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
-            id: UUID(-1), startedAt: Date(timeIntervalSince1970: 1_000),
+            id: UUID(-1), startedAt: Date(timeIntervalSince1970: 1000),
             teamAID: UUID(-1), teamABibColorHex: "#AF52DE", teamBID: UUID(-2)
           )
         }
@@ -153,7 +152,7 @@ extension SupershotTestSuite {
           Goal(
             id: UUID(-1), gameID: UUID(-1), gamePeriodID: periods[0].id,
             centrePassTeamID: UUID(-1), teamID: UUID(-1), elapsedSeconds: 30,
-            points: 2, createdAt: Date(timeIntervalSince1970: 1_030)
+            points: 2, createdAt: Date(timeIntervalSince1970: 1030)
           )
         }.execute(db)
       }
@@ -174,13 +173,13 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try Game.find(UUID(-1)).update {
-          $0.endedAt = #bind(Date(timeIntervalSince1970: 5_000))
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 5000))
         }.execute(db)
       }
       let completed = try await database.read { db in
-        (
-          try GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis,
-          try GameDetailRequest(gameID: UUID(-1)).fetch(db).detail?.analysis
+        try (
+          GameAnalysisRequest(gameID: UUID(-1)).fetch(db).analysis,
+          GameDetailRequest(gameID: UUID(-1)).fetch(db).detail?.analysis
         )
       }
       #expect(completed.0.isComplete)
@@ -192,7 +191,7 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
 
-      let startedAt = Date(timeIntervalSince1970: 1_000)
+      let startedAt = Date(timeIntervalSince1970: 1000)
       let updatedRavensColorHex = "#34C759"
       let updatedSwiftsColorHex = "#FF2D55"
       try await database.write { db in
@@ -202,7 +201,7 @@ extension SupershotTestSuite {
           Game(
             id: UUID(-1),
             startedAt: startedAt,
-            endedAt: Date(timeIntervalSince1970: 2_000),
+            endedAt: Date(timeIntervalSince1970: 2000),
             teamAID: UUID(-1),
             teamABibColorHex: "#AF52DE",
             teamBID: UUID(-2),
@@ -210,7 +209,7 @@ extension SupershotTestSuite {
           )
           Game(
             id: UUID(-2),
-            startedAt: Date(timeIntervalSince1970: 3_000),
+            startedAt: Date(timeIntervalSince1970: 3000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamABibColorHex: "#30B0C7",
@@ -244,10 +243,10 @@ extension SupershotTestSuite {
       }
 
       let values = try await database.read { db in
-        (
-          try GamesRequest().fetch(db),
-          try TeamsRequest().fetch(db),
-          try GameDetailRequest(gameID: UUID(-1)).fetch(db)
+        try (
+          GamesRequest().fetch(db),
+          TeamsRequest().fetch(db),
+          GameDetailRequest(gameID: UUID(-1)).fetch(db)
         )
       }
 

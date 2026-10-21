@@ -2,7 +2,7 @@ import Foundation
 import SharedModels
 
 /// Scoring rules consume an attributed playing moment, never advance a clock.
-nonisolated public struct ScoringOpportunity: Equatable, Sendable {
+public nonisolated struct ScoringOpportunity: Equatable, Sendable {
   public var periodID: GamePeriod.ID
   public var elapsedSeconds: Int
   public var isLate: Bool
@@ -14,7 +14,7 @@ nonisolated public struct ScoringOpportunity: Equatable, Sendable {
   }
 }
 
-nonisolated public struct GameScoringState: Equatable, Sendable {
+public nonisolated struct GameScoringState: Equatable, Sendable {
   public var centrePassTeamID: Team.ID?
   public var isAwaitingCentrePassConfirmation = false
   public var lateScoringPeriodNumber: Int?
@@ -23,12 +23,12 @@ nonisolated public struct GameScoringState: Equatable, Sendable {
     centrePassTeamID == teamBID ? teamBID : teamAID
   }
 
-  mutating public func alternateCentrePass(teamAID: Team.ID, teamBID: Team.ID) {
+  public mutating func alternateCentrePass(teamAID: Team.ID, teamBID: Team.ID) {
     centrePassTeamID = centrePass(teamAID: teamAID, teamBID: teamBID) == teamAID ? teamBID : teamAID
   }
 
-  mutating public func resolveCentrePass(taken: Bool, teamAID: Team.ID, teamBID: Team.ID) {
-    if isAwaitingCentrePassConfirmation && taken {
+  public mutating func resolveCentrePass(taken: Bool, teamAID: Team.ID, teamBID: Team.ID) {
+    if isAwaitingCentrePassConfirmation, taken {
       alternateCentrePass(teamAID: teamAID, teamBID: teamBID)
     }
     centrePassTeamID = centrePass(teamAID: teamAID, teamBID: teamBID)
@@ -42,7 +42,7 @@ nonisolated public struct GameScoringState: Equatable, Sendable {
     return periods.first(where: { $0.id == latestGoal.gamePeriodID })?.number == completed
   }
 
-  mutating public func recordGoal(
+  public mutating func recordGoal(
     _ command: RecordGoalCommand, opportunity: ScoringOpportunity,
     teamAID: Team.ID, teamBID: Team.ID
   ) throws -> Goal {
@@ -53,7 +53,8 @@ nonisolated public struct GameScoringState: Equatable, Sendable {
       id: command.goalID, gameID: command.gameID, gamePeriodID: opportunity.periodID,
       centrePassTeamID: centrePass(teamAID: teamAID, teamBID: teamBID), teamID: command.teamID,
       elapsedSeconds: opportunity.elapsedSeconds, isLate: opportunity.isLate,
-      points: command.points, createdAt: command.createdAt)
+      points: command.points, createdAt: command.createdAt
+    )
     alternateCentrePass(teamAID: teamAID, teamBID: teamBID)
     return goal
   }
@@ -68,13 +69,14 @@ nonisolated public struct GameScoringState: Equatable, Sendable {
   }
 }
 
-extension Game {
-  nonisolated public var scoring: GameScoringState {
+public extension Game {
+  nonisolated var scoring: GameScoringState {
     get {
       GameScoringState(
         centrePassTeamID: centrePassTeamID,
         isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: lateScoringPeriodNumber)
+        lateScoringPeriodNumber: lateScoringPeriodNumber
+      )
     }
     set {
       centrePassTeamID = newValue.centrePassTeamID
@@ -84,13 +86,13 @@ extension Game {
   }
 }
 
-nonisolated extension GameTimeline {
-  public func scoringPeriod(for context: GameScoringContext) -> GamePeriod? {
+public nonisolated extension GameTimeline {
+  func scoringPeriod(for context: GameScoringContext) -> GamePeriod? {
     periods.first { $0.number == context.periodNumber }
   }
 }
 
-nonisolated public enum GameScoringError: Error {
+public nonisolated enum GameScoringError: Error {
   case invalidTeam
   case unavailable
 }

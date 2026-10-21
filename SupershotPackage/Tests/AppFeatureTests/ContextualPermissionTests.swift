@@ -1,18 +1,12 @@
-import ComposableArchitecture
-import Dependencies
-import DependenciesTestSupport
-import Foundation
-import FeatureFlagsClient
-import Sharing
-import SQLiteData
-import OrderedCollections
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppFeature
 @testable import AppSettings
+import ComposableArchitecture
 @testable import Database
+import Dependencies
+import DependenciesTestSupport
+import FeatureFlagsClient
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
@@ -20,17 +14,22 @@ import TestSupport
 @testable import GamesFeature
 @testable import LocationClient
 @testable import NewGameFeature
+import OrderedCollections
 @testable import PaywallFeature
 @testable import PermissionsFeature
 @testable import PreviewSupport
 @testable import ScoringFeature
 @testable import SettingsFeature
 @testable import SharedModels
+import Sharing
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
 @testable import TeamEditingFeature
 @testable import TeamsFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -77,10 +76,10 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func welcomeDefersDeepLinkUntilCompletion() async {
+    func welcomeDefersDeepLinkUntilCompletion() async throws {
       @Dependency(\.defaultAppStorage) var defaults
       defaults.set(false, forKey: "hasCompletedWelcome")
-      let url = URL(string: "supershot://game/00000000-0000-0000-0000-000000000003")!
+      let url = try #require(URL(string: "supershot://game/00000000-0000-0000-0000-000000000003"))
       let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
         $0.gameTimer.reconcile = { _ in throw PermissionTestError.unavailable }
       }
@@ -178,7 +177,13 @@ extension SupershotTestSuite {
         $0.alarmAuthorization.request = { Issue.record("Unexpected request"); return .denied }
       }
       await store.send(.enableButtonTapped)
-      await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
+      await store.receive {
+        if case .delegate(.proPromotionTapped) = $0 {
+          true
+        } else {
+          false
+        }
+      }
     }
 
     @Test
@@ -190,7 +195,13 @@ extension SupershotTestSuite {
         $0.alarmAuthorization.request = { Issue.record("Unexpected request"); return .authorized }
       }
       await store.send(.enableButtonTapped)
-      await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
+      await store.receive {
+        if case .delegate(.proPromotionTapped) = $0 {
+          true
+        } else {
+          false
+        }
+      }
     }
 
     @Test
@@ -206,7 +217,13 @@ extension SupershotTestSuite {
         $0.isRequesting = false
         $0.authorization = .authorized
       }
-      await store.receive { if case .delegate(.authorized) = $0 { true } else { false } }
+      await store.receive {
+        if case .delegate(.authorized) = $0 {
+          true
+        } else {
+          false
+        }
+      }
     }
 
     @Test
@@ -262,7 +279,15 @@ extension SupershotTestSuite {
         $0.isRequesting = false
         $0.authorization = status
       }
-      if status == .authorized { await store.receive { if case .delegate(.authorized) = $0 { true } else { false } } }
+      if status == .authorized {
+        await store.receive {
+          if case .delegate(.authorized) = $0 {
+            true
+          } else {
+            false
+          }
+        }
+      }
       await store.send(.enableButtonTapped)
       #expect(requests.value == 1)
     }
@@ -286,7 +311,13 @@ extension SupershotTestSuite {
       store.dependencies.alarmAuthorization.request = { .authorized }
       await store.send(.enableButtonTapped) { $0.isRequesting = true; $0.errorMessage = nil }
       await store.receive(\.authorizationResponse) { $0.isRequesting = false; $0.authorization = .authorized }
-      await store.receive { if case .delegate(.authorized) = $0 { true } else { false } }
+      await store.receive {
+        if case .delegate(.authorized) = $0 {
+          true
+        } else {
+          false
+        }
+      }
     }
 
     @Test
@@ -299,7 +330,13 @@ extension SupershotTestSuite {
       }
       await store.send(.refresh(.pro))
       await store.receive(\.statusResponse) { $0.authorization = .authorized }
-      await store.receive { if case .delegate(.authorized) = $0 { true } else { false } }
+      await store.receive {
+        if case .delegate(.authorized) = $0 {
+          true
+        } else {
+          false
+        }
+      }
     }
 
     @Test

@@ -1,24 +1,23 @@
+@testable import AlarmClient
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import GRDB
-import SQLiteData
-import SwiftUI
-import TestSupport
-import Testing
-
-@testable import AlarmClient
-@testable import Database
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
+import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -26,15 +25,15 @@ extension SupershotTestSuite {
   @Suite(
     .dependencies {
       $0.uuid = .incrementing
-    }) struct GameDetailFeatureTests
-  {
+    }
+  ) struct GameDetailFeatureTests {
     @Test
     func completedGameDetailBuildsReverseChronologicalQuarterTimeline() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
 
-      let startedAt = Date(timeIntervalSince1970: 1_000)
-      let endedAt = Date(timeIntervalSince1970: 2_000)
+      let startedAt = Date(timeIntervalSince1970: 1000)
+      let endedAt = Date(timeIntervalSince1970: 2000)
       let periods = testGamePeriods(
         gameID: UUID(-1),
         durationSeconds: 900,
@@ -66,7 +65,7 @@ extension SupershotTestSuite {
             teamID: UUID(-2),
             elapsedSeconds: 30,
             points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_300)
+            createdAt: Date(timeIntervalSince1970: 1300)
           )
           Goal(
             id: UUID(-1),
@@ -76,7 +75,7 @@ extension SupershotTestSuite {
             teamID: UUID(-1),
             elapsedSeconds: 100,
             points: 2,
-            createdAt: Date(timeIntervalSince1970: 1_100)
+            createdAt: Date(timeIntervalSince1970: 1100)
           )
           Goal(
             id: UUID(-2),
@@ -86,7 +85,7 @@ extension SupershotTestSuite {
             teamID: UUID(-2),
             elapsedSeconds: 200,
             points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_200)
+            createdAt: Date(timeIntervalSince1970: 1200)
           )
         }
       }
@@ -125,7 +124,7 @@ extension SupershotTestSuite {
                     scoringTeamSide: .teamB,
                     teamAScore: 2,
                     teamBScore: 2
-                  )
+                  ),
                 ],
                 period: 2,
                 teamAQuarterScore: 0,
@@ -196,39 +195,47 @@ extension SupershotTestSuite {
               teamA: TeamGameStatistics(
                 averageTimeToGoalSeconds: 100,
                 centrePass: CentrePassStatistics(
-                  conversions: 1, inferredTurnovers: 1, opportunities: 2),
+                  conversions: 1, inferredTurnovers: 1, opportunities: 2
+                ),
                 biggestLead: 2, longestScoringRun: 1
               ),
               teamB: TeamGameStatistics(
                 averageTimeToGoalSeconds: 100,
                 centrePass: CentrePassStatistics(
-                  conversions: 0, inferredTurnovers: 0, opportunities: 0),
+                  conversions: 0, inferredTurnovers: 0, opportunities: 0
+                ),
                 longestScoringRun: 1
               )
             ),
             2: CompletedGameStatistics(
               teamA: TeamGameStatistics(
                 centrePass: CentrePassStatistics(
-                  conversions: 0, inferredTurnovers: 0, opportunities: 0)
+                  conversions: 0, inferredTurnovers: 0, opportunities: 0
+                )
               ),
               teamB: TeamGameStatistics(
                 averageTimeToGoalSeconds: 30,
                 centrePass: CentrePassStatistics(
-                  conversions: 1, inferredTurnovers: 0, opportunities: 1),
+                  conversions: 1, inferredTurnovers: 0, opportunities: 1
+                ),
                 biggestLead: 1, longestScoringRun: 1
               )
             ),
             3: CompletedGameStatistics(
               teamA: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
+              ),
               teamB: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
+              )
             ),
             4: CompletedGameStatistics(
               teamA: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
+              ),
               teamB: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
+                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
+              )
             ),
           ],
           teamABibColor: ColorPalette.blue,
@@ -253,7 +260,7 @@ extension SupershotTestSuite {
           Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
-            startedAt: Date(timeIntervalSince1970: 1_000),
+            startedAt: Date(timeIntervalSince1970: 1000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
@@ -270,7 +277,7 @@ extension SupershotTestSuite {
             teamID: UUID(-1),
             elapsedSeconds: 100,
             points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_100)
+            createdAt: Date(timeIntervalSince1970: 1100)
           )
         }
       }
@@ -292,7 +299,7 @@ extension SupershotTestSuite {
             teamID: UUID(-2),
             elapsedSeconds: 200,
             points: 2,
-            createdAt: Date(timeIntervalSince1970: 1_200)
+            createdAt: Date(timeIntervalSince1970: 1200)
           )
         }
         .execute(db)
@@ -330,8 +337,8 @@ extension SupershotTestSuite {
           Team(id: UUID(-2), name: "Swifts")
           Game(
             id: UUID(-1),
-            startedAt: Date(timeIntervalSince1970: 1_000),
-            endedAt: Date(timeIntervalSince1970: 2_000),
+            startedAt: Date(timeIntervalSince1970: 1000),
+            endedAt: Date(timeIntervalSince1970: 2000),
             teamAID: UUID(-1),
             teamBID: UUID(-2)
           )
@@ -346,7 +353,7 @@ extension SupershotTestSuite {
             teamID: UUID(-1),
             elapsedSeconds: 42,
             points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_042)
+            createdAt: Date(timeIntervalSince1970: 1042)
           )
         }
       }
@@ -371,6 +378,7 @@ extension SupershotTestSuite {
         )
       )
     }
+
     @Test
     func detailDeleteButtonDelegatesDeletion() async {
       let store = TestStore(initialState: GameDetailFeature.State(gameID: UUID(3))) {
@@ -380,6 +388,5 @@ extension SupershotTestSuite {
       await store.send(.deleteButtonTapped)
       await store.receive(.delegate(.deleteGameButtonTapped))
     }
-
   }
 }

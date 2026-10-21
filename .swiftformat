@@ -1,0 +1,5 @@
+--indent 2
+--header strip
+
+--wrap-enum-cases always
+--swift-version 6

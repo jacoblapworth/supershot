@@ -1,33 +1,32 @@
-import SwiftUI
-import ComposableArchitecture
-import CustomDump
-import DependenciesTestSupport
-import Foundation
-import GRDB
-import OrderedCollections
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import ComposableArchitecture
+import CustomDump
 @testable import Database
+import DependenciesTestSupport
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
 @testable import GamesFeature
+import GRDB
 @testable import LocationClient
 @testable import NewGameFeature
+import OrderedCollections
 @testable import PaywallFeature
 @testable import PermissionsFeature
 @testable import PreviewSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -89,7 +88,7 @@ extension SupershotTestSuite {
       try clearDatabase(database)
       try await database.write { db in
         try Self.seedGameAndGoal(db)
-        for position in 0..<3 {
+        for position in 0 ..< 3 {
           try GamePeriod.find(testGamePeriodID(gameID: UUID(3), position: position)).update {
             $0.breakAfterDurationSeconds = #bind(60)
           }.execute(db)
@@ -112,7 +111,7 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try Game.find(UUID(3)).update {
-          $0.endedAt = #bind(Date(timeIntervalSince1970: 2_000))
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 2000))
         }.execute(db)
       }
       let finishedGames = try await database.read { try GamesRequest().fetch($0).games }
@@ -128,9 +127,9 @@ extension SupershotTestSuite {
     @Test
     func completedGameOpensDetail() async {
       let game = GameListItem(
-        endedAt: Date(timeIntervalSince1970: 2_000),
+        endedAt: Date(timeIntervalSince1970: 2000),
         id: UUID(3),
-        startedAt: Date(timeIntervalSince1970: 1_000),
+        startedAt: Date(timeIntervalSince1970: 1000),
         teamAName: "Ravens",
         teamAScore: 12,
         teamBName: "Swifts",
@@ -238,10 +237,10 @@ extension SupershotTestSuite {
       await store.finish()
 
       let values = try await database.read { db in
-        (
-          try Game.find(UUID(3)).fetchOne(db),
-          try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
-          try Team.fetchAll(db)
+        try (
+          Game.find(UUID(3)).fetchOne(db),
+          Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
+          Team.fetchAll(db)
         )
       }
       expectNoDifference(values.0, nil)
@@ -312,7 +311,7 @@ extension SupershotTestSuite {
           teamID: UUID(1),
           elapsedSeconds: 10,
           points: 1,
-          createdAt: Date(timeIntervalSince1970: 1_000)
+          createdAt: Date(timeIntervalSince1970: 1000)
         )
       }
       .execute(db)

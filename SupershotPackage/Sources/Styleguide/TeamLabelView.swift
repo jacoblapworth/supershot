@@ -22,13 +22,17 @@ package struct TeamLabelView: View {
 
   package var body: some View {
     HStack(alignment: .center, spacing: 6) {
-      if alignment == .leading { avatar }
+      if alignment == .leading {
+        avatar
+      }
       Text(name)
         .font(.caption)
         .lineLimit(1)
         .multilineTextAlignment(.center)
         .foregroundStyle(.secondary)
-      if alignment == .trailing { avatar }
+      if alignment == .trailing {
+        avatar
+      }
     }
     .controlSize(.small)
   }
@@ -43,6 +47,6 @@ package struct TeamLabelView: View {
 #Preview {
   TeamLabelView(
     name: "Team One",
-    color: .blue,
+    color: .blue
   )
 }

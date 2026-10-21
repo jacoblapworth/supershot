@@ -1,24 +1,23 @@
-import SwiftUI
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
-@testable import Database
 @testable import GameCore
+import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
+import SQLiteData
 @testable import Styleguide
+import SwiftUI
 @testable import TeamEditingFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct TeamEditorFeatureTests {
+  struct TeamEditorFeatureTests {
     @Test
     func teamEditorTrimsAndPersistsNameAndColor() async throws {
       let team = Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())

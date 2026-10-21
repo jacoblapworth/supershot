@@ -1,17 +1,17 @@
 import Database
 import Dependencies
 import Foundation
-import GRDB
 import GameCore
+import GRDB
 import LocationClient
-import SQLiteData
 import SharedModels
+import SQLiteData
 import Styleguide
 import SwiftUI
 import WidgetSupport
 
-extension DatabaseWriter {
-  public func seedDebugExamplesIfNeeded() throws {
+public extension DatabaseWriter {
+  func seedDebugExamplesIfNeeded() throws {
     try write { db in
       guard try Team.fetchCount(db) == 0 else { return }
 
@@ -52,8 +52,8 @@ extension DatabaseWriter {
       }
 
       try GamePeriod.insert {
-        MockGameData.periods(gameID: UUID(10), idOffset: 1_000)
-        MockGameData.periods(gameID: UUID(11), idOffset: 1_010)
+        MockGameData.periods(gameID: UUID(10), idOffset: 1000)
+        MockGameData.periods(gameID: UUID(11), idOffset: 1010)
       }
       .execute(db)
 
@@ -94,13 +94,13 @@ private func insertMockGoals(
   for (index, event) in events.enumerated() {
     let secondsBeforePeriod =
       (event.period - 1)
-      * (MockGameData.periodDurationSeconds + MockGameData.breakDurationSeconds)
+        * (MockGameData.periodDurationSeconds + MockGameData.breakDurationSeconds)
     try Goal.insert {
       Goal(
         id: UUID(idOffset + index),
         gameID: gameID,
         gamePeriodID: UUID(
-          (gameID == UUID(10) ? 1_000 : 1_010) + event.period - 1
+          (gameID == UUID(10) ? 1000 : 1010) + event.period - 1
         ),
         centrePassTeamID: event.centrePassTeamA ? teamAID : teamBID,
         teamID: event.teamAScored ? teamAID : teamBID,

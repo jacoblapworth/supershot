@@ -39,7 +39,7 @@ package struct SetupCentrePassView: View {
   package init(
     firstCentrePass: Binding<NewGameFeature.TeamSide>, leftTeamName: String, rightTeamName: String
   ) {
-    self._firstCentrePass = firstCentrePass
+    _firstCentrePass = firstCentrePass
     self.leftTeamName = leftTeamName
     self.rightTeamName = rightTeamName
   }
@@ -67,7 +67,9 @@ package struct SetupStartBar: View {
           .font(.caption)
           .foregroundStyle(.red)
           .frame(maxWidth: .infinity, alignment: .leading)
-        if canRetry { Button("Retry", action: retryTapped).disabled(isSaving) }
+        if canRetry {
+          Button("Retry", action: retryTapped).disabled(isSaving)
+        }
       }
 
       Button {
@@ -171,14 +173,16 @@ package struct SetupGameDetailsView: View {
         isOn: Binding(
           get: { store.scheduledAt != nil },
           set: { store.send(.scheduleToggleChanged($0)) }
-        ))
+        )
+      )
       if store.scheduledAt != nil {
         DatePicker(
           "Scheduled",
           selection: Binding(
             get: { store.scheduledAt ?? store.createdAt },
             set: { store.scheduledAt = $0 }
-          ))
+          )
+        )
       } else {
         Text("Now").foregroundStyle(.secondary)
       }

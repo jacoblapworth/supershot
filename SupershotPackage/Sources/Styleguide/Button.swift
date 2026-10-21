@@ -31,13 +31,13 @@ package struct PrimaryButtonStyle: ButtonStyle {
       .animation(.smooth, value: configuration.isPressed)
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
-extension ButtonStyle where Self == PrimaryButtonStyle {
-  static package var myAppPrimaryButton: PrimaryButtonStyle { .init() }
+package extension ButtonStyle where Self == PrimaryButtonStyle {
+  static var myAppPrimaryButton: PrimaryButtonStyle {
+    .init()
+  }
 }
 
 #Preview {

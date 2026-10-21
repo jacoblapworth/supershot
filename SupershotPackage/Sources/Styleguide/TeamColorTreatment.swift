@@ -9,7 +9,8 @@ package struct TeamColorTreatment {
 
   package init(color: Color, environment: EnvironmentValues) {
     self.init(
-      resolvedColor: color.resolve(in: environment), contrast: environment.colorSchemeContrast)
+      resolvedColor: color.resolve(in: environment), contrast: environment.colorSchemeContrast
+    )
   }
 
   package init(resolvedColor resolved: Color.Resolved, contrast: ColorSchemeContrast) {
@@ -21,7 +22,7 @@ package struct TeamColorTreatment {
     let maximumBackgroundLuminance = contrast == .increased ? 0.03 : 0.055
     let backgroundScale =
       luminance > maximumBackgroundLuminance
-      ? maximumBackgroundLuminance / luminance : 1
+        ? maximumBackgroundLuminance / luminance : 1
 
     background = Color(
       .sRGBLinear,

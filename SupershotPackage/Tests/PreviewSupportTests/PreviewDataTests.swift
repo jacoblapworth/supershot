@@ -1,19 +1,18 @@
-import Dependencies
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import Database
+import Dependencies
 @testable import GameCore
+import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
+import SQLiteData
 @testable import Styleguide
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct PreviewDataTests {
+  struct PreviewDataTests {
     @Test
     func seedDebugExamplesOnlyOnce() throws {
       @Dependency(\.defaultDatabase) var database
@@ -23,10 +22,10 @@ extension SupershotTestSuite {
       try database.seedDebugExamplesIfNeeded()
 
       let counts = try database.read { db in
-        (
-          teams: try Team.fetchCount(db),
-          games: try Game.fetchCount(db),
-          goals: try Goal.fetchCount(db)
+        try (
+          teams: Team.fetchCount(db),
+          games: Game.fetchCount(db),
+          goals: Goal.fetchCount(db)
         )
       }
 
@@ -42,7 +41,7 @@ extension SupershotTestSuite {
       try database.seedDebugExamplesIfNeeded()
 
       let (games, goals, periods) = try database.read { db in
-        (try Game.fetchAll(db), try Goal.fetchAll(db), try GamePeriod.fetchAll(db))
+        try (Game.fetchAll(db), Goal.fetchAll(db), GamePeriod.fetchAll(db))
       }
 
       #expect(periods.count == games.count * 4)
@@ -62,7 +61,7 @@ extension SupershotTestSuite {
         for periodGoals in Dictionary(grouping: gameGoals, by: \.gamePeriodID).values {
           let elapsedSeconds = periodGoals.map(\.elapsedSeconds).sorted()
           let scoringIntervals = zip([0] + elapsedSeconds, elapsedSeconds).map { $1 - $0 }
-          #expect(scoringIntervals.allSatisfy { (20...30).contains($0) })
+          #expect(scoringIntervals.allSatisfy { (20 ... 30).contains($0) })
         }
       }
     }

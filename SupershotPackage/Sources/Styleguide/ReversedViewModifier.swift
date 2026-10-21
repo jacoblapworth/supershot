@@ -30,8 +30,8 @@ package struct ReversedModifier: ViewModifier {
   }
 }
 
-extension Group where Content: View {
-  package func reversed(_ flag: Bool = true) -> some View {
+package extension Group where Content: View {
+  func reversed(_ flag: Bool = true) -> some View {
     modifier(ReversedModifier(reversed: flag))
   }
 }

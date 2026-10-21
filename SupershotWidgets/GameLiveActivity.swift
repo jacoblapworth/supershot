@@ -1,9 +1,9 @@
-import SharedModels
-import WidgetSupport
 import ActivityKit
 import AppIntents
+import SharedModels
 import SwiftUI
 import WidgetKit
+import WidgetSupport
 
 struct GameLiveActivity: Widget {
   var body: some WidgetConfiguration {
@@ -63,7 +63,7 @@ struct GameLiveActivity: Widget {
         TimerText(state: context.state, isStale: context.isStale)
           .font(.caption2.monospacedDigit())
       }
-      
+
       .widgetURL(context.attributes.gameURL)
       .keylineTint(.orange)
     }
@@ -103,8 +103,6 @@ struct GameLiveActivity: Widget {
     .frame(maxWidth: 92)
   }
 }
-
-
 
 private struct ActivityGameView: View {
   let context: ActivityViewContext<GameActivityAttributes>
@@ -211,7 +209,6 @@ private struct LockScreenGameView: View {
         )
       }
       GoalControls(context: context)
-
     }
     .foregroundStyle(.white)
   }
@@ -224,7 +221,7 @@ private struct Score: View {
   var name: String
   var score: Int
   var alignment: HorizontalAlignment
-  
+
   var body: some View {
     VStack(alignment: alignment, spacing: 0) {
       HStack(spacing: 4) {
@@ -243,9 +240,9 @@ private struct Score: View {
       Text("\(score)")
         .font(.largeTitle)
         .fontWeight(.bold)
-      //        .fontWidth(.condensed)
-      //        .font(.system(.largeTitle, design: .monospaced, weight: .bold))
-      //        .monospacedDigit()
+        //        .fontWidth(.condensed)
+        //        .font(.system(.largeTitle, design: .monospaced, weight: .bold))
+        //        .monospacedDigit()
         .foregroundStyle(color)
     }
     .frame(
@@ -280,7 +277,7 @@ private struct TimerText: View {
       Text(
         timerInterval: timerEndsAt.addingTimeInterval(
           -TimeInterval(state.remainingSeconds)
-        )...timerEndsAt,
+        ) ... timerEndsAt,
         countsDown: true,
         showsHours: false
       )
@@ -294,8 +291,6 @@ private struct TimerText: View {
     }
   }
 }
-
-
 
 private struct GoalButton: View {
   let context: ActivityViewContext<GameActivityAttributes>
@@ -393,10 +388,12 @@ private extension GameActivityAttributes.ContentState {
       centrePassTeamID: GameActivityAttributes.preview.teamAID,
       elapsedSeconds: elapsed, phaseIndex: 3,
       phase: .breakTime(
-        after: GamePeriodReference(id: UUID(), number: 2), durationSeconds: 120),
+        after: GamePeriodReference(id: UUID(), number: 2), durationSeconds: 120
+      ),
       teamAScore: 18, teamBScore: 16,
       timerEndsAt: running ? Date.now.addingTimeInterval(TimeInterval(120 - elapsed)) : nil,
-      isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 2)
+      isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 2
+    )
   }
 
   static let endedPreview = Self(

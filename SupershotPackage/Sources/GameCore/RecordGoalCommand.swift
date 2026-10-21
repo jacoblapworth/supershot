@@ -1,7 +1,7 @@
 import Foundation
 import SharedModels
 
-nonisolated public struct RecordGoalCommand: Equatable, Sendable {
+public nonisolated struct RecordGoalCommand: Equatable, Sendable {
   public enum Source: Equatable, Sendable {
     case app
     case liveActivity

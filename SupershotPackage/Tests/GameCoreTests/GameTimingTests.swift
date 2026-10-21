@@ -1,30 +1,34 @@
 import CustomDump
 import Dependencies
 import Foundation
-import Testing
-
-import TestSupport
 @testable import GameCore
 @testable import SharedModels
+import Testing
+import TestSupport
 
-// No database-backed suite, TCA store, or system presentation dependencies.
+/// No database-backed suite, TCA store, or system presentation dependencies.
 struct GameTimingTests {
   @Test(arguments: [BreakStartPolicy.automatic, .manual])
   func delayedReconciliationProducesOrderedFactsOnce(policy: BreakStartPolicy) throws {
     let timeline = try #require(
-      GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)))
-    let boundary = Date(timeIntervalSince1970: 1_000)
+      GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120))
+    )
+    let boundary = Date(timeIntervalSince1970: 1000)
     var timing = GameTimingState(
-      phaseIndex: 0, countdown: GameCountdown(endsAt: boundary), breakStartPolicy: policy)
+      phaseIndex: 0, countdown: GameCountdown(endsAt: boundary), breakStartPolicy: policy
+    )
     let transitions = timing.reconcile(in: timeline, now: boundary.addingTimeInterval(200))
     var expected: [GameTimingTransition] = [
       .periodCompleted(
-        testGamePeriodReference(number: 1), boundary: boundary, hasFollowingPeriod: true)
+        testGamePeriodReference(number: 1), boundary: boundary, hasFollowingPeriod: true
+      ),
     ]
     if policy == .automatic {
       expected.append(
         .breakCompleted(
-          testGamePeriodReference(number: 1), boundary: boundary.addingTimeInterval(120)))
+          testGamePeriodReference(number: 1), boundary: boundary.addingTimeInterval(120)
+        )
+      )
     }
     expectNoDifference(transitions, expected)
     expectNoDifference(timing.phaseIndex, policy == .automatic ? 2 : 1)
@@ -34,25 +38,30 @@ struct GameTimingTests {
 
   @Test func commandsRejectStalePhasesAndPreservePausedCorrection() throws {
     let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
-    let now = Date(timeIntervalSince1970: 1_000)
+    let now = Date(timeIntervalSince1970: 1000)
     var timing = GameTimingState(phaseIndex: 0, countdown: GameCountdown())
     expectNoDifference(
-      timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 1, now: now).status, .rejected)
+      timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 1, now: now).status, .rejected
+    )
     expectNoDifference(timing.countdown, GameCountdown())
     expectNoDifference(
       timing.apply(.setRemainingTime(600), in: timeline, expectedPhaseIndex: 0, now: now).status,
-      .applied)
+      .applied
+    )
     expectNoDifference(timing.countdown, GameCountdown(elapsedSeconds: 300))
     expectNoDifference(
       timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 0, now: now).transitions,
-      [.periodStarted(testGamePeriodReference(number: 1))])
+      [.periodStarted(testGamePeriodReference(number: 1))]
+    )
     expectNoDifference(
       timing.apply(.setRemainingTime(500), in: timeline, expectedPhaseIndex: 0, now: now).status,
-      .rejected)
+      .rejected
+    )
     _ = timing.apply(.pause, in: timeline, expectedPhaseIndex: 0, now: now.addingTimeInterval(30))
     expectNoDifference(timing.countdown, GameCountdown(elapsedSeconds: 330))
     _ = timing.apply(
-      .startOrResume, in: timeline, expectedPhaseIndex: 0, now: now.addingTimeInterval(40))
+      .startOrResume, in: timeline, expectedPhaseIndex: 0, now: now.addingTimeInterval(40)
+    )
     expectNoDifference(timing.countdown.endsAt, now.addingTimeInterval(610))
   }
 
@@ -64,8 +73,10 @@ struct GameTimingTests {
       first.transitions,
       [
         .periodCompleted(
-          testGamePeriodReference(number: 1), boundary: .distantPast, hasFollowingPeriod: true)
-      ])
+          testGamePeriodReference(number: 1), boundary: .distantPast, hasFollowingPeriod: true
+        ),
+      ]
+    )
     expectNoDifference(timing.countdown, GameCountdown())
     _ = timing.apply(.skip, in: timeline, expectedPhaseIndex: 1, now: .distantPast)
     expectNoDifference(timing.isFinalPeriodComplete(in: timeline), true)
@@ -74,6 +85,7 @@ struct GameTimingTests {
     )
     expectNoDifference(
       timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 1, now: .distantPast).status,
-      .unchanged)
+      .unchanged
+    )
   }
 }

@@ -2,20 +2,20 @@ import Foundation
 import SharedModels
 
 /// Facts about clock transitions. Scoring consequences are applied by game coordination.
-nonisolated public enum GameTimingTransition: Equatable, Sendable {
+public nonisolated enum GameTimingTransition: Equatable, Sendable {
   case periodCompleted(GamePeriodReference, boundary: Date, hasFollowingPeriod: Bool)
   case breakCompleted(GamePeriodReference, boundary: Date)
   case periodStarted(GamePeriodReference)
 }
 
-nonisolated public enum GameTimingCommand: Equatable, Sendable {
+public nonisolated enum GameTimingCommand: Equatable, Sendable {
   case startOrResume
   case pause
   case skip
   case setRemainingTime(Int)
 }
 
-nonisolated public struct GameTimingResult: Equatable, Sendable {
+public nonisolated struct GameTimingResult: Equatable, Sendable {
   public enum Status: Equatable, Sendable { case applied, unchanged, rejected }
   public var status: Status
   public var transitions: [GameTimingTransition] = []
@@ -27,7 +27,7 @@ nonisolated public struct GameTimingResult: Equatable, Sendable {
 }
 
 /// Pure clock state: no goals, centre-pass ownership, persistence, or presentations.
-nonisolated public struct GameTimingState: Equatable, Sendable {
+public nonisolated struct GameTimingState: Equatable, Sendable {
   public var phaseIndex: Int
   public var countdown: GameCountdown
   public var breakStartPolicy = BreakStartPolicy.automatic
@@ -40,7 +40,7 @@ nonisolated public struct GameTimingState: Equatable, Sendable {
   }
 
   @discardableResult
-  mutating public func reconcile(in timeline: GameTimeline, now: Date) -> [GameTimingTransition] {
+  public mutating func reconcile(in timeline: GameTimeline, now: Date) -> [GameTimingTransition] {
     guard timeline.phase(at: phaseIndex) != nil else { return [] }
     var transitions: [GameTimingTransition] = []
     while let boundary = countdown.endsAt, boundary <= now {
@@ -54,16 +54,15 @@ nonisolated public struct GameTimingState: Equatable, Sendable {
   }
 
   @discardableResult
-  mutating public func complete(in timeline: GameTimeline, boundary: Date) -> [GameTimingTransition]
-  {
+  public mutating func complete(in timeline: GameTimeline, boundary: Date) -> [GameTimingTransition] {
     guard let phase = timeline.phase(at: phaseIndex), !isFinalPeriodComplete(in: timeline) else {
       return []
     }
     let hasNext = phaseIndex + 1 < timeline.phases.count
     let transition: GameTimingTransition =
       phase.isPlayingPeriod
-      ? .periodCompleted(phase.associatedPeriod, boundary: boundary, hasFollowingPeriod: hasNext)
-      : .breakCompleted(phase.associatedPeriod, boundary: boundary)
+        ? .periodCompleted(phase.associatedPeriod, boundary: boundary, hasFollowingPeriod: hasNext)
+        : .breakCompleted(phase.associatedPeriod, boundary: boundary)
     countdown = GameCountdown(elapsedSeconds: phase.durationSeconds)
     guard hasNext else { return [transition] }
     phaseIndex += 1
@@ -76,22 +75,23 @@ nonisolated public struct GameTimingState: Equatable, Sendable {
     return [transition]
   }
 
-  mutating public func apply(
+  public mutating func apply(
     _ command: GameTimingCommand, in timeline: GameTimeline,
     expectedPhaseIndex: Int?, now: Date
   ) -> GameTimingResult {
     guard let phase = timeline.phase(at: phaseIndex),
-      expectedPhaseIndex == nil || expectedPhaseIndex == phaseIndex
+          expectedPhaseIndex == nil || expectedPhaseIndex == phaseIndex
     else { return GameTimingResult(status: .rejected) }
     switch command {
     case .startOrResume:
       guard !countdown.isRunning,
-        let endsAt = countdown.endDate(durationSeconds: phase.durationSeconds, now: now)
+            let endsAt = countdown.endDate(durationSeconds: phase.durationSeconds, now: now)
       else { return GameTimingResult(status: .unchanged) }
       countdown.endsAt = endsAt
       return GameTimingResult(
         status: .applied,
-        transitions: phase.isPlayingPeriod ? [.periodStarted(phase.associatedPeriod)] : [])
+        transitions: phase.isPlayingPeriod ? [.periodStarted(phase.associatedPeriod)] : []
+      )
     case .pause:
       guard countdown.isRunning else { return GameTimingResult(status: .unchanged) }
       countdown.elapsedSeconds =
@@ -103,9 +103,9 @@ nonisolated public struct GameTimingState: Equatable, Sendable {
         return GameTimingResult(status: .unchanged)
       }
       return GameTimingResult(status: .applied, transitions: complete(in: timeline, boundary: now))
-    case .setRemainingTime(let seconds):
+    case let .setRemainingTime(seconds):
       guard !countdown.isRunning, countdown.elapsedSeconds < phase.durationSeconds,
-        (1...phase.durationSeconds).contains(seconds)
+            (1 ... phase.durationSeconds).contains(seconds)
       else { return GameTimingResult(status: .rejected) }
       countdown.elapsedSeconds = phase.durationSeconds - seconds
       return GameTimingResult(status: .applied)
@@ -122,11 +122,12 @@ nonisolated public struct GameTimingState: Equatable, Sendable {
   }
 }
 
-extension Game {
-  nonisolated public var timing: GameTimingState {
+public extension Game {
+  nonisolated var timing: GameTimingState {
     get {
       GameTimingState(
-        phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
+        phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy
+      )
     }
     set {
       currentPhaseIndex = newValue.phaseIndex

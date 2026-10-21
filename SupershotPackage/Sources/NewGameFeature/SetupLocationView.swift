@@ -27,7 +27,6 @@ package struct SetupLocationView: View {
     VStack(alignment: .leading, spacing: 16) {
       switch store.location {
       case .idle:
-
         ContentUnavailableView {
           Label("Remember where you played", systemImage: "mappin.and.ellipse")
         } description: {
@@ -71,10 +70,9 @@ package struct SetupLocationView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 80)
 
-      case .loaded(let location):
+      case let .loaded(location):
         GameLocationMap(location: location)
         HStack {
-
           Label {
             if let pointOfInterestName = location.pointOfInterestName {
               Text(pointOfInterestName)

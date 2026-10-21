@@ -7,7 +7,7 @@ import IssueReporting
 import SharedModels
 import SubscriptionClient
 
-nonisolated public struct GameTimerUpdate: Equatable, Sendable {
+public nonisolated struct GameTimerUpdate: Equatable, Sendable {
   public var alarmSchedulingFailed = false
   public var snapshot: GameSnapshot
 
@@ -18,7 +18,7 @@ nonisolated public struct GameTimerUpdate: Equatable, Sendable {
 }
 
 /// UI and intent adapter for timing commands and post-commit presentation.
-nonisolated public struct GameTimerClient: Sendable {
+public nonisolated struct GameTimerClient: Sendable {
   public var cancelAlarm: @Sendable (Game.ID) async -> Void
   public var endPresentation: @Sendable (Game.ID) async -> Void
   public var pause: @Sendable (Game.ID, Int?) async throws -> GameSnapshot
@@ -32,6 +32,7 @@ nonisolated public struct GameTimerClient: Sendable {
     _, _, _ in
     throw GameTimerError.invalidCorrection
   }
+
   public var startOrResume: @Sendable (Game.ID, Int?) async throws -> GameTimerUpdate
 
   public init(
@@ -52,27 +53,37 @@ nonisolated public struct GameTimerClient: Sendable {
     self.refreshActivity = refreshActivity
     self.scheduleAlarm = scheduleAlarm
     self.skip = skip
-    if let setRemainingTime { self.setRemainingTime = setRemainingTime }
+    if let setRemainingTime {
+      self.setRemainingTime = setRemainingTime
+    }
     self.startOrResume = startOrResume
   }
 }
 
-extension DependencyValues {
-  nonisolated public var gameTimer: GameTimerClient {
+public extension DependencyValues {
+  nonisolated var gameTimer: GameTimerClient {
     get { self[GameTimerClientKey.self] }
     set { self[GameTimerClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum GameTimerClientKey: DependencyKey {
-  static var liveValue: GameTimerClient { .live }
-  static var previewValue: GameTimerClient { .live }
-  static var testValue: GameTimerClient { .unimplemented }
+  static var liveValue: GameTimerClient {
+    .live
+  }
+
+  static var previewValue: GameTimerClient {
+    .live
+  }
+
+  static var testValue: GameTimerClient {
+    .unimplemented
+  }
 }
 
 /// Stable UI/intent adapter: commands commit through gameSession, then presentation runs.
-nonisolated extension GameTimerClient {
-  static public var live: Self {
+public nonisolated extension GameTimerClient {
+  static var live: Self {
     Self(
       cancelAlarm: { gameID in
         @Dependency(\.gamePresentation) var presentation
@@ -109,12 +120,13 @@ nonisolated extension GameTimerClient {
       },
       startOrResume: { gameID, expectedPhaseIndex in
         try await perform(
-          gameID, command: .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex))
+          gameID, command: .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex)
+        )
       }
     )
   }
 
-  static public var unimplemented: Self {
+  static var unimplemented: Self {
     Self(
       cancelAlarm: { _ in reportIssue("GameTimerClient.cancelAlarm is unimplemented") },
       endPresentation: { _ in reportIssue("GameTimerClient.endPresentation is unimplemented") },
@@ -170,8 +182,8 @@ private nonisolated enum GameTimerError: Error, LocalizedError {
   }
 }
 
-extension GameTimerClient {
-  static nonisolated public func elapsedSeconds(
+public extension GameTimerClient {
+  nonisolated static func elapsedSeconds(
     durationSeconds: Int,
     persistedElapsedSeconds: Int,
     timerEndsAt: Date?,
@@ -181,12 +193,13 @@ extension GameTimerClient {
       .projection(durationSeconds: durationSeconds, now: now).elapsedSeconds
   }
 
-  static nonisolated public func endDate(
+  nonisolated static func endDate(
     durationSeconds: Int,
     elapsedSeconds: Int,
     now: Date
   ) -> Date? {
     GameCountdown(elapsedSeconds: elapsedSeconds).endDate(
-      durationSeconds: durationSeconds, now: now)
+      durationSeconds: durationSeconds, now: now
+    )
   }
 }

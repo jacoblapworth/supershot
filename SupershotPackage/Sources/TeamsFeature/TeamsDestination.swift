@@ -51,7 +51,5 @@ package struct TeamsEditorFeature {
     .ifLet(\.$alert, action: \.alert)
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

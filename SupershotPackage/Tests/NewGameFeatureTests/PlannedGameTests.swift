@@ -1,26 +1,26 @@
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import SQLiteData
-import SwiftUI
-import TestSupport
-import Testing
-
-@testable import Database
 @testable import GameCore
 @testable import LocationClient
 @testable import NewGameFeature
 @testable import SharedModels
+import SQLiteData
+import SwiftUI
+import Testing
+import TestSupport
 
 extension SupershotTestSuite {
   @MainActor
   @Suite(
     .dependencies {
       $0.uuid = .incrementing
-      $0.date.now = Date(timeIntervalSince1970: 10_000)
-    })
+      $0.date.now = Date(timeIntervalSince1970: 10000)
+    }
+  )
   struct PlannedGameTests {
     private func readySetup() async throws -> NewGameFeature.State {
       @Dependency(\.defaultDatabase) var database
@@ -44,7 +44,7 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       var state = try await readySetup()
       state.court = "  A  "
-      state.scheduledAt = Date(timeIntervalSince1970: 20_000)
+      state.scheduledAt = Date(timeIntervalSince1970: 20000)
       let store = Store(initialState: state) { NewGameFeature() }
       let actions: [NewGameFeature.Action] = [
         .configurationChanged, .sceneBecameInactive, .closeButtonTapped, .saveGameButtonTapped,
@@ -70,7 +70,7 @@ extension SupershotTestSuite {
       expectNoDifference(games, [])
     }
 
-    @Test(arguments: [-1_000.0, 30_000.0])
+    @Test(arguments: [-1000.0, 30000.0])
     func reopensEditsAndStartsSameGame(scheduledTime: Double) async throws {
       @Dependency(\.defaultDatabase) var database
       var state = try await readySetup()
@@ -87,10 +87,10 @@ extension SupershotTestSuite {
       await editor.send(.configurationChanged).finish()
       await editor.send(.startGameButtonTapped).finish()
       let (game, count) = try await database.read { db in
-        (try Game.find(state.gameID).fetchOne(db), try Game.fetchCount(db))
+        try (Game.find(state.gameID).fetchOne(db), Game.fetchCount(db))
       }
       expectNoDifference(count, 1)
-      expectNoDifference(game?.startedAt, Date(timeIntervalSince1970: 10_000))
+      expectNoDifference(game?.startedAt, Date(timeIntervalSince1970: 10000))
       expectNoDifference(game?.scheduledAt, state.scheduledAt)
       expectNoDifference(game?.court, "B")
       #expect(game?.timerEndsAt == nil)
@@ -101,7 +101,7 @@ extension SupershotTestSuite {
     func failedSaveRetainsChangesAndCanRetry() async throws {
       @Dependency(\.defaultDatabase) var database
       let state = try await readySetup()
-      let b = state.rightTeam.team!
+      let b = try #require(state.rightTeam.team)
       try await database.write { db in try Team.find(b.id).delete().execute(db) }
       let store = Store(initialState: state) { NewGameFeature() }
       await store.send(.closeButtonTapped).finish()
@@ -118,7 +118,7 @@ extension SupershotTestSuite {
     func retryAfterFailedStartStartsTheSameGame() async throws {
       @Dependency(\.defaultDatabase) var database
       let state = try await readySetup()
-      let b = state.rightTeam.team!
+      let b = try #require(state.rightTeam.team)
       try await database.write { db in try Team.find(b.id).delete().execute(db) }
       let store = Store(initialState: state) { NewGameFeature() }
       await store.send(.startGameButtonTapped).finish()
@@ -165,7 +165,7 @@ extension SupershotTestSuite {
     @Test
     func switchingToNowClearsScheduleAndBlankCourt() async throws {
       var state = try await readySetup()
-      state.scheduledAt = Date(timeIntervalSince1970: 20_000)
+      state.scheduledAt = Date(timeIntervalSince1970: 20000)
       state.court = " \n "
       let store = Store(initialState: state) { NewGameFeature() }
       store.send(.binding(.set(\.scheduledAt, nil)))

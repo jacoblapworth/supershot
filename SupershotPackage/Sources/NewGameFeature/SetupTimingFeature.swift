@@ -15,7 +15,7 @@ import SwiftUI
 import TeamEditingFeature
 import WidgetSupport
 
-nonisolated package struct SetupTiming: Equatable, Sendable {
+package nonisolated struct SetupTiming: Equatable, Sendable {
   package var breakStartPolicy = BreakStartPolicy.automatic
   package var customizesBreaks = false
   package var firstBreakDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
@@ -42,11 +42,13 @@ nonisolated package struct SetupTiming: Equatable, Sendable {
   package init(
     breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic, customizesBreaks: Bool = false,
     firstBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(
-      totalSeconds: 60),
+      totalSeconds: 60
+    ),
     halfTimeDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60),
     periodDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 480),
     secondBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(
-      totalSeconds: 60)
+      totalSeconds: 60
+    )
   ) {
     self.breakStartPolicy = breakStartPolicy
     self.customizesBreaks = customizesBreaks
@@ -74,9 +76,11 @@ package struct SetupTimingFeature {
       self.timing = timing
     }
   }
+
   package enum DurationField: Equatable {
     case quarter, allBreaks, firstBreak, halfTime, secondBreak
   }
+
   package enum Action: BindableAction {
     case editDurationButtonTapped(DurationField)
     case timeInput(PresentationAction<TimeInputFeature.Action>)
@@ -93,11 +97,12 @@ package struct SetupTimingFeature {
       case committed(SetupTiming)
     }
   }
+
   package var body: some Reducer<State, Action> {
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .editDurationButtonTapped(let field):
+      case let .editDurationButtonTapped(field):
         state.editedDuration = field
         let duration: NewGameFeature.DurationDraft
         let title: String
@@ -120,8 +125,9 @@ package struct SetupTimingFeature {
         }
         state.timeInput = .init(
           title: title, totalSeconds: duration.totalSeconds ?? 0,
-          allowedSeconds: (field == .quarter ? 1 : 0)...5999)
-      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+          allowedSeconds: (field == .quarter ? 1 : 0) ... 5999
+        )
+      case let .timeInput(.presented(.delegate(.committed(seconds)))):
         let duration = NewGameFeature.DurationDraft(totalSeconds: seconds)
         switch state.editedDuration {
         case .quarter: state.timing.periodDuration = duration
@@ -165,9 +171,7 @@ package struct SetupTimingFeature {
     .ifLet(\.$timeInput, action: \.timeInput) { TimeInputFeature() }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 package struct SetupTimingSummaryView: View {

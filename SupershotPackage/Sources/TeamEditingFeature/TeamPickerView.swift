@@ -2,8 +2,8 @@ import ComposableArchitecture
 import Database
 import GameCore
 import PreviewSupport
-import SQLiteData
 import SharedModels
+import SQLiteData
 import Styleguide
 import SwiftUI
 import WidgetSupport
@@ -83,27 +83,27 @@ package struct TeamPickerView: View {
       }
     }
     #if os(iOS)
-      .toolbar(content: {
-        DefaultToolbarItem(kind: .search, placement: .bottomBar)
-        ToolbarSpacer(.flexible, placement: .bottomBar)
-        ToolbarItem(placement: .bottomBar) {
-          Button {
-            store.send(.createTeamButtonTapped)
-          } label: {
-            Label("Create", systemImage: "plus.circle.fill")
-          }
-        }
-      })
-    #else
-      .toolbar {
-        ToolbarItem(placement: .primaryAction) {
-          Button {
-            store.send(.createTeamButtonTapped)
-          } label: {
-            Label("Create", systemImage: "plus.circle.fill")
-          }
+    .toolbar(content: {
+      DefaultToolbarItem(kind: .search, placement: .bottomBar)
+      ToolbarSpacer(.flexible, placement: .bottomBar)
+      ToolbarItem(placement: .bottomBar) {
+        Button {
+          store.send(.createTeamButtonTapped)
+        } label: {
+          Label("Create", systemImage: "plus.circle.fill")
         }
       }
+    })
+    #else
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Button {
+          store.send(.createTeamButtonTapped)
+        } label: {
+          Label("Create", systemImage: "plus.circle.fill")
+        }
+      }
+    }
     #endif
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
       NavigationStack {

@@ -1,7 +1,7 @@
 import Foundation
 
 /// Transient extraction data. No database identity, settings, inferred zone or lifecycle state.
-nonisolated package struct FixtureDraft: Equatable, Sendable {
+package nonisolated struct FixtureDraft: Equatable, Sendable {
   package var source: String
   package var sourceLine: Int
   package var firstTeam: String?
@@ -15,7 +15,7 @@ nonisolated package struct FixtureDraft: Equatable, Sendable {
   package var issues: [FixtureValidationIssue]
 }
 
-nonisolated package enum FixtureValidationIssue: Equatable, Sendable {
+package nonisolated enum FixtureValidationIssue: Equatable, Sendable {
   case missingFirstTeam
   case missingSecondTeam
   case identicalTeams
@@ -26,7 +26,7 @@ nonisolated package enum FixtureValidationIssue: Equatable, Sendable {
 }
 
 /// Context is explicit: time-only input never acquires a date or time zone.
-nonisolated package struct FixtureParsingContext: Sendable {
+package nonisolated struct FixtureParsingContext: Sendable {
   package var calendar: Calendar
   package var referenceDate: Date
   package var timeZone: TimeZone
@@ -38,7 +38,7 @@ nonisolated package struct FixtureParsingContext: Sendable {
   }
 }
 
-nonisolated package enum FixtureParserAvailability: Equatable, Sendable {
+package nonisolated enum FixtureParserAvailability: Equatable, Sendable {
   case available
   case deviceNotEligible
   case intelligenceNotEnabled
@@ -46,7 +46,7 @@ nonisolated package enum FixtureParserAvailability: Equatable, Sendable {
   case unavailable
 }
 
-nonisolated package enum FixtureParserError: Error, Equatable, Sendable, LocalizedError {
+package nonisolated enum FixtureParserError: Error, Equatable, Sendable, LocalizedError {
   case unavailable(FixtureParserAvailability)
   case unsupportedInput
   case inputTooLong(maximumBytes: Int)
@@ -64,8 +64,8 @@ nonisolated package enum FixtureParserError: Error, Equatable, Sendable, Localiz
     case .unavailable:
       "The on-device model is unavailable. Try again later or enter fixtures manually."
     case .unsupportedInput: "Paste a matchup or fixture list containing team names."
-    case .inputTooLong(let maximum): "Paste a shorter list (at most \(maximum) UTF-8 bytes)."
-    case .outputTooLong(let maximum): "Split the list into batches of at most \(maximum) fixtures."
+    case let .inputTooLong(maximum): "Paste a shorter list (at most \(maximum) UTF-8 bytes)."
+    case let .outputTooLong(maximum): "Split the list into batches of at most \(maximum) fixtures."
     case .generationFailed: "The fixture list could not be extracted. Try a shorter, simpler list."
     case .cancelled: "Fixture extraction was cancelled."
     }

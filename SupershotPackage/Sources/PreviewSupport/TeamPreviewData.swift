@@ -3,26 +3,26 @@ import GameCore
 import SwiftUI
 import WidgetSupport
 
-extension Team {
-  static package let previewRavens = Self(
+package extension Team {
+  static let previewRavens = Self(
     id: UUID(),
     name: "North London Ravens",
     colorHex: ColorPalette.blue.hex()
   )
-  static package let previewSwifts = Self(
+  static let previewSwifts = Self(
     id: UUID(),
     name: "Westminster Swifts",
     colorHex: ColorPalette.red.hex()
   )
-  static package let previewFoxes = Self(
+  static let previewFoxes = Self(
     id: UUID(),
     name: "Foxes",
     colorHex: "#34C759"
   )
 }
 
-extension Array where Element == Team {
-  static package var previewTeams: Self {
+package extension [Team] {
+  static var previewTeams: Self {
     [
       Team.previewRavens,
       Team.previewSwifts,

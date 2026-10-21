@@ -7,26 +7,26 @@
   final class MacNotificationDelegate: NSObject, NSApplicationDelegate,
     UNUserNotificationCenterDelegate
   {
-    func applicationWillFinishLaunching(_ notification: Notification) {
+    func applicationWillFinishLaunching(_: Notification) {
       UNUserNotificationCenter.current().delegate = self
     }
 
     nonisolated func userNotificationCenter(
-      _ center: UNUserNotificationCenter,
-      willPresent notification: UNNotification,
+      _: UNUserNotificationCenter,
+      willPresent _: UNNotification,
       withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
       completionHandler([.banner, .sound])
     }
 
     nonisolated func userNotificationCenter(
-      _ center: UNUserNotificationCenter,
+      _: UNUserNotificationCenter,
       didReceive response: UNNotificationResponse,
       withCompletionHandler completionHandler: @escaping () -> Void
     ) {
       guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
-        let value = response.notification.request.content.userInfo["gameID"] as? String,
-        let gameID = UUID(uuidString: value)
+            let value = response.notification.request.content.userInfo["gameID"] as? String,
+            let gameID = UUID(uuidString: value)
       else {
         completionHandler()
         return
@@ -38,7 +38,8 @@
         if let url = URL(string: "\(scheme)://game/\(gameID.uuidString)") {
           NSWorkspace.shared.open(
             [url], withApplicationAt: Bundle.main.bundleURL,
-            configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
+            configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil
+          )
         }
         completionHandler()
       }

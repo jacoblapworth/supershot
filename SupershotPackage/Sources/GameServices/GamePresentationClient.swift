@@ -5,20 +5,20 @@ import FeatureFlagsClient
 import Foundation
 import GameCore
 import IssueReporting
-import SQLiteData
 import SharedModels
+import SQLiteData
 import SubscriptionClient
 
 /// System effects run only after the authoritative transaction has committed.
 /// Presentation failure is reported separately and cannot roll back game state.
-nonisolated public struct GamePresentationClient: Sendable {
+public nonisolated struct GamePresentationClient: Sendable {
   public var update: @Sendable (GameSessionUpdate, GameSessionCommand) async -> Bool
   public var cancelAlarm: @Sendable (Game.ID) async -> Void
   public var end: @Sendable (Game.ID) async -> Void
   public var refresh: @Sendable (Game.ID) async -> Void
   public var scheduleAlarm: @Sendable (Game.ID) async -> Bool
 
-  static public var live: Self {
+  public static var live: Self {
     Self(
       update: { update, command in
         @Dependency(\.alarmClient) var alarms
@@ -31,17 +31,21 @@ nonisolated public struct GamePresentationClient: Sendable {
           await end(alarms, snapshot: snapshot)
           return false
         }
-        let access = (try? await subscription.currentAccess()) ?? .unknown
+        let access = await (try? subscription.currentAccess()) ?? .unknown
         let showsActivity = featureFlags.isEnabled(.liveActivities, access)
         let schedulesAlerts = featureFlags.isEnabled(.timerAlerts, access)
         if !schedulesAlerts {
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
         }
-        if !showsActivity { await alarms.endActivity(snapshot.game.id) }
+        if !showsActivity {
+          await alarms.endActivity(snapshot.game.id)
+        }
         guard showsActivity || schedulesAlerts else { return false }
         switch command {
         case .timing(.startOrResume, _) where applied:
-          if showsActivity { await alarms.updateActivity(snapshot, true) }
+          if showsActivity {
+            await alarms.updateActivity(snapshot, true)
+          }
           // A newer pause/reconcile can cancel the start effect after its commit.
           guard !Task.isCancelled, schedulesAlerts else { return false }
           return await alarms.scheduleAlarm(snapshot)
@@ -57,16 +61,18 @@ nonisolated public struct GamePresentationClient: Sendable {
         default:
           break
         }
-        if showsActivity { await alarms.updateActivity(snapshot, true) }
+        if showsActivity {
+          await alarms.updateActivity(snapshot, true)
+        }
         return false
       },
       cancelAlarm: { gameID in
         @Dependency(\.alarmClient) var alarms
-        await alarms.cancelAlarm(gameID, await phaseCount(gameID))
+        await alarms.cancelAlarm(gameID, phaseCount(gameID))
       },
       end: { gameID in
         @Dependency(\.alarmClient) var alarms
-        await alarms.cancelAlarm(gameID, await phaseCount(gameID))
+        await alarms.cancelAlarm(gameID, phaseCount(gameID))
         await alarms.endActivity(gameID)
       },
       refresh: { gameID in
@@ -76,7 +82,8 @@ nonisolated public struct GamePresentationClient: Sendable {
         else { return }
         @Dependency(\.gamePresentation) var presentation
         _ = await presentation.update(
-          GameSessionUpdate(outcome: .unchanged, snapshot: snapshot), .reconcile)
+          GameSessionUpdate(outcome: .unchanged, snapshot: snapshot), .reconcile
+        )
       },
       scheduleAlarm: { gameID in
         @Dependency(\.defaultDatabase) var database
@@ -87,7 +94,7 @@ nonisolated public struct GamePresentationClient: Sendable {
           let snapshot = try? await database.read({ try GameSnapshot.fetch($0, gameID: gameID) }),
           snapshot.game.isInProgress, snapshot.game.timerEndsAt != nil
         else { return false }
-        let access = (try? await subscription.currentAccess()) ?? .unknown
+        let access = await (try? subscription.currentAccess()) ?? .unknown
         guard featureFlags.isEnabled(.timerAlerts, access) else {
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
           return false
@@ -97,7 +104,7 @@ nonisolated public struct GamePresentationClient: Sendable {
     )
   }
 
-  static public var unimplemented: Self {
+  public static var unimplemented: Self {
     Self(
       update: { _, _ in
         reportIssue("GamePresentationClient.update is unimplemented")
@@ -121,7 +128,7 @@ nonisolated public struct GamePresentationClient: Sendable {
   private static func phaseCount(_ gameID: Game.ID) async -> Int {
     @Dependency(\.defaultDatabase) var database
     return
-      (try? await database.read { db in
+      await (try? database.read { db in
         let periods = try GamePeriod.where { $0.gameID.eq(gameID) }.fetchAll(db)
         return GameTimeline(periods: periods)?.phases.count ?? 0
       }) ?? 0
@@ -142,14 +149,19 @@ nonisolated public struct GamePresentationClient: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated public var gamePresentation: GamePresentationClient {
+public extension DependencyValues {
+  nonisolated var gamePresentation: GamePresentationClient {
     get { self[GamePresentationClientKey.self] }
     set { self[GamePresentationClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum GamePresentationClientKey: DependencyKey {
-  static var liveValue: GamePresentationClient { .live }
-  static var testValue: GamePresentationClient { .unimplemented }
+  static var liveValue: GamePresentationClient {
+    .live
+  }
+
+  static var testValue: GamePresentationClient {
+    .unimplemented
+  }
 }

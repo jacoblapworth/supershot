@@ -44,21 +44,23 @@ package struct AlarmPermissionFeature {
   package var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .refresh(let access):
+      case let .refresh(access):
         state.access = access
         guard !state.isRequesting else { return .none }
         return .run { send in
-          await send(.statusResponse(await alarmAuthorization.status()))
+          await send(.statusResponse(alarmAuthorization.status()))
         }
         .cancellable(id: "authorizationStatus", cancelInFlight: true)
 
-      case .statusResponse(let status):
+      case let .statusResponse(status):
         guard !state.isRequesting else { return .none }
         let previous = state.authorization
         state.authorization = status
-        if state.authorization != previous { state.errorMessage = nil }
+        if state.authorization != previous {
+          state.errorMessage = nil
+        }
         if featureFlags.isEnabled(.timerAlerts, state.access), previous != .authorized,
-          state.authorization == .authorized
+           state.authorization == .authorized
         {
           return .send(.delegate(.authorized))
         }
@@ -75,11 +77,11 @@ package struct AlarmPermissionFeature {
         return .merge(
           .cancel(id: "authorizationStatus"),
           .run { send in
-            await send(.authorizationResponse(await Result { try await alarmAuthorization.request() }))
+            await send(.authorizationResponse(Result { try await alarmAuthorization.request() }))
           }
         )
 
-      case .authorizationResponse(.success(let status)):
+      case let .authorizationResponse(.success(status)):
         state.isRequesting = false
         state.authorization = status
         if status == .authorized, featureFlags.isEnabled(.timerAlerts, state.access) {
@@ -102,7 +104,5 @@ package struct AlarmPermissionFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

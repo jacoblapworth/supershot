@@ -15,26 +15,26 @@ import SubscriptionClient
 import SwiftUI
 import WidgetSupport
 
-extension ScoringFeature.Team {
-  static package let previewRavens = Self(
+package extension ScoringFeature.Team {
+  static let previewRavens = Self(
     id: UUID(3),
     bibColor: ColorPalette.green,
     name: "Foxes"
   )
-  static package let previewSwifts = Self(
+  static let previewSwifts = Self(
     id: UUID(4),
     bibColor: ColorPalette.orange,
     name: "Owls"
   )
 }
 
-extension ScoringFeature.State {
-  static package var previewQuarter: Self {
+package extension ScoringFeature.State {
+  static var previewQuarter: Self {
     Self(
       centrePassTeamID: ScoringFeature.Team.previewRavens.id,
       currentPhaseIndex: 2,
       gameID: UUID(11),
-      periods: MockGameData.periods(gameID: UUID(11), idOffset: 1_010),
+      periods: MockGameData.periods(gameID: UUID(11), idOffset: 1010),
       startedAt: Date(),
       teamA: .previewRavens,
       teamB: .previewSwifts,
@@ -42,7 +42,7 @@ extension ScoringFeature.State {
     )
   }
 
-  static package var previewQuarterComplete: Self {
+  static var previewQuarterComplete: Self {
     var state = previewQuarter
     state.canUndo = true
     state.elapsedSeconds = state.currentDurationSeconds
@@ -52,7 +52,7 @@ extension ScoringFeature.State {
     return state
   }
 
-  static package var previewBreak: Self {
+  static var previewBreak: Self {
     var state = previewQuarter
     state.currentPhaseIndex = 3
     state.lateScoringPeriodNumber = 2

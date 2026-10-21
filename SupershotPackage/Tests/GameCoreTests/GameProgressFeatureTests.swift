@@ -1,18 +1,17 @@
-@testable import Database
-@testable import ScoringFeature
-@testable import WidgetSupport
-import SwiftUI
 import CustomDump
+@testable import Database
 import Dependencies
-import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
-@testable import GameCore
-@testable import SharedModels
 import DependenciesTestSupport
+import Foundation
+@testable import GameCore
+import GRDB
+@testable import ScoringFeature
+@testable import SharedModels
+import SQLiteData
+import SwiftUI
+import Testing
+import TestSupport
+@testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -30,7 +29,7 @@ extension SupershotTestSuite {
           Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
             id: UUID(-1),
-            startedAt: Date(timeIntervalSince1970: 1_000),
+            startedAt: Date(timeIntervalSince1970: 1000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamABibColorHex: "#AF52DE",
@@ -72,7 +71,7 @@ extension SupershotTestSuite {
       let snapshot = GameSnapshot(
         game: Game(
           id: UUID(-3),
-          startedAt: Date(timeIntervalSince1970: 1_000),
+          startedAt: Date(timeIntervalSince1970: 1000),
           endedAt: nil,
           teamAID: ravens.id,
           teamBID: swifts.id,
@@ -100,6 +99,5 @@ extension SupershotTestSuite {
       expectNoDifference(state.courtLayout.left.id, state.teamB.id)
       expectNoDifference(state.isTimerRunning, false)
     }
-
   }
 }

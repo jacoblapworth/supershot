@@ -2,7 +2,7 @@ import Foundation
 import SharedModels
 
 /// Composed game progress. Clock transitions are pure; this projection applies their scoring consequences.
-nonisolated public struct GameProgress: Equatable, Sendable {
+public nonisolated struct GameProgress: Equatable, Sendable {
   public var timing: GameTimingState
   public var scoring: GameScoringState
 
@@ -16,28 +16,34 @@ nonisolated public struct GameProgress: Equatable, Sendable {
     lateScoringPeriodNumber: Int? = nil, breakStartPolicy: BreakStartPolicy = .automatic
   ) {
     timing = GameTimingState(
-      phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
+      phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy
+    )
     scoring = GameScoringState(
       isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
-      lateScoringPeriodNumber: lateScoringPeriodNumber)
+      lateScoringPeriodNumber: lateScoringPeriodNumber
+    )
   }
 
   public var phaseIndex: Int {
     get { timing.phaseIndex }
     set { timing.phaseIndex = newValue }
   }
+
   public var countdown: GameCountdown {
     get { timing.countdown }
     set { timing.countdown = newValue }
   }
+
   public var isAwaitingCentrePassConfirmation: Bool {
     get { scoring.isAwaitingCentrePassConfirmation }
     set { scoring.isAwaitingCentrePassConfirmation = newValue }
   }
+
   public var lateScoringPeriodNumber: Int? {
     get { scoring.lateScoringPeriodNumber }
     set { scoring.lateScoringPeriodNumber = newValue }
   }
+
   public var breakStartPolicy: BreakStartPolicy {
     get { timing.breakStartPolicy }
     set { timing.breakStartPolicy = newValue }
@@ -47,20 +53,22 @@ nonisolated public struct GameProgress: Equatable, Sendable {
     timing.isFinalPeriodComplete(in: timeline)
   }
 
-  mutating public func reconcile(in timeline: GameTimeline, now: Date) {
+  public mutating func reconcile(in timeline: GameTimeline, now: Date) {
     apply(timing.reconcile(in: timeline, now: now))
   }
 
-  mutating public func complete(in timeline: GameTimeline, boundary: Date) {
+  public mutating func complete(in timeline: GameTimeline, boundary: Date) {
     apply(timing.complete(in: timeline, boundary: boundary))
   }
 
-  mutating public func apply(_ transitions: [GameTimingTransition]) {
+  public mutating func apply(_ transitions: [GameTimingTransition]) {
     for transition in transitions {
       switch transition {
-      case .periodCompleted(let period, _, let hasFollowingPeriod):
+      case let .periodCompleted(period, _, hasFollowingPeriod):
         lateScoringPeriodNumber = period.number
-        if hasFollowingPeriod { isAwaitingCentrePassConfirmation = true }
+        if hasFollowingPeriod {
+          isAwaitingCentrePassConfirmation = true
+        }
       case .periodStarted:
         lateScoringPeriodNumber = nil
       case .breakCompleted:

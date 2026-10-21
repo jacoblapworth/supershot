@@ -2,7 +2,7 @@ import Database
 import GameCore
 
 /// Quarter scores start at zero; the selected breakdown's winner is plotted above zero.
-nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
+package nonisolated struct ScoreDifferenceSeries: Equatable, Sendable {
   package struct Point: Equatable, Identifiable, Sendable {
     package enum ID: Hashable, Sendable {
       case start
@@ -17,7 +17,9 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
     package let teamAScore: Int
     package let teamBScore: Int
 
-    package var difference: Int { teamAScore - teamBScore }
+    package var difference: Int {
+      teamAScore - teamBScore
+    }
   }
 
   package let points: [Point]
@@ -40,7 +42,7 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
       boundaries.append(duration)
     }
     self.duration = max(duration, 1)
-    self.periodEndOffsets = Array(boundaries.dropLast())
+    periodEndOffsets = Array(boundaries.dropLast())
 
     // Timeline presentation is newest first, including its same-second tie breaks.
     var teamAScore = 0
@@ -50,11 +52,12 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
       .reversed().flatMap { quarter in
         quarter.goals.reversed().compactMap { goal -> Point? in
           guard let period = periods.first(where: { $0.number == goal.period }),
-            let offset = offsets[goal.period]
+                let offset = offsets[goal.period]
           else { return nil }
           let elapsed = min(
             max(period.durationSeconds - goal.clockSecondsRemaining, 0),
-            period.durationSeconds)
+            period.durationSeconds
+          )
           if breakdown == .wholeGame {
             teamAScore = goal.teamAScore
             teamBScore = goal.teamBScore
@@ -74,29 +77,30 @@ nonisolated package struct ScoreDifferenceSeries: Equatable, Sendable {
       }
     self.moments = moments
     // A tie has no winner, so keep a deterministic Team A reference.
-    self.positiveTeamIsTeamA = (moments.last?.difference ?? 0) >= 0
+    positiveTeamIsTeamA = (moments.last?.difference ?? 0) >= 0
     var points =
       [
         Point(
           id: .start, elapsedSeconds: 0, period: periods.first?.number ?? 1,
           periodElapsedSeconds: 0, teamAScore: 0, teamBScore: 0
-        )
+        ),
       ] + moments
 
     // Finishing is only allowed once the final playing period is complete.
     // Live games stop at the last goal rather than projecting a lead into the future.
     if analysis.isComplete, let last = moments.last, let period = periods.last,
-      last.elapsedSeconds < duration
+       last.elapsedSeconds < duration
     {
       points.append(
         Point(
           id: .end, elapsedSeconds: duration, period: period.number,
           periodElapsedSeconds: period.durationSeconds,
           teamAScore: last.teamAScore, teamBScore: last.teamBScore
-        ))
+        )
+      )
     }
     self.points = points
-    self.extent = max(moments.map { abs($0.difference) }.max() ?? 0, 1)
+    extent = max(moments.map { abs($0.difference) }.max() ?? 0, 1)
   }
 
   package func nearestMoment(to elapsedSeconds: Int) -> Point? {

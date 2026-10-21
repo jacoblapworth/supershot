@@ -36,10 +36,13 @@ package struct SetupTeamView: View {
           }
           PaletteColorPicker(
             color: Binding(
-              get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }),
+              get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }
+            ),
             title: "Colour"
           )
-          if store.isSaving { ProgressView("Saving colour…") }
+          if store.isSaving {
+            ProgressView("Saving colour…")
+          }
           if let errorMessage = store.errorMessage {
             Text(errorMessage).foregroundStyle(.red)
             Button("Retry") { store.send(.retryButtonTapped) }
@@ -61,7 +64,7 @@ package struct SetupTeamView: View {
       }
     }
     #if os(macOS)
-      .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)
+    .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)
     #endif
     .interactiveDismissDisabled(store.isSaving)
     .presentationDetents([.medium, .large])
@@ -77,7 +80,8 @@ package struct SetupTeamView: View {
   SetupTeamView(
     store: Store(initialState: SetupTeamFeature.State(team: .previewRavens)) {
       SetupTeamFeature()
-    })
+    }
+  )
 }
 
 #Preview("Save error") {

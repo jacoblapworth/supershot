@@ -1,15 +1,10 @@
-import SwiftUI
-import ComposableArchitecture
-import CustomDump
-import Dependencies
-import Foundation
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import ComposableArchitecture
+import CustomDump
 @testable import Database
+import Dependencies
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameServices
@@ -20,14 +15,18 @@ import TestSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct NewGameFeatureTests {
+  struct NewGameFeatureTests {
     @Test
     func newGamesDefaultToEightMinuteQuartersAndOneMinuteBreaks() {
       let state = NewGameFeature.State()
@@ -242,7 +241,7 @@ extension SupershotTestSuite {
       state.leftTeam.team = ravens
       state.rightTeam = .init(bibColor: Color(hex: "#FF2D55"))
       state.rightTeam.team = swifts
-      let startedAt = Date(timeIntervalSince1970: 1_000)
+      let startedAt = Date(timeIntervalSince1970: 1000)
       let store = TestStore(initialState: state) {
         NewGameFeature()
       } withDependencies: {
@@ -273,9 +272,9 @@ extension SupershotTestSuite {
       }
 
       let (game, periods) = try await store.dependencies.defaultDatabase.read { db in
-        (
-          try Game.fetchOne(db),
-          try GamePeriod.order { $0.position }.fetchAll(db)
+        try (
+          Game.fetchOne(db),
+          GamePeriod.order { $0.position }.fetchAll(db)
         )
       }
       #expect(game?.breakStartPolicy == policy)

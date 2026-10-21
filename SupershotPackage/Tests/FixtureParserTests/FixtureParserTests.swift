@@ -1,12 +1,11 @@
 import CustomDump
 import Dependencies
 import DependenciesTestSupport
+@testable import FixtureParser
 import Foundation
 import Testing
 
-@testable import FixtureParser
-
-@Suite struct FixtureParserTests {
+struct FixtureParserTests {
   func parser(_ rows: [ExtractedFixture]) -> FixtureParser {
     FixtureParser(availability: { .available }, generate: { _ in rows })
   }
@@ -23,7 +22,8 @@ import Testing
       ExtractedFixture(
         source: source, firstTeam: pairs[index].0, secondTeam: pairs[index].1,
         time: times[index], division: "Division \(index < 3 ? 1 : 2)",
-        court: "Court \(index < 3 ? 1 : 2)")
+        court: "Court \(index < 3 ? 1 : 2)"
+      )
     }
     // Validation owns source ordering even if the generator reverses its output.
     let drafts = try await parser(rows.reversed()).parse(FixtureParserDevelopmentHarness.sample)
@@ -37,7 +37,9 @@ import Testing
         draft.time,
         DateComponents(
           hour: index % 3 == 0 ? 18 : 19,
-          minute: [30, 10, 50][index % 3]))
+          minute: [30, 10, 50][index % 3]
+        )
+      )
       expectNoDifference(draft.division, "Division \(index < 3 ? 1 : 2)")
       expectNoDifference(draft.court, "Court \(index < 3 ? 1 : 2)")
       #expect(draft.date == nil)
@@ -66,7 +68,8 @@ import Testing
         generate: { _ in
           withUnsafeCurrentTask { $0?.cancel() }
           throw FixtureParserError.generationFailed
-        })
+        }
+      )
       await #expect(throws: FixtureParserError.cancelled) { try await parser.parse("A vs B") }
     }
     await failureTask.value
@@ -76,8 +79,9 @@ import Testing
     let source = "18:30 A vs B"
     let draft = try #require(
       try await parser([
-        .init(source: source, firstTeam: "A", secondTeam: "B", date: "18:30", time: "18:30")
-      ]).parse(source).first)
+        .init(source: source, firstTeam: "A", secondTeam: "B", date: "18:30", time: "18:30"),
+      ]).parse(source).first
+    )
     #expect(draft.date == nil && draft.dateText == nil)
     expectNoDifference(draft.time, DateComponents(hour: 18, minute: 30))
     expectNoDifference(draft.issues, [])
@@ -86,7 +90,7 @@ import Testing
   @Test func singleAndPartialRows() async throws {
     let source = FixtureParserDevelopmentHarness.single
     let drafts = try await parser([
-      .init(source: source, firstTeam: "Coles Hot Chooks", secondTeam: "IMG & Friends")
+      .init(source: source, firstTeam: "Coles Hot Chooks", secondTeam: "IMG & Friends"),
     ]).parse(source)
     expectNoDifference(drafts.first?.issues, [])
     #expect(drafts.first?.time == nil)
@@ -99,7 +103,8 @@ import Testing
     let rows = [
       ExtractedFixture(
         source: "Chooks vs chooks", firstTeam: "Chooks", secondTeam: "chooks",
-        date: "2026-10-19", time: "18:30", division: "Division 1", court: "Court 1")
+        date: "2026-10-19", time: "18:30", division: "Division 1", court: "Court 1"
+      ),
     ]
     let draft = try #require(try await parser(rows).parse(rows[0].source).first)
     expectNoDifference(
@@ -108,13 +113,15 @@ import Testing
         .identicalTeams, .valueNotInSource(field: "date"),
         .valueNotInSource(field: "time"), .valueNotInSource(field: "division"),
         .valueNotInSource(field: "court"),
-      ])
+      ]
+    )
     #expect(draft.date == nil && draft.time == nil && draft.division == nil && draft.court == nil)
     let missing = try await parser([.init(source: "vs", firstTeam: " ", secondTeam: "Invented")])
       .parse("vs")
     expectNoDifference(
       missing.first?.issues,
-      [.valueNotInSource(field: "secondTeam"), .missingFirstTeam, .missingSecondTeam])
+      [.valueNotInSource(field: "secondTeam"), .missingFirstTeam, .missingSecondTeam]
+    )
   }
 
   @Test(arguments: ["24:00", "19:60", "-1:30", "7:5", "noon"])
@@ -123,7 +130,8 @@ import Testing
     let draft = try #require(
       try await parser([.init(source: source, firstTeam: "A", secondTeam: "B", time: time)]).parse(
         source
-      ).first)
+      ).first
+    )
     expectNoDifference(draft.timeText, time)
     expectNoDifference(draft.issues, [.invalidTime])
     #expect(draft.time == nil)
@@ -134,8 +142,9 @@ import Testing
     let source = "\(date) 18:30 A vs B"
     let draft = try #require(
       try await parser([
-        .init(source: source, firstTeam: "A", secondTeam: "B", date: date, time: "18:30")
-      ]).parse(source).first)
+        .init(source: source, firstTeam: "A", secondTeam: "B", date: date, time: "18:30"),
+      ]).parse(source).first
+    )
     expectNoDifference(draft.dateText, date)
     expectNoDifference(draft.issues, [.invalidDate])
     expectNoDifference(draft.time, DateComponents(hour: 18, minute: 30))
@@ -149,7 +158,8 @@ import Testing
     // UTC date is still 18 October; local date is 19 October.
     let reference = try #require(ISO8601DateFormatter().date(from: "2026-10-18T12:30:00Z"))
     let context = FixtureParsingContext(
-      calendar: calendar, referenceDate: reference, timeZone: zone)
+      calendar: calendar, referenceDate: reference, timeZone: zone
+    )
     for (date, expected) in [
       ("2028-02-29", DateComponents(year: 2028, month: 2, day: 29)),
       ("tomorrow", DateComponents(year: 2026, month: 10, day: 20)),
@@ -158,7 +168,7 @@ import Testing
     ] {
       let source = "\(date) A vs B"
       let result = try await parser([
-        .init(source: source, firstTeam: "A", secondTeam: "B", date: date)
+        .init(source: source, firstTeam: "A", secondTeam: "B", date: date),
       ]).parse(source, context: context)
       expectNoDifference(result.first?.date, expected)
       expectNoDifference(result.first?.issues, [])
@@ -166,7 +176,7 @@ import Testing
     }
     let source = "tomorrow A vs B"
     let result = try await parser([
-      .init(source: source, firstTeam: "A", secondTeam: "B", date: "tomorrow")
+      .init(source: source, firstTeam: "A", secondTeam: "B", date: "tomorrow"),
     ]).parse(source)
     expectNoDifference(result.first?.issues, [.dateContextRequired])
     #expect(result.first?.date == nil)
@@ -178,12 +188,13 @@ import Testing
       generate: { _ in
         Issue.record("Generation should not run")
         return []
-      })
+      }
+    )
     await #expect(throws: FixtureParserError.unsupportedInput) {
       try await neverGenerate.parse(" \n")
     }
-    await #expect(throws: FixtureParserError.inputTooLong(maximumBytes: 6_000)) {
-      try await neverGenerate.parse(String(repeating: "&", count: 6_001))
+    await #expect(throws: FixtureParserError.inputTooLong(maximumBytes: 6000)) {
+      try await neverGenerate.parse(String(repeating: "&", count: 6001))
     }
     await #expect(throws: FixtureParserError.unsupportedInput) {
       try await parser([]).parse("Shopping list")
@@ -207,10 +218,12 @@ import Testing
       try await parser([.init(source: "invented")]).parse("A vs B")
     }
     let failure = FixtureParser(
-      availability: { .available }, generate: { _ in throw CocoaError(.coderInvalidValue) })
+      availability: { .available }, generate: { _ in throw CocoaError(.coderInvalidValue) }
+    )
     await #expect(throws: FixtureParserError.generationFailed) { try await failure.parse("A vs B") }
     let cancelled = FixtureParser(
-      availability: { .available }, generate: { _ in throw CancellationError() })
+      availability: { .available }, generate: { _ in throw CancellationError() }
+    )
     await #expect(throws: FixtureParserError.cancelled) { try await cancelled.parse("A vs B") }
   }
 
@@ -221,7 +234,8 @@ import Testing
         generate: { _ in
           withUnsafeCurrentTask { $0?.cancel() }
           return [.init(source: "A vs B", firstTeam: "A", secondTeam: "B")]
-        })
+        }
+      )
       await #expect(throws: FixtureParserError.cancelled) { try await parser.parse("A vs B") }
     }
     await task.value
@@ -239,7 +253,7 @@ import Testing
   }
 }
 
-nonisolated private func neverGenerateGeneration(_: String) async throws -> [ExtractedFixture] {
+private nonisolated func neverGenerateGeneration(_: String) async throws -> [ExtractedFixture] {
   Issue.record("Unavailable parser must not generate")
   return []
 }

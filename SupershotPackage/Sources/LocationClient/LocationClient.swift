@@ -4,14 +4,14 @@ import Foundation
 import MapKit
 import SharedModels
 
-nonisolated package enum LocationAuthorizationStatus: Equatable, Sendable {
+package nonisolated enum LocationAuthorizationStatus: Equatable, Sendable {
   case authorized
   case denied
   case restricted
   case notDetermined
 }
 
-nonisolated package struct LocationClient: Sendable {
+package nonisolated struct LocationClient: Sendable {
   package var authorizationStatus: @Sendable () -> LocationAuthorizationStatus
   package var currentLocation: @Sendable () async throws -> GameLocation
   package var requestAuthorization: @Sendable () async -> LocationAuthorizationStatus
@@ -27,39 +27,47 @@ nonisolated package struct LocationClient: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated package var locationClient: LocationClient {
+package extension DependencyValues {
+  nonisolated var locationClient: LocationClient {
     get { self[LocationClientKey.self] }
     set { self[LocationClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum LocationClientKey: DependencyKey {
-  static var liveValue: LocationClient { .live }
-  static var previewValue: LocationClient { .preview }
-  static var testValue: LocationClient { .unavailable }
+  static var liveValue: LocationClient {
+    .live
+  }
+
+  static var previewValue: LocationClient {
+    .preview
+  }
+
+  static var testValue: LocationClient {
+    .unavailable
+  }
 }
 
-nonisolated extension LocationClient {
-  static package let previewLocation = GameLocation(
+package nonisolated extension LocationClient {
+  static let previewLocation = GameLocation(
     latitude: 51.5560,
     longitude: -0.2796,
     pointOfInterestName: "Wembley Arena"
   )
 
-  static package let preview = Self(
+  static let preview = Self(
     authorizationStatus: { .authorized },
     currentLocation: { previewLocation },
     requestAuthorization: { .authorized }
   )
 
-  static package let unavailable = Self(
+  static let unavailable = Self(
     authorizationStatus: { .denied },
     currentLocation: { throw LocationClientError.authorizationDenied },
     requestAuthorization: { .denied }
   )
 
-  static package var live: Self {
+  static var live: Self {
     Self(
       authorizationStatus: {
         LocationAuthorizationStatus(CLLocationManager().authorizationStatus)
@@ -72,7 +80,7 @@ nonisolated extension LocationClient {
         let location = try await provider.requestLocation()
         let request = MKLocalPointsOfInterestRequest(
           center: location.coordinate,
-          radius: 5_000
+          radius: 5000
         )
 
         request.pointOfInterestFilter = .init(including: [
@@ -111,7 +119,7 @@ nonisolated extension LocationClient {
   }
 }
 
-nonisolated package enum LocationClientError: Error {
+package nonisolated enum LocationClientError: Error {
   case authorizationDenied
   case locationUnavailable
 }
@@ -166,7 +174,7 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
     }
   }
 
-  func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+  func locationManager(_: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
     guard let location = locations.last(where: { $0.horizontalAccuracy >= 0 }) else {
       locationContinuation?.resume(throwing: LocationClientError.locationUnavailable)
       locationContinuation = nil
@@ -176,16 +184,14 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
     locationContinuation = nil
   }
 
-  func locationManager(_ manager: CLLocationManager, didFailWithError error: any Error) {
+  func locationManager(_: CLLocationManager, didFailWithError error: any Error) {
     locationContinuation?.resume(throwing: error)
     locationContinuation = nil
   }
 }
-nonisolated
 
-  extension CLAuthorizationStatus
-{
-  fileprivate var isAuthorized: Bool {
+private nonisolated extension CLAuthorizationStatus {
+  var isAuthorized: Bool {
     #if os(iOS)
       self == .authorizedAlways || self == .authorizedWhenInUse
     #else
@@ -193,11 +199,9 @@ nonisolated
     #endif
   }
 }
-nonisolated
 
-  extension LocationAuthorizationStatus
-{
-  fileprivate init(_ status: CLAuthorizationStatus) {
+private nonisolated extension LocationAuthorizationStatus {
+  init(_ status: CLAuthorizationStatus) {
     switch status {
     case .authorizedAlways:
       self = .authorized

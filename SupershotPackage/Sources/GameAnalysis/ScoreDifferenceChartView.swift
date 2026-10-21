@@ -29,10 +29,21 @@ private struct ScoreDifferenceChart: View {
   let teamBColor: Color
   @State private var selectedMoment: ScoreDifferenceSeries.Point?
 
-  private var positiveTeamName: String { series.positiveTeamIsTeamA ? teamAName : teamBName }
-  private var negativeTeamName: String { series.positiveTeamIsTeamA ? teamBName : teamAName }
-  private var positiveTeamColor: Color { series.positiveTeamIsTeamA ? teamAColor : teamBColor }
-  private var negativeTeamColor: Color { series.positiveTeamIsTeamA ? teamBColor : teamAColor }
+  private var positiveTeamName: String {
+    series.positiveTeamIsTeamA ? teamAName : teamBName
+  }
+
+  private var negativeTeamName: String {
+    series.positiveTeamIsTeamA ? teamBName : teamAName
+  }
+
+  private var positiveTeamColor: Color {
+    series.positiveTeamIsTeamA ? teamAColor : teamBColor
+  }
+
+  private var negativeTeamColor: Color {
+    series.positiveTeamIsTeamA ? teamBColor : teamAColor
+  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -108,8 +119,8 @@ private struct ScoreDifferenceChart: View {
               .foregroundStyle(Color.primary.opacity(0.5))
           }
         }
-        .chartXScale(domain: 0...series.duration)
-        .chartYScale(domain: -series.extent...series.extent)
+        .chartXScale(domain: 0 ... series.duration)
+        .chartYScale(domain: -series.extent ... series.extent)
         .chartXAxisLabel("Playing time")
         .chartYAxisLabel("Points")
         .chartXAxis {
@@ -196,7 +207,7 @@ private struct ScoreDifferenceChart: View {
     }
     let plotArea = geometry[plotFrame]
     guard plotArea.contains(location),
-      let seconds = proxy.value(atX: location.x - plotArea.minX, as: Int.self)
+          let seconds = proxy.value(atX: location.x - plotArea.minX, as: Int.self)
     else {
       selectedMoment = nil
       return
@@ -217,7 +228,8 @@ private struct ScoreDifferenceInspection: View {
       Text("\(teamAName) \(moment.teamAScore) – \(moment.teamBScore) \(teamBName)")
         .monospacedDigit()
       Text(scoreDifferenceLeadDescription(
-        moment.difference, teamAName: teamAName, teamBName: teamBName))
+        moment.difference, teamAName: teamAName, teamBName: teamBName
+      ))
     }
     .font(.caption.weight(.medium))
     .fixedSize(horizontal: false, vertical: true)
@@ -234,9 +246,13 @@ private func elapsedTime(_ seconds: Int) -> String {
 private func scoreDifferenceLeadDescription(
   _ difference: Int, teamAName: String, teamBName: String
 ) -> LocalizedStringResource {
-  if difference == 0 { return "Scores level" }
+  if difference == 0 {
+    return "Scores level"
+  }
   let name = difference > 0 ? teamAName : teamBName
-  if abs(difference) == 1 { return "\(name) leads by 1 point" }
+  if abs(difference) == 1 {
+    return "\(name) leads by 1 point"
+  }
   return "\(name) leads by \(abs(difference)) points"
 }
 
@@ -288,7 +304,7 @@ private func scoreDifferencePreview(scores: [(Int, Int)]) -> GameAnalysis {
     GoalTimelineQuarter(
       goals: moments.reversed(), period: period.number,
       teamAQuarterScore: scores.last?.0 ?? 0, teamBQuarterScore: scores.last?.1 ?? 0
-    )
+    ),
   ])
   return analysis
 }

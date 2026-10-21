@@ -1,4 +1,3 @@
-import PreviewSupport
 import AlarmClient
 import AppSettings
 import Combine
@@ -10,9 +9,10 @@ import GameServices
 import GamesFeature
 import PaywallFeature
 import PermissionsFeature
-import SQLiteData
+import PreviewSupport
 import SettingsFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -41,7 +41,11 @@ package struct AppView: View {
           #endif
           return store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
         },
-        set: { if $0 == nil { store.send(.destination(.dismiss)) } }
+        set: {
+          if $0 == nil {
+            store.send(.destination(.dismiss))
+          }
+        }
       )
     ) { paywallStore in
       PaywallView(store: paywallStore)
@@ -65,28 +69,28 @@ package struct AppView: View {
     #if os(macOS)
       MacNavigationView(store: store)
     #else
-    TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
-      Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
-        GamesHomeView(
-          proAccess: store.proAccess,
-          store: store.scope(state: \.games, action: \.games),
-          isPresentingPaywall: store.destination?.proPaywall != nil
-        )
+      TabView(selection: $store.selectedTab.sending(\.selectedTabChanged)) {
+        Tab("Games", systemImage: "sportscourt", value: AppFeature.Tab.games) {
+          GamesHomeView(
+            proAccess: store.proAccess,
+            store: store.scope(state: \.games, action: \.games),
+            isPresentingPaywall: store.destination?.proPaywall != nil
+          )
+        }
+        Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
+          TeamsListView(
+            proAccess: store.proAccess,
+            store: store.scope(state: \.teams, action: \.teams),
+            isPresentingPaywall: store.destination?.proPaywall != nil
+          )
+        }
+        Tab("Settings", systemImage: "gearshape", value: AppFeature.Tab.settings) {
+          SettingsView(
+            proAccess: store.proAccess,
+            store: store.scope(state: \.settings, action: \.settings)
+          )
+        }
       }
-      Tab("Teams", systemImage: "person.2", value: AppFeature.Tab.teams) {
-        TeamsListView(
-          proAccess: store.proAccess,
-          store: store.scope(state: \.teams, action: \.teams),
-          isPresentingPaywall: store.destination?.proPaywall != nil
-        )
-      }
-      Tab("Settings", systemImage: "gearshape", value: AppFeature.Tab.settings) {
-        SettingsView(
-          proAccess: store.proAccess,
-          store: store.scope(state: \.settings, action: \.settings)
-        )
-      }
-    }
     #endif
   }
 

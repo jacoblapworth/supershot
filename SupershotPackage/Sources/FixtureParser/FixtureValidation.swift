@@ -15,11 +15,16 @@ nonisolated extension ExtractedFixture {
     }
     let first = grounded(firstTeam, field: "firstTeam")
     let second = grounded(secondTeam, field: "secondTeam")
-    if first == nil { issues.append(.missingFirstTeam) }
-    if second == nil { issues.append(.missingSecondTeam) }
+    if first == nil {
+      issues.append(.missingFirstTeam)
+    }
+    if second == nil {
+      issues.append(.missingSecondTeam)
+    }
     if let first, let second,
-      first.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(
-        second.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+       first.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(
+         second.trimmingCharacters(in: .whitespacesAndNewlines)
+       ) == .orderedSame
     {
       issues.append(.identicalTeams)
     }
@@ -31,9 +36,9 @@ nonisolated extension ExtractedFixture {
     if let rawTime {
       let parts = rawTime.split(separator: ":", omittingEmptySubsequences: false)
       if parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]),
-        (0...23).contains(hour), (0...59).contains(minute),
-        parts[0].count <= 2, parts[1].count == 2,
-        rawTime.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == ":") })
+         (0 ... 23).contains(hour), (0 ... 59).contains(minute),
+         parts[0].count <= 2, parts[1].count == 2,
+         rawTime.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == ":") })
       {
         parsedTime = DateComponents(hour: hour, minute: minute)
       } else {
@@ -42,7 +47,9 @@ nonisolated extension ExtractedFixture {
     }
     // A valid clock time repeated in the date slot is not evidence of a calendar date.
     // The on-device model can populate both slots from a time-only fixture.
-    if parsedTime != nil, rawDate == rawTime { rawDate = nil }
+    if parsedTime != nil, rawDate == rawTime {
+      rawDate = nil
+    }
     var parsedDate: DateComponents?
     if let rawDate {
       let relative = rawDate.lowercased()
@@ -63,15 +70,15 @@ nonisolated extension ExtractedFixture {
         // Unambiguous ISO dates only; retain other date text for later correction.
         let parts = rawDate.split(separator: "-", omittingEmptySubsequences: false)
         if parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
-          let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
-          year > 0, (1...12).contains(month), (1...31).contains(day),
-          rawDate.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "-") })
+           let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
+           year > 0, (1 ... 12).contains(month), (1 ... 31).contains(day),
+           rawDate.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "-") })
         {
           let components = DateComponents(year: year, month: month, day: day)
           var calendar = Calendar(identifier: .gregorian)
           calendar.timeZone = TimeZone(secondsFromGMT: 0)!
           if let date = calendar.date(from: components),
-            calendar.dateComponents([.year, .month, .day], from: date) == components
+             calendar.dateComponents([.year, .month, .day], from: date) == components
           {
             parsedDate = components
           } else {
@@ -85,6 +92,7 @@ nonisolated extension ExtractedFixture {
     return FixtureDraft(
       source: source, sourceLine: sourceLine, firstTeam: first, secondTeam: second,
       date: parsedDate, time: parsedTime, dateText: rawDate, timeText: rawTime,
-      division: division, court: court, issues: issues)
+      division: division, court: court, issues: issues
+    )
   }
 }

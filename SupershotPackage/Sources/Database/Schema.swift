@@ -2,11 +2,11 @@ import Dependencies
 import Foundation
 import GameCore
 import OSLog
-import SQLiteData
 import SharedModels
+import SQLiteData
 
-extension DependencyValues {
-  nonisolated mutating public func bootstrapDatabase() throws {
+public extension DependencyValues {
+  nonisolated mutating func bootstrapDatabase() throws {
     let database = try SQLiteData.defaultDatabase()
     logger.debug(
       """
@@ -143,4 +143,4 @@ extension DependencyValues {
   }
 }
 
-nonisolated private let logger = Logger(subsystem: "Supershot", category: "Database")
+private nonisolated let logger = Logger(subsystem: "Supershot", category: "Database")

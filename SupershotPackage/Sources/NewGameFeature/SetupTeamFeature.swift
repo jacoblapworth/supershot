@@ -7,9 +7,9 @@ import GameServices
 import LocationClient
 import PermissionsFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -66,7 +66,7 @@ package struct SetupTeamFeature {
         guard !state.isSaving else { return .none }
         state.picker = TeamPickerFeature.State(excluding: state.excludedTeamIDs)
         return .none
-      case .colorChanged(let color):
+      case let .colorChanged(color):
         state.draft.colorHex = color.hex()
         state.errorMessage = nil
         state.failedColorHex = nil
@@ -78,7 +78,7 @@ package struct SetupTeamFeature {
       case .doneButtonTapped:
         guard !state.isSaving else { return .none }
         return .send(.delegate(.done))
-      case .picker(.presented(.delegate(.teamSelected(let team)))):
+      case let .picker(.presented(.delegate(.teamSelected(team)))):
         state.savedTeam = team
         state.draft = Team.Draft(team)
         state.errorMessage = nil
@@ -93,7 +93,7 @@ package struct SetupTeamFeature {
       case .retryButtonTapped:
         guard !state.isSaving, let colorHex = state.failedColorHex else { return .none }
         return .send(.colorChanged(Color(hex: colorHex)))
-      case .saveResponse(.success(let team)):
+      case let .saveResponse(.success(team)):
         state.savedTeam = team
         state.isSaving = false
         if state.draft.colorHex != team.colorHex {
@@ -132,7 +132,5 @@ package struct SetupTeamFeature {
 
   private enum SaveError: Error { case teamUnavailable }
 
-  package init() {
-
-  }
+  package init() {}
 }

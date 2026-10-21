@@ -1,19 +1,15 @@
-import SwiftUI
-import CustomDump
-import Dependencies
-import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import CustomDump
 @testable import Database
+import Dependencies
+import DependenciesTestSupport
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
+import GRDB
 @testable import LocationClient
 @testable import NewGameFeature
 @testable import PaywallFeature
@@ -22,12 +18,15 @@ import TestSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
 @testable import TeamsFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
-import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -39,8 +38,8 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
 
-      let olderDate = Date(timeIntervalSince1970: 1_000)
-      let newerDate = Date(timeIntervalSince1970: 2_000)
+      let olderDate = Date(timeIntervalSince1970: 1000)
+      let newerDate = Date(timeIntervalSince1970: 2000)
       try await database.write { db in
         try db.seed {
           Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
@@ -49,7 +48,7 @@ extension SupershotTestSuite {
           Game(
             id: UUID(-1),
             startedAt: olderDate,
-            endedAt: Date(timeIntervalSince1970: 1_500),
+            endedAt: Date(timeIntervalSince1970: 1500),
             teamAID: UUID(-1),
             teamBID: UUID(-2)
           )
@@ -64,7 +63,7 @@ extension SupershotTestSuite {
           )
           Game(
             id: UUID(-3),
-            startedAt: Date(timeIntervalSince1970: 3_000),
+            startedAt: Date(timeIntervalSince1970: 3000),
             endedAt: nil,
             teamAID: UUID(-2),
             teamBID: UUID(-3)
@@ -74,7 +73,7 @@ extension SupershotTestSuite {
           testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
           testGamePeriods(gameID: UUID(-2), durationSeconds: 600),
           testGamePeriods(gameID: UUID(-3), durationSeconds: 900),
-        ].flatMap { $0 }
+        ].flatMap(\.self)
         try GamePeriod.insert { periods }.execute(db)
         try Goal.insert {
           Goal(
@@ -120,7 +119,7 @@ extension SupershotTestSuite {
               teamBScore: 0
             ),
             GameListItem(
-              endedAt: Date(timeIntervalSince1970: 1_500),
+              endedAt: Date(timeIntervalSince1970: 1500),
               id: UUID(-1),
               periods: testGamePeriods(gameID: UUID(-1), durationSeconds: 900),
               startedAt: olderDate,
@@ -146,14 +145,14 @@ extension SupershotTestSuite {
     func statisticsUseCompletedGamesAndParticipantIDs() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
-      let date = Date(timeIntervalSince1970: 1_000)
+      let date = Date(timeIntervalSince1970: 1000)
       try await database.write { db in
         try db.seed {
           Team(id: UUID(-1), name: "Ravens")
           Team(id: UUID(-2), name: "Ravens")
           Team(id: UUID(-3), name: "Other")
         }
-        for index in 1...6 {
+        for index in 1 ... 6 {
           let gameID = UUID(-index)
           try Game.insert {
             Game(
@@ -210,7 +209,7 @@ extension SupershotTestSuite {
     func statisticsObserveFinishingScoringAndDeletingGames() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
-      let date = Date(timeIntervalSince1970: 1_000)
+      let date = Date(timeIntervalSince1970: 1000)
       try await database.write { db in
         try db.seed {
           Team(id: UUID(-1), name: "Ravens")

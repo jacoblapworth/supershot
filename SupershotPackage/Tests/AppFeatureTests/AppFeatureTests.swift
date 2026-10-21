@@ -1,26 +1,22 @@
-import SwiftUI
-import ComposableArchitecture
-import CustomDump
-import Dependencies
-import Foundation
-import FeatureFlagsClient
-import GRDB
-import OrderedCollections
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppFeature
 @testable import AppSettings
+import ComposableArchitecture
+import CustomDump
 @testable import Database
+import Dependencies
+import DependenciesTestSupport
+import FeatureFlagsClient
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
 @testable import GamesFeature
+import GRDB
 @testable import LocationClient
 @testable import NewGameFeature
+import OrderedCollections
 @testable import PaywallFeature
 @testable import PermissionsFeature
 @testable import PreviewSupport
@@ -28,15 +24,18 @@ import TestSupport
 @testable import SettingsFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
 @testable import TeamsFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 #if os(iOS)
-internal import AlarmKit
+  internal import AlarmKit
 #endif
-import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -45,22 +44,22 @@ extension SupershotTestSuite {
     $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
   }) struct AppFeatureTests {
     #if os(macOS)
-    @Test func macNavigationDisablesDuringNestedPresentationsAndPendingSaves() {
-      var state = AppFeature.State()
-      #expect(!state.macHasBlockingPresentation)
-      var setup = NewGameFeature.State()
-      setup.isSaving = true
-      state.games.path.append(.setup(setup))
-      #expect(state.macHasBlockingPresentation)
-      state.games.path.removeAll()
-      var teamDetail = TeamDetailFeature.State(teamID: UUID(1))
-      teamDetail.editor = TeamEditorFeature.State(team: Team(id: UUID(1), name: "Ravens"))
-      state.teams.path.append(.teamDetail(teamDetail))
-      #expect(state.macHasBlockingPresentation)
-      state.teams.path.removeAll()
-      state.destination = .proPaywall(PaywallFeature.State())
-      #expect(state.macHasBlockingPresentation)
-    }
+      @Test func macNavigationDisablesDuringNestedPresentationsAndPendingSaves() {
+        var state = AppFeature.State()
+        #expect(!state.macHasBlockingPresentation)
+        var setup = NewGameFeature.State()
+        setup.isSaving = true
+        state.games.path.append(.setup(setup))
+        #expect(state.macHasBlockingPresentation)
+        state.games.path.removeAll()
+        var teamDetail = TeamDetailFeature.State(teamID: UUID(1))
+        teamDetail.editor = TeamEditorFeature.State(team: Team(id: UUID(1), name: "Ravens"))
+        state.teams.path.append(.teamDetail(teamDetail))
+        #expect(state.macHasBlockingPresentation)
+        state.teams.path.removeAll()
+        state.destination = .proPaywall(PaywallFeature.State())
+        #expect(state.macHasBlockingPresentation)
+      }
     #endif
 
     @Test
@@ -109,7 +108,6 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-
     @Test(arguments: [SubscriptionEntitlement.free, .unknown])
     func nonProAccessRetainsPaywallWhenPermissionsAreResolved(
       access: SubscriptionEntitlement
@@ -129,8 +127,6 @@ extension SupershotTestSuite {
       }
       await store.finish()
     }
-
-
 
     @Test
     func paywallProAccessDismissesWhenPermissionsAreResolved() async {
@@ -154,7 +150,6 @@ extension SupershotTestSuite {
       }
       await store.finish()
     }
-
 
     @Test
     func dismissingPaywallPreservesEntitlementAndSelectedTab() async {
@@ -322,22 +317,22 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: ["supershot", "supershot-dev"])
-    func gameDeepLinkReconcilesAndRestoresRunningScoringRoute(scheme: String) async {
+    func gameDeepLinkReconcilesAndRestoresRunningScoringRoute(scheme: String) async throws {
       var scoring = Self.appScoringState()
-      scoring.timerEndsAt = Date(timeIntervalSince1970: 1_900)
+      scoring.timerEndsAt = Date(timeIntervalSince1970: 1900)
       let seedStore = Self.makeAppScoringStore(state: scoring)
       let database = seedStore.dependencies.defaultDatabase
       let store = TestStore(initialState: AppFeature.State()) {
         AppFeature()
       } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_100)
+        $0.date.now = Date(timeIntervalSince1970: 1100)
         $0.defaultDatabase = database
         $0.gameTimer = .live
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
-      await store.send(
-        .deepLinkOpened(URL(string: "\(scheme)://game/\(UUID(3).uuidString)")!)
+      try await store.send(
+        .deepLinkOpened(#require(URL(string: "\(scheme)://game/\(UUID(3).uuidString)")))
       )
       await store.receive {
         guard case let .games(.resumeGameResponse(request, .success)) = $0 else {
@@ -355,7 +350,7 @@ extension SupershotTestSuite {
       expectNoDifference(restored.isTimerRunning, true)
       expectNoDifference(
         restored.timerEndsAt,
-        Date(timeIntervalSince1970: 1_900)
+        Date(timeIntervalSince1970: 1900)
       )
     }
 
@@ -379,7 +374,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func gameDeepLinkSelectsTeamsForAnExistingTeamsScoringRoute() async {
+    func gameDeepLinkSelectsTeamsForAnExistingTeamsScoringRoute() async throws {
       let scoring = Self.appScoringState()
       let seedStore = Self.makeAppScoringStore(state: scoring)
       var state = AppFeature.State()
@@ -392,8 +387,8 @@ extension SupershotTestSuite {
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
-      await store.send(
-        .deepLinkOpened(URL(string: "supershot://game/\(UUID(3).uuidString)")!)
+      try await store.send(
+        .deepLinkOpened(#require(URL(string: "supershot://game/\(UUID(3).uuidString)")))
       ) {
         $0.selectedTab = .teams
       }
@@ -403,85 +398,84 @@ extension SupershotTestSuite {
     }
 
     private static func makeAppScoringStore(
-        state: ScoringFeature.State = appScoringState(),
-        date: Date = Date(timeIntervalSince1970: 1_000),
-        clock: TestClock<Duration>? = nil,
-        dismiss: DismissEffect? = nil,
-        gameTimer: GameTimerClient? = nil
-      ) -> TestStoreOf<ScoringFeature> {
-        let clockStart = clock?.now
-        return TestStore(initialState: state) {
-          ScoringFeature()
-        } withDependencies: {
-          if let clock, let clockStart {
-            $0.date = DateGenerator {
-              let components = clockStart.duration(to: clock.now).components
-              let seconds = Double(components.seconds)
-                + Double(components.attoseconds) / 1_000_000_000_000_000_000
-              return date.addingTimeInterval(seconds)
-            }
-          } else {
-            $0.date.now = date
+      state: ScoringFeature.State = appScoringState(),
+      date: Date = Date(timeIntervalSince1970: 1000),
+      clock: TestClock<Duration>? = nil,
+      dismiss: DismissEffect? = nil,
+      gameTimer: GameTimerClient? = nil
+    ) -> TestStoreOf<ScoringFeature> {
+      let clockStart = clock?.now
+      return TestStore(initialState: state) {
+        ScoringFeature()
+      } withDependencies: {
+        if let clock, let clockStart {
+          $0.date = DateGenerator {
+            let components = clockStart.duration(to: clock.now).components
+            let seconds = Double(components.seconds)
+              + Double(components.attoseconds) / 1_000_000_000_000_000_000
+            return date.addingTimeInterval(seconds)
           }
-          $0.uuid = .incrementing
-    $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
-          try! $0.bootstrapDatabase()
-          try! clearDatabase($0.defaultDatabase)
-          try! $0.defaultDatabase.write { db in
-            try Team.insert {
-              Team(id: UUID(1), name: "Ravens")
-              Team(id: UUID(2), name: "Swifts")
-            }
-            .execute(db)
+        } else {
+          $0.date.now = date
+        }
+        $0.uuid = .incrementing
+        $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome")
+        try! $0.bootstrapDatabase()
+        try! clearDatabase($0.defaultDatabase)
+        try! $0.defaultDatabase.write { db in
+          try Team.insert {
+            Team(id: UUID(1), name: "Ravens")
+            Team(id: UUID(2), name: "Swifts")
+          }
+          .execute(db)
 
-            try Game.insert {
-              Game(
-                id: UUID(3),
-                startedAt: state.startedAt,
-                endedAt: nil,
-                teamAID: UUID(1),
-                teamBID: UUID(2),
-                centrePassTeamID: state.centrePassTeamID,
-                isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
-                currentPhaseIndex: state.currentPhaseIndex,
-                elapsedSeconds: state.elapsedSeconds,
-                timerEndsAt: state.timerEndsAt
-              )
-            }
-            .execute(db)
-            try GamePeriod.insert { state.periods }.execute(db)
+          try Game.insert {
+            Game(
+              id: UUID(3),
+              startedAt: state.startedAt,
+              endedAt: nil,
+              teamAID: UUID(1),
+              teamBID: UUID(2),
+              centrePassTeamID: state.centrePassTeamID,
+              isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
+              currentPhaseIndex: state.currentPhaseIndex,
+              elapsedSeconds: state.elapsedSeconds,
+              timerEndsAt: state.timerEndsAt
+            )
           }
-          if let clock {
-            $0.continuousClock = clock
-          }
-          if let dismiss {
-            $0.dismiss = dismiss
-          }
-          if let gameTimer {
-            $0.gameTimer = gameTimer
-          }
+          .execute(db)
+          try GamePeriod.insert { state.periods }.execute(db)
+        }
+        if let clock {
+          $0.continuousClock = clock
+        }
+        if let dismiss {
+          $0.dismiss = dismiss
+        }
+        if let gameTimer {
+          $0.gameTimer = gameTimer
         }
       }
+    }
 
-
-      private nonisolated static func appScoringState() -> ScoringFeature.State {
-        ScoringFeature.State(
-          centrePassTeamID: UUID(1),
-          gameID: UUID(3),
-          periods: testGamePeriods(gameID: UUID(3)),
-          startedAt: Date(timeIntervalSince1970: 500),
-          teamA: ScoringFeature.Team(
-            id: UUID(1),
-            bibColor: ColorPalette.blue,
-            name: "Ravens"
-          ),
-          teamB: ScoringFeature.Team(
-            id: UUID(2),
-            bibColor: ColorPalette.red,
-            name: "Swifts"
-          )
+    private nonisolated static func appScoringState() -> ScoringFeature.State {
+      ScoringFeature.State(
+        centrePassTeamID: UUID(1),
+        gameID: UUID(3),
+        periods: testGamePeriods(gameID: UUID(3)),
+        startedAt: Date(timeIntervalSince1970: 500),
+        teamA: ScoringFeature.Team(
+          id: UUID(1),
+          bibColor: ColorPalette.blue,
+          name: "Ravens"
+        ),
+        teamB: ScoringFeature.Team(
+          id: UUID(2),
+          bibColor: ColorPalette.red,
+          name: "Swifts"
         )
-      }
+      )
+    }
   }
 }
 

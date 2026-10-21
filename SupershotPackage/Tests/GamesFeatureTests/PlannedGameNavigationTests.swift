@@ -1,17 +1,16 @@
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import Foundation
-import GameServices
-import OrderedCollections
-import SQLiteData
-import TestSupport
-import Testing
-
-@testable import Database
 @testable import GameCore
+import GameServices
 @testable import GamesFeature
 @testable import NewGameFeature
+import OrderedCollections
+import SQLiteData
+import Testing
+import TestSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -38,7 +37,7 @@ extension SupershotTestSuite {
     func rowAndDeepLinkOpenPlannedSetupWithoutReconciliation(deepLink: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let state = try setup()
-      let draft = state.draft!
+      let draft = try #require(state.draft)
       try await database.write { db in _ = try draft.save(db) }
       let row = try await database.read { try GamesRequest().fetch($0).games[0] }
       let store = TestStore(initialState: GamesFeature.State()) {
@@ -52,10 +51,12 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(deepLink ? .gameDeepLinkOpened(row.id) : .gameRowTapped(row))
       await store.receive {
-        if case .resumeGameResponse(_, .success) = $0 { return true }
+        if case .resumeGameResponse(_, .success) = $0 {
+          return true
+        }
         return false
       }
-      guard case .setup(let setup) = store.state.path.last else {
+      guard case let .setup(setup) = store.state.path.last else {
         Issue.record("Expected planned setup")
         return
       }
@@ -81,7 +82,7 @@ extension SupershotTestSuite {
     @Test func failedPopSaveRestoresEditorForRetry() async throws {
       @Dependency(\.defaultDatabase) var database
       let setup = try setup()
-      let teamID = setup.leftTeam.team!.id
+      let teamID = try #require(setup.leftTeam.team?.id)
       try await database.write { db in try Team.find(teamID).delete().execute(db) }
       var state = GamesFeature.State()
       state.path.append(.setup(setup))
@@ -89,10 +90,12 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(.path(.popFrom(id: store.state.path.ids[0])))
       await store.receive {
-        if case .setupExitSaveFailed = $0 { return true }
+        if case .setupExitSaveFailed = $0 {
+          return true
+        }
         return false
       }
-      guard case .setup(let restored) = store.state.path.last else {
+      guard case let .setup(restored) = store.state.path.last else {
         Issue.record("Expected setup to be restored after save failure")
         return
       }
@@ -105,21 +108,25 @@ extension SupershotTestSuite {
         GameListItem(
           id: UUID(id), startedAt: nil, teamAName: "A", teamAScore: 0,
           teamBName: "B", teamBScore: 0, createdAt: Date(timeIntervalSince1970: created ?? Double(id)),
-          scheduledAt: scheduled.map(Date.init(timeIntervalSince1970:)))
+          scheduledAt: scheduled.map(Date.init(timeIntervalSince1970:))
+        )
       }
       let unscheduled = row(1)
       let newerUnscheduled = row(2)
-      let later = row(3, scheduled: 2_000)
-      let sooner = row(4, scheduled: 1_000)
-      let sameTime = row(6, scheduled: 1_000, created: 0)
+      let later = row(3, scheduled: 2000)
+      let sooner = row(4, scheduled: 1000)
+      let sameTime = row(6, scheduled: 1000, created: 0)
       let active = GameListItem(
         id: UUID(5), startedAt: Date(), teamAName: "A", teamAScore: 0,
-        teamBName: "B", teamBScore: 0)
+        teamBName: "B", teamBScore: 0
+      )
       let rows = [unscheduled, active, later, newerUnscheduled, sooner, sameTime]
       expectNoDifference(
-        GamesFilter.all.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1), UUID(5)])
+        GamesFilter.all.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1), UUID(5)]
+      )
       expectNoDifference(
-        GamesFilter.planned.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1)])
+        GamesFilter.planned.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1)]
+      )
       expectNoDifference(GamesFilter.inProgress.games(from: rows), [active])
     }
   }

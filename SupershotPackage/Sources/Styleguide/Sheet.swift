@@ -33,11 +33,10 @@ package struct SizeToFitModifier: ViewModifier {
   }
 }
 
-extension View {
-
+package extension View {
   /// Sets the sheet detent to fit its content height.
-  package func presentationDetents(
-    _ detent: SizeToFitPresentationDetent,
+  func presentationDetents(
+    _: SizeToFitPresentationDetent,
     additional: Set<PresentationDetent> = []
   ) -> some View {
     modifier(SizeToFitModifier(additional: additional))

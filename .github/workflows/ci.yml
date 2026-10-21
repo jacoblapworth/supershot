@@ -32,8 +32,8 @@ jobs:
             echo "::error::Xcode 27.2 is required at $DEVELOPER_DIR."
             exit 1
           fi
-          xcodebuild -version
           xcode_version=$(xcodebuild -version | tr '\n ' '--')
+          echo "$xcode_version"
           echo "xcode-version=$xcode_version" >> "$GITHUB_OUTPUT"
           xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
           simulator_id=$(python3 - "$RUNNER_TEMP/simulators.json" <<'PY'
@@ -51,12 +51,31 @@ jobs:
           PY
           )
           echo "simulator-id=$simulator_id" >> "$GITHUB_OUTPUT"
+          # Start booting while caches restore and the app compiles.
+          simulator_state=$(xcrun simctl list devices --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          print(next(d["state"] for group in devices.values() for d in group if d["udid"] == sys.argv[1]))
+          ' "$simulator_id")
+          if [[ "$simulator_state" != "Booted" ]]; then
+            xcrun simctl boot "$simulator_id"
+          fi
 
       - name: Cache Swift packages
         uses: actions/cache@v6
         with:
           path: ${{ runner.temp }}/SourcePackages
-          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-${{ hashFiles('SupershotPackage/Package.resolved', 'SupershotWorkspace.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-${{ hashFiles('SupershotPackage/Package.resolved', 'Supershot.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-
+
+      # Xcode's content-addressed cache survives fresh checkouts without restoring
+      # DerivedData build records or source timestamps. Keep SDKs/toolchains separate.
+      - name: Cache compiled code
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/CompilationCache.noindex
+          key: compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-ios-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-ios-
 
       - name: Run all tests
         env:
@@ -65,7 +84,7 @@ jobs:
           set -o pipefail
           mkdir -p "$RUNNER_TEMP/test-results"
           xcodebuild test \
-            -workspace SupershotWorkspace.xcworkspace \
+            -workspace Supershot.xcworkspace \
             -scheme 'Supershot Dev' \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
@@ -73,6 +92,10 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -onlyUsePackageVersionsFromResolvedFile \
             -skipMacroValidation \
+            -skipPackageUpdates \
+            -showBuildTimingSummary \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_CAS_PATH="$HOME/Library/Developer/Xcode/DerivedData/CompilationCache.noindex" \
             -resultBundlePath "$RUNNER_TEMP/test-results/Tests.xcresult" \
             2>&1 | tee "$RUNNER_TEMP/test-results/xcodebuild.log" | xcbeautify
 
@@ -95,16 +118,49 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Check Xcode
+        id: environment
+        run: |
+          if [[ ! -d "$DEVELOPER_DIR" ]]; then
+            echo "::error::Xcode 27.2 is required at $DEVELOPER_DIR."
+            exit 1
+          fi
+          xcode_version=$(xcodebuild -version | tr '\n ' '--')
+          echo "$xcode_version"
+          echo "xcode-version=$xcode_version" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Swift packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: spm-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-${{ hashFiles('SupershotPackage/Package.resolved', 'Supershot.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-
+
+      # Xcode's content-addressed cache survives fresh checkouts without restoring
+      # DerivedData build records or source timestamps. Keep SDKs/toolchains separate.
+      - name: Cache compiled code
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/CompilationCache.noindex
+          key: compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-macos-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: compile-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.environment.outputs.xcode-version }}-macos-
+
       - name: Build native Mac app
         run: |
           set -o pipefail
           xcodebuild build \
-            -workspace SupershotWorkspace.xcworkspace \
+            -workspace Supershot.xcworkspace \
             -scheme 'Supershot Dev' \
             -configuration Debug \
             -destination 'platform=macOS' \
             -derivedDataPath "$RUNNER_TEMP/MacDerivedData" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
             -onlyUsePackageVersionsFromResolvedFile \
+            -skipMacroValidation \
+            -skipPackageUpdates \
+            -showBuildTimingSummary \
+            COMPILATION_CACHE_ENABLE_CACHING=YES \
+            COMPILATION_CACHE_CAS_PATH="$HOME/Library/Developer/Xcode/DerivedData/CompilationCache.noindex" \
             CODE_SIGNING_ALLOWED=NO \
             2>&1 | tee "$RUNNER_TEMP/macos-build.log" | xcbeautify
       - name: Upload Mac build log

@@ -1,27 +1,27 @@
 import Foundation
 
 /// Callable on an eligible iOS device or Mac. Deliberately has no persistence or app lifecycle dependencies.
-nonisolated package enum FixtureParserDevelopmentHarness {
+package nonisolated enum FixtureParserDevelopmentHarness {
   package static let single = "Coles Hot Chooks vs IMG & Friends"
   package static let sample = """
-    18:30  Coles Hot Chooks vs IMG & Friends
-    Division 1 • Court 1
+  18:30  Coles Hot Chooks vs IMG & Friends
+  Division 1 • Court 1
 
-    19:10  Mixed Bag vs Buzz Ballers
-    Division 1 • Court 1
+  19:10  Mixed Bag vs Buzz Ballers
+  Division 1 • Court 1
 
-    19:50  Buzz Ballers vs Clapham Ballers
-    Division 1 • Court 1
+  19:50  Buzz Ballers vs Clapham Ballers
+  Division 1 • Court 1
 
-    18:30  Pole vaulters vs Silence of the Lambeths
-    Division 2 • Court 2
+  18:30  Pole vaulters vs Silence of the Lambeths
+  Division 2 • Court 2
 
-    19:10  The lodgers vs Netball & Chill
-    Division 2 • Court 2
+  19:10  The lodgers vs Netball & Chill
+  Division 2 • Court 2
 
-    19:50  Netball & Chill vs One Team, One Dream
-    Division 2 • Court 2
-    """
+  19:50  Netball & Chill vs One Team, One Dream
+  Division 2 • Court 2
+  """
 
   package struct Report: Sendable {
     package var availability: FixtureParserAvailability
@@ -38,10 +38,11 @@ nonisolated package enum FixtureParserDevelopmentHarness {
     let start = clock.now
     let availability = parser.availability()
     let result: Result<[FixtureDraft], FixtureParserError>
-    do { result = .success(try await parser.parse(text, context: context)) } catch let error
+    do { result = try await .success(parser.parse(text, context: context)) } catch let error
       as FixtureParserError
     { result = .failure(error) } catch { result = .failure(.generationFailed) }
     return Report(
-      availability: availability, elapsed: start.duration(to: clock.now), result: result)
+      availability: availability, elapsed: start.duration(to: clock.now), result: result
+    )
   }
 }

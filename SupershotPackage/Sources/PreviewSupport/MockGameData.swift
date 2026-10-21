@@ -7,18 +7,18 @@ import SharedModels
 import Styleguide
 import WidgetSupport
 
-nonisolated package enum MockGameData {
-  static package let breakDurationSeconds = 60
-  static package let periodDurationSeconds = 8 * 60
+package nonisolated enum MockGameData {
+  package static let breakDurationSeconds = 60
+  package static let periodDurationSeconds = 8 * 60
 
-  static package func periods(
+  package static func periods(
     gameID: Game.ID,
     idOffset: Int,
     count: Int = 4,
     periodDurationSeconds: Int = periodDurationSeconds,
     breakDurationSeconds: Int = breakDurationSeconds
   ) -> [GamePeriod] {
-    (0..<count).map { position in
+    (0 ..< count).map { position in
       GamePeriod(
         id: UUID(idOffset + position),
         gameID: gameID,
@@ -46,7 +46,7 @@ nonisolated package enum MockGameData {
   }
 
   /// Builds a repeatable, match-like scoring sequence with a goal every 20–30 seconds.
-  static package func goalEvents(
+  package static func goalEvents(
     throughPeriod finalPeriod: Int,
     elapsedSecondsInFinalPeriod: Int = periodDurationSeconds
   ) -> [GoalEvent] {
@@ -60,11 +60,11 @@ nonisolated package enum MockGameData {
     var events: [GoalEvent] = []
     var goalIndex = 0
 
-    for period in 1...min(max(finalPeriod, 1), 4) {
+    for period in 1 ... min(max(finalPeriod, 1), 4) {
       let periodLimit =
         period == finalPeriod
-        ? min(max(elapsedSecondsInFinalPeriod, 0), periodDurationSeconds)
-        : periodDurationSeconds
+          ? min(max(elapsedSecondsInFinalPeriod, 0), periodDurationSeconds)
+          : periodDurationSeconds
       var elapsedSeconds = 0
       var intervalIndex = period - 1
 

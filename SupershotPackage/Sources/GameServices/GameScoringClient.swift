@@ -7,7 +7,7 @@ import IssueReporting
 import SharedModels
 import SubscriptionClient
 
-nonisolated public struct GameScoreSnapshot: Equatable, Sendable {
+public nonisolated struct GameScoreSnapshot: Equatable, Sendable {
   public var canUndo = false
   public var canUndoDuringConfirmation = false
   public var centrePassTeamID: Team.ID
@@ -26,7 +26,7 @@ nonisolated public struct GameScoreSnapshot: Equatable, Sendable {
   }
 }
 
-nonisolated public struct LastCentrePassSnapshot: Equatable, Sendable {
+public nonisolated struct LastCentrePassSnapshot: Equatable, Sendable {
   public var centrePassTeamID: Team.ID
 
   public init(centrePassTeamID: Team.ID) {
@@ -34,27 +34,29 @@ nonisolated public struct LastCentrePassSnapshot: Equatable, Sendable {
   }
 }
 
-nonisolated public struct GameScoringClient: Sendable {
+public nonisolated struct GameScoringClient: Sendable {
   public var recordGoal: @Sendable (RecordGoalCommand) async throws -> GameScoreSnapshot
   public var undo: @Sendable (Game.ID) async throws -> GameScoreSnapshot
   public var selectCentrePass: @Sendable (Game.ID, Team.ID) async throws -> Team.ID
   public var resolveCentrePass:
     @Sendable (Game.ID, Int, Bool) async throws -> LastCentrePassSnapshot
 
-  static public var live: Self {
+  public static var live: Self {
     Self(
       recordGoal: { command in
         @Dependency(\.gameSession) var session
-        return GameScoreSnapshot(
-          snapshot: try await session.execute(
+        return try await GameScoreSnapshot(
+          snapshot: session.execute(
             command.gameID, .recordGoal(command), command.createdAt
-          ).acceptedSnapshot())
+          ).acceptedSnapshot()
+        )
       },
       undo: { gameID in
         @Dependency(\.gameSession) var session
         @Dependency(\.date.now) var now
-        return GameScoreSnapshot(
-          snapshot: try await session.execute(gameID, .undoGoal, now).acceptedSnapshot())
+        return try await GameScoreSnapshot(
+          snapshot: session.execute(gameID, .undoGoal, now).acceptedSnapshot()
+        )
       },
       selectCentrePass: { gameID, teamID in
         @Dependency(\.gameSession) var session
@@ -71,13 +73,13 @@ nonisolated public struct GameScoringClient: Sendable {
         ).acceptedSnapshot()
         return LastCentrePassSnapshot(
           centrePassTeamID:
-            snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
+          snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
         )
       }
     )
   }
 
-  static public var unimplemented: Self {
+  public static var unimplemented: Self {
     Self(
       recordGoal: { _ in
         reportIssue("GameScoringClient.recordGoal is unimplemented")
@@ -103,7 +105,7 @@ nonisolated public struct GameScoringClient: Sendable {
     undo: @escaping @Sendable (Game.ID) async throws -> GameScoreSnapshot,
     selectCentrePass: @escaping @Sendable (Game.ID, Team.ID) async throws -> Team.ID,
     resolveCentrePass:
-      @escaping @Sendable (Game.ID, Int, Bool) async throws -> LastCentrePassSnapshot
+    @escaping @Sendable (Game.ID, Int, Bool) async throws -> LastCentrePassSnapshot
   ) {
     self.recordGoal = recordGoal
     self.undo = undo
@@ -112,25 +114,32 @@ nonisolated public struct GameScoringClient: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated public var gameScoring: GameScoringClient {
+public extension DependencyValues {
+  nonisolated var gameScoring: GameScoringClient {
     get { self[GameScoringClientKey.self] }
     set { self[GameScoringClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum GameScoringClientKey: DependencyKey {
-  static var liveValue: GameScoringClient { .live }
-  static var testValue: GameScoringClient { .unimplemented }
+  static var liveValue: GameScoringClient {
+    .live
+  }
+
+  static var testValue: GameScoringClient {
+    .unimplemented
+  }
 }
 
-nonisolated extension GameScoreSnapshot {
-  public init(snapshot: GameSnapshot) {
+public nonisolated extension GameScoreSnapshot {
+  init(snapshot: GameSnapshot) {
     self.init(
       canUndo: !snapshot.goals.isEmpty,
       canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
       centrePassTeamID: snapshot.game.scoring.centrePass(
-        teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id),
-      teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore)
+        teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id
+      ),
+      teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore
+    )
   }
 }

@@ -1,14 +1,7 @@
-//
-//  Models.swift
-//  Supershot
-//
-//  Created by J on 16/09/2026.
-//
-
 import Foundation
 
 /// Stable identity and display number of a playing period in a derived phase.
-nonisolated public struct GamePeriodReference: Equatable, Hashable, Codable, Sendable {
+public nonisolated struct GamePeriodReference: Equatable, Hashable, Codable, Sendable {
   public let id: UUID
   public let number: Int
 
@@ -19,37 +12,47 @@ nonisolated public struct GamePeriodReference: Equatable, Hashable, Codable, Sen
 }
 
 /// A clock segment derived from the game's persisted periods.
-nonisolated public enum GamePhase: Equatable, Hashable, Codable, Sendable {
+public nonisolated enum GamePhase: Equatable, Hashable, Codable, Sendable {
   case period(GamePeriodReference, durationSeconds: Int)
   case breakTime(after: GamePeriodReference, durationSeconds: Int)
 
   public var durationSeconds: Int {
     switch self {
-    case .period(_, let duration), .breakTime(_, let duration): duration
+    case let .period(_, duration), let .breakTime(_, duration): duration
     }
   }
 
   /// For a break, this identifies the period that precedes it.
   public var associatedPeriod: GamePeriodReference {
     switch self {
-    case .period(let period, _), .breakTime(let period, _): period
+    case let .period(period, _), let .breakTime(period, _): period
     }
   }
 
   public var isBreak: Bool {
-    if case .breakTime = self { true } else { false }
+    if case .breakTime = self {
+      true
+    } else {
+      false
+    }
   }
 
   public var isPlayingPeriod: Bool {
-    if case .period = self { true } else { false }
+    if case .period = self {
+      true
+    } else {
+      false
+    }
   }
 }
 
 /// A countdown's persisted values. All time-dependent facts come from one projection.
-nonisolated public struct GameCountdown: Equatable, Hashable, Sendable {
+public nonisolated struct GameCountdown: Equatable, Hashable, Sendable {
   public var elapsedSeconds = 0
   public var endsAt: Date?
-  public var isRunning: Bool { endsAt != nil }
+  public var isRunning: Bool {
+    endsAt != nil
+  }
 
   public enum Status: Equatable, Sendable {
     case paused
@@ -97,21 +100,25 @@ nonisolated public struct GameCountdown: Equatable, Hashable, Sendable {
 }
 
 /// Attribution is separate from the phase whose clock is currently on screen.
-nonisolated public enum GameScoringContext: Equatable, Sendable {
+public nonisolated enum GameScoringContext: Equatable, Sendable {
   case livePeriod(number: Int)
   case completedPeriod(number: Int)
 
   public var periodNumber: Int {
     switch self {
-    case .livePeriod(let number), .completedPeriod(let number): number
+    case let .livePeriod(number), let .completedPeriod(number): number
     }
   }
 
   public var isLate: Bool {
-    if case .completedPeriod = self { true } else { false }
+    if case .completedPeriod = self {
+      true
+    } else {
+      false
+    }
   }
 
-  static public func resolve(
+  public static func resolve(
     phase: GamePhase,
     countdown: GameCountdown,
     isAwaitingCentrePassConfirmation: Bool,
@@ -125,11 +132,11 @@ nonisolated public enum GameScoringContext: Equatable, Sendable {
     guard let completed = lateScoringPeriodNumber else { return nil }
     let isCompletedPeriod =
       phase.isPlayingPeriod && phase.associatedPeriod.number == completed
-      && timer.status == .complete
+        && timer.status == .complete
     let isFollowingBreak = phase.isBreak && phase.associatedPeriod.number == completed
     let isWaitingPeriod =
       phase.isPlayingPeriod && phase.associatedPeriod.number == completed + 1
-      && timer.status == .paused && timer.elapsedSeconds == 0
+        && timer.status == .paused && timer.elapsedSeconds == 0
     return isCompletedPeriod || isFollowingBreak || isWaitingPeriod
       ? .completedPeriod(number: completed) : nil
   }

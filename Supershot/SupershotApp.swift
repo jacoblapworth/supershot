@@ -1,18 +1,18 @@
-import Database
 import AlarmClient
 import AppFeature
-import PreviewSupport
-import SwiftUI
-import SQLiteData
+import Database
 import Dependencies
+import PreviewSupport
 import RevenueCat
+import SQLiteData
+import SwiftUI
 
 @main struct SupershotApp: App {
   @Dependency(\.context) var context
   #if os(macOS)
     @NSApplicationDelegateAdaptor(MacNotificationDelegate.self) private var notificationDelegate
   #endif
-  
+
   init() {
     guard
       let revenueCatAPIKey = Bundle.main.object(
@@ -20,18 +20,18 @@ import RevenueCat
       ) as? String,
       !revenueCatAPIKey.isEmpty,
       !revenueCatAPIKey.hasPrefix("$(")
-        else {
+    else {
       preconditionFailure(
         "RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings."
       )
     }
-    
+
     Purchases.configure(
       withAPIKey: revenueCatAPIKey
     )
-#if DEBUG
-    Purchases.shared.logIn("dev") { _,_,_  in }
-#endif
+    #if DEBUG
+      Purchases.shared.logIn("dev") { _, _, _ in }
+    #endif
     try! prepareDependencies {
       try $0.bootstrapDatabase()
       $0.alarmClient = .live
@@ -39,12 +39,12 @@ import RevenueCat
 //        for: $0.defaultDatabase,
 //        tables: Team.self, Game.self, GamePeriod.self, Goal.self
 //      )
-#if DEBUG
-      try $0.defaultDatabase.seedDebugExamplesIfNeeded()
-#endif
+      #if DEBUG
+        try $0.defaultDatabase.seedDebugExamplesIfNeeded()
+      #endif
     }
   }
-  
+
   var body: some Scene {
     #if os(macOS)
       SupershotMacScenes()

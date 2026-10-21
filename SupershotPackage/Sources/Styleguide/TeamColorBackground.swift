@@ -18,8 +18,7 @@ package struct TeamColorBackground: View {
     let right = TeamColorTreatment(color: rightColor, environment: environment).background
     let middle = left.mix(with: right, by: 0.5, in: .device)
 
-    TimelineView(.animation(minimumInterval: 1 / 15, paused: reduceMotion || scenePhase != .active))
-    { context in
+    TimelineView(.animation(minimumInterval: 1 / 15, paused: reduceMotion || scenePhase != .active)) { context in
       // A full cycle takes about 75 seconds, with only a small change in the blend.
       let phase = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate / 12
       let centreX = Float(0.5 + 0.035 * sin(phase))

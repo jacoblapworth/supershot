@@ -58,7 +58,9 @@ package struct GameOverviewView: View {
             Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
           }
         }
-        if let court = detail.court { LabeledContent("Court", value: court) }
+        if let court = detail.court {
+          LabeledContent("Court", value: court)
+        }
         LabeledContent("Started") {
           Text(detail.startedAt.formatted(date: .abbreviated, time: .shortened))
         }

@@ -9,7 +9,7 @@ import Testing
   .serialized,
   .dependencies {
     $0.uuid = .incrementing
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
+    $0.date.now = Date(timeIntervalSince1970: 1000)
     try $0.bootstrapDatabase()
     $0.gameScoring = .live
     $0.gameSession = .live

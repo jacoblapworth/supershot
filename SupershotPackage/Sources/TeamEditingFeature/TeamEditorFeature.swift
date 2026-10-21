@@ -3,8 +3,8 @@ import Database
 import Foundation
 import GameCore
 import PreviewSupport
-import SQLiteData
 import SharedModels
+import SQLiteData
 import Styleguide
 import SwiftUI
 import WidgetSupport
@@ -70,7 +70,7 @@ package struct TeamEditorFeature {
     }
   }
 
-  nonisolated package enum Field: Hashable, Sendable {
+  package nonisolated enum Field: Hashable, Sendable {
     case name
   }
 
@@ -106,7 +106,7 @@ package struct TeamEditorFeature {
 
         let savedTeam = Team(
           id: {
-            if case .editing(let teamID) = state.mode {
+            if case let .editing(teamID) = state.mode {
               return teamID
             }
             return uuid()
@@ -139,11 +139,11 @@ package struct TeamEditorFeature {
           await send(.saveResponse(result))
         }
 
-      case .saveResponse(.success(let savedTeam)):
+      case let .saveResponse(.success(savedTeam)):
         state.isSaving = false
         return .send(.delegate(.saved(savedTeam)))
 
-      case .saveResponse(.failure(let error)):
+      case let .saveResponse(.failure(error)):
         state.isSaving = false
         switch error as? TeamEditorPersistenceError {
         case .teamUnavailable:
@@ -156,9 +156,7 @@ package struct TeamEditorFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 private enum TeamEditorPersistenceError: Error {

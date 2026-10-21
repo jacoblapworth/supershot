@@ -9,9 +9,9 @@ import IssueReporting
 import NewGameFeature
 import PaywallFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import TeamEditingFeature
@@ -46,11 +46,11 @@ package struct TeamsFeature {
     package var pendingGameResume: PendingGameResume?
     package var searchText = ""
 
-    mutating package func clearResumeAlert() {
+    package mutating func clearResumeAlert() {
       switch destination {
       case .alert:
         destination = nil
-      case .teamEditor(var editor):
+      case var .teamEditor(editor):
         editor.alert = nil
         destination = .teamEditor(editor)
       case nil:
@@ -69,9 +69,9 @@ package struct TeamsFeature {
     package func hasGameRoute(for gameID: Game.ID) -> Bool {
       path.contains {
         switch $0 {
-        case .scoring(let scoring): return scoring.gameID == gameID
-        case .setup(let setup): return setup.gameID == gameID
-        default: return false
+        case let .scoring(scoring): scoring.gameID == gameID
+        case let .setup(setup): setup.gameID == gameID
+        default: false
         }
       }
     }
@@ -127,19 +127,19 @@ package struct TeamsFeature {
       case .binding, .delegate:
         return .none
 
-      case .deleteGameButtonTapped(let gameID):
+      case let .deleteGameButtonTapped(gameID):
         return deleteGameEffect(gameID: gameID)
 
-      case .deleteTeamButtonTapped(let teamID):
+      case let .deleteTeamButtonTapped(teamID):
         return deleteTeamEffect(teamID: teamID)
 
-      case .gameDeepLinkOpened(let gameID):
+      case let .gameDeepLinkOpened(gameID):
         for (id, destination) in zip(state.path.ids, state.path) {
-          if case .setup(let setup) = destination, setup.gameID == gameID {
+          if case let .setup(setup) = destination, setup.gameID == gameID {
             state.path.pop(to: id)
             return .none
           }
-          guard case .scoring(let scoring) = destination, scoring.gameID == gameID else {
+          guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
             continue
           }
           state.path.pop(to: id)
@@ -157,7 +157,7 @@ package struct TeamsFeature {
       case .path(
         .element(id: let id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))
       ):
-        guard case .gameDetail(let gameDetail) = state.path[id: id] else {
+        guard case let .gameDetail(gameDetail) = state.path[id: id] else {
           return .none
         }
         let gameID = gameDetail.gameID
@@ -167,15 +167,15 @@ package struct TeamsFeature {
       case .path(
         .element(id: let id, action: .teamDetail(.delegate(.deleteTeamButtonTapped)))
       ):
-        guard case .teamDetail(let teamDetail) = state.path[id: id] else {
+        guard case let .teamDetail(teamDetail) = state.path[id: id] else {
           return .none
         }
         let teamID = teamDetail.teamID
         state.path.pop(from: id)
         return .send(.deleteTeamButtonTapped(teamID))
 
-      case .path(
-        .element(id: let id, action: .scoring(.delegate(.gameFinished(let gameID))))
+      case let .path(
+        .element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))
       ):
         state.path.pop(from: id)
         state.path.append(
@@ -197,16 +197,16 @@ package struct TeamsFeature {
         state.path.append(.setup(setup))
         return .none
 
-      case .path(.element(id: let id, action: .setup(.delegate(.gameStarted(let scoring))))):
+      case let .path(.element(id: id, action: .setup(.delegate(.gameStarted(scoring))))):
         state.path.pop(from: id)
         state.path.append(.scoring(scoring))
         return .none
 
       case .path(.element(id: _, action: .setup(.delegate(.proPromotionTapped)))),
-        .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
+           .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
         return .send(.delegate(.proPromotionTapped))
 
-      case .setupExitSaveFailed(var setup):
+      case var .setupExitSaveFailed(setup):
         setup.isSaving = false
         setup.inFlightDraft = nil
         setup.pendingSaveIntent = nil
@@ -216,9 +216,9 @@ package struct TeamsFeature {
         state.path.append(.setup(setup))
         return .none
 
-      case .path(.popFrom(let id)):
-        guard case .setup(let setup) = state.path[id: id], !setup.hasStarted,
-          let draft = setup.draft, draft != setup.lastSavedDraft
+      case let .path(.popFrom(id)):
+        guard case let .setup(setup) = state.path[id: id], !setup.hasStarted,
+              let draft = setup.draft, draft != setup.lastSavedDraft
         else { return .none }
         let requiresExistingGame = setup.requiresExistingGame
         // This parent-owned effect survives removal of the setup route and its effects.
@@ -242,7 +242,7 @@ package struct TeamsFeature {
       case .proPromotionTapped:
         return .send(.delegate(.proPromotionTapped))
 
-      case .resumeGameResponse(let request, .success(let snapshot)):
+      case let .resumeGameResponse(request, .success(snapshot)):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
 
@@ -257,10 +257,10 @@ package struct TeamsFeature {
         }
         return .none
 
-      case .resumeGameResponse(let request, .failure):
+      case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
-        if case .teamEditor(var editor) = state.destination {
+        if case var .teamEditor(editor) = state.destination {
           editor.alert = .gameUnavailable
           state.destination = .teamEditor(editor)
         } else {
@@ -269,14 +269,14 @@ package struct TeamsFeature {
         return .none
 
       case .destination(.presented(.teamEditor(.editor(.delegate(.cancelled))))),
-        .destination(.presented(.teamEditor(.editor(.delegate(.saved(_)))))):
+           .destination(.presented(.teamEditor(.editor(.delegate(.saved(_)))))):
         state.destination = nil
         return .none
 
       case .destination:
         return .none
 
-      case .teamGameRowTapped(let game):
+      case let .teamGameRowTapped(game):
         guard !game.isCompleted else {
           state.path.append(
             .gameDetail(GameDetailFeature.State(gameID: game.id))
@@ -287,7 +287,7 @@ package struct TeamsFeature {
         state.clearResumeAlert()
         return resumeGame(gameID: game.id, state: &state)
 
-      case .teamRowTapped(let team):
+      case let .teamRowTapped(team):
         state.path.append(
           .teamDetail(TeamDetailFeature.State(teamID: team.id))
         )
@@ -323,9 +323,9 @@ package struct TeamsFeature {
         try await database.write { db in
           let gameIDs =
             try Game
-            .where { $0.teamAID.eq(teamID) || $0.teamBID.eq(teamID) }
-            .fetchAll(db)
-            .map(\.id)
+              .where { $0.teamAID.eq(teamID) || $0.teamBID.eq(teamID) }
+              .fetchAll(db)
+              .map(\.id)
           try Team.find(teamID).delete().execute(db)
           return gameIDs
         }
@@ -350,7 +350,9 @@ package struct TeamsFeature {
         let snapshot = try await database.read {
           try GameSnapshot.fetch($0, gameID: request.gameID)
         }
-        if snapshot.game.isPlanned { return snapshot }
+        if snapshot.game.isPlanned {
+          return snapshot
+        }
         return try await gameTimer.reconcile(request.gameID)
       }
       await send(.resumeGameResponse(request, result))
@@ -358,13 +360,11 @@ package struct TeamsFeature {
     .cancellable(id: CancelID.resumeGame, cancelInFlight: true)
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
-extension AlertState where Action == TeamsFeature.Alert {
-  static package var gameUnavailable: Self {
+package extension AlertState where Action == TeamsFeature.Alert {
+  static var gameUnavailable: Self {
     Self {
       TextState("Game unavailable")
     } actions: {

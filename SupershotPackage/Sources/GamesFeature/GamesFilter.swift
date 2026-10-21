@@ -1,13 +1,15 @@
 import Database
 import Foundation
 
-nonisolated package enum GamesFilter: String, CaseIterable, Identifiable, Sendable {
+package nonisolated enum GamesFilter: String, CaseIterable, Identifiable, Sendable {
   case all
   case planned
   case inProgress
   case completed
 
-  package var id: Self { self }
+  package var id: Self {
+    self
+  }
 
   var title: LocalizedStringResource {
     switch self {
@@ -28,7 +30,9 @@ nonisolated package enum GamesFilter: String, CaseIterable, Identifiable, Sendab
   }
 
   private static func ordered(_ lhs: GameListItem, _ rhs: GameListItem) -> Bool {
-    if lhs.isPlanned != rhs.isPlanned { return lhs.isPlanned }
+    if lhs.isPlanned != rhs.isPlanned {
+      return lhs.isPlanned
+    }
     if lhs.isPlanned {
       if lhs.scheduledAt != rhs.scheduledAt {
         return (lhs.scheduledAt ?? .distantFuture) < (rhs.scheduledAt ?? .distantFuture)
@@ -47,7 +51,7 @@ nonisolated package enum GamesFilter: String, CaseIterable, Identifiable, Sendab
     case .all: games.filter(\.isPlanned).sorted(by: Self.ordered) + games.filter { !$0.isPlanned }
     case .planned: games.filter(\.isPlanned).sorted(by: Self.ordered)
     case .inProgress: games.filter(\.isInProgress)
-    case .completed: games.filter { $0.isCompleted }
+    case .completed: games.filter(\.isCompleted)
     }
   }
 }
