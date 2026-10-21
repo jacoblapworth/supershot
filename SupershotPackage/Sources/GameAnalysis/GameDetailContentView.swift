@@ -18,7 +18,7 @@ package struct GameDetailContentView: View {
   package var body: some View {
     ScrollViewReader { scrollProxy in
       ScrollView {
-        LazyVStack(alignment: .leading, spacing: 28, pinnedViews: [.sectionHeaders]) {
+        LazyVStack(alignment: .leading, spacing: 20, pinnedViews: [.sectionHeaders]) {
           GameOverviewView(detail: detail)
             .padding(.top)
           if let location = detail.location {

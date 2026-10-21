@@ -10,7 +10,7 @@ import WidgetSupport
 
 package struct GameRow: View {
   package var game: GameListItem
-
+  
   package var body: some View {
     VStack(spacing: 8) {
       HStack(alignment: .center, spacing: 12) {
@@ -29,17 +29,17 @@ package struct GameRow: View {
           scoreColor: scoreColor(for: game.teamBScore, opponentScore: game.teamAScore)
         )
       }
-
+      
       HStack(spacing: 8) {
         Text(dateText)
-          .foregroundStyle(.secondary)
-
+          .foregroundStyle(.thickMaterial)
+        
         if let court = game.court {
-          Text("Court \(court)").foregroundStyle(.secondary)
+          Text("Court \(court)").foregroundStyle(.thickMaterial)
         }
-
+        
         Spacer(minLength: 8)
-
+        
         Label {
           if game.isPlanned {
             Text("Planned")
@@ -51,39 +51,102 @@ package struct GameRow: View {
         } icon: {
           Image(
             systemName: game.isPlanned
-              ? "calendar" : game.isCompleted ? "checkmark.circle.fill" : "clock.fill"
+              ? "calendar"
+              : game.isCompleted
+              ? "checkmark.circle.fill"
+              : "clock.fill"
           )
         }
-        .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
+        .labelIconToTitleSpacing(4)
+        .foregroundStyle(.thickMaterial)
       }
       .font(.caption.weight(.semibold))
     }
     .padding()
     .background {
+//      MeshGradient(
+//        width: 2,
+//        height: 2,
+//        bezierPoints: [
+//          .init(
+//            position: [0, 0],
+//            leadingControlPoint: [0.0, 0.0],
+//            topControlPoint: [0.0, 0.0],
+//            trailingControlPoint: [0.0, 0.0],
+//            bottomControlPoint: [0.0, 0.0]
+//          ),
+//          .init(
+//            position: [0, 1],
+//            leadingControlPoint: [0.0, 1.0],
+//            topControlPoint: [0.0, 1.0],
+//            trailingControlPoint: [0.0, 1.0],
+//            bottomControlPoint: [0.0, 1.0]
+//          ),
+//          .init(
+//            position: [1, 0],
+//            leadingControlPoint: [1.0, 0.0],
+//            topControlPoint: [1.0, 0.0],
+//            trailingControlPoint: [1.0, 0.0],
+//            bottomControlPoint: [1.0, 0.0]
+//          ),
+//          .init(
+//            position: [1, 1],
+//            leadingControlPoint: [1.0, 1.0],
+//            topControlPoint: [1.0, 1.0],
+//            trailingControlPoint: [1.0, 1.0],
+//            bottomControlPoint: [1.0, 1.0]
+//          ),
+//        ],
+//        colors: [
+//          game.teamABibColor,
+//          game.teamABibColor,
+//          game.teamBBibColor,
+//          game.teamBBibColor,
+//        ]
+//      )
+//      MeshGradient(
+//        width: 2,
+//        height: 2,
+//        points: [
+//          [0.5, 0.5],
+//          [0, 1],
+//          [1, 0],
+//          [1, 1]
+//        ],
+//        colors: [
+//          game.teamABibColor,
+//          game.teamABibColor,
+//          game.teamBBibColor,
+//          game.teamBBibColor,
+//        ]
+//      )
       LinearGradient(
-        colors: [
-          game.teamABibColor,
-          game.teamBBibColor,
-        ], startPoint: .leading, endPoint: .trailing
+        stops: [
+          Gradient.Stop(color: game.teamABibColor, location: 0.2),
+          Gradient.Stop(color: game.teamBBibColor, location: 0.8)
+        ],
+        startPoint: .leading,
+        endPoint: .trailing
       )
     }
     .contentShape(.rect)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(accessibilityText)
+    .listRowInsets(.all, 0)
   }
-
+  
   private func scoreColor(for score: Int, opponentScore: Int) -> Color {
     guard game.isCompleted, score < opponentScore else { return .primary }
     return .secondary
   }
-
+  
   private var dateText: String {
     if game.isPlanned {
       return game.scheduledAt?.formatted(date: .abbreviated, time: .shortened) ?? "Unscheduled"
     }
     return game.startedAt?.formatted(date: .abbreviated, time: .shortened) ?? ""
   }
-
+  
   private var accessibilityText: String {
     let date = dateText
     let court = game.court.map { ", Court \($0)" } ?? ""
@@ -94,7 +157,7 @@ package struct GameRow: View {
     return "\(date), \(game.teamAName) \(game.teamAScore), "
       + "\(game.teamBName) \(game.teamBScore), \(status)\(court), \(game.timingSummary)"
   }
-
+  
   package init(game: GameListItem) {
     self.game = game
   }
@@ -106,33 +169,35 @@ private struct TeamScore: View {
   var name: String
   var score: Int?
   var scoreColor: Color
-
-  private var team: some View {
-    HStack(alignment: .center, spacing: 4) {
-      if alignment == .leading {
-        AvatarView(label: name)
-      }
-      Text(name)
-        .font(score == nil ? .headline : .caption)
-        .lineLimit(1)
-        .multilineTextAlignment(.center)
-        .foregroundStyle(.secondary)
-      if alignment == .trailing {
-        AvatarView(label: name)
-      }
-    }
-    .controlSize(.small)
+  
+  var avatar: some View {
+    AvatarView(name)
+      .backgroundStyle(.ultraThinMaterial)
+      .foregroundStyle(.ultraThickMaterial)
   }
 
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
-      team
-      if let score {
-        Text("\(score)")
-          .font(.system(size: 62, weight: .bold))
-          .fontWidth(.compressed)
-          .monospacedDigit()
-          .foregroundStyle(scoreColor)
+      Text(name)
+        .font(.headline)
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .multilineTextAlignment(.center)
+        .foregroundStyle(.thickMaterial)
+      HStack(spacing: 16) {
+        if alignment == .leading {
+          avatar
+        }
+        if let score {
+          Text("\(score)")
+            .font(.system(size: 62, weight: .bold))
+            .fontWidth(.compressed)
+            .monospacedDigit()
+            .foregroundStyle(scoreColor)
+        }
+        if alignment == .trailing {
+          avatar
+        }
       }
     }
     .frame(
@@ -145,23 +210,19 @@ private struct TeamScore: View {
 #Preview("List") {
   List {
     GameRow(game: .previewInProgress)
-      .padding()
     GameRow(game: .previewCompleted)
-      .padding()
   }
+  .listRowSpacing(8)
 }
 
 #Preview("In-progress game") {
   GameRow(game: .previewInProgress)
-    .padding()
 }
 
 #Preview("Completed game row") {
   GameRow(game: .previewCompleted)
-    .padding()
 }
 
 #Preview("Loading game row") {
   GameRow(game: .previewInProgress)
-    .padding()
 }

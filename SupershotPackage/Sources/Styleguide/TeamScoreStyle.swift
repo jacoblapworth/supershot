@@ -22,7 +22,7 @@ private struct TeamScoreStyle: ViewModifier {
 
     content
       .foregroundStyle(color)
-      .shadow(color: .black.opacity(0.55), radius: 3, y: 2)
+      .shadow(color: .black.opacity(0.2), radius: 5)
       // A faint light edge also keeps black and navy teams visible on the dark surface.
       .shadow(color: .white.opacity(luminance < 0.12 ? 0.4 : 0), radius: 1)
   }
