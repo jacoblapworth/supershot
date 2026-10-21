@@ -1,10 +1,11 @@
 import CustomDump
 import Dependencies
+import DependenciesTestSupport
 import Foundation
 import SQLiteData
+import TestSupport
 import Testing
 
-import TestSupport
 @testable import AlarmClient
 @testable import Database
 @testable import GameCore
@@ -159,6 +160,37 @@ extension SupershotTestSuite {
       RecordGoalCommand(
         gameID: UUID(3), teamID: UUID(2), expectedPhaseIndex: phase,
         goalID: UUID(10), createdAt: now, scoringContext: context)
+    }
+
+    @Test(.dependencies { $0.date.now = Date(timeIntervalSince1970: 1_000) })
+    func plannedGamesRejectEverySessionCommandWithoutChangingState() async throws {
+      @Dependency(\.defaultDatabase) var database
+      _ = try seed()
+      try await database.write { db in
+        try Game.find(UUID(3)).update { $0.startedAt = #bind(nil as Date?) }.execute(db)
+      }
+      let before = try await read()
+      let commands: [GameSessionCommand] = [
+        .reconcile, .timing(.startOrResume, expectedPhaseIndex: nil),
+        .timing(.pause, expectedPhaseIndex: nil), .timing(.skip, expectedPhaseIndex: nil),
+        .recordGoal(command(context: .livePeriod(number: 1))), .undoGoal,
+        .selectCentrePass(UUID(2)), .resolveCentrePass(completedPeriod: 1, taken: true),
+        .finish, .swapSides,
+      ]
+      for command in commands {
+        let update = try await execute(command)
+        expectNoDifference(update.outcome, .rejected(.gameNotStarted))
+        expectNoDifference(update.snapshot, before)
+        _ = await GamePresentationClient.live.update(update, command)
+      }
+      await #expect(throws: GameSessionRejection.gameNotStarted) {
+        try await GameTimerClient.live.startOrResume(UUID(3), nil)
+      }
+      await #expect(throws: GameSessionRejection.gameNotStarted) {
+        try await GameTimerClient.live.reconcile(UUID(3))
+      }
+      #expect(before.scoringContext == nil)
+      #expect(!before.isFinalPeriodComplete)
     }
 
     private func execute(_ command: GameSessionCommand, at date: Date? = nil) async throws

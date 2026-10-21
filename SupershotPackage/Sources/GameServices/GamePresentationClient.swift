@@ -25,6 +25,7 @@ nonisolated public struct GamePresentationClient: Sendable {
         @Dependency(\.proSubscription) var subscription
         @Dependency(\.featureFlags) var featureFlags
         let snapshot = update.snapshot
+        guard !snapshot.game.isPlanned else { return false }
         let applied = update.outcome == .applied
         if command == .finish, applied {
           await end(alarms, snapshot: snapshot)
@@ -48,7 +49,9 @@ nonisolated public struct GamePresentationClient: Sendable {
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
         case .timing(.skip, _) where applied && schedulesAlerts:
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
-          if snapshot.game.timerEndsAt != nil { _ = await alarms.scheduleAlarm(snapshot) }
+          if snapshot.game.isInProgress, snapshot.game.timerEndsAt != nil {
+            _ = await alarms.scheduleAlarm(snapshot)
+          }
         case .timing(.setRemainingTime, _) where applied && schedulesAlerts:
           await alarms.cancelAlarm(snapshot.game.id, snapshot.phases.count)
         default:
@@ -82,7 +85,7 @@ nonisolated public struct GamePresentationClient: Sendable {
         @Dependency(\.featureFlags) var featureFlags
         guard
           let snapshot = try? await database.read({ try GameSnapshot.fetch($0, gameID: gameID) }),
-          snapshot.game.timerEndsAt != nil
+          snapshot.game.isInProgress, snapshot.game.timerEndsAt != nil
         else { return false }
         let access = (try? await subscription.currentAccess()) ?? .unknown
         guard featureFlags.isEnabled(.timerAlerts, access) else {

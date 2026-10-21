@@ -58,7 +58,7 @@ extension SupershotTestSuite {
         }
         return true
       }
-      var setup = NewGameFeature.State()
+      var setup = withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }
       setup.leftTeam.team = team
       setup.leftTeam.bibColor = team.color
       expectNoDifference(

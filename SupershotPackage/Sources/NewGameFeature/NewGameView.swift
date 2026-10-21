@@ -24,6 +24,7 @@ package struct NewGameView: View {
     ScrollView {
       VStack(spacing: 20) {
         NewGameTeamsView(store: store)
+        SetupGameDetailsView(store: store)
 
         if store.leftTeam.team != nil, store.rightTeam.team != nil {
           SetupCentrePassView(
@@ -35,10 +36,10 @@ package struct NewGameView: View {
 
         SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
 
-          AlarmPermissionCard(
-            store: store.scope(state: \.alarms, action: \.alarms),
-            proAccess: proAccess
-          )
+        AlarmPermissionCard(
+          store: store.scope(state: \.alarms, action: \.alarms),
+          proAccess: proAccess
+        )
         SetupLocationView(store: store)
       }
       #if os(macOS)
@@ -47,10 +48,22 @@ package struct NewGameView: View {
       #endif
       .padding()
     }
-    .navigationTitle("New game")
+    .navigationTitle(store.requiresExistingGame ? "Planned game" : "New game")
+    .navigationBarBackButtonHidden()
+    .toolbar {
+      ToolbarItem(placement: .cancellationAction) {
+        Button("Back", systemImage: "chevron.backward") { store.send(.closeButtonTapped) }
+          .disabled(store.isSaving)
+      }
+    }
+    .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }
     .task { store.send(.task) }
     .onChange(of: scenePhase) { _, phase in
-      if phase == .active { store.send(.sceneBecameActive) }
+      if phase == .active {
+        store.send(.sceneBecameActive)
+      } else {
+        store.send(.sceneBecameInactive)
+      }
     }
     .safeAreaInset(edge: .bottom) {
       SetupStartBar(
@@ -58,7 +71,13 @@ package struct NewGameView: View {
         configurationSummary: store.configurationSummary,
         errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
         isSaving: store.isSaving,
-        startGameTapped: { store.send(.startGameButtonTapped) }
+        startGameTapped: {
+          store.send(store.scheduledAt == nil ? .startGameButtonTapped : .saveGameButtonTapped)
+        },
+        isScheduled: store.scheduledAt != nil,
+        startNowTapped: { store.send(.startGameButtonTapped) },
+        retryTapped: { store.send(.retrySaveButtonTapped) },
+        canRetry: store.failedSaveIntent != nil
       )
     }
     .sheet(

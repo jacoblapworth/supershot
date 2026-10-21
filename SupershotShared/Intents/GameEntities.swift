@@ -1,7 +1,7 @@
-import GameCore
 import AppIntents
 import Dependencies
 import Foundation
+import GameCore
 import SQLiteData
 
 struct TeamEntity: AppEntity {
@@ -53,22 +53,31 @@ struct GameEntity: AppEntity {
   let id: UUID
   @Property(title: "Team A") var teamA: TeamEntity
   @Property(title: "Team B") var teamB: TeamEntity
-  @Property(title: "Started At") var startedAt: Date
+  @Property(title: "Started At") var startedAt: Date?
+  @Property(title: "Scheduled At") var scheduledAt: Date?
+  @Property(title: "Court") var court: String?
+  @Property(title: "Planned") var isPlanned: Bool
   @Property(title: "Completed") var isCompleted: Bool
 
   init(game: Game, teamA: Team, teamB: Team) {
     id = game.id
     self.teamA = TeamEntity(team: teamA)
     self.teamB = TeamEntity(team: teamB)
+    scheduledAt = game.scheduledAt
+    court = game.court
+    isPlanned = game.isPlanned
     startedAt = game.startedAt
     isCompleted = game.endedAt != nil
   }
 
   var displayRepresentation: DisplayRepresentation {
-    DisplayRepresentation(
-      title: "\(teamA.name) vs \(teamB.name)",
-      subtitle: "\(startedAt.formatted(date: .abbreviated, time: .shortened))"
-    )
+    if let date = startedAt ?? scheduledAt {
+      return DisplayRepresentation(
+        title: "\(teamA.name) vs \(teamB.name)",
+        subtitle: "\(date.formatted(date: .abbreviated, time: .shortened))"
+      )
+    }
+    return DisplayRepresentation(title: "\(teamA.name) vs \(teamB.name)", subtitle: "Unscheduled")
   }
 }
 

@@ -36,7 +36,10 @@ extension DependencyValues {
         """
         CREATE TABLE "games"(
           "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
-          "startedAt" TEXT NOT NULL,
+          "startedAt" TEXT,
+          "createdAt" TEXT NOT NULL,
+          "scheduledAt" TEXT,
+          "court" TEXT,
           "endedAt" TEXT,
           "teamAID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "teamABibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF',
@@ -55,7 +58,9 @@ extension DependencyValues {
           "timerEndsAt" TEXT,
           "breakStartPolicy" TEXT NOT NULL DEFAULT 'automatic'
             CHECK ("breakStartPolicy" IN ('automatic', 'manual')),
-          CHECK ("teamAID" != "teamBID")
+          CHECK ("teamAID" != "teamBID"),
+          CHECK ("endedAt" IS NULL OR "startedAt" IS NOT NULL),
+          CHECK ("startedAt" IS NOT NULL OR "timerEndsAt" IS NULL)
         ) STRICT
         """
       )

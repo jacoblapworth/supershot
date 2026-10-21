@@ -53,6 +53,12 @@ package struct GameOverviewView: View {
       Divider()
 
       VStack(alignment: .leading, spacing: 8) {
+        if let scheduledAt = detail.scheduledAt {
+          LabeledContent("Scheduled") {
+            Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
+          }
+        }
+        if let court = detail.court { LabeledContent("Court", value: court) }
         LabeledContent("Started") {
           Text(detail.startedAt.formatted(date: .abbreviated, time: .shortened))
         }

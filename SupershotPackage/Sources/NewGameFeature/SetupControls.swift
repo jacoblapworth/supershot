@@ -1,4 +1,5 @@
 import AppSettings
+import ComposableArchitecture
 import Database
 import GameAnalysis
 import GameCore
@@ -50,6 +51,10 @@ package struct SetupStartBar: View {
   package var errorMessage: String?
   package var isSaving: Bool
   package var startGameTapped: () -> Void
+  package var isScheduled = false
+  package var startNowTapped: () -> Void = {}
+  package var retryTapped: () -> Void = {}
+  package var canRetry = false
 
   package var body: some View {
     VStack(spacing: 10) {
@@ -62,6 +67,7 @@ package struct SetupStartBar: View {
           .font(.caption)
           .foregroundStyle(.red)
           .frame(maxWidth: .infinity, alignment: .leading)
+        if canRetry { Button("Retry", action: retryTapped).disabled(isSaving) }
       }
 
       Button {
@@ -71,13 +77,26 @@ package struct SetupStartBar: View {
           ProgressView()
             .frame(maxWidth: .infinity)
         } else {
-          Text("Continue")
+          Text(isScheduled ? "Save game" : "Start game")
             .padding(8)
             .frame(maxWidth: .infinity)
         }
       }
       .buttonStyle(.glassProminent)
+      .buttonSizing(.flexible)
       .disabled(!canStartGame)
+      if isScheduled {
+        Button {
+          startNowTapped()
+        } label: {
+          Text("Start now")
+            .padding(8)
+        }
+
+        .disabled(!canStartGame)
+        .buttonSizing(.flexible)
+        .buttonStyle(.glass)
+      }
     }
     .padding()
     .background(.bar)
@@ -85,13 +104,19 @@ package struct SetupStartBar: View {
 
   package init(
     canStartGame: Bool, configurationSummary: String, errorMessage: String? = nil, isSaving: Bool,
-    startGameTapped: @escaping () -> Void
+    startGameTapped: @escaping () -> Void,
+    isScheduled: Bool = false, startNowTapped: @escaping () -> Void = {},
+    retryTapped: @escaping () -> Void = {}, canRetry: Bool = false
   ) {
     self.canStartGame = canStartGame
     self.configurationSummary = configurationSummary
     self.errorMessage = errorMessage
     self.isSaving = isSaving
     self.startGameTapped = startGameTapped
+    self.isScheduled = isScheduled
+    self.startNowTapped = startNowTapped
+    self.retryTapped = retryTapped
+    self.canRetry = canRetry
   }
 }
 
@@ -132,4 +157,38 @@ package struct SetupStartBar: View {
     isSaving: true,
     startGameTapped: {}
   )
+}
+
+package struct SetupGameDetailsView: View {
+  @Bindable var store: StoreOf<NewGameFeature>
+
+  package var body: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Label("Game details", systemImage: "calendar")
+        .font(.headline)
+      Toggle(
+        "Scheduled date and time",
+        isOn: Binding(
+          get: { store.scheduledAt != nil },
+          set: { store.send(.scheduleToggleChanged($0)) }
+        ))
+      if store.scheduledAt != nil {
+        DatePicker(
+          "Scheduled",
+          selection: Binding(
+            get: { store.scheduledAt ?? store.createdAt },
+            set: { store.scheduledAt = $0 }
+          ))
+      } else {
+        Text("Now").foregroundStyle(.secondary)
+      }
+      LabeledContent("Court") {
+        TextField("Optional", text: $store.court)
+          .textFieldStyle(.roundedBorder)
+          .accessibilityLabel("Court")
+          .accessibilityIdentifier("gameSetup.court")
+      }
+    }
+    .setupCardStyle()
+  }
 }

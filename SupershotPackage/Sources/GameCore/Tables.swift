@@ -10,7 +10,10 @@ nonisolated public enum BreakStartPolicy: String, Codable, CaseIterable, Sendabl
 @Table
 nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
-  public var startedAt: Date
+  public var startedAt: Date?
+  public var createdAt: Date
+  public var scheduledAt: Date?
+  public var court: String?
   public var endedAt: Date?
   public var teamAID: Team.ID
   public var teamABibColorHex = "#007AFF"
@@ -28,6 +31,9 @@ nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
   public var timerEndsAt: Date? = nil
   public var breakStartPolicy = BreakStartPolicy.automatic
 
+  public var isPlanned: Bool { startedAt == nil && endedAt == nil }
+  public var isInProgress: Bool { startedAt != nil && endedAt == nil }
+
   public var countdown: GameCountdown {
     get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
     set {
@@ -37,15 +43,19 @@ nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
   }
 
   public init(
-    id: UUID, startedAt: Date, endedAt: Date? = nil, teamAID: Team.ID,
+    id: UUID, startedAt: Date?, endedAt: Date? = nil, teamAID: Team.ID,
     teamABibColorHex: String = "#007AFF", teamBID: Team.ID, teamBBibColorHex: String = "#FF3B30",
     centrePassTeamID: Team.ID? = nil, swapSides: Bool = false, latitude: Double? = nil,
     longitude: Double? = nil, pointOfInterestName: String? = nil,
     isAwaitingCentrePassConfirmation: Bool = false, lateScoringPeriodNumber: Int? = nil,
     currentPhaseIndex: Int = 0, elapsedSeconds: Int = 0, timerEndsAt: Date? = nil,
-    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic
+    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
+    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil
   ) {
     self.id = id
+    self.createdAt = createdAt ?? startedAt ?? Date()
+    self.scheduledAt = scheduledAt
+    self.court = court
     self.startedAt = startedAt
     self.endedAt = endedAt
     self.teamAID = teamAID

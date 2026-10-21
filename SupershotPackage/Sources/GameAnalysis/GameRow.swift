@@ -18,32 +18,38 @@ package struct GameRow: View {
           alignment: .leading,
           color: game.teamABibColor,
           name: game.teamAName,
-          score: game.teamAScore,
+          score: game.isPlanned ? nil : game.teamAScore,
           scoreColor: scoreColor(for: game.teamAScore, opponentScore: game.teamBScore)
         )
         TeamScore(
           alignment: .trailing,
           color: game.teamBBibColor,
           name: game.teamBName,
-          score: game.teamBScore,
+          score: game.isPlanned ? nil : game.teamBScore,
           scoreColor: scoreColor(for: game.teamBScore, opponentScore: game.teamAScore)
         )
       }
 
       HStack(spacing: 8) {
-        Text(game.startedAt.formatted(date: .abbreviated, time: .shortened))
+        Text(dateText)
           .foregroundStyle(.secondary)
+
+        if let court = game.court { Text("Court \(court)").foregroundStyle(.secondary) }
 
         Spacer(minLength: 8)
 
         Label {
-          if game.isCompleted {
+          if game.isPlanned {
+            Text("Planned")
+          } else if game.isCompleted {
             Text("Final")
           } else {
             Text("Q\(game.currentQuarter)")
           }
         } icon: {
-          Image(systemName: game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
+          Image(
+            systemName: game.isPlanned
+              ? "calendar" : game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
         }
         .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
 
@@ -68,11 +74,22 @@ package struct GameRow: View {
     return .secondary
   }
 
+  private var dateText: String {
+    if game.isPlanned {
+      return game.scheduledAt?.formatted(date: .abbreviated, time: .shortened) ?? "Unscheduled"
+    }
+    return game.startedAt?.formatted(date: .abbreviated, time: .shortened) ?? ""
+  }
+
   private var accessibilityText: String {
-    let date = game.startedAt.formatted(date: .abbreviated, time: .shortened)
+    let date = dateText
+    let court = game.court.map { ", Court \($0)" } ?? ""
+    if game.isPlanned {
+      return "\(date), \(game.teamAName), \(game.teamBName), Planned\(court), \(game.timingSummary)"
+    }
     let status = game.isCompleted ? "Final" : "Q\(game.currentQuarter)"
     return "\(date), \(game.teamAName) \(game.teamAScore), "
-      + "\(game.teamBName) \(game.teamBScore), \(status), \(game.timingSummary)"
+      + "\(game.teamBName) \(game.teamBScore), \(status)\(court), \(game.timingSummary)"
   }
 
   package init(game: GameListItem) {
@@ -84,7 +101,7 @@ private struct TeamScore: View {
   var alignment: HorizontalAlignment
   var color: Color
   var name: String
-  var score: Int
+  var score: Int?
   var scoreColor: Color
 
   private var team: some View {
@@ -93,7 +110,7 @@ private struct TeamScore: View {
         AvatarView(label: name)
       }
       Text(name)
-        .font(.caption)
+        .font(score == nil ? .headline : .caption)
         .lineLimit(1)
         .multilineTextAlignment(.center)
         .foregroundStyle(.secondary)
@@ -107,11 +124,13 @@ private struct TeamScore: View {
   var body: some View {
     VStack(alignment: alignment, spacing: 4) {
       team
-      Text("\(score)")
-        .font(.system(size: 62, weight: .bold))
-        .fontWidth(.compressed)
-        .monospacedDigit()
-        .foregroundStyle(scoreColor)
+      if let score {
+        Text("\(score)")
+          .font(.system(size: 62, weight: .bold))
+          .fontWidth(.compressed)
+          .monospacedDigit()
+          .foregroundStyle(scoreColor)
+      }
 
     }
     .frame(

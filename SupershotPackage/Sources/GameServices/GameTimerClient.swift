@@ -153,6 +153,7 @@ nonisolated extension GameTimerClient {
     @Dependency(\.gameSession) var session
     @Dependency(\.gamePresentation) var presentation
     let update = try await session.execute(gameID, command, now)
+    guard !update.snapshot.game.isPlanned else { throw GameSessionRejection.gameNotStarted }
     if case .timing(.setRemainingTime, _) = command, update.outcome != .applied {
       throw GameTimerError.invalidCorrection
     }

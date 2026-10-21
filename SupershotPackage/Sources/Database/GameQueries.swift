@@ -8,13 +8,19 @@ nonisolated package struct GameListItem: Equatable, Identifiable, Sendable {
   package let endedAt: Date?
   package let id: Game.ID
   package var periods: [GamePeriod] = []
-  package let startedAt: Date
+  package let startedAt: Date?
+  package var createdAt: Date
+  package var scheduledAt: Date?
+  package var court: String?
   package var teamABibColorHex: String = "#007AFF"
   package let teamAName: String
   package let teamAScore: Int
   package var teamBBibColorHex: String = "#FF3B30"
   package let teamBName: String
   package let teamBScore: Int
+
+  package var isPlanned: Bool { startedAt == nil && endedAt == nil }
+  package var isInProgress: Bool { startedAt != nil && endedAt == nil }
 
   package var isCompleted: Bool {
     endedAt != nil
@@ -26,13 +32,17 @@ nonisolated package struct GameListItem: Equatable, Identifiable, Sendable {
 
   package init(
     currentQuarter: Int = 1, endedAt: Date? = nil, id: Game.ID, periods: [GamePeriod] = [],
-    startedAt: Date, teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
-    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int
+    startedAt: Date?, teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
+    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int,
+    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil
   ) {
     self.currentQuarter = currentQuarter
     self.endedAt = endedAt
     self.id = id
     self.periods = periods
+    self.createdAt = createdAt ?? startedAt ?? .distantPast
+    self.scheduledAt = scheduledAt
+    self.court = court
     self.startedAt = startedAt
     self.teamABibColorHex = teamABibColorHex
     self.teamAName = teamAName
@@ -209,6 +219,8 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
   package let goalTimeline: GoalTimeline
   package let id: Game.ID
   package var location: GameLocation?
+  package var scheduledAt: Date?
+  package var court: String?
   package var periods: [GamePeriod] = []
   package let startedAt: Date
   package var statistics = CompletedGameStatistics()
@@ -254,8 +266,11 @@ nonisolated package struct CompletedGameDetail: Equatable, Identifiable, Sendabl
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
     teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
-    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int
+    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int,
+    scheduledAt: Date? = nil, court: String? = nil
   ) {
+    self.scheduledAt = scheduledAt
+    self.court = court
     self.endedAt = endedAt
     self.goalTimeline = goalTimeline
     self.id = id
@@ -305,7 +320,8 @@ nonisolated public struct GameSnapshot: Equatable, Sendable {
   }
 
   public var scoringContext: GameScoringContext? {
-    GameScoringContext.resolve(
+    guard !game.isPlanned else { return nil }
+    return GameScoringContext.resolve(
       phase: currentPhase, countdown: game.countdown,
       isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
       lateScoringPeriodNumber: game.lateScoringPeriodNumber
@@ -317,7 +333,7 @@ nonisolated public struct GameSnapshot: Equatable, Sendable {
   }
 
   public var isFinalPeriodComplete: Bool {
-    game.progress.isFinalPeriodComplete(in: timeline)
+    !game.isPlanned && game.progress.isFinalPeriodComplete(in: timeline)
   }
 
   public var canUndoDuringConfirmation: Bool {
@@ -460,7 +476,8 @@ nonisolated package struct GamesRequest: FetchKeyRequest {
           teamBScore:
             gameGoals
             .filter { $0.teamID == teamB.id }
-            .reduce(0) { $0 + $1.points }
+            .reduce(0) { $0 + $1.points },
+          createdAt: game.createdAt, scheduledAt: game.scheduledAt, court: game.court
         )
       }
     )
@@ -486,7 +503,7 @@ nonisolated package struct TeamsRequest: FetchKeyRequest {
       try Team
       .order { ($0.name, $0.id) }
       .fetchAll(db)
-    let gameCounts = games.reduce(into: [Team.ID: Int]()) { counts, game in
+    let gameCounts = games.filter { !$0.isPlanned }.reduce(into: [Team.ID: Int]()) { counts, game in
       for teamID in Set([game.teamAID, game.teamBID]) {
         counts[teamID, default: 0] += 1
       }
@@ -680,7 +697,8 @@ nonisolated package struct GameDetailRequest: FetchKeyRequest {
 
   package func fetch(_ db: Database) throws -> Value {
     let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    guard let endedAt = snapshot.game.endedAt else { return Value() }
+    guard let endedAt = snapshot.game.endedAt, let startedAt = snapshot.game.startedAt
+    else { return Value() }
     let timeline = goalTimeline(snapshot: snapshot)
 
     return Value(
@@ -690,7 +708,7 @@ nonisolated package struct GameDetailRequest: FetchKeyRequest {
         id: snapshot.game.id,
         location: snapshot.game.location,
         periods: snapshot.periods,
-        startedAt: snapshot.game.startedAt,
+        startedAt: startedAt,
         statistics: completedGameStatistics(
           goals: snapshot.goals,
           teamAID: snapshot.teamA.id,
@@ -702,7 +720,8 @@ nonisolated package struct GameDetailRequest: FetchKeyRequest {
         teamAScore: snapshot.teamAScore,
         teamBBibColorHex: snapshot.game.teamBBibColorHex,
         teamBName: snapshot.teamB.name,
-        teamBScore: snapshot.teamBScore
+        teamBScore: snapshot.teamBScore,
+        scheduledAt: snapshot.game.scheduledAt, court: snapshot.game.court
       )
     )
   }

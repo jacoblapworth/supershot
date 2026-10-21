@@ -92,6 +92,8 @@ package struct ScoringFeature {
     package var isTransitioningPeriod = false
     package var lateScoringPeriodNumber: Int?
     package var periods: [GamePeriod]
+    package var scheduledAt: Date?
+    package var court: String?
     package let startedAt: Date
     package var teamA: Team
     package var teamAScore = 0
@@ -853,9 +855,13 @@ extension AlertState where Action == ScoringFeature.Alert {
       }
     } message: {
       #if os(macOS)
-        TextState("The game timer will keep running, but Supershot couldn’t schedule its notifications. Try pausing and resuming the timer.")
+        TextState(
+          "The game timer will keep running, but Supershot couldn’t schedule its notifications. Try pausing and resuming the timer."
+        )
       #else
-        TextState("The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer.")
+        TextState(
+          "The game timer will keep running, but Supershot couldn’t schedule its alarms. Try pausing and resuming the timer."
+        )
       #endif
     }
   }
