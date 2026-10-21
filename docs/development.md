@@ -32,3 +32,18 @@ unique `-resultBundlePath` when collecting test results.
 
 Formatting includes app, widget, shared, and test sources plus the package manifest,
 sources, and tests. It excludes dependency checkouts and generated build output.
+
+## CI performance
+
+The iOS test and native macOS build jobs run independently. Both cache Swift
+package downloads by Xcode build, runner architecture, and committed lockfiles;
+a lockfile change can reuse older downloads while Xcode enforces the new versions.
+Both enable Xcode compilation caching and persist its content-addressed cache,
+with separate keys for iOS and macOS. Each successful run saves an updated cache
+for the next run. Build records and source timestamps are not restored.
+
+The simulator begins booting before cache restoration and compilation. All scheme
+tests still run, with the scheme's existing parallelization settings. Raw build
+logs include `-showBuildTimingSummary`; compare successful cold and warm CI runs,
+including cache restore/save time, to measure the benefit. The first run for a new
+Xcode build or runner architecture needs to populate the caches.
