@@ -1,31 +1,30 @@
-import SharedModels
-import WidgetSupport
-import GameCore
-import Database
-import GameServices
 import AlarmClient
-import AppSettings
 import AppIntents
+import AppSettings
+import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import SQLiteData
+import GameCore
+import GameServices
+import SharedModels
 import Sharing
-import Testing
-
+import SQLiteData
 @testable import Supershot
+import Testing
+import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
   @Suite(.dependencies {
     $0.uuid = .incrementing
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
+    $0.date.now = Date(timeIntervalSince1970: 1000)
   })
   struct AppIntentsTests {
     @Test func resolvesPlannedGameMetadataWithoutInventingAnActualStartDate() async throws {
       @Dependencies.Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
-      let scheduledAt = Date(timeIntervalSince1970: 2_000)
+      let scheduledAt = Date(timeIntervalSince1970: 2000)
       try await database.write { db in
         try Team.insert {
           Team(id: UUID(1), name: "A")
@@ -34,7 +33,8 @@ extension SupershotTestSuite {
         try Game.insert {
           Game(
             id: UUID(3), startedAt: nil, teamAID: UUID(1), teamBID: UUID(2),
-            createdAt: Date(timeIntervalSince1970: 1_000), scheduledAt: scheduledAt, court: "A")
+            createdAt: Date(timeIntervalSince1970: 1000), scheduledAt: scheduledAt, court: "A"
+          )
         }.execute(db)
       }
       let entities = try await GameEntityQuery().entities(for: [UUID(3)])
@@ -73,7 +73,7 @@ extension SupershotTestSuite {
       #expect(game.centrePassTeamID == teamB.id)
       #expect(game.timerEndsAt == nil)
       #expect(game.elapsedSeconds == 0)
-      #expect(game.startedAt == Date(timeIntervalSince1970: 1_000))
+      #expect(game.startedAt == Date(timeIntervalSince1970: 1000))
       #expect(game.teamABibColorHex == teamA.colorHex)
       #expect(game.teamBBibColorHex == teamB.colorHex)
       let periods = try await database.read {

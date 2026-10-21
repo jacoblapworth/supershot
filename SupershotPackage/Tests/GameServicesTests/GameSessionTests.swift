@@ -1,24 +1,23 @@
+@testable import AlarmClient
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import SQLiteData
-import TestSupport
-import Testing
-
-@testable import AlarmClient
-@testable import Database
 @testable import GameCore
 @testable import GameServices
 @testable import SharedModels
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
   struct GameSessionTests {
-    let now = Date(timeIntervalSince1970: 1_000)
+    let now = Date(timeIntervalSince1970: 1000)
 
     @Test func expiredLiveGoalRejectsAndCommitsClockReconciliation() async throws {
       let before = try seed(endsAt: now)
@@ -48,7 +47,8 @@ extension SupershotTestSuite {
 
     @Test func lateGoalPreservesClockAndConfirmationAndUsesRecordingDate() async throws {
       let before = try seed(
-        phase: 1, elapsed: 20, endsAt: now.addingTimeInterval(100), pending: true, late: 1)
+        phase: 1, elapsed: 20, endsAt: now.addingTimeInterval(100), pending: true, late: 1
+      )
       var goal = command(phase: 1, context: .completedPeriod(number: 1))
       goal.createdAt = now.addingTimeInterval(10)
       let update = try await execute(.recordGoal(goal), at: now.addingTimeInterval(500))
@@ -76,7 +76,8 @@ extension SupershotTestSuite {
       let paused = try await execute(.timing(.pause, expectedPhaseIndex: 2))
       expectNoDifference(paused.snapshot.game.countdown, GameCountdown())
       let late = try await execute(
-        .recordGoal(command(phase: 2, context: .completedPeriod(number: 1))))
+        .recordGoal(command(phase: 2, context: .completedPeriod(number: 1)))
+      )
       expectNoDifference(late.outcome, .rejected(.scoringUnavailable))
       expectNoDifference(late.snapshot.goals, [])
     }
@@ -91,9 +92,11 @@ extension SupershotTestSuite {
       expectNoDifference(recovered.snapshot.game.currentPhaseIndex, 1)
       expectNoDifference(
         recovered.snapshot.game.timerEndsAt,
-        hasBreak && policy == .automatic ? now.addingTimeInterval(120) : nil)
+        hasBreak && policy == .automatic ? now.addingTimeInterval(120) : nil
+      )
       expectNoDifference(
-        recovered.snapshot.game.elapsedSeconds, hasBreak && policy == .automatic ? 50 : 0)
+        recovered.snapshot.game.elapsedSeconds, hasBreak && policy == .automatic ? 50 : 0
+      )
       expectNoDifference(recovered.snapshot.game.lateScoringPeriodNumber, 1)
       let again = try await execute(.reconcile, at: now.addingTimeInterval(50))
       expectNoDifference(again.outcome, .unchanged)
@@ -123,7 +126,8 @@ extension SupershotTestSuite {
         try Goal.insert {
           Goal(
             id: UUID(10), gameID: UUID(3), gamePeriodID: before.periods[0].id,
-            teamID: UUID(1), elapsedSeconds: 900, isLate: true, createdAt: .distantPast)
+            teamID: UUID(1), elapsedSeconds: 900, isLate: true, createdAt: .distantPast
+          )
         }.execute(db)
       }
       let seeded = try await read()
@@ -138,7 +142,7 @@ extension SupershotTestSuite {
       try await database.write { db in
         try db.execute(
           sql:
-            "CREATE TEMP TRIGGER reject_goal BEFORE INSERT ON goals BEGIN SELECT RAISE(ABORT, 'test failure'); END"
+          "CREATE TEMP TRIGGER reject_goal BEFORE INSERT ON goals BEGIN SELECT RAISE(ABORT, 'test failure'); END"
         )
       }
       await #expect(throws: (any Error).self) {
@@ -159,10 +163,11 @@ extension SupershotTestSuite {
     private func command(phase: Int = 0, context: GameScoringContext) -> RecordGoalCommand {
       RecordGoalCommand(
         gameID: UUID(3), teamID: UUID(2), expectedPhaseIndex: phase,
-        goalID: UUID(10), createdAt: now, scoringContext: context)
+        goalID: UUID(10), createdAt: now, scoringContext: context
+      )
     }
 
-    @Test(.dependencies { $0.date.now = Date(timeIntervalSince1970: 1_000) })
+    @Test(.dependencies { $0.date.now = Date(timeIntervalSince1970: 1000) })
     func plannedGamesRejectEverySessionCommandWithoutChangingState() async throws {
       @Dependency(\.defaultDatabase) var database
       _ = try seed()
@@ -222,7 +227,8 @@ extension SupershotTestSuite {
             teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
             isAwaitingCentrePassConfirmation: pending, lateScoringPeriodNumber: late,
             currentPhaseIndex: phase, elapsedSeconds: elapsed, timerEndsAt: endsAt,
-            breakStartPolicy: policy)
+            breakStartPolicy: policy
+          )
         }.execute(db)
         for period in testGamePeriods(gameID: UUID(3), breakDurationSeconds: breakSeconds) {
           try GamePeriod.insert { period }.execute(db)

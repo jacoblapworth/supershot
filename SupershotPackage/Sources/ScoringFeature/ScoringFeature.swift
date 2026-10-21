@@ -1,6 +1,6 @@
 import AlarmClient
-import AppSettings
 import ApplicationDependency
+import AppSettings
 import ComposableArchitecture
 import Database
 import Foundation
@@ -19,7 +19,7 @@ import WidgetSupport
 
 @Reducer
 package struct ScoringFeature {
-  nonisolated package enum ControlsPresentation: Equatable, Sendable {
+  package nonisolated enum ControlsPresentation: Equatable, Sendable {
     case shown
     case dismissingForTimeInput
     case hiddenForTimeInput
@@ -27,12 +27,12 @@ package struct ScoringFeature {
     case hiddenForPaywall
   }
 
-  nonisolated package enum ClockPhase: Equatable, Sendable {
+  package nonisolated enum ClockPhase: Equatable, Sendable {
     case breakTime
     case quarter
   }
 
-  nonisolated package struct Team: Equatable, Identifiable, Sendable {
+  package nonisolated struct Team: Equatable, Identifiable, Sendable {
     package let id: UUID
     package var bibColor = ColorPalette.blue
     package var name: String
@@ -49,7 +49,9 @@ package struct ScoringFeature {
     package var score: Int
     package var hasCentrePass: Bool
 
-    package var id: Team.ID { team.id }
+    package var id: Team.ID {
+      team.id
+    }
 
     package init(team: Team, score: Int, hasCentrePass: Bool) {
       self.team = team
@@ -103,12 +105,22 @@ package struct ScoringFeature {
     package var presentationDetent: PresentationDetent = .height(112)
     package var detents: Set<PresentationDetent> = [.height(112), .height(200)]
 
-    package var timeline: GameTimeline { GameTimeline(periods: periods)! }
-    package var currentPhase: GamePhase { timeline.phase(at: currentPhaseIndex)! }
+    package var timeline: GameTimeline {
+      GameTimeline(periods: periods)!
+    }
+
+    package var currentPhase: GamePhase {
+      timeline.phase(at: currentPhaseIndex)!
+    }
+
     package var activePlayingPeriod: GamePeriod? {
       timeline.activePlayingPeriod(at: currentPhaseIndex)
     }
-    package var precedingPeriod: GamePeriod? { timeline.precedingPeriod(at: currentPhaseIndex) }
+
+    package var precedingPeriod: GamePeriod? {
+      timeline.precedingPeriod(at: currentPhaseIndex)
+    }
+
     package var scoringPeriod: GamePeriod? {
       scoringContext.flatMap { timeline.scoringPeriod(for: $0) }
     }
@@ -125,18 +137,32 @@ package struct ScoringFeature {
       currentPhase.isBreak ? .breakTime : .quarter
     }
 
-    package var period: Int { currentPhase.associatedPeriod.number }
-    package var isTimerRunning: Bool { countdown.isRunning }
-    package var currentDurationSeconds: Int { currentPhase.durationSeconds }
+    package var period: Int {
+      currentPhase.associatedPeriod.number
+    }
+
+    package var isTimerRunning: Bool {
+      countdown.isRunning
+    }
+
+    package var currentDurationSeconds: Int {
+      currentPhase.durationSeconds
+    }
+
     package var timerProjection: GameCountdown.Projection {
       countdown.projection(durationSeconds: currentDurationSeconds)
     }
-    package var isPeriodComplete: Bool { timerProjection.status == .complete }
+
+    package var isPeriodComplete: Bool {
+      timerProjection.status == .complete
+    }
+
     package var scoringContext: GameScoringContext? {
       GameScoringContext.resolve(
         phase: currentPhase, countdown: countdown,
         isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner,
-        lateScoringPeriodNumber: lateScoringPeriodNumber)
+        lateScoringPeriodNumber: lateScoringPeriodNumber
+      )
     }
 
     package var canEditTime: Bool {
@@ -144,7 +170,10 @@ package struct ScoringFeature {
         && !isTimerOperationPending && !isShowingLastCentrePassBanner
     }
 
-    package var canScoreGoal: Bool { scoringContext != nil && !isTransitioningPeriod }
+    package var canScoreGoal: Bool {
+      scoringContext != nil && !isTransitioningPeriod
+    }
+
     package var canUndoGoal: Bool {
       canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation)
     }
@@ -326,16 +355,17 @@ package struct ScoringFeature {
           state.controlsPresentation = .hiddenForTimeInput
           state.timeInput = .init(
             title: "Edit remaining time", totalSeconds: state.timeRemainingSeconds,
-            allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
+            allowedSeconds: 1 ... state.currentDurationSeconds, selectedUnit: .seconds
+          )
         #else
           state.controlsPresentation = .dismissingForTimeInput
         #endif
         return .none
 
-      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+      case let .timeInput(.presented(.delegate(.committed(seconds)))):
         guard let phaseIndex = state.editedPhaseIndex, state.canEditTime,
-          phaseIndex == state.currentPhaseIndex,
-          (1...state.currentDurationSeconds).contains(seconds)
+              phaseIndex == state.currentPhaseIndex,
+              (1 ... state.currentDurationSeconds).contains(seconds)
         else {
           state.timeInput?.errorMessage = "The clock has changed. Close the editor and try again."
           return .none
@@ -345,9 +375,11 @@ package struct ScoringFeature {
         return .run { send in
           await send(
             .timeCorrectionResponse(
-              await Result {
+              Result {
                 try await gameTimer.setRemainingTime(gameID, phaseIndex, seconds)
-              }))
+              }
+            )
+          )
         }
 
       case .timeInput(.presented(.delegate(.cancelled))):
@@ -363,12 +395,12 @@ package struct ScoringFeature {
         state.controlsPresentation = .shown
         return .none
 
-      case .timeCorrectionResponse(.success(let snapshot)):
+      case let .timeCorrectionResponse(.success(snapshot)):
         applyTimer(snapshot.game, to: &state)
         state.timeInput = nil
         return .none
 
-      case .timeCorrectionResponse(.failure(let error)):
+      case let .timeCorrectionResponse(.failure(error)):
         state.timeInput?.isSaving = false
         state.timeInput?.errorMessage = error.localizedDescription
         return .none
@@ -383,7 +415,8 @@ package struct ScoringFeature {
           }
           state.timeInput = .init(
             title: "Edit remaining time", totalSeconds: state.timeRemainingSeconds,
-            allowedSeconds: 1...state.currentDurationSeconds, selectedUnit: .seconds)
+            allowedSeconds: 1 ... state.currentDurationSeconds, selectedUnit: .seconds
+          )
           return .none
         }
         guard state.controlsPresentation == .dismissingForPaywall else { return .none }
@@ -392,7 +425,7 @@ package struct ScoringFeature {
 
       case .proPaywallDidDismiss:
         guard state.timeInput == nil, state.controlsPresentation != .dismissingForTimeInput,
-          state.controlsPresentation != .hiddenForTimeInput
+              state.controlsPresentation != .hiddenForTimeInput
         else { return .none }
         state.controlsPresentation = .shown
         return .none
@@ -400,10 +433,10 @@ package struct ScoringFeature {
       case .alarms(.delegate(.authorized)):
         let gameID = state.gameID
         return .run { send in
-          await send(.alarmScheduleResponse(await gameTimer.scheduleAlarm(gameID)))
+          await send(.alarmScheduleResponse(gameTimer.scheduleAlarm(gameID)))
         }
 
-      case .alarmScheduleResponse(let failed):
+      case let .alarmScheduleResponse(failed):
         if failed, !state.hasShownAlarmSchedulingFailureAlert {
           state.alert = .alarmSchedulingFailed
           state.hasShownAlarmSchedulingFailureAlert = true
@@ -424,7 +457,7 @@ package struct ScoringFeature {
           await send(.swapSidesResponse(result))
         }
 
-      case .swapSidesResponse(.success(let swapSides)):
+      case let .swapSidesResponse(.success(swapSides)):
         state.isSavingCourtOrientation = false
         state.swapSides = swapSides
         return .none
@@ -447,7 +480,7 @@ package struct ScoringFeature {
           state.teamA.id == state.centrePassTeamID ? state.teamB.id : state.teamA.id
         return updateCentrePassEffect(gameID: state.gameID, teamID: state.centrePassTeamID)
 
-      case .centrePassTeamButtonTapped(let teamID):
+      case let .centrePassTeamButtonTapped(teamID):
         guard
           state.currentPhase.isPlayingPeriod,
           !state.isShowingLastCentrePassBanner,
@@ -456,7 +489,7 @@ package struct ScoringFeature {
         else { return .none }
         return updateCentrePassEffect(gameID: state.gameID, teamID: teamID)
 
-      case .centrePassTeamResponse(.success(let teamID)):
+      case let .centrePassTeamResponse(.success(teamID)):
         guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
         state.centrePassTeamID = teamID
         return .none
@@ -475,13 +508,13 @@ package struct ScoringFeature {
           finishGameEffect(state: state)
         )
 
-      case .finishGameResponse(.success(let gameID)):
+      case let .finishGameResponse(.success(gameID)):
         return .send(.delegate(.gameFinished(gameID)))
 
       case .finishGameResponse(.failure):
         return .none
 
-      case .goalButtonTapped(let teamID):
+      case let .goalButtonTapped(teamID):
         guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
         synchronizeTimer(state: &state, now: now)
         guard state.canScoreGoal else {
@@ -492,13 +525,13 @@ package struct ScoringFeature {
         }
         return insertGoalEffect(state: state, teamID: teamID)
 
-      case .goalResponse(.success(let snapshot)):
+      case let .goalResponse(.success(snapshot)):
         apply(snapshot, to: &state)
         state.goalFeedbackTrigger += 1
         let soundEffect: Effect<Action> =
           state.soundEffectsEnabled
-          ? .run { _ in await soundEffects.playGoal() }
-          : .none
+            ? .run { _ in await soundEffects.playGoal() }
+            : .none
         return .merge(
           soundEffect,
           refreshActivityEffect(gameID: state.gameID)
@@ -524,7 +557,7 @@ package struct ScoringFeature {
       case .lastCentrePassTakenButtonTapped:
         return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: true)
 
-      case .lastCentrePassResponse(.success(let snapshot)):
+      case let .lastCentrePassResponse(.success(snapshot)):
         state.centrePassTeamID = snapshot.centrePassTeamID
         state.isShowingLastCentrePassBanner = false
         state.isTransitioningPeriod = false
@@ -546,7 +579,7 @@ package struct ScoringFeature {
           pauseTimerEffect(gameID: state.gameID, expectedPhaseIndex: state.currentPhaseIndex)
         )
 
-      case .timerPauseResponse(.success(let snapshot)):
+      case let .timerPauseResponse(.success(snapshot)):
         state.isTimerOperationPending = false
         applyTimer(snapshot.game, to: &state)
         return .none
@@ -566,7 +599,7 @@ package struct ScoringFeature {
         guard state.currentPhase.isBreak, !state.isTransitioningPeriod else { return .none }
         return skipCurrentPhase(state: &state)
 
-      case .skipPhaseResponse(.success(let snapshot)):
+      case let .skipPhaseResponse(.success(snapshot)):
         applyTimer(snapshot.game, to: &state)
         state.isTransitioningPeriod = false
         guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
@@ -609,7 +642,7 @@ package struct ScoringFeature {
           reconcileTimerEffect(gameID: state.gameID)
         )
 
-      case .timerReconcileResponse(.success(let snapshot)):
+      case let .timerReconcileResponse(.success(snapshot)):
         state.teamAScore = snapshot.teamAScore
         state.teamBScore = snapshot.teamBScore
         state.canUndo = !snapshot.goals.isEmpty
@@ -622,7 +655,7 @@ package struct ScoringFeature {
       case .timerReconcileResponse(.failure):
         return .none
 
-      case .timerStartResponse(.success(let update)):
+      case let .timerStartResponse(.success(update)):
         state.isTimerOperationPending = false
         applyTimer(update.snapshot.game, to: &state)
         if update.alarmSchedulingFailed, !state.hasShownAlarmSchedulingFailureAlert {
@@ -639,13 +672,14 @@ package struct ScoringFeature {
         guard state.canUndoGoal else { return .none }
         return undoGoalEffect(state: state)
 
-      case .undoResponse(.success(let snapshot)):
+      case let .undoResponse(.success(snapshot)):
         apply(snapshot, to: &state)
         return refreshActivityEffect(gameID: state.gameID)
 
       case .undoResponse(.failure):
         return .none
-      case .binding(_):
+
+      case .binding:
         return .none
       }
     }
@@ -681,7 +715,7 @@ package struct ScoringFeature {
       .run { send in
         await send(
           .skipPhaseResponse(
-            await Result {
+            Result {
               try await gameTimer.skip(gameID, phaseIndex)
             }
           )
@@ -714,9 +748,11 @@ package struct ScoringFeature {
     return .run { send in
       await send(
         .lastCentrePassResponse(
-          await Result {
+          Result {
             try await gameScoring.resolveCentrePass(gameID, completedPeriod, wasLastCentrePassTaken)
-          }))
+          }
+        )
+      )
     }
   }
 
@@ -745,7 +781,9 @@ package struct ScoringFeature {
         try await gameScoring.recordGoal(
           RecordGoalCommand(
             gameID: gameID, teamID: teamID, expectedPhaseIndex: expectedPhaseIndex,
-            goalID: goalID, createdAt: createdAt, points: points, scoringContext: scoringContext))
+            goalID: goalID, createdAt: createdAt, points: points, scoringContext: scoringContext
+          )
+        )
       }
       await send(.goalResponse(result))
     }
@@ -768,7 +806,7 @@ package struct ScoringFeature {
     .run { send in
       await send(
         .timerPauseResponse(
-          await Result {
+          Result {
             try await gameTimer.pause(gameID, expectedPhaseIndex)
           }
         )
@@ -781,7 +819,7 @@ package struct ScoringFeature {
     .run { send in
       await send(
         .timerReconcileResponse(
-          await Result {
+          Result {
             try await gameTimer.reconcile(gameID)
           }
         )
@@ -801,7 +839,7 @@ package struct ScoringFeature {
     .run { send in
       await send(
         .timerStartResponse(
-          await Result {
+          Result {
             try await gameTimer.startOrResume(
               gameID,
               expectedPhaseIndex
@@ -816,7 +854,7 @@ package struct ScoringFeature {
   private func undoGoalEffect(state: State) -> Effect<Action> {
     let gameID = state.gameID
     return .run { send in
-      await send(.undoResponse(await Result { try await gameScoring.undo(gameID) }))
+      await send(.undoResponse(Result { try await gameScoring.undo(gameID) }))
     }
   }
 
@@ -833,20 +871,20 @@ package struct ScoringFeature {
     gameID: Game.ID,
     teamID: Team.ID
   ) -> Effect<Action> {
-    return .run { send in
+    .run { send in
       await send(
         .centrePassTeamResponse(
-          await Result { try await gameScoring.selectCentrePass(gameID, teamID) }))
+          Result { try await gameScoring.selectCentrePass(gameID, teamID) }
+        )
+      )
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
-extension AlertState where Action == ScoringFeature.Alert {
-  static package var alarmSchedulingFailed: Self {
+package extension AlertState where Action == ScoringFeature.Alert {
+  static var alarmSchedulingFailed: Self {
     Self {
       TextState("Quarter alerts unavailable")
     } actions: {

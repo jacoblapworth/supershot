@@ -1,19 +1,14 @@
-import SwiftUI
-import CustomDump
-import Dependencies
-import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import CustomDump
 @testable import Database
+import Dependencies
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
+import GRDB
 @testable import LocationClient
 @testable import NewGameFeature
 @testable import PaywallFeature
@@ -22,15 +17,19 @@ import TestSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
 @testable import TeamsFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct TeamsListFeatureTests {
+  struct TeamsListFeatureTests {
     @Test
     func teamsListIsAlphabeticalWithGameCounts() async throws {
       @Dependency(\.defaultDatabase) var database
@@ -43,15 +42,15 @@ extension SupershotTestSuite {
           Team(id: UUID(-3), name: "Aces", colorHex: "#34C759")
           Game(
             id: UUID(-1),
-            startedAt: Date(timeIntervalSince1970: 1_000),
+            startedAt: Date(timeIntervalSince1970: 1000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2)
           )
           Game(
             id: UUID(-2),
-            startedAt: Date(timeIntervalSince1970: 2_000),
-            endedAt: Date(timeIntervalSince1970: 3_000),
+            startedAt: Date(timeIntervalSince1970: 2000),
+            endedAt: Date(timeIntervalSince1970: 3000),
             teamAID: UUID(-3),
             teamBID: UUID(-1)
           )

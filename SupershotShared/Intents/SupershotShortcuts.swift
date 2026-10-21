@@ -7,7 +7,7 @@ nonisolated struct SupershotShortcuts: AppShortcutsProvider {
       phrases: [
         "Create a game in \(.applicationName)",
         "Create a netball game in \(.applicationName)",
-        "Create a \(.applicationName) game"
+        "Create a \(.applicationName) game",
       ],
       shortTitle: "Create Game",
       systemImageName: "plus.circle"

@@ -6,7 +6,7 @@ import SharedModels
   import Foundation
   import SQLiteData
 
-  nonisolated package struct DatabaseExportClient: Sendable {
+  package nonisolated struct DatabaseExportClient: Sendable {
     package var snapshot: @Sendable () async throws -> URL
     package var removeSnapshot: @Sendable (URL) -> Void
 
@@ -20,7 +20,7 @@ import SharedModels
   }
 
   extension DatabaseExportClient: DependencyKey {
-    nonisolated static package var liveValue: Self {
+    package nonisolated static var liveValue: Self {
       Self(
         snapshot: {
           @Dependency(\.defaultDatabase) var database
@@ -46,10 +46,11 @@ import SharedModels
         },
         removeSnapshot: { url in
           try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
-        })
+        }
+      )
     }
 
-    nonisolated static package var testValue: Self {
+    package nonisolated static var testValue: Self {
       Self(snapshot: { throw CancellationError() }, removeSnapshot: { _ in })
     }
   }

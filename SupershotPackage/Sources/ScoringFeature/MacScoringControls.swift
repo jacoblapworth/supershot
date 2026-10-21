@@ -22,7 +22,8 @@
       .buttonStyle(.borderedProminent)
       .disabled(
         !store.canScoreGoal || store.controlsPresentation != .shown
-          || store.alert != nil || store.isTimerOperationPending)
+          || store.alert != nil || store.isTimerOperationPending
+      )
     }
   }
 
@@ -36,22 +37,41 @@
         && store.controlsPresentation == .shown && !store.isTimerOperationPending
         && !store.isTransitioningPeriod && !store.isSavingCourtOrientation
     }
-    package var canScore: Bool { isEnabled && store.canScoreGoal }
-    package var canUndo: Bool { isEnabled && store.canUndoGoal }
+
+    package var canScore: Bool {
+      isEnabled && store.canScoreGoal
+    }
+
+    package var canUndo: Bool {
+      isEnabled && store.canUndoGoal
+    }
+
     package var canToggleTimer: Bool {
       isEnabled && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner
     }
-    package var timerTitle: String { store.isTimerRunning ? "Pause Timer" : "Start Timer" }
-    package var leftTitle: String { "Goal for \(store.courtLayout.left.team.name) (Left)" }
-    package var rightTitle: String { "Goal for \(store.courtLayout.right.team.name) (Right)" }
+
+    package var timerTitle: String {
+      store.isTimerRunning ? "Pause Timer" : "Start Timer"
+    }
+
+    package var leftTitle: String {
+      "Goal for \(store.courtLayout.left.team.name) (Left)"
+    }
+
+    package var rightTitle: String {
+      "Goal for \(store.courtLayout.right.team.name) (Right)"
+    }
+
     package func toggleTimer() {
       guard canToggleTimer else { return }
       store.send(store.isTimerRunning ? .pauseTimerButtonTapped : .startTimerButtonTapped)
     }
+
     package func goal(left: Bool) {
       guard canScore else { return }
       store.send(.goalButtonTapped(left ? store.courtLayout.left.id : store.courtLayout.right.id))
     }
+
     package func undo() {
       guard canUndo else { return }
       store.send(.undoButtonTapped)
@@ -61,8 +81,9 @@
   private struct ScoringCommandsKey: FocusedValueKey {
     typealias Value = ScoringCommandContext
   }
-  extension FocusedValues {
-    package var scoringCommands: ScoringCommandContext? {
+
+  package extension FocusedValues {
+    var scoringCommands: ScoringCommandContext? {
       get { self[ScoringCommandsKey.self] }
       set { self[ScoringCommandsKey.self] = newValue }
     }

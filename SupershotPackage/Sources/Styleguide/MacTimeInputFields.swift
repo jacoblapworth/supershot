@@ -40,7 +40,8 @@
     MacTimeInputFields(
       store: Store(
         initialState: TimeInputFeature.State(
-          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1...5999)
+          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999
+        )
       ) {
         TimeInputFeature()
       }

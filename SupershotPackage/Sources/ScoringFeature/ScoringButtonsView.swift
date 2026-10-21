@@ -11,6 +11,7 @@ import SoundEffectsClient
 import Styleguide
 import SubscriptionClient
 import WidgetSupport
+
 //
 //  ScoringButtonsView.swift
 //  Supershot
@@ -18,9 +19,9 @@ import WidgetSupport
 //  Created by J on 13/10/2026.
 //
 //
-//import SwiftUI
+// import SwiftUI
 //
-//struct ScoringButtonsView: View {
+// struct ScoringButtonsView: View {
 //
 //  var body: some View {
 //    ScrollView {
@@ -43,7 +44,7 @@ import WidgetSupport
 //    .interactiveDismissDisabled()
 //    .presentationContentInteraction(.resizes)
 //    .presentationDragIndicator(.hidden)
-//#if os(iOS)
+// #if os(iOS)
 //    .presentationPlacement(.leading)
 //  }
 //
@@ -58,4 +59,4 @@ import WidgetSupport
 //    .font(.title2.bold())
 //    .labelStyle(.iconOnly)
 //  }
-//}
+// }

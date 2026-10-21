@@ -1,32 +1,35 @@
 #if os(macOS)
-  import ConcurrencyExtras
-  import Foundation
-  import Dependencies
-  import Testing
-  import CustomDump
-  import FeatureFlagsClient
-  import SQLiteData
-  import SubscriptionClient
-  import TestSupport
   @testable import AlarmClient
+  import ConcurrencyExtras
+  import CustomDump
   @testable import Database
+  import Dependencies
+  import FeatureFlagsClient
+  import Foundation
   @testable import GameCore
   @testable import SharedModels
+  import SQLiteData
+  import SubscriptionClient
+  import Testing
+  import TestSupport
 
-  @Suite struct MacNotificationSchedulerTests {
+  struct MacNotificationSchedulerTests {
     private func snapshot(policy: BreakStartPolicy = .automatic, end: TimeInterval? = 1100)
       -> GameSnapshot
     {
       var game = Game(
         id: UUID(3), startedAt: Date(timeIntervalSince1970: 500),
-        teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1))
+        teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1)
+      )
       game.breakStartPolicy = policy
       game.timerEndsAt = end.map(Date.init(timeIntervalSince1970:))
       return GameSnapshot(
         game: game, goals: [],
         periods: testGamePeriods(
-          gameID: game.id, count: 2, durationSeconds: 100, breakDurationSeconds: 60),
-        teamA: Team(id: UUID(1), name: "Ravens"), teamB: Team(id: UUID(2), name: "Swifts"))
+          gameID: game.id, count: 2, durationSeconds: 100, breakDurationSeconds: 60
+        ),
+        teamA: Team(id: UUID(1), name: "Ravens"), teamB: Team(id: UUID(2), name: "Swifts")
+      )
     }
 
     @Test func delayedSchedulingRechecksFeatureAccess() async throws {
@@ -49,12 +52,12 @@
         }
       } operation: {
         let client = AlarmClient.macNotifications(delivery: harness.client)
-        expectNoDifference(await client.scheduleAlarm(current), false)
-        expectNoDifference(await harness.requests.count, 2)
+        await expectNoDifference(client.scheduleAlarm(current), false)
+        await expectNoDifference(harness.requests.count, 2)
         await client.cancelAlarm(current.game.id, current.phases.count)
         allowed.setValue(false)
-        expectNoDifference(await client.scheduleAlarm(current), false)
-        expectNoDifference(await harness.requests.isEmpty, true)
+        await expectNoDifference(client.scheduleAlarm(current), false)
+        await expectNoDifference(harness.requests.isEmpty, true)
       }
     }
 
@@ -63,13 +66,16 @@
       let harness = NotificationHarness()
       let scheduler = MacNotificationScheduler(
         delivery: harness.client,
-        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true })
+        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true }
+      )
       #expect(await scheduler.schedule(snapshot(policy: policy)) == false)
       #expect(await harness.requests.count == (policy == .automatic ? 2 : 1))
       #expect(
         await harness.requests.values.map(\.date).sorted()
           == (policy == .automatic ? [1100.0, 1160.0] : [1100.0]).map(
-            Date.init(timeIntervalSince1970:)))
+            Date.init(timeIntervalSince1970:)
+          )
+      )
       #expect(await scheduler.schedule(snapshot(policy: policy, end: 1200)) == false)
       #expect(await harness.requests.values.map(\.date).min() == Date(timeIntervalSince1970: 1200))
       await scheduler.cancel(UUID(3))
@@ -81,7 +87,8 @@
       await harness.setAuthorization(.denied)
       let scheduler = MacNotificationScheduler(
         delivery: harness.client,
-        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true })
+        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true }
+      )
       #expect(await scheduler.schedule(snapshot()) == false)
       #expect(await harness.requests.isEmpty)
       await harness.setAuthorization(.authorized)
@@ -97,7 +104,8 @@
       await harness.failAfter(1)
       let scheduler = MacNotificationScheduler(
         delivery: harness.client,
-        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true })
+        now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true }
+      )
       #expect(await scheduler.schedule(snapshot()))
       #expect(await harness.requests.isEmpty)
     }
@@ -120,7 +128,8 @@
         let scheduler = MacNotificationScheduler(
           delivery: harness.client,
           now: { Date(timeIntervalSince1970: 1000) },
-          isCurrent: { $0.game.timerEndsAt == deadline })
+          isCurrent: { $0.game.timerEndsAt == deadline }
+        )
         let current = snapshot(end: 1200)
         let stale = snapshot(end: 1100)
         let scheduling = Task { await scheduler.schedule(current) }
@@ -142,7 +151,8 @@
         await harness.suspendAdd(until: gate.stream)
         let scheduler = MacNotificationScheduler(
           delivery: harness.client,
-          now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true })
+          now: { Date(timeIntervalSince1970: 1000) }, isCurrent: { _ in true }
+        )
         let current = snapshot()
         let scheduling = Task { await scheduler.schedule(current) }
         await Task.megaYield()
@@ -166,21 +176,43 @@
       NotificationDeliveryClient(
         authorization: { await self.authorization }, add: { try await self.add($0) },
         pendingIDs: { await Array(self.requests.keys) }, deliveredIDs: { await self.delivered },
-        remove: { await self.remove($0) })
+        remove: { await self.remove($0) }
+      )
     }
-    func setAuthorization(_ value: AlarmAuthorizationStatus) { authorization = value }
-    func failAfter(_ count: Int) { maximumAdds = count }
-    func setDelivered(_ ids: [String]) { delivered = ids }
-    func suspendAdd(until stream: AsyncStream<Void>) { gate = stream }
+
+    func setAuthorization(_ value: AlarmAuthorizationStatus) {
+      authorization = value
+    }
+
+    func failAfter(_ count: Int) {
+      maximumAdds = count
+    }
+
+    func setDelivered(_ ids: [String]) {
+      delivered = ids
+    }
+
+    func suspendAdd(until stream: AsyncStream<Void>) {
+      gate = stream
+    }
+
     func add(_ request: GameNotificationRequest) async throws {
-      if let gate { for await _ in gate {} }
-      if let maximumAdds, requests.count >= maximumAdds { throw Failure.unavailable }
+      if let gate {
+        for await _ in gate {}
+      }
+      if let maximumAdds, requests.count >= maximumAdds {
+        throw Failure.unavailable
+      }
       requests[request.id] = request
     }
+
     func remove(_ ids: [String]) {
-      for id in ids { requests[id] = nil }
+      for id in ids {
+        requests[id] = nil
+      }
       delivered.removeAll { ids.contains($0) }
     }
+
     enum Failure: Error { case unavailable }
   }
 #endif

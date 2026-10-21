@@ -1,26 +1,25 @@
-import CustomDump
-import Dependencies
-import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import CustomDump
 @testable import Database
+import Dependencies
+import DependenciesTestSupport
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameServices
+import GRDB
 @testable import PermissionsFeature
 @testable import PreviewSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import Testing
+import TestSupport
 @testable import WidgetSupport
-import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
@@ -42,7 +41,7 @@ extension SupershotTestSuite {
           Team(id: UUID(-4), name: "Owls")
           Game(
             id: firstGameID,
-            startedAt: Date(timeIntervalSince1970: 1_000),
+            startedAt: Date(timeIntervalSince1970: 1000),
             endedAt: nil,
             teamAID: UUID(-1),
             teamBID: UUID(-2),
@@ -53,7 +52,7 @@ extension SupershotTestSuite {
           )
           Game(
             id: secondGameID,
-            startedAt: Date(timeIntervalSince1970: 2_000),
+            startedAt: Date(timeIntervalSince1970: 2000),
             endedAt: nil,
             teamAID: UUID(-3),
             teamBID: UUID(-4),
@@ -65,7 +64,7 @@ extension SupershotTestSuite {
         let periods = [
           testGamePeriods(gameID: firstGameID, durationSeconds: 900),
           testGamePeriods(gameID: secondGameID, durationSeconds: 600),
-        ].flatMap { $0 }
+        ].flatMap(\.self)
         try GamePeriod.insert { periods }.execute(db)
         try Goal.insert {
           Goal(
@@ -75,7 +74,7 @@ extension SupershotTestSuite {
             teamID: UUID(-2),
             elapsedSeconds: 30,
             points: 1,
-            createdAt: Date(timeIntervalSince1970: 1_100)
+            createdAt: Date(timeIntervalSince1970: 1100)
           )
           Goal(
             id: UUID(-2),
@@ -84,16 +83,16 @@ extension SupershotTestSuite {
             teamID: UUID(-3),
             elapsedSeconds: 20,
             points: 2,
-            createdAt: Date(timeIntervalSince1970: 2_100)
+            createdAt: Date(timeIntervalSince1970: 2100)
           )
         }
         .execute(db)
       }
 
       let snapshots = try await database.read { db in
-        (
-          try GameSnapshot.fetch(db, gameID: firstGameID),
-          try GameSnapshot.fetch(db, gameID: secondGameID)
+        try (
+          GameSnapshot.fetch(db, gameID: firstGameID),
+          GameSnapshot.fetch(db, gameID: secondGameID)
         )
       }
       let first = ScoringFeature.State(snapshot: snapshots.0)

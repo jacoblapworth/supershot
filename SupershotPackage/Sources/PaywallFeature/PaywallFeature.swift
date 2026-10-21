@@ -13,6 +13,7 @@ package struct PaywallFeature {
       case loaded([PaywallProduct])
       case failed
     }
+
     package enum Operation: Equatable { case purchasing, restoring }
 
     package var catalog: Catalog = .idle
@@ -21,9 +22,10 @@ package struct PaywallFeature {
     package var selectedProductID: UUID?
 
     package var products: [PaywallProduct] {
-      guard case .loaded(let products) = catalog else { return [] }
+      guard case let .loaded(products) = catalog else { return [] }
       return products
     }
+
     package var selectedProduct: PaywallProduct? {
       products.first { $0.id == selectedProductID }
     }
@@ -76,7 +78,7 @@ package struct PaywallFeature {
         guard state.operation == nil, state.catalog != .loading else { return .none }
         return loadProducts(state: &state)
 
-      case .productsResponse(.success(let products)):
+      case let .productsResponse(.success(products)):
         state.catalog = .loaded(products)
         state.selectedProductID = products.first(where: \.isAnnual)?.id ?? products.first?.id
         return .none
@@ -86,7 +88,7 @@ package struct PaywallFeature {
         state.selectedProductID = nil
         return .none
 
-      case .productSelected(let id):
+      case let .productSelected(id):
         guard state.operation == nil, state.products.contains(where: { $0.id == id }) else {
           return .none
         }
@@ -100,16 +102,17 @@ package struct PaywallFeature {
           await send(.purchaseResponse(Result { try await proSubscription.purchase(product.id) }))
         }
 
-      case .purchaseResponse(let result):
+      case let .purchaseResponse(result):
         state.operation = nil
         switch result {
-        case .success(.completed(let access)):
+        case let .success(.completed(access)):
           if access != .pro {
             state.destination = .alert(
               Self.alert(
                 "Purchase received",
                 "Pro access hasn’t been confirmed yet. Try Restore purchases in a moment."
-              ))
+              )
+            )
           }
           return .send(.customerInfoUpdated(access))
         case .success(.cancelled): return .none
@@ -118,13 +121,15 @@ package struct PaywallFeature {
             Self.alert(
               "Purchase pending",
               "Your purchase is awaiting approval. Supershot Pro will unlock once it is approved."
-            ))
+            )
+          )
         case .failure:
           state.destination = .alert(
             Self.alert(
               "Unable to purchase",
               "Your purchase couldn’t be completed. Check your connection and try again."
-            ))
+            )
+          )
         }
         return .none
 
@@ -135,13 +140,14 @@ package struct PaywallFeature {
           await send(.restoreResponse(Result { try await proSubscription.restore() }))
         }
 
-      case .restoreResponse(.success(let access)):
+      case let .restoreResponse(.success(access)):
         state.operation = nil
         if access != .pro {
           state.destination = .alert(
             Self.alert(
               "Restore purchases", "No Supershot Pro purchase was found."
-            ))
+            )
+          )
         }
         return .send(.customerInfoUpdated(access))
 
@@ -151,14 +157,15 @@ package struct PaywallFeature {
           Self.alert(
             "Unable to restore",
             "Check your connection and try again. Use the Apple Account that made the purchase."
-          ))
+          )
+        )
         return .none
 
       case .closeButtonTapped:
         guard state.operation == nil else { return .none }
         return .run { _ in await dismiss() }
 
-      case .customerInfoUpdated(let access):
+      case let .customerInfoUpdated(access):
         return .send(.delegate(.accessChanged(access)))
 
       case .destination, .delegate:
@@ -190,9 +197,7 @@ package struct PaywallFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 extension PaywallFeature.Destination.State: Equatable {}

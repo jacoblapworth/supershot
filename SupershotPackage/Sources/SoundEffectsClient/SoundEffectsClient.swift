@@ -2,7 +2,7 @@ import AVFAudio
 import Dependencies
 import Foundation
 
-nonisolated package struct SoundEffectsClient: Sendable {
+package nonisolated struct SoundEffectsClient: Sendable {
   package var playGoal: @Sendable () async -> Void
 
   package init(playGoal: @escaping @Sendable () async -> Void) {
@@ -10,8 +10,8 @@ nonisolated package struct SoundEffectsClient: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated package var soundEffects: SoundEffectsClient {
+package extension DependencyValues {
+  nonisolated var soundEffects: SoundEffectsClient {
     get { self[SoundEffectsClientKey.self] }
     set { self[SoundEffectsClientKey.self] = newValue }
   }
@@ -31,10 +31,10 @@ private nonisolated enum SoundEffectsClientKey: DependencyKey {
   }
 }
 
-nonisolated extension SoundEffectsClient {
-  static package let noop = Self(playGoal: {})
+package nonisolated extension SoundEffectsClient {
+  static let noop = Self(playGoal: {})
 
-  static package var live: Self {
+  static var live: Self {
     let player = SoundEffectsPlayer()
     return Self {
       await player.playGoal()

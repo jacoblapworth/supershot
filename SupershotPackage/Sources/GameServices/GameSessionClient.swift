@@ -4,11 +4,11 @@ import Dependencies
 import Foundation
 import GameCore
 import IssueReporting
-import SQLiteData
 import SharedModels
+import SQLiteData
 import SubscriptionClient
 
-nonisolated public enum GameSessionCommand: Equatable, Sendable {
+public nonisolated enum GameSessionCommand: Equatable, Sendable {
   case reconcile
   case timing(GameTimingCommand, expectedPhaseIndex: Int?)
   case recordGoal(RecordGoalCommand)
@@ -24,14 +24,14 @@ nonisolated public enum GameSessionCommand: Equatable, Sendable {
     switch self {
     case .reconcile, .recordGoal, .finish: true
     case .timing(.setRemainingTime, _), .undoGoal, .selectCentrePass, .resolveCentrePass,
-      .swapSides:
+         .swapSides:
       false
     case .timing: true
     }
   }
 }
 
-nonisolated public enum GameSessionRejection: Error, Equatable, Sendable {
+public nonisolated enum GameSessionRejection: Error, Equatable, Sendable {
   case gameFinished
   case gameNotStarted
   case stalePhase
@@ -42,17 +42,20 @@ nonisolated public enum GameSessionRejection: Error, Equatable, Sendable {
   case finishUnavailable
 }
 
-nonisolated public struct GameSessionUpdate: Equatable, Sendable {
+public nonisolated struct GameSessionUpdate: Equatable, Sendable {
   public enum Outcome: Equatable, Sendable {
     case applied
     case unchanged
     case rejected(GameSessionRejection)
   }
+
   public var outcome: Outcome
   public var snapshot: GameSnapshot
 
   public func acceptedSnapshot() throws -> GameSnapshot {
-    if case .rejected(let reason) = outcome { throw reason }
+    if case let .rejected(reason) = outcome {
+      throw reason
+    }
     return snapshot
   }
 
@@ -65,11 +68,11 @@ nonisolated public struct GameSessionUpdate: Equatable, Sendable {
 /// Authoritative application service. Each command reads, validates, and commits in
 /// one transaction. Expected rejection is a value, so valid reconciliation can commit.
 /// Only storage failures throw from the transaction; presentations happen afterwards.
-nonisolated public struct GameSessionClient: Sendable {
+public nonisolated struct GameSessionClient: Sendable {
   public var execute:
     @Sendable (Game.ID, GameSessionCommand, Date) async throws -> GameSessionUpdate
 
-  static public var live: Self {
+  public static var live: Self {
     Self(execute: { gameID, command, now in
       @Dependency(\.defaultDatabase) var database
       return try await database.write {
@@ -78,7 +81,7 @@ nonisolated public struct GameSessionClient: Sendable {
     })
   }
 
-  static public var unimplemented: Self {
+  public static var unimplemented: Self {
     Self(execute: { _, _, _ in
       reportIssue("GameSessionClient.execute is unimplemented")
       throw GameSessionRejection.scoringUnavailable
@@ -87,26 +90,31 @@ nonisolated public struct GameSessionClient: Sendable {
 
   public init(
     execute:
-      @escaping @Sendable (Game.ID, GameSessionCommand, Date) async throws -> GameSessionUpdate
+    @escaping @Sendable (Game.ID, GameSessionCommand, Date) async throws -> GameSessionUpdate
   ) {
     self.execute = execute
   }
 }
 
-extension DependencyValues {
-  nonisolated public var gameSession: GameSessionClient {
+public extension DependencyValues {
+  nonisolated var gameSession: GameSessionClient {
     get { self[GameSessionClientKey.self] }
     set { self[GameSessionClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum GameSessionClientKey: DependencyKey {
-  static var liveValue: GameSessionClient { .live }
-  static var testValue: GameSessionClient { .unimplemented }
+  static var liveValue: GameSessionClient {
+    .live
+  }
+
+  static var testValue: GameSessionClient {
+    .unimplemented
+  }
 }
 
-nonisolated package enum GameSessionTransaction {
-  static package func execute(
+package nonisolated enum GameSessionTransaction {
+  package static func execute(
     _ db: Database, gameID: Game.ID, command: GameSessionCommand,
     now: Date
   ) throws -> GameSessionUpdate {
@@ -116,18 +124,19 @@ nonisolated package enum GameSessionTransaction {
     }
     var game = stored.game
     var outcome = GameSessionUpdate.Outcome.unchanged
-    let commandDate: Date
-    if case .recordGoal(let goal) = command {
-      commandDate = goal.createdAt
+    let commandDate: Date = if case let .recordGoal(goal) = command {
+      goal.createdAt
     } else {
-      commandDate = now
+      now
     }
 
     if game.endedAt == nil, command.reconcilesTiming {
       let transitions = game.timing.reconcile(in: stored.timeline, now: commandDate)
       game.progress.apply(transitions)
       // Goal recording uses a sampled clock, but does not persist incidental tick progress.
-      if case .recordGoal = command, transitions.isEmpty { game.timing = stored.game.timing }
+      if case .recordGoal = command, transitions.isEmpty {
+        game.timing = stored.game.timing
+      }
     }
 
     if game.endedAt != nil {
@@ -137,12 +146,12 @@ nonisolated package enum GameSessionTransaction {
       case .reconcile:
         outcome = game == stored.game ? .unchanged : .applied
 
-      case .timing(let timingCommand, let expectedPhaseIndex):
+      case let .timing(timingCommand, expectedPhaseIndex):
         let phase = stored.timeline.phase(at: game.currentPhaseIndex)!
-        if expectedPhaseIndex != nil && expectedPhaseIndex != game.currentPhaseIndex {
+        if expectedPhaseIndex != nil, expectedPhaseIndex != game.currentPhaseIndex {
           outcome = .rejected(.stalePhase)
         } else if game.isAwaitingCentrePassConfirmation,
-          timingCommand == .startOrResume && phase.isPlayingPeriod
+                  timingCommand == .startOrResume, phase.isPlayingPeriod
         {
           outcome = .rejected(.confirmationRequired)
         } else if game.isAwaitingCentrePassConfirmation, case .setRemainingTime = timingCommand {
@@ -150,7 +159,8 @@ nonisolated package enum GameSessionTransaction {
         } else {
           let result = game.timing.apply(
             timingCommand, in: stored.timeline,
-            expectedPhaseIndex: expectedPhaseIndex, now: commandDate)
+            expectedPhaseIndex: expectedPhaseIndex, now: commandDate
+          )
           game.progress.apply(result.transitions)
           switch result.status {
           case .applied: outcome = .applied
@@ -159,7 +169,7 @@ nonisolated package enum GameSessionTransaction {
           }
         }
 
-      case .recordGoal(let goalCommand):
+      case let .recordGoal(goalCommand):
         if goalCommand.gameID != gameID {
           outcome = .rejected(.scoringUnavailable)
         } else if goalCommand.teamID != stored.teamA.id && goalCommand.teamID != stored.teamB.id {
@@ -168,12 +178,14 @@ nonisolated package enum GameSessionTransaction {
           outcome = .rejected(.stalePhase)
         } else if let opportunity = scoringOpportunity(
           game: game, timeline: stored.timeline,
-          requestedContext: goalCommand.scoringContext, now: commandDate),
+          requestedContext: goalCommand.scoringContext, now: commandDate
+        ),
           goalCommand.source != .liveActivity || !opportunity.isLate
         {
           let goal = try game.scoring.recordGoal(
             goalCommand, opportunity: opportunity,
-            teamAID: stored.teamA.id, teamBID: stored.teamB.id)
+            teamAID: stored.teamA.id, teamBID: stored.teamB.id
+          )
           try Goal.insert { goal }.execute(db)
           outcome = .applied
         } else {
@@ -183,7 +195,7 @@ nonisolated package enum GameSessionTransaction {
       case .undoGoal:
         let latest = stored.goals.max { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }
         if game.isAwaitingCentrePassConfirmation,
-          !game.scoring.canUndoDuringConfirmation(latestGoal: latest, periods: stored.periods)
+           !game.scoring.canUndoDuringConfirmation(latestGoal: latest, periods: stored.periods)
         {
           outcome = .rejected(.confirmationRequired)
         } else if let latest {
@@ -192,7 +204,7 @@ nonisolated package enum GameSessionTransaction {
           outcome = .applied
         }
 
-      case .selectCentrePass(let teamID):
+      case let .selectCentrePass(teamID):
         if teamID == stored.teamA.id || teamID == stored.teamB.id {
           game.centrePassTeamID = teamID
           outcome = game == stored.game ? .unchanged : .applied
@@ -200,11 +212,12 @@ nonisolated package enum GameSessionTransaction {
           outcome = .rejected(.invalidTeam)
         }
 
-      case .resolveCentrePass(let completedPeriod, let taken):
+      case let .resolveCentrePass(completedPeriod, taken):
         if stored.timeline.precedingPeriod(at: game.currentPhaseIndex)?.number == completedPeriod {
           game.scoring.resolveCentrePass(
             taken: taken,
-            teamAID: stored.teamA.id, teamBID: stored.teamB.id)
+            teamAID: stored.teamA.id, teamBID: stored.teamB.id
+          )
           outcome = game == stored.game ? .unchanged : .applied
         } else {
           outcome = .rejected(.stalePhase)
@@ -212,7 +225,7 @@ nonisolated package enum GameSessionTransaction {
 
       case .finish:
         if game.timing.isFinalPeriodComplete(in: stored.timeline),
-          !game.isAwaitingCentrePassConfirmation
+           !game.isAwaitingCentrePassConfirmation
         {
           game.endedAt = commandDate
           game.timerEndsAt = nil
@@ -227,8 +240,10 @@ nonisolated package enum GameSessionTransaction {
       }
     }
 
-    if game != stored.game { try persist(game, in: db) }
-    return GameSessionUpdate(outcome: outcome, snapshot: try GameSnapshot.fetch(db, gameID: gameID))
+    if game != stored.game {
+      try persist(game, in: db)
+    }
+    return try GameSessionUpdate(outcome: outcome, snapshot: GameSnapshot.fetch(db, gameID: gameID))
   }
 
   private static func scoringOpportunity(
@@ -236,17 +251,19 @@ nonisolated package enum GameSessionTransaction {
     requestedContext: GameScoringContext?, now: Date
   ) -> ScoringOpportunity? {
     guard let phase = timeline.phase(at: game.currentPhaseIndex),
-      let context = GameScoringContext.resolve(
-        phase: phase, countdown: game.countdown,
-        isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: now),
-      context == (requestedContext ?? .livePeriod(number: phase.associatedPeriod.number)),
-      let period = timeline.scoringPeriod(for: context)
+          let context = GameScoringContext.resolve(
+            phase: phase, countdown: game.countdown,
+            isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
+            lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: now
+          ),
+          context == (requestedContext ?? .livePeriod(number: phase.associatedPeriod.number)),
+          let period = timeline.scoringPeriod(for: context)
     else { return nil }
     return ScoringOpportunity(
       period: period, context: context,
       elapsedSeconds: game.countdown.projection(durationSeconds: period.durationSeconds, now: now)
-        .elapsedSeconds)
+        .elapsedSeconds
+    )
   }
 
   private static func persist(_ game: Game, in db: Database) throws {

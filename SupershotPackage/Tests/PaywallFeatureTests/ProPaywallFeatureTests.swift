@@ -1,13 +1,12 @@
 import ComposableArchitecture
 import Foundation
-import Testing
-
-import TestSupport
 @testable import GameCore
 @testable import PaywallFeature
 @testable import SharedModels
 @testable import Styleguide
 @testable import SubscriptionClient
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -32,7 +31,7 @@ extension SupershotTestSuite {
     func loadPrefersAnnualAndSelectionChanges() async {
       let products = [Self.monthly, Self.annual]
       let store = TestStore(initialState: PaywallFeature.State()) { PaywallFeature() }
-      withDependencies: { $0.proSubscription.loadProducts = { products } }
+        withDependencies: { $0.proSubscription.loadProducts = { products } }
       await store.send(.task) { $0.catalog = .loading }
       await store.receive(\.productsResponse.success) {
         $0.catalog = .loaded(products)
@@ -46,7 +45,7 @@ extension SupershotTestSuite {
     @Test
     func loadingFailureCanBeRetried() async {
       let store = TestStore(initialState: PaywallFeature.State()) { PaywallFeature() }
-      withDependencies: { $0.proSubscription.loadProducts = { throw Failure.unavailable } }
+        withDependencies: { $0.proSubscription.loadProducts = { throw Failure.unavailable } }
       await store.send(.task) { $0.catalog = .loading }
       await store.receive(\.productsResponse.failure) { $0.catalog = .failed }
       store.dependencies.proSubscription.loadProducts = { [Self.monthly] }
@@ -60,7 +59,7 @@ extension SupershotTestSuite {
     @Test
     func emptyOfferingDisablesPurchaseAndCanRetry() async {
       let store = TestStore(initialState: PaywallFeature.State()) { PaywallFeature() }
-      withDependencies: { $0.proSubscription.loadProducts = { [] } }
+        withDependencies: { $0.proSubscription.loadProducts = { [] } }
       await store.send(.task) { $0.catalog = .loading }
       await store.receive(\.productsResponse.success) { $0.catalog = .loaded([]) }
       await store.send(.purchaseButtonTapped)
@@ -87,12 +86,12 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: PaywallFeature.State(
         catalog: .loaded([Self.monthly]), selectedProductID: id
       )) { PaywallFeature() }
-      withDependencies: {
-        $0.proSubscription.purchase = { token in
-          #expect(token == id)
-          return .completed(.pro)
+        withDependencies: {
+          $0.proSubscription.purchase = { token in
+            #expect(token == id)
+            return .completed(.pro)
+          }
         }
-      }
       await store.send(.purchaseButtonTapped) { $0.operation = .purchasing }
       await store.receive(\.purchaseResponse.success) { $0.operation = nil }
       await store.receive(\.customerInfoUpdated)
@@ -126,7 +125,7 @@ extension SupershotTestSuite {
     @Test(arguments: [SubscriptionEntitlement.pro, .free, .unknown])
     func restoreDelegatesAccessAndExplainsMissingPurchase(access: SubscriptionEntitlement) async {
       let store = TestStore(initialState: PaywallFeature.State()) { PaywallFeature() }
-      withDependencies: { $0.proSubscription.restore = { access } }
+        withDependencies: { $0.proSubscription.restore = { access } }
       store.exhaustivity = .off
       await store.send(.restoreButtonTapped)
       #expect(store.state.operation == .restoring)
@@ -143,7 +142,7 @@ extension SupershotTestSuite {
     @Test
     func restoreFailureOffersRetry() async {
       let store = TestStore(initialState: PaywallFeature.State()) { PaywallFeature() }
-      withDependencies: { $0.proSubscription.restore = { throw Failure.unavailable } }
+        withDependencies: { $0.proSubscription.restore = { throw Failure.unavailable } }
       store.exhaustivity = .off
       await store.send(.restoreButtonTapped)
       await store.receive(\.restoreResponse.failure)
@@ -152,7 +151,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func productCopyAndComparableSavings() {
+    func productCopyAndComparableSavings() throws {
       let lifetime = PaywallProduct.Preview.lifetime
       #expect(lifetime.purchaseDetails == "One-time purchase. No subscription.")
       #expect(lifetime.purchaseButtonTitle == "Unlock Supershot Pro")
@@ -162,9 +161,9 @@ extension SupershotTestSuite {
       #expect(Self.annual.savings(comparedTo: [Self.monthly]) == 50)
       #expect(Self.annual.monthlyEquivalent(comparedTo: [Self.monthly]) == "$2.50")
       var fractionalMonthly = Self.monthly
-      fractionalMonthly.price = Decimal(string: "9.99")!
+      fractionalMonthly.price = try #require(Decimal(string: "9.99"))
       var fractionalAnnual = Self.annual
-      fractionalAnnual.price = Decimal(string: "79.99")!
+      fractionalAnnual.price = try #require(Decimal(string: "79.99"))
       #expect(fractionalAnnual.savings(comparedTo: [fractionalMonthly]) == 33)
       var otherCurrency = Self.monthly
       otherCurrency.currencyCode = "USD"

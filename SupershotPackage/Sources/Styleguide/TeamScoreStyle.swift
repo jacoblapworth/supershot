@@ -3,9 +3,9 @@ import SharedModels
 import SwiftUI
 import WidgetSupport
 
-extension View {
+package extension View {
   /// Preserves the team's full colour, with a small shadow to separate it from the background.
-  package func teamScoreStyle(color: Color) -> some View {
+  func teamScoreStyle(color: Color) -> some View {
     modifier(TeamScoreStyle(color: color))
   }
 }
@@ -18,7 +18,7 @@ private struct TeamScoreStyle: ViewModifier {
     let resolved = color.resolve(in: environment)
     let luminance =
       resolved.linearRed * 0.2126
-      + resolved.linearGreen * 0.7152 + resolved.linearBlue * 0.0722
+        + resolved.linearGreen * 0.7152 + resolved.linearBlue * 0.0722
 
     content
       .foregroundStyle(color)

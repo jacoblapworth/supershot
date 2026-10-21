@@ -73,10 +73,10 @@ package struct GoalProgressChartView: View {
       let periodElapsedSeconds = max(period.durationSeconds - goal.clockSecondsRemaining, 0)
       let elapsedSeconds =
         breakdown == .wholeGame
-        ? orderedPeriods
+          ? orderedPeriods
           .prefix { $0.position < period.position }
           .reduce(periodElapsedSeconds) { $0 + $1.durationSeconds }
-        : periodElapsedSeconds
+          : periodElapsedSeconds
       moments.append(
         GoalProgressMoment(
           id: goal.id,
@@ -183,7 +183,7 @@ package struct GoalProgressChartView: View {
               }
           }
         }
-        .chartXScale(domain: 0...displayedDuration)
+        .chartXScale(domain: 0 ... displayedDuration)
         //        .chartXAxisLabel("Playing time", alignment: .center)
         //        .chartYAxisLabel("Score", alignment: .center)
         .chartXAxis {
@@ -250,15 +250,11 @@ package struct GoalProgressChartView: View {
       return
     }
     let plotArea = geometry[plotFrame]
-    guard plotArea.contains(location) else {
-      selectedMoment = nil
-      return
-    }
-    guard
-      let elapsedSeconds = proxy.value(
-        atX: location.x - plotArea.origin.x,
-        as: Int.self
-      )
+    guard plotArea.contains(location),
+          let elapsedSeconds = proxy.value(
+            atX: location.x - plotArea.origin.x,
+            as: Int.self
+          )
     else {
       selectedMoment = nil
       return

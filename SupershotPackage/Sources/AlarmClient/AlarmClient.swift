@@ -11,7 +11,7 @@ import SharedModels
   import SwiftUI
 #endif
 
-nonisolated public struct AlarmClient: Sendable {
+public nonisolated struct AlarmClient: Sendable {
   public var scheduleAlarm: @Sendable (GameSnapshot) async -> Bool
   public var updateActivity: @Sendable (GameSnapshot, Bool) async -> Void
   public var cancelAlarm: @Sendable (Game.ID, Int) async -> Void
@@ -33,16 +33,16 @@ nonisolated public struct AlarmClient: Sendable {
   }
 }
 
-extension DependencyValues {
+public extension DependencyValues {
   @DependencyEntry(
     liveValue: AlarmClient.noop,
     previewValue: AlarmClient.noop
   )
-  nonisolated public var alarmClient: AlarmClient = .noop
+  nonisolated var alarmClient: AlarmClient = .noop
 }
 
-nonisolated extension AlarmClient {
-  static public let noop = Self(
+public nonisolated extension AlarmClient {
+  static let noop = Self(
     scheduleAlarm: { _ in false },
     updateActivity: { _, _ in },
     cancelAlarm: { _, _ in },

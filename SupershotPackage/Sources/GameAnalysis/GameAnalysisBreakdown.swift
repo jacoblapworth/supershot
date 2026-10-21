@@ -1,20 +1,22 @@
 import Database
 
-nonisolated package enum GameAnalysisBreakdown: Hashable, Identifiable, Sendable {
+package nonisolated enum GameAnalysisBreakdown: Hashable, Identifiable, Sendable {
   case wholeGame
   case period(Int)
 
-  package var id: Self { self }
+  package var id: Self {
+    self
+  }
 
   package var period: Int? {
-    guard case .period(let period) = self else { return nil }
+    guard case let .period(period) = self else { return nil }
     return period
   }
 
   package var title: String {
     switch self {
     case .wholeGame: "Game"
-    case .period(let period): "Q\(period)"
+    case let .period(period): "Q\(period)"
     }
   }
 

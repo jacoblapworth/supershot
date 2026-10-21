@@ -15,17 +15,17 @@ struct ChartSelectionOverlay: View {
     Rectangle()
       .fill(.clear)
       .contentShape(Rectangle())
-      #if os(iOS)
-        .gesture(HorizontalChartPan(selectionChanged: selectionChanged))
-      #else
-        .simultaneousGesture(
-          DragGesture(minimumDistance: 10)
-            .updating($interaction) { value, interaction, _ in
-              interaction.update(value)
-            }
-        )
-        .onChange(of: interaction) { selectionChanged(interaction.location) }
-      #endif
+    #if os(iOS)
+      .gesture(HorizontalChartPan(selectionChanged: selectionChanged))
+    #else
+      .simultaneousGesture(
+        DragGesture(minimumDistance: 10)
+          .updating($interaction) { value, interaction, _ in
+            interaction.update(value)
+          }
+      )
+      .onChange(of: interaction) { selectionChanged(interaction.location) }
+    #endif
   }
 
   #if !os(iOS)
@@ -35,7 +35,7 @@ struct ChartSelectionOverlay: View {
       case vertical
 
       var location: CGPoint? {
-        guard case .horizontal(let location) = self else { return nil }
+        guard case let .horizontal(location) = self else { return nil }
         return location
       }
 
@@ -44,7 +44,7 @@ struct ChartSelectionOverlay: View {
         case .idle:
           self =
             abs(value.translation.width) > abs(value.translation.height)
-            ? .horizontal(value.location) : .vertical
+              ? .horizontal(value.location) : .vertical
         case .horizontal:
           self = .horizontal(value.location)
         case .vertical:
@@ -59,7 +59,7 @@ struct ChartSelectionOverlay: View {
   private struct HorizontalChartPan: UIGestureRecognizerRepresentable {
     var selectionChanged: (CGPoint?) -> Void
 
-    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinator {
+    func makeCoordinator(converter _: CoordinateSpaceConverter) -> Coordinator {
       Coordinator()
     }
 

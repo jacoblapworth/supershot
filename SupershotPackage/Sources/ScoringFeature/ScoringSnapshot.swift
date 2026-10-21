@@ -12,8 +12,8 @@ import Styleguide
 import SubscriptionClient
 import WidgetSupport
 
-extension ScoringFeature.State {
-  package init(snapshot: GameSnapshot) {
+package extension ScoringFeature.State {
+  init(snapshot: GameSnapshot) {
     guard let startedAt = snapshot.game.startedAt else {
       preconditionFailure("A planned game must be started before entering scoring")
     }

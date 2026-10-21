@@ -80,7 +80,7 @@ package struct GameStatisticsView: View {
 
   package init(detail: GameAnalysis, breakdown: GameAnalysisBreakdown = .wholeGame) {
     self.detail = detail
-    self._breakdown = State(initialValue: breakdown)
+    _breakdown = State(initialValue: breakdown)
   }
 }
 
@@ -124,7 +124,6 @@ private struct StatisticComparisonRow: View {
         + "\(teamBName), \(metric.accessibleText(teamBStatistics))"
     )
   }
-
 }
 
 private struct StatisticComparisonBar: View {
@@ -193,7 +192,8 @@ private struct TeamStatisticsHeader: View {
   var analysis = CompletedGameDetail.previewCompleted.analysis
   analysis.statisticsByPeriod[1] = CompletedGameStatistics(
     teamA: TeamGameStatistics(
-      averageTimeToGoalSeconds: 20.25, biggestLead: 4, longestScoringRun: 2),
+      averageTimeToGoalSeconds: 20.25, biggestLead: 4, longestScoringRun: 2
+    ),
     teamB: TeamGameStatistics(averageTimeToGoalSeconds: 45.75, biggestLead: 1, longestScoringRun: 3)
   )
   return ScrollView {

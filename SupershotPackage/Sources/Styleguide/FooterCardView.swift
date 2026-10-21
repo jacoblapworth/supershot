@@ -46,18 +46,14 @@ package struct FooterCardView: View {
         //            corners: .concentric,
         //            isUniform: true
         //          )
-        VStack {
-
-        }
-        .containerShape(ContainerRelativeShape())
+        VStack {}
+          .containerShape(ContainerRelativeShape())
       }
     }
     .ignoresSafeArea()
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 #if os(iOS)

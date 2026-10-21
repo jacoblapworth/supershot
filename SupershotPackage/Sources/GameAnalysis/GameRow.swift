@@ -34,7 +34,9 @@ package struct GameRow: View {
         Text(dateText)
           .foregroundStyle(.secondary)
 
-        if let court = game.court { Text("Court \(court)").foregroundStyle(.secondary) }
+        if let court = game.court {
+          Text("Court \(court)").foregroundStyle(.secondary)
+        }
 
         Spacer(minLength: 8)
 
@@ -49,10 +51,10 @@ package struct GameRow: View {
         } icon: {
           Image(
             systemName: game.isPlanned
-              ? "calendar" : game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
+              ? "calendar" : game.isCompleted ? "checkmark.circle.fill" : "clock.fill"
+          )
         }
         .foregroundStyle(game.isCompleted ? Color.secondary : Color.accentColor)
-
       }
       .font(.caption.weight(.semibold))
     }
@@ -62,7 +64,8 @@ package struct GameRow: View {
         colors: [
           game.teamABibColor,
           game.teamBBibColor,
-        ], startPoint: .leading, endPoint: .trailing)
+        ], startPoint: .leading, endPoint: .trailing
+      )
     }
     .contentShape(.rect)
     .accessibilityElement(children: .ignore)
@@ -131,7 +134,6 @@ private struct TeamScore: View {
           .monospacedDigit()
           .foregroundStyle(scoreColor)
       }
-
     }
     .frame(
       maxWidth: .infinity,

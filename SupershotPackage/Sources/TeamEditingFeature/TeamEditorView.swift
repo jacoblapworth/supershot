@@ -49,34 +49,34 @@ package struct TeamEditorView: View {
     #if os(iOS)
       .navigationBarTitleDisplayMode(.inline)
     #endif
-    .interactiveDismissDisabled(store.isSaving)
+      .interactiveDismissDisabled(store.isSaving)
     #if os(macOS)
       .formStyle(.grouped)
       .frame(minWidth: 440, idealWidth: 480, minHeight: 320)
     #endif
-    .toolbar {
-      ToolbarItem(placement: .cancellationAction) {
-        Button("Cancel") {
-          store.send(.cancelButtonTapped)
-        }
-        .disabled(store.isSaving)
-      }
-      ToolbarItem(placement: .confirmationAction) {
-        Button {
-          store.send(.saveButtonTapped)
-        } label: {
-          if store.isSaving {
-            ProgressView()
-          } else {
-            Text("Save")
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button("Cancel") {
+            store.send(.cancelButtonTapped)
           }
+          .disabled(store.isSaving)
         }
-        .disabled(!store.canSave)
-        #if os(macOS)
-          .keyboardShortcut(.defaultAction)
-        #endif
+        ToolbarItem(placement: .confirmationAction) {
+          Button {
+            store.send(.saveButtonTapped)
+          } label: {
+            if store.isSaving {
+              ProgressView()
+            } else {
+              Text("Save")
+            }
+          }
+          .disabled(!store.canSave)
+          #if os(macOS)
+            .keyboardShortcut(.defaultAction)
+          #endif
+        }
       }
-    }
   }
 
   package init(store: StoreOf<TeamEditorFeature>) {

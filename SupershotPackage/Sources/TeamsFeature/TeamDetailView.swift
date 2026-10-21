@@ -8,9 +8,9 @@ import GameServices
 import NewGameFeature
 import PaywallFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI

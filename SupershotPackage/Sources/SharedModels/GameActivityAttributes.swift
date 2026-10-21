@@ -3,8 +3,8 @@
   import Foundation
   import SwiftUI
 
-  nonisolated public struct GameActivityAttributes: ActivityAttributes, Sendable {
-    nonisolated public struct ContentState: Codable, Hashable, Sendable {
+  public nonisolated struct GameActivityAttributes: ActivityAttributes, Sendable {
+    public nonisolated struct ContentState: Codable, Hashable, Sendable {
       public var centrePassTeamID: UUID
       public var elapsedSeconds: Int
       public var phaseIndex: Int
@@ -57,27 +57,41 @@
 #endif
 
 #if os(iOS)
-  nonisolated extension GameActivityAttributes.ContentState {
-    public var scoringContext: GameScoringContext? {
+  public nonisolated extension GameActivityAttributes.ContentState {
+    var scoringContext: GameScoringContext? {
       GameScoringContext.resolve(
         phase: phase, countdown: countdown,
         isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: lateScoringPeriodNumber)
+        lateScoringPeriodNumber: lateScoringPeriodNumber
+      )
     }
+
     /// Live Activity scoring is restricted to running playing time; late goals belong in the app.
-    public var canScoreGoal: Bool { scoringContext?.isLate == false }
-    public var isInBreak: Bool { phase.isBreak }
-    public var canControlTimer: Bool {
+    var canScoreGoal: Bool {
+      scoringContext?.isLate == false
+    }
+
+    var isInBreak: Bool {
+      phase.isBreak
+    }
+
+    var canControlTimer: Bool {
       !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation)
     }
-    public var period: Int { phase.associatedPeriod.number }
-    public var countdown: GameCountdown {
+
+    var period: Int {
+      phase.associatedPeriod.number
+    }
+
+    var countdown: GameCountdown {
       GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt)
     }
-    public var isComplete: Bool {
+
+    var isComplete: Bool {
       countdown.projection(durationSeconds: phase.durationSeconds).status == .complete
     }
-    public var remainingSeconds: Int {
+
+    var remainingSeconds: Int {
       countdown.projection(durationSeconds: phase.durationSeconds).remainingSeconds
     }
   }

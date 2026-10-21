@@ -1,22 +1,21 @@
 import CustomDump
+@testable import Database
 import Dependencies
 import Foundation
-import GRDB
-import SQLiteData
-import Testing
-
-import TestSupport
-@testable import Database
 @testable import GameCore
+import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
+import SQLiteData
 @testable import Styleguide
 @testable import TeamEditingFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct TeamIdentityFeatureTests {
+  struct TeamIdentityFeatureTests {
     @Test
     func teamIdentityTrimsNameAndCanonicalizesColor() {
       let team = Team(id: UUID(50), name: "  E\u{301}CLAIRS  ", colorHex: "#abcdef")

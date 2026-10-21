@@ -85,7 +85,9 @@ private struct GoalTimelineLegend: View {
 
   private func teamLabel(name: String, color: Color, isLeft: Bool) -> some View {
     HStack(alignment: .top, spacing: 8) {
-      if isLeft { teamColor(color) }
+      if isLeft {
+        teamColor(color)
+      }
       VStack(alignment: isLeft ? .leading : .trailing, spacing: 2) {
         Text(name)
           .font(.subheadline.weight(.semibold))
@@ -95,7 +97,9 @@ private struct GoalTimelineLegend: View {
           .font(.caption)
           .foregroundStyle(.secondary)
       }
-      if !isLeft { teamColor(color) }
+      if !isLeft {
+        teamColor(color)
+      }
     }
     .frame(maxWidth: .infinity, alignment: isLeft ? .leading : .trailing)
   }

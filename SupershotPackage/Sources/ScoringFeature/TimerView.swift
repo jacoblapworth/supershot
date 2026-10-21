@@ -55,14 +55,13 @@ package struct TimerView: View {
               .monospacedDigit()
               .contentTransition(.numericText())
               .foregroundStyle(.white)
-
           }
           Spacer(minLength: 0)
           HStack(spacing: 4) {
             if isBreakPaused {
               TimerButton(type: .skip, action: skipBreakTapped)
             }
-            if !isInitial && !isBreakNotStarted {
+            if !isInitial, !isBreakNotStarted {
               TimerButton(type: isTimerRunning ? .pause : .play) {
                 withAnimation {
                   if isTimerRunning {

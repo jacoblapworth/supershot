@@ -1,27 +1,26 @@
-import SoundEffectsClient
-@testable import ScoringFeature
+@testable import AlarmClient
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
 import Foundation
-import SQLiteData
-import Testing
-
-import TestSupport
-@testable import AlarmClient
-@testable import Database
 @testable import GameCore
 @testable import GameServices
+@testable import ScoringFeature
 @testable import SharedModels
+import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
   @Suite(.dependencies {
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
+    $0.date.now = Date(timeIntervalSince1970: 1000)
     $0.uuid = .incrementing
     $0.gameTimer.refreshActivity = { _ in }
     $0.soundEffects.playGoal = {}
@@ -35,12 +34,13 @@ extension SupershotTestSuite {
     func lateGoalsPreserveClockAndConfirmation(window: Window, pending: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: window, pending: pending)
-      let completed = game.lateScoringPeriodNumber!
+      let completed = try #require(game.lateScoringPeriodNumber)
       for team in [UUID(1), UUID(2)] {
         _ = try await GameScoringClient.live.recordGoal(RecordGoalCommand(
           gameID: game.id, teamID: team, expectedPhaseIndex: game.currentPhaseIndex,
-          goalID: UUID(), createdAt: Date(timeIntervalSince1970: 1_000),
-          scoringContext: .completedPeriod(number: completed)))
+          goalID: UUID(), createdAt: Date(timeIntervalSince1970: 1000),
+          scoringContext: .completedPeriod(number: completed)
+        ))
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       expectNoDifference(snapshot.teamAScore, 1)
@@ -52,17 +52,18 @@ extension SupershotTestSuite {
       for goal in snapshot.goals {
         expectNoDifference(goal.gamePeriodID, testGamePeriodID(gameID: game.id, position: completed - 1))
         expectNoDifference(goal.elapsedSeconds, 900)
-        expectNoDifference(goal.createdAt, Date(timeIntervalSince1970: 1_000))
+        expectNoDifference(goal.createdAt, Date(timeIntervalSince1970: 1000))
         #expect(goal.isLate)
       }
       #if os(iOS)
-      let content = GameActivityAttributes.ContentState(
-        centrePassTeamID: snapshot.game.centrePassTeamID!,
-        elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
-        phase: snapshot.currentPhase, teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore,
-        timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
-        lateScoringPeriodNumber: completed)
-      expectNoDifference(content.scoringContext, .completedPeriod(number: completed))
+        let content = try GameActivityAttributes.ContentState(
+          centrePassTeamID: #require(snapshot.game.centrePassTeamID),
+          elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
+          phase: snapshot.currentPhase, teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore,
+          timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
+          lateScoringPeriodNumber: completed
+        )
+        expectNoDifference(content.scoringContext, .completedPeriod(number: completed))
       #endif
       let state = ScoringFeature.State(snapshot: snapshot)
       #expect(state.canScoreGoal)
@@ -76,9 +77,10 @@ extension SupershotTestSuite {
       await #expect(throws: (any Error).self) {
         try await GameScoringClient.live.recordGoal(RecordGoalCommand(
           gameID: game.id, teamID: UUID(1), expectedPhaseIndex: game.currentPhaseIndex,
-          goalID: UUID(20), createdAt: Date(timeIntervalSince1970: 1_000),
-          scoringContext: .completedPeriod(number: game.lateScoringPeriodNumber!),
-          source: .liveActivity))
+          goalID: UUID(20), createdAt: Date(timeIntervalSince1970: 1000),
+          scoringContext: .completedPeriod(number: #require(game.lateScoringPeriodNumber)),
+          source: .liveActivity
+        ))
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       #expect(snapshot.goals.isEmpty)
@@ -92,7 +94,13 @@ extension SupershotTestSuite {
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) { ScoringFeature() }
       await store.send(.goalButtonTapped(UUID(2)))
-      await store.receive { if case .goalResponse(.success) = $0 { true } else { false } } assert: {
+      await store.receive {
+        if case .goalResponse(.success) = $0 {
+          true
+        } else {
+          false
+        }
+      } assert: {
         $0.canUndo = true
         $0.canUndoDuringConfirmation = true
         $0.centrePassTeamID = UUID(2)
@@ -100,7 +108,13 @@ extension SupershotTestSuite {
         $0.goalFeedbackTrigger = 1
       }
       await store.send(.undoButtonTapped)
-      await store.receive { if case .undoResponse(.success) = $0 { true } else { false } } assert: {
+      await store.receive {
+        if case .undoResponse(.success) = $0 {
+          true
+        } else {
+          false
+        }
+      } assert: {
         $0.canUndo = false
         $0.canUndoDuringConfirmation = false
         $0.centrePassTeamID = UUID(1)
@@ -125,8 +139,8 @@ extension SupershotTestSuite {
       #expect(!ScoringFeature.State(snapshot: paused).canScoreGoal)
       await #expect(throws: (any Error).self) {
         try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1),
-            expectedPhaseIndex: game.currentPhaseIndex, goalID: UUID(10),
-            createdAt: Date(timeIntervalSince1970: 1_000), scoringContext: .completedPeriod(number: 1)))
+                                                                      expectedPhaseIndex: game.currentPhaseIndex, goalID: UUID(10),
+                                                                      createdAt: Date(timeIntervalSince1970: 1000), scoringContext: .completedPeriod(number: 1)))
       }
     }
 
@@ -134,7 +148,7 @@ extension SupershotTestSuite {
     func zeroBreakOpensLateWindowAfterNaturalOrSkippedCompletion(skip: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .waitingQuarter, pending: false)
-      let endsAt = Date(timeIntervalSince1970: skip ? 1_050 : 1_000)
+      let endsAt = Date(timeIntervalSince1970: skip ? 1050 : 1000)
       try await database.write { db in
         try Game.find(game.id).update {
           $0.currentPhaseIndex = 0
@@ -152,14 +166,14 @@ extension SupershotTestSuite {
       #expect(completed.game.isAwaitingCentrePassConfirmation)
       await #expect(throws: (any Error).self) {
         try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 0,
-            goalID: UUID(9), createdAt: Date(timeIntervalSince1970: 1_000),
-            scoringContext: .completedPeriod(number: 1)))
+                                                                      goalID: UUID(9), createdAt: Date(timeIntervalSince1970: 1000),
+                                                                      scoringContext: .completedPeriod(number: 1)))
       }
       let staleTimer = try await client.startOrResume(game.id, 0)
       expectNoDifference(staleTimer.snapshot.game.countdown, completed.game.countdown)
       _ = try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 1,
-          goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
-          scoringContext: .completedPeriod(number: 1)))
+                                                                        goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1000),
+                                                                        scoringContext: .completedPeriod(number: 1)))
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       expectNoDifference(snapshot.goals.first?.elapsedSeconds, 900)
     }
@@ -175,9 +189,9 @@ extension SupershotTestSuite {
       }
       await #expect(throws: (any Error).self) {
         try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1),
-            expectedPhaseIndex: reason == "phase" ? 0 : 1, goalID: UUID(10),
-            createdAt: Date(timeIntervalSince1970: reason == "expiredBreak" ? 1_100 : 1_000),
-            scoringContext: .completedPeriod(number: reason == "period" ? 2 : 1)))
+                                                                      expectedPhaseIndex: reason == "phase" ? 0 : 1, goalID: UUID(10),
+                                                                      createdAt: Date(timeIntervalSince1970: reason == "expiredBreak" ? 1100 : 1000),
+                                                                      scoringContext: .completedPeriod(number: reason == "period" ? 2 : 1)))
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       #expect(snapshot.goals.isEmpty)
@@ -196,8 +210,8 @@ extension SupershotTestSuite {
         }.execute(db)
         try Goal.insert {
           Goal(id: UUID(10), gameID: game.id,
-            gamePeriodID: testGamePeriodID(gameID: game.id, position: 0), teamID: UUID(1),
-            elapsedSeconds: 900, isLate: true, createdAt: Date(timeIntervalSince1970: 999))
+               gamePeriodID: testGamePeriodID(gameID: game.id, position: 0), teamID: UUID(1),
+               elapsedSeconds: 900, isLate: true, createdAt: Date(timeIntervalSince1970: 999))
         }.execute(db)
       }
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
@@ -209,25 +223,25 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test(arguments: [1_099.999, 1_100, 1_100.001], [false, true])
+    @Test(arguments: [1099.999, 1100, 1100.001], [false, true])
     func lateGoalAtBreakBoundaryRejectsStalePhase(timestamp: Double, pending: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .runningBreak, pending: pending)
       let record = {
         try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1),
-            expectedPhaseIndex: 1, goalID: UUID(10),
-            createdAt: Date(timeIntervalSince1970: timestamp),
-            scoringContext: .completedPeriod(number: 1)))
+                                                                      expectedPhaseIndex: 1, goalID: UUID(10),
+                                                                      createdAt: Date(timeIntervalSince1970: timestamp),
+                                                                      scoringContext: .completedPeriod(number: 1)))
       }
-      if timestamp < 1_100 {
+      if timestamp < 1100 {
         _ = try await record()
       } else {
         await #expect(throws: (any Error).self) { try await record() }
       }
       let stored = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
-      #expect(stored.goals.count == (timestamp < 1_100 ? 1 : 0))
-      expectNoDifference(stored.game.countdown, timestamp < 1_100 ? game.countdown : GameCountdown())
-      expectNoDifference(stored.game.currentPhaseIndex, timestamp < 1_100 ? game.currentPhaseIndex : 2)
+      #expect(stored.goals.count == (timestamp < 1100 ? 1 : 0))
+      expectNoDifference(stored.game.countdown, timestamp < 1100 ? game.countdown : GameCountdown())
+      expectNoDifference(stored.game.currentPhaseIndex, timestamp < 1100 ? game.currentPhaseIndex : 2)
     }
 
     @Test
@@ -235,8 +249,8 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .runningBreak, pending: true)
       _ = try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1),
-          expectedPhaseIndex: 1, goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
-          scoringContext: .completedPeriod(number: 1)))
+                                                                        expectedPhaseIndex: 1, goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1000),
+                                                                        scoringContext: .completedPeriod(number: 1)))
       let before = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: before)) { ScoringFeature() }
       #expect(store.state.canUndoGoal)
@@ -248,7 +262,13 @@ extension SupershotTestSuite {
       }
       let advanced = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       await store.send(.undoButtonTapped)
-      await store.receive { if case .undoResponse(.failure) = $0 { true } else { false } }
+      await store.receive {
+        if case .undoResponse(.failure) = $0 {
+          true
+        } else {
+          false
+        }
+      }
       let after = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       expectNoDifference(after, advanced)
       await store.finish()
@@ -259,15 +279,21 @@ extension SupershotTestSuite {
       @Dependency(\.defaultDatabase) var database
       let game = try seed(window: .finalQuarter, pending: false)
       _ = try await GameScoringClient.live.recordGoal(RecordGoalCommand(gameID: game.id, teamID: UUID(1), expectedPhaseIndex: 6,
-          goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1_000),
-          scoringContext: .completedPeriod(number: 4)))
+                                                                        goalID: UUID(10), createdAt: Date(timeIntervalSince1970: 1000),
+                                                                        scoringContext: .completedPeriod(number: 4)))
       let before = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: before)) { ScoringFeature() }
       try await database.write { db in
-        try Game.find(game.id).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1_001)) }.execute(db)
+        try Game.find(game.id).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1001)) }.execute(db)
       }
       await store.send(.undoButtonTapped)
-      await store.receive { if case .undoResponse(.failure) = $0 { true } else { false } }
+      await store.receive {
+        if case .undoResponse(.failure) = $0 {
+          true
+        } else {
+          false
+        }
+      }
       let after = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       expectNoDifference(after.goals, before.goals)
       expectNoDifference(after.game.centrePassTeamID, before.game.centrePassTeamID)
@@ -284,7 +310,7 @@ extension SupershotTestSuite {
         lateScoringPeriodNumber: window == .finalQuarter ? 4 : 1,
         currentPhaseIndex: window == .finalQuarter ? 6 : window == .waitingQuarter ? 2 : 1,
         elapsedSeconds: window == .finalQuarter ? 900 : window == .waitingQuarter ? 0 : 20,
-        timerEndsAt: window == .runningBreak ? Date(timeIntervalSince1970: 1_100) : nil
+        timerEndsAt: window == .runningBreak ? Date(timeIntervalSince1970: 1100) : nil
       )
       try database.write { db in
         try Team.insert {

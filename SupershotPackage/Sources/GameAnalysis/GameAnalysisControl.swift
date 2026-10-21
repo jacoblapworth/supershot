@@ -12,7 +12,9 @@ package enum GameAnalysisTab: String, CaseIterable, Identifiable {
   case playByPlay = "Play-by-play"
   case stats = "Stats"
 
-  package var id: Self { self }
+  package var id: Self {
+    self
+  }
 }
 
 package struct GameAnalysisControl: View {
@@ -73,15 +75,15 @@ package struct GameAnalysisControl: View {
       DispatchQueue.main.async { pinnedSelectionChanged() }
     }
     #if os(iOS)
-      .toolbarBackground(.bar, for: .navigationBar)
-      .toolbarBackground(isPinned ? .visible : .automatic, for: .navigationBar)
+    .toolbarBackground(.bar, for: .navigationBar)
+    .toolbarBackground(isPinned ? .visible : .automatic, for: .navigationBar)
     #endif
   }
 
   package init(
     selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}
   ) {
-    self._selection = selection
+    _selection = selection
     self.pinnedSelectionChanged = pinnedSelectionChanged
   }
 }

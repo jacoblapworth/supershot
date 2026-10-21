@@ -2,8 +2,8 @@ import Dependencies
 import Foundation
 
 /// FoundationModels stays behind this boundary; tests can stub generation without bypassing validation.
-nonisolated package struct FixtureParser: Sendable {
-  package static let maximumInputBytes = 6_000
+package nonisolated struct FixtureParser: Sendable {
+  package static let maximumInputBytes = 6000
   package static let maximumFixtures = 12
   package var availability: @Sendable () -> FixtureParserAvailability
   private var generate: @Sendable (String) async throws -> [ExtractedFixture]
@@ -39,14 +39,14 @@ nonisolated package struct FixtureParser: Sendable {
       var located: [(Range<String.Index>, ExtractedFixture)] = []
       for row in rows {
         guard !row.source.isEmpty else { throw FixtureParserError.generationFailed }
-        var search = text.startIndex..<text.endIndex
+        var search = text.startIndex ..< text.endIndex
         var match: Range<String.Index>?
         while let range = text.range(of: row.source, range: search) {
           if !located.contains(where: { $0.0.overlaps(range) }) {
             match = range
             break
           }
-          search = range.upperBound..<text.endIndex
+          search = range.upperBound ..< text.endIndex
         }
         guard let range = match else { throw FixtureParserError.generationFailed }
         located.append((range, row))
@@ -60,17 +60,21 @@ nonisolated package struct FixtureParser: Sendable {
     } catch is CancellationError {
       throw FixtureParserError.cancelled
     } catch let error as FixtureParserError {
-      if Task.isCancelled { throw FixtureParserError.cancelled }
+      if Task.isCancelled {
+        throw FixtureParserError.cancelled
+      }
       throw error
     } catch {
-      if Task.isCancelled { throw FixtureParserError.cancelled }
+      if Task.isCancelled {
+        throw FixtureParserError.cancelled
+      }
       throw FixtureParserError.generationFailed
     }
   }
 }
 
 /// Raw, untrusted output. Strings must be verbatim excerpts, including punctuation and metadata labels.
-nonisolated package struct ExtractedFixture: Sendable {
+package nonisolated struct ExtractedFixture: Sendable {
   package var source: String
   package var firstTeam: String?
   package var secondTeam: String?
@@ -93,15 +97,18 @@ nonisolated package struct ExtractedFixture: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated package var fixtureParser: FixtureParser {
+package extension DependencyValues {
+  nonisolated var fixtureParser: FixtureParser {
     get { self[FixtureParserKey.self] }
     set { self[FixtureParserKey.self] = newValue }
   }
 }
 
 private nonisolated enum FixtureParserKey: DependencyKey {
-  static var liveValue: FixtureParser { .live }
+  static var liveValue: FixtureParser {
+    .live
+  }
+
   static var testValue: FixtureParser {
     FixtureParser(availability: { .unavailable }, generate: { _ in [] })
   }

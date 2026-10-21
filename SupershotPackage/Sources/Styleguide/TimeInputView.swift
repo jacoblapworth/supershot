@@ -24,7 +24,9 @@ package struct TimeInputView: View {
           )
           .foregroundStyle(.red)
         }
-        if store.isSaving { ProgressView("Saving time…") }
+        if store.isSaving {
+          ProgressView("Saving time…")
+        }
         #if os(iOS)
           TimeInputKeypad(store: store)
         #endif
@@ -36,18 +38,18 @@ package struct TimeInputView: View {
       #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
       #endif
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel", systemImage: "xmark") { store.send(.cancelButtonTapped) }
-            .disabled(store.isSaving)
-            .keyboardShortcut(.cancelAction)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button("Cancel", systemImage: "xmark") { store.send(.cancelButtonTapped) }
+              .disabled(store.isSaving)
+              .keyboardShortcut(.cancelAction)
+          }
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Done", systemImage: "checkmark") { store.send(.doneButtonTapped) }
+              .disabled(!store.isValid || store.isSaving)
+              .keyboardShortcut(.defaultAction)
+          }
         }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Done", systemImage: "checkmark") { store.send(.doneButtonTapped) }
-            .disabled(!store.isValid || store.isSaving)
-            .keyboardShortcut(.defaultAction)
-        }
-      }
     }
     .presentationDetents([.medium])
     .presentationBackground(.regularMaterial)
@@ -173,8 +175,8 @@ private struct TimeInputKeypad: View {
     }
   }
 
-  private func key<Label: View>(
-    tint: Color = .primary, action: @escaping () -> Void, @ViewBuilder label: () -> Label
+  private func key(
+    tint: Color = .primary, action: @escaping () -> Void, @ViewBuilder label: () -> some View
   ) -> some View {
     Button(action: action) {
       label()
@@ -200,9 +202,10 @@ private struct TimeInputKeypad: View {
           initialState: TimeInputFeature.State(
             title: "Quarter length",
             totalSeconds: 480,
-            allowedSeconds: 1...5999
+            allowedSeconds: 1 ... 5999
           )
-        ) { TimeInputFeature() })
+        ) { TimeInputFeature() }
+      )
     }
 }
 
@@ -211,7 +214,7 @@ private struct TimeInputKeypad: View {
     var state = TimeInputFeature.State(
       title: "Quarter length",
       totalSeconds: 480,
-      allowedSeconds: 1...5999
+      allowedSeconds: 1 ... 5999
     )
     state.errorMessage = "Invalid"
     return state

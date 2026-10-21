@@ -49,10 +49,12 @@ package struct SetupTimingView: View {
       if store.timing.customizesBreaks {
         durationRow(
           "After quarter 1",
-          duration: store.timing.firstBreakDuration, field: .firstBreak)
+          duration: store.timing.firstBreakDuration, field: .firstBreak
+        )
         durationRow(
           "Half time",
-          duration: store.timing.halfTimeDuration, field: .halfTime)
+          duration: store.timing.halfTimeDuration, field: .halfTime
+        )
         durationRow(
           "After quarter 3",
           duration: store.timing.secondBreakDuration, field: .secondBreak
@@ -100,25 +102,30 @@ package struct SetupTimingView: View {
   SetupTimingEditorView(
     store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
       SetupTimingFeature()
-    })
+    }
+  )
 }
 
 #Preview("Custom breaks") {
   SetupTimingEditorView(
     store: Store(
       initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewCustomTiming.timing)
+        timing: NewGameFeature.State.previewCustomTiming.timing
+      )
     ) {
       SetupTimingFeature()
-    })
+    }
+  )
 }
 
 #Preview("Invalid duration") {
   SetupTimingEditorView(
     store: Store(
       initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewInvalidTiming.timing)
+        timing: NewGameFeature.State.previewInvalidTiming.timing
+      )
     ) {
       SetupTimingFeature()
-    })
+    }
+  )
 }

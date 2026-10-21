@@ -8,7 +8,9 @@ package enum GameStatistic: String, CaseIterable, Identifiable {
   case biggestLead = "Biggest lead"
   case longestScoringRun = "Longest scoring run"
 
-  package var id: Self { self }
+  package var id: Self {
+    self
+  }
 
   package func value(_ statistics: TeamGameStatistics) -> Double? {
     switch self {
@@ -60,7 +62,7 @@ package enum GameStatistic: String, CaseIterable, Identifiable {
     teamA: TeamGameStatistics, teamB: TeamGameStatistics
   ) -> Double? {
     guard let a = value(teamA), let b = value(teamB),
-      a.isFinite, b.isFinite, a >= 0, b >= 0, a + b > 0
+          a.isFinite, b.isFinite, a >= 0, b >= 0, a + b > 0
     else { return nil }
     return a / (a + b)
   }

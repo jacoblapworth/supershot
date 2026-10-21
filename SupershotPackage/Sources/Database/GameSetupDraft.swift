@@ -3,7 +3,7 @@ import GameCore
 import SQLiteData
 
 /// A complete, valid setup. Saving never changes a game that has already started.
-nonisolated package struct GameSetupDraft: Equatable, Sendable {
+package nonisolated struct GameSetupDraft: Equatable, Sendable {
   package var game: Game
   package var periods: [GamePeriod]
 
@@ -22,7 +22,7 @@ nonisolated package struct GameSetupDraft: Equatable, Sendable {
     _ db: Database, startingAt: Date? = nil, requiresExistingGame: Bool = false
   ) throws -> GameSnapshot {
     guard game.teamAID != game.teamBID, GameTimeline(periods: periods) != nil,
-      periods.allSatisfy({ $0.gameID == game.id })
+          periods.allSatisfy({ $0.gameID == game.id })
     else { throw SaveError.invalidSetup }
     var saved = game
     saved.startedAt = startingAt

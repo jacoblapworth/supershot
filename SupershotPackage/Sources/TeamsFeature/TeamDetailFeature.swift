@@ -52,23 +52,23 @@ package struct TeamDetailFeature {
       case .delegate:
         return .none
 
-      case .editButtonTapped(let team):
+      case let .editButtonTapped(team):
         guard team.id == state.teamID else { return .none }
         state.editor = TeamEditorFeature.State(team: team)
         return .none
 
       case .editor(.presented(.delegate(.cancelled))),
-        .editor(.presented(.delegate(.saved(_)))):
+           .editor(.presented(.delegate(.saved(_)))):
         state.editor = nil
         return .none
 
       case .editor:
         return .none
 
-      case .gameRowTapped(let game):
+      case let .gameRowTapped(game):
         return .send(.delegate(.gameRowTapped(game)))
 
-      case .newGameButtonTapped(let team):
+      case let .newGameButtonTapped(team):
         guard team.id == state.teamID else { return .none }
         return .send(.delegate(.newGameButtonTapped(team)))
       }
@@ -78,7 +78,5 @@ package struct TeamDetailFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

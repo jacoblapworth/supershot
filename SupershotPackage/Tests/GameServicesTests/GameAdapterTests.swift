@@ -1,29 +1,29 @@
+@testable import AlarmClient
 import Clocks
 import ConcurrencyExtras
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesTestSupport
-import Foundation
 import FeatureFlagsClient
-import Testing
-
-import TestSupport
-@testable import AlarmClient
-@testable import Database
+import Foundation
 @testable import GameCore
 @testable import GameServices
 @testable import SharedModels
 @testable import Styleguide
 @testable import SubscriptionClient
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
-// Test adapters independently of persistence and system services.
+/// Test adapters independently of persistence and system services.
 @MainActor
 @Suite(
   .dependencies {
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
+    $0.date.now = Date(timeIntervalSince1970: 1000)
     $0.proSubscription = .pro
-  })
+  }
+)
 struct GameAdapterTests {
   @Test func timerPresentsOnlyAfterCommandReturnsAuthoritativeState() async throws {
     let committed = LockIsolated(false)
@@ -32,7 +32,7 @@ struct GameAdapterTests {
       $0.gameSession.execute = { id, command, date in
         expectNoDifference(id, UUID(3))
         expectNoDifference(command, .timing(.startOrResume, expectedPhaseIndex: 0))
-        expectNoDifference(date, Date(timeIntervalSince1970: 1_000))
+        expectNoDifference(date, Date(timeIntervalSince1970: 1000))
         committed.setValue(true)
         return GameSessionUpdate(outcome: .applied, snapshot: expected)
       }
@@ -61,7 +61,8 @@ struct GameAdapterTests {
   @Test func rejectedStartRefreshesActivityWithoutSchedulingOrCancelling() async {
     let calls = LockIsolated<[String]>([])
     let rejected = GameSessionUpdate(
-      outcome: .rejected(.confirmationRequired), snapshot: snapshot())
+      outcome: .rejected(.confirmationRequired), snapshot: snapshot()
+    )
     let failed = await withDependencies {
       $0.alarmClient = AlarmClient(
         scheduleAlarm: { _ in
@@ -70,10 +71,12 @@ struct GameAdapterTests {
         },
         updateActivity: { _, _ in calls.withValue { $0.append("refresh") } },
         cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
-        endActivity: { _ in calls.withValue { $0.append("end") } })
+        endActivity: { _ in calls.withValue { $0.append("end") } }
+      )
     } operation: {
       await GamePresentationClient.live.update(
-        rejected, .timing(.startOrResume, expectedPhaseIndex: 0))
+        rejected, .timing(.startOrResume, expectedPhaseIndex: 0)
+      )
     }
     expectNoDifference(failed, false)
     expectNoDifference(calls.value, ["refresh"])
@@ -96,13 +99,17 @@ struct GameAdapterTests {
             activityStarted.continuation.yield(())
             try? await clock.sleep(for: .seconds(1))
           },
-          cancelAlarm: { _, _ in }, endActivity: { _ in })
+          cancelAlarm: { _, _ in }, endActivity: { _ in }
+        )
       } operation: {
         await GamePresentationClient.live.update(
-          update, .timing(.startOrResume, expectedPhaseIndex: 0))
+          update, .timing(.startOrResume, expectedPhaseIndex: 0)
+        )
       }
     }
-    for await _ in activityStarted.stream { break }
+    for await _ in activityStarted.stream {
+      break
+    }
     task.cancel()
     _ = await task.value
     activityStarted.continuation.finish()
@@ -116,8 +123,8 @@ struct GameAdapterTests {
     let failed = await withDependencies {
       $0.featureFlags = FeatureFlagsClient { feature, _ in
         switch feature {
-        case .liveActivities: return showsActivity
-        case .timerAlerts: return allowsAlerts
+        case .liveActivities: showsActivity
+        case .timerAlerts: allowsAlerts
         }
       }
       $0.alarmClient = AlarmClient(
@@ -131,11 +138,13 @@ struct GameAdapterTests {
           calls.withValue { $0.append("refresh") }
         },
         cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
-        endActivity: { _ in calls.withValue { $0.append("end") } })
+        endActivity: { _ in calls.withValue { $0.append("end") } }
+      )
     } operation: {
       await GamePresentationClient.live.update(
         GameSessionUpdate(outcome: .applied, snapshot: expected),
-        .timing(.startOrResume, expectedPhaseIndex: 0))
+        .timing(.startOrResume, expectedPhaseIndex: 0)
+      )
     }
     expectNoDifference(failed, allowsAlerts)
     expectNoDifference(calls.value.filter { $0 == "refresh" }.count, showsActivity ? 1 : 0)
@@ -153,10 +162,12 @@ struct GameAdapterTests {
         scheduleAlarm: { _ in Issue.record("Unexpected scheduling"); return false },
         updateActivity: { _, _ in Issue.record("Unexpected activity") },
         cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
-        endActivity: { _ in calls.withValue { $0.append("end") } })
+        endActivity: { _ in calls.withValue { $0.append("end") } }
+      )
     } operation: {
       _ = await GamePresentationClient.live.update(
-        GameSessionUpdate(outcome: .unchanged, snapshot: snapshot(running: true)), .reconcile)
+        GameSessionUpdate(outcome: .unchanged, snapshot: snapshot(running: true)), .reconcile
+      )
     }
     expectNoDifference(Set(calls.value), ["cancel", "end"])
   }
@@ -170,10 +181,12 @@ struct GameAdapterTests {
         scheduleAlarm: { _ in Issue.record("Unexpected scheduling"); return false },
         updateActivity: { _, _ in Issue.record("Unexpected activity") },
         cancelAlarm: { _, _ in calls.withValue { $0.append("cancel") } },
-        endActivity: { _ in calls.withValue { $0.append("end") } })
+        endActivity: { _ in calls.withValue { $0.append("end") } }
+      )
     } operation: {
       _ = await GamePresentationClient.live.update(
-        GameSessionUpdate(outcome: .applied, snapshot: snapshot()), .finish)
+        GameSessionUpdate(outcome: .applied, snapshot: snapshot()), .finish
+      )
     }
     expectNoDifference(calls.value, ["cancel", "end"])
   }
@@ -183,8 +196,10 @@ struct GameAdapterTests {
       game: Game(
         id: UUID(3), startedAt: .distantPast,
         teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
-        timerEndsAt: running ? Date(timeIntervalSince1970: 1_900) : nil),
+        timerEndsAt: running ? Date(timeIntervalSince1970: 1900) : nil
+      ),
       goals: [], periods: testGamePeriods(gameID: UUID(3)),
-      teamA: Team(id: UUID(1), name: "A"), teamB: Team(id: UUID(2), name: "B"))
+      teamA: Team(id: UUID(1), name: "A"), teamB: Team(id: UUID(2), name: "B")
+    )
   }
 }

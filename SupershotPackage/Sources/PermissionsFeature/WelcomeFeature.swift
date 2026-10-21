@@ -7,9 +7,7 @@ import SubscriptionClient
 package struct WelcomeFeature {
   @ObservableState
   package struct State: Equatable {
-    package init() {
-
-    }
+    package init() {}
   }
 
   package enum Action {
@@ -23,14 +21,12 @@ package struct WelcomeFeature {
     Reduce { _, action in
       switch action {
       case .getStartedButtonTapped:
-        return .send(.delegate(.completed))
+        .send(.delegate(.completed))
       case .delegate:
-        return .none
+        .none
       }
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

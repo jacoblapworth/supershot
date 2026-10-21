@@ -1,14 +1,14 @@
 import Foundation
-import SQLiteData
 import SharedModels
+import SQLiteData
 
-nonisolated public enum BreakStartPolicy: String, Codable, CaseIterable, Sendable, QueryBindable {
+public nonisolated enum BreakStartPolicy: String, Codable, CaseIterable, Sendable, QueryBindable {
   case automatic
   case manual
 }
 
 @Table
-nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
+public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
   public var startedAt: Date?
   public var createdAt: Date
@@ -28,11 +28,16 @@ nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
   public var lateScoringPeriodNumber: Int?
   public var currentPhaseIndex = 0
   public var elapsedSeconds = 0
-  public var timerEndsAt: Date? = nil
+  public var timerEndsAt: Date?
   public var breakStartPolicy = BreakStartPolicy.automatic
 
-  public var isPlanned: Bool { startedAt == nil && endedAt == nil }
-  public var isInProgress: Bool { startedAt != nil && endedAt == nil }
+  public var isPlanned: Bool {
+    startedAt == nil && endedAt == nil
+  }
+
+  public var isInProgress: Bool {
+    startedAt != nil && endedAt == nil
+  }
 
   public var countdown: GameCountdown {
     get { GameCountdown(elapsedSeconds: elapsedSeconds, endsAt: timerEndsAt) }
@@ -76,8 +81,8 @@ nonisolated public struct Game: Equatable, Hashable, Identifiable, Sendable {
   }
 }
 
-extension Game {
-  nonisolated public var progress: GameProgress {
+public extension Game {
+  nonisolated var progress: GameProgress {
     get { GameProgress(timing: timing, scoring: scoring) }
     set {
       timing = newValue.timing
@@ -87,7 +92,7 @@ extension Game {
 }
 
 @Table
-nonisolated public struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
+public nonisolated struct GamePeriod: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
   public var gameID: Game.ID
   public var position: Int
@@ -110,11 +115,13 @@ nonisolated public struct GamePeriod: Equatable, Hashable, Identifiable, Sendabl
   }
 
   /// User facing number presentation
-  public var number: Int { position + 1 }
+  public var number: Int {
+    position + 1
+  }
 }
 
-extension Game {
-  nonisolated public var location: GameLocation? {
+public extension Game {
+  nonisolated var location: GameLocation? {
     get {
       guard let latitude, let longitude else { return nil }
       return GameLocation(
@@ -132,7 +139,7 @@ extension Game {
 }
 
 @Table
-nonisolated public struct Team: Equatable, Hashable, Identifiable, Sendable {
+public nonisolated struct Team: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
   public var colorHex: String
   public var name: String
@@ -144,8 +151,8 @@ nonisolated public struct Team: Equatable, Hashable, Identifiable, Sendable {
   }
 }
 
-extension Team {
-  nonisolated public init(
+public extension Team {
+  nonisolated init(
     id: UUID,
     name: String,
     colorHex: String = "#007AFF"
@@ -153,18 +160,18 @@ extension Team {
     self.id = id
     self.colorHex =
       HexColor.isValid(colorHex)
-      ? colorHex.uppercased()
-      : "#007AFF"
+        ? colorHex.uppercased()
+        : "#007AFF"
     self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }
 
 @Table
-nonisolated public struct Goal: Equatable, Hashable, Identifiable, Sendable {
+public nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
   public var gameID: Game.ID
   public var gamePeriodID: GamePeriod.ID
-  public var centrePassTeamID: Team.ID? = nil
+  public var centrePassTeamID: Team.ID?
   public var teamID: Team.ID
   public var elapsedSeconds: Int
   public var isLate = false

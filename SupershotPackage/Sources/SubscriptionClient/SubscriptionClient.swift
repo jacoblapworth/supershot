@@ -2,18 +2,18 @@ import Dependencies
 import Foundation
 import RevenueCat
 
-nonisolated package enum SubscriptionEntitlement: Equatable, Sendable {
+package nonisolated enum SubscriptionEntitlement: Equatable, Sendable {
   case free
   case pro
   case unknown
 
-  static package let entitlementIdentifier = "Supershot Pro"
+  package static let entitlementIdentifier = "Supershot Pro"
 
   package init(customerInfo: CustomerInfo) {
     self =
       customerInfo.entitlements[Self.entitlementIdentifier]?.isActive == true
-      ? .pro
-      : .free
+        ? .pro
+        : .free
   }
 
   package var isPro: Bool {
@@ -21,13 +21,14 @@ nonisolated package enum SubscriptionEntitlement: Equatable, Sendable {
   }
 }
 
-nonisolated package struct SubscriptionClient: Sendable {
+package nonisolated struct SubscriptionClient: Sendable {
   package var accessUpdates: @Sendable () -> AsyncStream<SubscriptionEntitlement>
   package var currentAccess: @Sendable () async throws -> SubscriptionEntitlement
   package var loadProducts: @Sendable () async throws -> [PaywallProduct] = { [] }
   package var purchase: @Sendable (UUID) async throws -> PaywallPurchaseOutcome = { _ in
     throw PaywallClientError.packageUnavailable
   }
+
   package var restore: @Sendable () async throws -> SubscriptionEntitlement = { .free }
 
   package init(
@@ -46,26 +47,34 @@ nonisolated package struct SubscriptionClient: Sendable {
   }
 }
 
-extension DependencyValues {
-  nonisolated package var proSubscription: SubscriptionClient {
+package extension DependencyValues {
+  nonisolated var proSubscription: SubscriptionClient {
     get { self[ProSubscriptionClientKey.self] }
     set { self[ProSubscriptionClientKey.self] = newValue }
   }
 }
 
 private nonisolated enum ProSubscriptionClientKey: DependencyKey {
-  static var liveValue: SubscriptionClient { .live }
-  static var previewValue: SubscriptionClient { .pro }
-  static var testValue: SubscriptionClient { .pro }
+  static var liveValue: SubscriptionClient {
+    .live
+  }
+
+  static var previewValue: SubscriptionClient {
+    .pro
+  }
+
+  static var testValue: SubscriptionClient {
+    .pro
+  }
 }
 
-nonisolated extension SubscriptionClient {
-  static package let free = Self(
+package nonisolated extension SubscriptionClient {
+  static let free = Self(
     accessUpdates: { AsyncStream { $0.finish() } },
     currentAccess: { .free }
   )
 
-  static package var live: Self {
+  static var live: Self {
     let packages = PaywallPackages()
     return Self(
       accessUpdates: {
@@ -80,17 +89,17 @@ nonisolated extension SubscriptionClient {
         }
       },
       currentAccess: {
-        SubscriptionEntitlement(customerInfo: try await Purchases.shared.customerInfo())
+        try await SubscriptionEntitlement(customerInfo: Purchases.shared.customerInfo())
       },
       loadProducts: { try await packages.load() },
       purchase: { try await packages.purchase($0) },
       restore: {
-        SubscriptionEntitlement(customerInfo: try await Purchases.shared.restorePurchases())
+        try await SubscriptionEntitlement(customerInfo: Purchases.shared.restorePurchases())
       }
     )
   }
 
-  static package let pro = Self(
+  static let pro = Self(
     accessUpdates: { AsyncStream { $0.finish() } },
     currentAccess: { .pro },
     loadProducts: {
@@ -104,7 +113,7 @@ nonisolated extension SubscriptionClient {
   )
 }
 
-// Each token retains the exact package, including the offering context used to display it.
+/// Each token retains the exact package, including the offering context used to display it.
 private actor PaywallPackages {
   private var packages: [UUID: Package] = [:]
 
@@ -114,7 +123,7 @@ private actor PaywallPackages {
       return []
     }
     let eligibility = await Purchases.shared.checkTrialOrIntroDiscountEligibility(
-      productIdentifiers: offering.availablePackages.map { $0.storeProduct.productIdentifier }
+      productIdentifiers: offering.availablePackages.map(\.storeProduct.productIdentifier)
     )
     var loaded: [UUID: Package] = [:]
     let products = offering.availablePackages.map { package in
@@ -123,12 +132,13 @@ private actor PaywallPackages {
       let product = package.storeProduct
       var intro: PaywallProduct.IntroductoryOffer?
       if eligibility[product.productIdentifier]?.status == .eligible,
-        let discount = product.introductoryDiscount
+         let discount = product.introductoryDiscount
       {
         switch discount.paymentMode {
         case .freeTrial:
           intro = .freeTrial(
-            Self.period(discount.subscriptionPeriod, multiplier: discount.numberOfPeriods))
+            Self.period(discount.subscriptionPeriod, multiplier: discount.numberOfPeriods)
+          )
         case .payAsYouGo, .payUpFront:
           intro = .discounted(
             price: discount.localizedPriceString,
@@ -143,15 +153,14 @@ private actor PaywallPackages {
         }
       }
       let period = product.subscriptionPeriod.map { Self.period($0) }
-      let title: String
-      if package.packageType == .lifetime {
-        title = String(localized: "Lifetime")
+      let title: String = if package.packageType == .lifetime {
+        String(localized: "Lifetime")
       } else if period == .init(value: 1, unit: .year) {
-        title = String(localized: "Yearly")
+        String(localized: "Yearly")
       } else if period == .init(value: 1, unit: .month) {
-        title = String(localized: "Monthly")
+        String(localized: "Monthly")
       } else {
-        title = product.localizedTitle
+        product.localizedTitle
       }
       return PaywallProduct(
         id: id, title: title, price: product.price,
@@ -184,13 +193,12 @@ private actor PaywallPackages {
   private static func period(_ period: SubscriptionPeriod, multiplier: Int = 1)
     -> PaywallProduct.Period
   {
-    let unit: PaywallProduct.Period.Unit
-    switch period.unit {
-    case .day: unit = .day
-    case .week: unit = .week
-    case .month: unit = .month
-    case .year: unit = .year
-    @unknown default: unit = .day
+    let unit: PaywallProduct.Period.Unit = switch period.unit {
+    case .day: .day
+    case .week: .week
+    case .month: .month
+    case .year: .year
+    @unknown default: .day
     }
     return .init(value: period.value * multiplier, unit: unit)
   }

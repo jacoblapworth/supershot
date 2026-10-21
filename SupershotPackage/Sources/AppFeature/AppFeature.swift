@@ -9,10 +9,10 @@ import GameServices
 import GamesFeature
 import PaywallFeature
 import PermissionsFeature
-import SQLiteData
 import SettingsFeature
 import SharedModels
 import Sharing
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -81,7 +81,7 @@ package struct AppFeature {
       }
       Reduce { state, action in
         switch action {
-        case .deepLinkOpened(let url):
+        case let .deepLinkOpened(url):
           guard let gameID = gameID(from: url) else { return .none }
           guard state.hasCompletedWelcome else {
             state.pendingDeepLink = url
@@ -110,7 +110,7 @@ package struct AppFeature {
           state.paywallFromSettings = false
           return .send(.proPromotionTapped)
 
-        case .settings(.delegate(.proAccessChanged(let access))):
+        case let .settings(.delegate(.proAccessChanged(access))):
           return .send(.proAccessUpdated(access))
 
         case .games, .settings, .teams:
@@ -124,14 +124,14 @@ package struct AppFeature {
           state.pendingDeepLink = nil
           return .send(.deepLinkOpened(url))
 
-        case .proAccessLoaded(let access):
+        case let .proAccessLoaded(access):
           state.hasLoadedAccess = true
           return applyProAccess(access, state: &state)
 
-        case .proAccessUpdated(let access):
+        case let .proAccessUpdated(access):
           return applyProAccess(access, state: &state)
 
-        case .destination(.presented(.proPaywall(.delegate(.accessChanged(let access))))):
+        case let .destination(.presented(.proPaywall(.delegate(.accessChanged(access))))):
           return applyProAccess(access, state: &state)
 
         case .destination:
@@ -144,20 +144,20 @@ package struct AppFeature {
 
         case .sceneBecameActive:
           guard state.hasStartedSubscriptionObservation else { return .none }
-          let proSubscription = self.proSubscription
+          let proSubscription = proSubscription
           return .run { send in
             guard let access = try? await proSubscription.currentAccess() else { return }
             await send(.proAccessUpdated(access))
           }
 
-        case .selectedTabChanged(let tab):
+        case let .selectedTabChanged(tab):
           state.selectedTab = tab
           return .none
 
         case .task:
           guard !state.hasStartedSubscriptionObservation else { return .none }
           state.hasStartedSubscriptionObservation = true
-          let proSubscription = self.proSubscription
+          let proSubscription = proSubscription
           return .run { send in
             let initialAccess: SubscriptionEntitlement
             do {
@@ -210,8 +210,7 @@ package struct AppFeature {
     }
   }
 
-  private func synchronizePremiumPresentations(_ access: SubscriptionEntitlement) -> Effect<Action>
-  {
+  private func synchronizePremiumPresentations(_ access: SubscriptionEntitlement) -> Effect<Action> {
     let showsActivity = featureFlags.isEnabled(.liveActivities, access)
     let allowsAlerts = featureFlags.isEnabled(.timerAlerts, access)
     guard showsActivity || allowsAlerts else { return cleanUpPremiumPresentations() }
@@ -251,9 +250,7 @@ package struct AppFeature {
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 @Reducer

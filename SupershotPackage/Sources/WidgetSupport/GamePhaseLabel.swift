@@ -19,19 +19,19 @@ public struct GamePhaseLabel: View {
 
   private var label: String {
     switch phase {
-    case .period(let period, _):
+    case let .period(period, _):
       switch size {
       case .short:
-        return "Q\(period.number)"
+        "Q\(period.number)"
       case .long:
-        return "Quarter \(period.number)"
+        "Quarter \(period.number)"
       }
     case .breakTime:
       switch size {
       case .short:
-        return "B"
+        "B"
       case .long:
-        return "Break"
+        "Break"
       }
     }
   }

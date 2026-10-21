@@ -8,10 +8,10 @@ import GameServices
 import LocationClient
 import PermissionsFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
 import Sharing
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -20,7 +20,7 @@ import WidgetSupport
 
 @Reducer
 package struct NewGameFeature {
-  nonisolated package enum LocationState: Equatable, Sendable {
+  package nonisolated enum LocationState: Equatable, Sendable {
     case idle
     case requesting
     case denied
@@ -30,12 +30,12 @@ package struct NewGameFeature {
     case failed
   }
 
-  nonisolated package enum TeamSide: Equatable, Hashable, Sendable {
+  package nonisolated enum TeamSide: Equatable, Hashable, Sendable {
     case teamA
     case teamB
   }
 
-  nonisolated package struct DurationDraft: Equatable, Sendable {
+  package nonisolated struct DurationDraft: Equatable, Sendable {
     package var minutesText: String
     package var secondsText: String
 
@@ -53,14 +53,14 @@ package struct NewGameFeature {
       guard
         let minutes = Int(minutesText),
         let seconds = Int(secondsText),
-        (0...99).contains(minutes),
-        (0...59).contains(seconds)
+        (0 ... 99).contains(minutes),
+        (0 ... 59).contains(seconds)
       else { return nil }
       return minutes * 60 + seconds
     }
   }
 
-  nonisolated package struct TeamSelection: Equatable, Sendable {
+  package nonisolated struct TeamSelection: Equatable, Sendable {
     package var bibColor: Color
     package var team: Team?
 
@@ -89,16 +89,19 @@ package struct NewGameFeature {
       get { timing.customizesBreaks }
       set { timing.customizesBreaks = newValue }
     }
+
     package var errorMessage: String?
     package var firstBreakDuration: DurationDraft {
       get { timing.firstBreakDuration }
       set { timing.firstBreakDuration = newValue }
     }
+
     package var firstCentrePass: TeamSide = .teamA
     package var halfTimeDuration: DurationDraft {
       get { timing.halfTimeDuration }
       set { timing.halfTimeDuration = newValue }
     }
+
     package var isSaving = false
     package var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     package var location = LocationState.idle
@@ -108,6 +111,7 @@ package struct NewGameFeature {
       get { timing.periodDuration }
       set { timing.periodDuration = newValue }
     }
+
     package var rightTeam = TeamSelection(bibColor: ColorPalette.red)
     package var secondBreakDuration: DurationDraft {
       get { timing.secondBreakDuration }
@@ -119,7 +123,7 @@ package struct NewGameFeature {
       @Dependency(\.date.now) var now
       gameID = uuid()
       createdAt = now
-      periodIDs = (0..<4).map { _ in uuid() }
+      periodIDs = (0 ..< 4).map { _ in uuid() }
       @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
       timing.breakStartPolicy = defaultBreakStartPolicy
       @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
@@ -154,14 +158,16 @@ package struct NewGameFeature {
       halfTimeDuration = .init(totalSeconds: breaks.dropFirst().first ?? 0)
       secondBreakDuration = .init(totalSeconds: breaks.dropFirst(2).first ?? 0)
       customizesBreaks = Set(breaks).count > 1
-      if let location = snapshot.game.location { self.location = .loaded(location) }
+      if let location = snapshot.game.location {
+        self.location = .loaded(location)
+      }
       lastSavedDraft = draft
     }
 
     /// Only committed setup values are included; temporary child-editor edits stay transient.
     package var draft: GameSetupDraft? {
       guard let teamA = leftTeam.team, let teamB = rightTeam.team,
-        teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
+            teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
       else { return nil }
       let court = court.trimmingCharacters(in: .whitespacesAndNewlines)
       let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration]
@@ -207,15 +213,14 @@ package struct NewGameFeature {
     }
 
     package var configurationSummary: String {
-      let matchup: String
-      if let leftName = leftTeam.team?.name,
-        let rightName = rightTeam.team?.name,
-        !leftName.isEmpty,
-        !rightName.isEmpty
+      let matchup = if let leftName = leftTeam.team?.name,
+                       let rightName = rightTeam.team?.name,
+                       !leftName.isEmpty,
+                       !rightName.isEmpty
       {
-        matchup = "\(leftName) vs \(rightName) · "
+        "\(leftName) vs \(rightName) · "
       } else {
-        matchup = ""
+        ""
       }
       return "\(matchup)\(timing.summary)"
     }
@@ -226,12 +231,12 @@ package struct NewGameFeature {
     }
 
     private var isSavingTeamConfiguration: Bool {
-      guard case .teamConfiguration(let configuration) = destination else { return false }
+      guard case let .teamConfiguration(configuration) = destination else { return false }
       return configuration.configuration.isSaving
     }
 
     package var gameLocation: GameLocation? {
-      guard case .loaded(let location) = location else { return nil }
+      guard case let .loaded(location) = location else { return nil }
       return location
     }
 
@@ -287,7 +292,7 @@ package struct NewGameFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
-      case .scheduleToggleChanged(let scheduled):
+      case let .scheduleToggleChanged(scheduled):
         state.scheduledAt = scheduled ? (state.scheduledAt ?? now) : nil
         return .none
 
@@ -341,13 +346,13 @@ package struct NewGameFeature {
         if locationClient.authorizationStatus() == .notDetermined {
           state.location = .requesting
           return .run { send in
-            await send(.locationAuthorizationResponse(await locationClient.requestAuthorization()))
+            await send(.locationAuthorizationResponse(locationClient.requestAuthorization()))
           }
           .cancellable(id: CancelID.location, cancelInFlight: true)
         }
         return loadLocation(state: &state)
 
-      case .locationAuthorizationResponse(let status):
+      case let .locationAuthorizationResponse(status):
         return loadLocation(state: &state, authorization: status)
 
       case .sceneBecameActive:
@@ -363,7 +368,7 @@ package struct NewGameFeature {
         }
         return loadLocation(state: &state)
 
-      case .locationResponse(.success(let location)):
+      case let .locationResponse(.success(location)):
         state.location = .loaded(location)
         return .none
 
@@ -371,8 +376,8 @@ package struct NewGameFeature {
         state.location = .failed
         return .none
 
-      case .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(let team)))))):
-        guard case .teamPicker(let picker) = state.destination else { return .none }
+      case let .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(team)))))):
+        guard case let .teamPicker(picker) = state.destination else { return .none }
         switch picker.side {
         case .teamA:
           state.leftTeam.team = team
@@ -396,10 +401,10 @@ package struct NewGameFeature {
         state.destination = nil
         return .none
 
-      case .destination(
-        .presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(let team)))))
+      case let .destination(
+        .presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(team)))))
       ):
-        guard case .teamConfiguration(let configuration) = state.destination else { return .none }
+        guard case let .teamConfiguration(configuration) = state.destination else { return .none }
         if configuration.side == .teamA {
           state.leftTeam.team = team
           state.leftTeam.bibColor = team.color
@@ -413,7 +418,7 @@ package struct NewGameFeature {
         state.destination = nil
         return .none
 
-      case .destination(.presented(.timingEditor(.delegate(.committed(let timing))))):
+      case let .destination(.presented(.timingEditor(.delegate(.committed(timing))))):
         state.timing = timing
         state.destination = nil
         state.errorMessage = nil
@@ -436,7 +441,7 @@ package struct NewGameFeature {
         state.destination = .timingEditor(SetupTimingFeature.State(timing: state.timing))
         return .none
 
-      case .selectTeamButtonTapped(let side):
+      case let .selectTeamButtonTapped(side):
         guard !state.isSaving else { return .none }
         let selectedTeam = side == .teamA ? state.leftTeam.team : state.rightTeam.team
         if let selectedTeam {
@@ -476,7 +481,7 @@ package struct NewGameFeature {
 
         return save(state: &state, intent: .start)
 
-      case .startGameResponse(.success(let scoring)):
+      case let .startGameResponse(.success(scoring)):
         state.hasStarted = true
         state.inFlightDraft = nil
         state.isSaving = false
@@ -504,7 +509,6 @@ package struct NewGameFeature {
       case .task:
         guard !state.requiresExistingGame, state.location == .idle else { return .none }
         return loadLocation(state: &state)
-
       }
     }
     .ifLet(\.$destination, action: \.destination) {
@@ -515,16 +519,18 @@ package struct NewGameFeature {
   private func excludedTeamIDs(for side: TeamSide, state: State) -> Set<Team.ID> {
     switch side {
     case .teamA:
-      return state.rightTeam.team.map { [$0.id] } ?? []
+      state.rightTeam.team.map { [$0.id] } ?? []
     case .teamB:
-      return state.leftTeam.team.map { [$0.id] } ?? []
+      state.leftTeam.team.map { [$0.id] } ?? []
     }
   }
 
   private func save(state: inout State, intent: SaveIntent) -> Effect<Action> {
     guard !state.hasStarted else { return .none }
     if state.isSaving {
-      if intent != .autosave { state.pendingSaveIntent = intent }
+      if intent != .autosave {
+        state.pendingSaveIntent = intent
+      }
       return .none
     }
     guard let draft = state.draft else {
@@ -548,9 +554,9 @@ package struct NewGameFeature {
       }
       if intent == .start {
         switch result {
-        case .success(let snapshot):
-          await send(.startGameResponse(.success(await ScoringFeature.State(snapshot: snapshot))))
-        case .failure(let error):
+        case let .success(snapshot):
+          await send(.startGameResponse(.success(ScoringFeature.State(snapshot: snapshot))))
+        case let .failure(error):
           await send(.startGameResponse(.failure(error)))
         }
       } else {
@@ -580,7 +586,7 @@ package struct NewGameFeature {
     return .run { send in
       await send(
         .locationResponse(
-          await Result {
+          Result {
             try await locationClient.currentLocation()
           }
         )
@@ -593,9 +599,7 @@ package struct NewGameFeature {
     case location
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 @Reducer
@@ -630,9 +634,7 @@ package struct NewGameTeamConfiguration {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 @Reducer
@@ -658,7 +660,5 @@ package struct NewGameTeamPicker {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

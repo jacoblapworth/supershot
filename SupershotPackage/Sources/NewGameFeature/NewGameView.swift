@@ -43,8 +43,8 @@ package struct NewGameView: View {
         SetupLocationView(store: store)
       }
       #if os(macOS)
-        .frame(maxWidth: 680)
-        .frame(maxWidth: .infinity)
+      .frame(maxWidth: 680)
+      .frame(maxWidth: .infinity)
       #endif
       .padding()
     }
@@ -85,7 +85,7 @@ package struct NewGameView: View {
       onDismiss: { store.send(.destinationDidDismiss) }
     ) { destinationStore in
       switch destinationStore.case {
-      case .teamConfiguration(let configurationStore):
+      case let .teamConfiguration(configurationStore):
         SetupTeamView(
           store: configurationStore.scope(
             state: \.configuration,
@@ -93,7 +93,7 @@ package struct NewGameView: View {
           )
         )
 
-      case .teamPicker(let pickerStore):
+      case let .teamPicker(pickerStore):
         NavigationStack {
           TeamPickerView(
             store: pickerStore.scope(
@@ -109,7 +109,7 @@ package struct NewGameView: View {
         .presentationBackground(.thinMaterial)
         .presentationDetents([.medium, .large])
 
-      case .timingEditor(let timingEditorStore):
+      case let .timingEditor(timingEditorStore):
         SetupTimingEditorView(store: timingEditorStore)
       }
     }

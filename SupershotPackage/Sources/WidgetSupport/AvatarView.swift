@@ -3,8 +3,9 @@ import SwiftUI
 
 public struct AvatarView: View {
   // MARK: - Public API
+
   public let label: String
-  //  public var size: CGFloat
+  ///  public var size: CGFloat
   public var color: Color?
 
   @Environment(\.controlSize) private var controlSize
@@ -21,12 +22,14 @@ public struct AvatarView: View {
   }
 
   // MARK: - Init
+
   public init(label: String, color: Color? = nil) {
     self.label = label
     self.color = color
   }
 
   // MARK: - Body
+
   public var body: some View {
     let initials = AvatarView.makeInitials(from: label)
     let bg = color ?? AvatarView.color(for: label)
@@ -49,33 +52,42 @@ public struct AvatarView: View {
 }
 
 // MARK: - Helpers
-extension AvatarView {
+
+public extension AvatarView {
   /// Produces up to two-letter initials from a label, e.g., "Ada Lovelace" -> "AL".
   /// Handles single words, multi-words, extra whitespace, emojis, and empty strings.
-  static public func makeInitials(from label: String) -> String {
+  static func makeInitials(from label: String) -> String {
     let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty { return "?" }
+    if trimmed.isEmpty {
+      return "?"
+    }
 
     // Split by whitespace and punctuation commonly separating names/words
     let separators = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
     let parts =
       trimmed
-      .components(separatedBy: separators)
-      .filter { !$0.isEmpty }
+        .components(separatedBy: separators)
+        .filter { !$0.isEmpty }
 
-    if parts.isEmpty { return "?" }
+    if parts.isEmpty {
+      return "?"
+    }
 
     // Take first character from first two parts when possible, else from first part only
     var chars: [Character] = []
-    if let first = parts.first?.first { chars.append(first) }
-    if parts.count > 1, let second = parts[1].first { chars.append(second) }
+    if let first = parts.first?.first {
+      chars.append(first)
+    }
+    if parts.count > 1, let second = parts[1].first {
+      chars.append(second)
+    }
 
     // Uppercased string for letters; non-alphabetics will remain as-is when uppercased
     return String(chars).uppercased()
   }
 
   /// Deterministically maps a string to a pleasant, varied color.
-  static public func color(for label: String) -> Color {
+  static func color(for label: String) -> Color {
     // Simple FNV-1a 32-bit hash for stability across runs
     let bytes = Array(label.utf8)
     var hash: UInt32 = 0x811C_9DC5
@@ -84,18 +96,21 @@ extension AvatarView {
       hash = hash &* 16_777_619
     }
     // Map hash into H, S, B ranges for visually distinct colors
-    let hue = Double((hash % 360)) / 360.0
-    let saturation = 0.55 + Double((hash >> 8) % 30) / 100.0  // 0.55 - 0.85
-    let brightness = 0.70 + Double((hash >> 16) % 20) / 100.0  // 0.70 - 0.90
+    let hue = Double(hash % 360) / 360.0
+    let saturation = 0.55 + Double((hash >> 8) % 30) / 100.0 // 0.55 - 0.85
+    let brightness = 0.70 + Double((hash >> 16) % 20) / 100.0 // 0.70 - 0.90
     return Color(
       hue: hue, saturation: min(max(saturation, 0.0), 1.0),
-      brightness: min(max(brightness, 0.0), 1.0))
+      brightness: min(max(brightness, 0.0), 1.0)
+    )
   }
 
   /// Accessibility phrase, e.g., "Avatar for Ada Lovelace, initials AL".
-  static public func accessibilityLabel(for label: String, initials: String) -> String {
+  static func accessibilityLabel(for label: String, initials: String) -> String {
     let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty { return "Avatar with placeholder" }
+    if trimmed.isEmpty {
+      return "Avatar with placeholder"
+    }
     return "Avatar for \(trimmed), initials \(initials)"
   }
 }

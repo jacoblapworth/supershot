@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated public struct GameLocation: Equatable, Hashable, Sendable {
+public nonisolated struct GameLocation: Equatable, Hashable, Sendable {
   public var latitude: Double
   public var longitude: Double
   public var pointOfInterestName: String?

@@ -1,33 +1,32 @@
-import SwiftUI
-import ComposableArchitecture
-import CustomDump
-import DependenciesTestSupport
-import Foundation
-import GRDB
-import OrderedCollections
-import SQLiteData
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import ComposableArchitecture
+import CustomDump
 @testable import Database
+import DependenciesTestSupport
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameDetailFeature
 @testable import GameServices
+import GRDB
 @testable import LocationClient
 @testable import NewGameFeature
+import OrderedCollections
 @testable import PaywallFeature
 @testable import PermissionsFeature
 @testable import PreviewSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
 @testable import TeamsFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -35,7 +34,6 @@ extension SupershotTestSuite {
   @Suite(.dependencies {
     $0.uuid = .incrementing
   }) struct TeamsFeatureTests {
-    
     @Test
     func newGameFromTeamDetailPreselectsTeam() async {
       let team = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
@@ -48,7 +46,7 @@ extension SupershotTestSuite {
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
       let detailID = store.state.path.ids[0]
-      
+
       await store.send(
         .path(.element(id: detailID, action: .teamDetail(.newGameButtonTapped(team))))
       )
@@ -65,7 +63,7 @@ extension SupershotTestSuite {
         Array(store.state.path),
         [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .setup(setup)]
       )
-      
+
       let setupID = store.state.path.ids[1]
       let scoring = ScoringFeature.State(
         centrePassTeamID: team.id,
@@ -83,7 +81,7 @@ extension SupershotTestSuite {
         [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .scoring(scoring)]
       )
     }
-    
+
     @Test
     func searchMatchesNamesAndClearingRestoresTeams() async {
       let teams = [
@@ -93,34 +91,34 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: TeamsFeature.State()) {
         TeamsFeature()
       }
-      
+
       await store.send(.binding(.set(\.searchText, "  CAFE \n"))) {
         $0.searchText = "  CAFE \n"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [teams[1]])
-      
+
       await store.send(.binding(.set(\.searchText, "aven"))) {
         $0.searchText = "aven"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [teams[0]])
-      
+
       await store.send(.binding(.set(\.searchText, "missing"))) {
         $0.searchText = "missing"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [])
-      
+
       await store.send(.binding(.set(\.searchText, " \n"))) {
         $0.searchText = " \n"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), teams)
     }
-    
+
     @Test
     func completedTeamGameOpensDetail() async {
       let game = GameListItem(
-        endedAt: Date(timeIntervalSince1970: 2_000),
+        endedAt: Date(timeIntervalSince1970: 2000),
         id: UUID(3),
-        startedAt: Date(timeIntervalSince1970: 1_000),
+        startedAt: Date(timeIntervalSince1970: 1000),
         teamAName: "Ravens",
         teamAScore: 12,
         teamBName: "Swifts",
@@ -129,14 +127,14 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: TeamsFeature.State()) {
         TeamsFeature()
       }
-      
+
       await store.send(.teamGameRowTapped(game)) {
         $0.path.append(
           .gameDetail(GameDetailFeature.State(gameID: game.id))
         )
       }
     }
-    
+
     @Test
     func teamSelectionAndCreationStayWithinTeamsTab() async {
       let team = TeamListItem(
@@ -148,7 +146,7 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: TeamsFeature.State()) {
         TeamsFeature()
       }
-      
+
       await store.send(.teamRowTapped(team)) {
         $0.path.append(
           .teamDetail(TeamDetailFeature.State(teamID: team.id))
@@ -158,7 +156,7 @@ extension SupershotTestSuite {
         $0.destination = .teamEditor(TeamsEditorFeature.State())
       }
     }
-    
+
     @Test
     func unfinishedTeamGameResumesAndFinishesInTeamsStack() async {
       let game = GameListItem(
@@ -176,7 +174,7 @@ extension SupershotTestSuite {
       )
       let store = Self.makeStore(state: state)
       store.exhaustivity = .off(showSkippedAssertions: false)
-      
+
       await store.send(.teamGameRowTapped(game)) {
         $0.pendingGameResume = TeamsFeature.PendingGameResume(
           gameID: game.id,
@@ -189,7 +187,7 @@ extension SupershotTestSuite {
         }
         return request.gameID == game.id
       }
-      
+
       expectNoDifference(store.state.pendingGameResume, nil)
       expectNoDifference(store.state.path.count, 2)
       guard case let .scoring(scoring) = store.state.path[1] else {
@@ -197,7 +195,7 @@ extension SupershotTestSuite {
         return
       }
       expectNoDifference(scoring.gameID, game.id)
-      
+
       let scoringID = store.state.path.ids[1]
       await store.send(
         .path(
@@ -207,7 +205,7 @@ extension SupershotTestSuite {
           )
         )
       )
-      
+
       expectNoDifference(store.state.path.count, 2)
       guard case let .gameDetail(detail) = store.state.path[1] else {
         Issue.record("Expected scoring to finish in the Teams stack")
@@ -215,7 +213,7 @@ extension SupershotTestSuite {
       }
       expectNoDifference(detail.gameID, game.id)
     }
-    
+
     @Test
     func staleResumeResponseIsIgnored() async {
       let currentRequest = TeamsFeature.PendingGameResume(
@@ -235,7 +233,7 @@ extension SupershotTestSuite {
         gameID: UUID(3),
         requestID: UUID(1)
       )
-      
+
       await store.send(
         .resumeGameResponse(
           staleRequest,
@@ -269,7 +267,9 @@ extension SupershotTestSuite {
       let (responses, continuation) = AsyncStream<Void>.makeStream()
       var gameTimer = GameTimerClient.live
       gameTimer.reconcile = { _ in
-        for await _ in responses { break }
+        for await _ in responses {
+          break
+        }
         throw TabFeatureTestError.unavailable
       }
       var state = TeamsFeature.State()
@@ -377,7 +377,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func successfulDeepLinkKeepsEditorAndAppendsScoring() async {
+    func successfulDeepLinkKeepsEditorAndAppendsScoring() async throws {
       var state = TeamsFeature.State()
       var editor = TeamsEditorFeature.State()
       editor.editor.name = "Draft team"
@@ -387,7 +387,7 @@ extension SupershotTestSuite {
       await store.send(.gameDeepLinkOpened(UUID(3))) {
         $0.pendingGameResume = TeamsFeature.PendingGameResume(gameID: UUID(3), requestID: UUID(0))
       }
-      let snapshot = try! await store.dependencies.defaultDatabase.read {
+      let snapshot = try await store.dependencies.defaultDatabase.read {
         try GameSnapshot.fetch($0, gameID: UUID(3))
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
@@ -417,9 +417,9 @@ extension SupershotTestSuite {
       let database = store.dependencies.defaultDatabase
       try await database.write { db in
         try db.execute(sql: """
-          CREATE TRIGGER fail_game_delete BEFORE DELETE ON games
-          BEGIN SELECT RAISE(ABORT, 'Test deletion failure'); END;
-          """)
+        CREATE TRIGGER fail_game_delete BEFORE DELETE ON games
+        BEGIN SELECT RAISE(ABORT, 'Test deletion failure'); END;
+        """)
       }
       await withKnownIssue {
         await store.send(deletesTeam ? .deleteTeamButtonTapped(UUID(1)) : .deleteGameButtonTapped(UUID(3)))
@@ -460,7 +460,9 @@ extension SupershotTestSuite {
       let (responses, continuation) = AsyncStream<Void>.makeStream()
       var gameTimer = GameTimerClient.live
       gameTimer.reconcile = { _ in
-        for await _ in responses { break }
+        for await _ in responses {
+          break
+        }
         throw TabFeatureTestError.unavailable
       }
       var state = TeamsFeature.State()
@@ -493,7 +495,7 @@ extension SupershotTestSuite {
       }
       await store.finish()
     }
-    
+
     @Test
     func deletingTeamCascadesGamesAndGoalsAndEndsPresentations() async throws {
       let endedGameIDs = LockIsolated<[Game.ID]>([])
@@ -503,16 +505,16 @@ extension SupershotTestSuite {
       }
       let store = Self.makeStore(gameTimer: gameTimer)
       let database = store.dependencies.defaultDatabase
-      
+
       await store.send(.deleteTeamButtonTapped(UUID(1)))
       await store.finish()
-      
+
       let values = try await database.read { db in
-        (
-          try Team.find(UUID(1)).fetchOne(db),
-          try Game.find(UUID(3)).fetchOne(db),
-          try Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
-          try Team.find(UUID(2)).fetchOne(db)
+        try (
+          Team.find(UUID(1)).fetchOne(db),
+          Game.find(UUID(3)).fetchOne(db),
+          Goal.where { $0.gameID.eq(UUID(3)) }.fetchAll(db),
+          Team.find(UUID(2)).fetchOne(db)
         )
       }
       expectNoDifference(values.0, nil)
@@ -521,20 +523,20 @@ extension SupershotTestSuite {
       expectNoDifference(values.3?.name, "Swifts")
       expectNoDifference(endedGameIDs.value, [UUID(3)])
     }
-    
+
     @Test
     func promotionDelegatesToApp() async {
       let store = TestStore(initialState: TeamsFeature.State()) {
         TeamsFeature()
       }
-      
+
       await store.send(.proPromotionTapped)
       await store.receive {
         guard case .delegate(.proPromotionTapped) = $0 else { return false }
         return true
       }
     }
-    
+
     private static func updateEditor(
       in state: inout TeamsFeature.State,
       _ update: (inout TeamsEditorFeature.State) -> Void
@@ -554,7 +556,7 @@ extension SupershotTestSuite {
       TestStore(initialState: state ?? TeamsFeature.State()) {
         TeamsFeature()
       } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_100)
+        $0.date.now = Date(timeIntervalSince1970: 1100)
         $0.uuid = .incrementing
         try! clearDatabase($0.defaultDatabase)
         try! $0.defaultDatabase.write { db in
@@ -563,7 +565,7 @@ extension SupershotTestSuite {
         $0.gameTimer = gameTimer
       }
     }
-    
+
     private nonisolated static func seedGameAndGoal(_ db: Database) throws {
       try Team.insert {
         Team(id: UUID(1), name: "Ravens")
@@ -594,7 +596,7 @@ extension SupershotTestSuite {
           teamID: UUID(1),
           elapsedSeconds: 10,
           points: 1,
-          createdAt: Date(timeIntervalSince1970: 1_000)
+          createdAt: Date(timeIntervalSince1970: 1000)
         )
       }
       .execute(db)

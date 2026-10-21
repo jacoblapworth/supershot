@@ -6,7 +6,7 @@ import WidgetSupport
 
 @Reducer
 package struct TimeInputFeature {
-  nonisolated package enum Unit: Equatable, Sendable {
+  package nonisolated enum Unit: Equatable, Sendable {
     case minutes
     case seconds
   }
@@ -34,19 +34,34 @@ package struct TimeInputFeature {
       self.selectedUnit = selectedUnit
     }
 
-    package var totalSeconds: Int { (Int(minutes) ?? 0) * 60 + (Int(seconds) ?? 0) }
-    package var isValid: Bool { allowedSeconds.contains(totalSeconds) }
-    package var enabledQuickAdds: Set<Int> { Set([1, 10, 30].filter { canAdd($0) }) }
+    package var totalSeconds: Int {
+      (Int(minutes) ?? 0) * 60 + (Int(seconds) ?? 0)
+    }
+
+    package var isValid: Bool {
+      allowedSeconds.contains(totalSeconds)
+    }
+
+    package var enabledQuickAdds: Set<Int> {
+      Set([1, 10, 30].filter { canAdd($0) })
+    }
+
     package var selectedText: String {
       get { selectedUnit == .minutes ? minutes : seconds }
       set {
-        if selectedUnit == .minutes { minutes = newValue } else { seconds = newValue }
+        if selectedUnit == .minutes {
+          minutes = newValue
+        } else {
+          seconds = newValue
+        }
       }
     }
+
     package func canAdd(_ amount: Int) -> Bool {
       totalSeconds + amount * (selectedUnit == .minutes ? 60 : 1) <= allowedSeconds.upperBound
     }
-    mutating package func normalize() {
+
+    package mutating func normalize() {
       let total = totalSeconds
       minutes = String(total / 60)
       seconds = String(total % 60)
@@ -82,8 +97,8 @@ package struct TimeInputFeature {
         return .send(.delegate(.cancelled))
       case .delegate:
         break
-      case .digitButtonTapped(let digit):
-        guard (0...9).contains(digit) else { return .none }
+      case let .digitButtonTapped(digit):
+        guard (0 ... 9).contains(digit) else { return .none }
         let existing = state.replacesNextDigit ? "" : state.selectedText
         guard existing.count < 2 else { return .none }
         state.selectedText = existing + String(digit)
@@ -93,7 +108,7 @@ package struct TimeInputFeature {
         guard state.isValid else { return .none }
         state.normalize()
         return .send(.delegate(.committed(state.totalSeconds)))
-      case .quickAddButtonTapped(let amount):
+      case let .quickAddButtonTapped(amount):
         guard [1, 10, 30].contains(amount), state.canAdd(amount) else { return .none }
         let total = state.totalSeconds + amount * (state.selectedUnit == .minutes ? 60 : 1)
         state.minutes = String(total / 60)
@@ -102,9 +117,13 @@ package struct TimeInputFeature {
         state.errorMessage = nil
       case let .textChanged(unit, text):
         let digits = String(text.filter { $0.isASCII && $0.isNumber }.prefix(2))
-        if unit == .minutes { state.minutes = digits } else { state.seconds = digits }
+        if unit == .minutes {
+          state.minutes = digits
+        } else {
+          state.seconds = digits
+        }
         state.errorMessage = nil
-      case .unitButtonTapped(let unit):
+      case let .unitButtonTapped(unit):
         state.normalize()
         state.selectedUnit = unit
         state.replacesNextDigit = true
@@ -113,7 +132,5 @@ package struct TimeInputFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

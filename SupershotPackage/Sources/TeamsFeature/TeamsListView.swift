@@ -8,9 +8,9 @@ import GameServices
 import NewGameFeature
 import PaywallFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -29,22 +29,22 @@ package struct TeamsListView: View {
       teamsList
     } destination: { pathStore in
       switch pathStore.case {
-      case .gameDetail(let gameDetailStore):
+      case let .gameDetail(gameDetailStore):
         GameDetailView(
           store: gameDetailStore,
           showsProPromotion: proAccess == .free,
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
-      case .scoring(let scoringStore):
+      case let .scoring(scoringStore):
         ScoringView(
           store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall
         )
         #if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
+        .toolbarVisibility(.hidden, for: .tabBar)
         #endif
-      case .setup(let setupStore):
+      case let .setup(setupStore):
         NewGameView(store: setupStore, proAccess: proAccess)
-      case .teamDetail(let teamDetailStore):
+      case let .teamDetail(teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,
           isResumingGame: store.pendingGameResume != nil
@@ -93,11 +93,11 @@ package struct TeamsListView: View {
           }
           .buttonStyle(.plain)
           .contextMenu {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                store.send(.deleteTeamButtonTapped(team.id))
-              }
+            Button("Delete", systemImage: "trash", role: .destructive) {
+              store.send(.deleteTeamButtonTapped(team.id))
             }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+          }
+          .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button("Delete", systemImage: "trash", role: .destructive) {
               store.send(.deleteTeamButtonTapped(team.id))
             }

@@ -1,17 +1,13 @@
+@testable import AlarmClient
 import ApplicationDependency
+@testable import AppSettings
 import ComposableArchitecture
 import CustomDump
+@testable import Database
 import Dependencies
 import DependenciesAdditionsBasics
+import DependenciesTestSupport
 import Foundation
-import SQLiteData
-import SwiftUI
-import Testing
-
-import TestSupport
-@testable import AlarmClient
-@testable import AppSettings
-@testable import Database
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameServices
@@ -20,43 +16,46 @@ import TestSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
+import Testing
+import TestSupport
 @testable import WidgetSupport
-import DependenciesTestSupport
 
 extension SupershotTestSuite {
   @MainActor
   @Suite(.dependencies {
     $0.uuid = .incrementing
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
+    $0.date.now = Date(timeIntervalSince1970: 1000)
   }) struct ScoringFeatureTests {
-#if os(iOS)
-    @Test(arguments: [0, 1, 6])
-    func keepsScreenAwakeUntilScoringTaskIsCancelled(phaseIndex: Int) async {
-      let isIdleTimerDisabled = LockIsolated(false)
-      var state = Self.state()
-      state.currentPhaseIndex = phaseIndex
-      let store = TestStore(initialState: state) {
-        ScoringFeature()
-      } withDependencies: {
-        $0.application.$isIdleTimerDisabled = .init(isIdleTimerDisabled)
+    #if os(iOS)
+      @Test(arguments: [0, 1, 6])
+      func keepsScreenAwakeUntilScoringTaskIsCancelled(phaseIndex: Int) async {
+        let isIdleTimerDisabled = LockIsolated(false)
+        var state = Self.state()
+        state.currentPhaseIndex = phaseIndex
+        let store = TestStore(initialState: state) {
+          ScoringFeature()
+        } withDependencies: {
+          $0.application.$isIdleTimerDisabled = .init(isIdleTimerDisabled)
+        }
+
+        let task = await store.send(.keepScreenAwakeTask)
+        expectNoDifference(isIdleTimerDisabled.value, true)
+        await task.cancel()
+        expectNoDifference(isIdleTimerDisabled.value, false)
+
+        let resumedTask = await store.send(.keepScreenAwakeTask)
+        expectNoDifference(isIdleTimerDisabled.value, true)
+        await resumedTask.cancel()
+        expectNoDifference(isIdleTimerDisabled.value, false)
+        await store.finish()
       }
+    #endif
 
-      let task = await store.send(.keepScreenAwakeTask)
-      expectNoDifference(isIdleTimerDisabled.value, true)
-      await task.cancel()
-      expectNoDifference(isIdleTimerDisabled.value, false)
-
-      let resumedTask = await store.send(.keepScreenAwakeTask)
-      expectNoDifference(isIdleTimerDisabled.value, true)
-      await resumedTask.cancel()
-      expectNoDifference(isIdleTimerDisabled.value, false)
-      await store.finish()
-    }
-#endif
-
-    @Test(arguments: 0...6)
+    @Test(arguments: 0 ... 6)
     func swappingSidesPreservesGameStateAndCanBeReversed(phaseIndex: Int) async throws {
       var game = Self.game()
       game.currentPhaseIndex = phaseIndex
@@ -120,7 +119,7 @@ extension SupershotTestSuite {
       await store.finish()
     }
 
-    @Test(arguments: [false, true], 0...6)
+    @Test(arguments: [false, true], 0 ... 6)
     func courtLayoutKeepsScoreColourAndCentrePassWithTeam(
       swapSides: Bool,
       phaseIndex: Int
@@ -213,9 +212,9 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func gameTimelineIsFourQuartersWithBreaksBetweenThem() {
-      expectNoDifference(
-        GameTimeline(periods: Self.periods())!.phases,
+    func gameTimelineIsFourQuartersWithBreaksBetweenThem() throws {
+      try expectNoDifference(
+        #require(GameTimeline(periods: Self.periods())?.phases),
         [
           .period(testGamePeriodReference(number: 1), durationSeconds: 900),
           .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120),
@@ -235,30 +234,30 @@ extension SupershotTestSuite {
       let periods = testGamePeriods(
         gameID: game.id,
         count: 2,
-        durationSeconds: 1_800,
+        durationSeconds: 1800,
         breakDurationSeconds: 600
       )
       let database = try await Self.seed(game, periods: periods)
       let client = GameTimerClient.live
 
-      expectNoDifference(
-        GameTimeline(periods: periods)!.phases,
+      try expectNoDifference(
+        #require(GameTimeline(periods: periods)?.phases),
         [
-          .period(testGamePeriodReference(number: 1), durationSeconds: 1_800),
+          .period(testGamePeriodReference(number: 1), durationSeconds: 1800),
           .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 600),
-          .period(testGamePeriodReference(number: 2), durationSeconds: 1_800),
+          .period(testGamePeriodReference(number: 2), durationSeconds: 1800),
         ]
       )
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
       } operation: {
         try await client.skip(game.id, 2)
       }
 
       expectNoDifference(snapshot.game.currentPhaseIndex, 2)
-      expectNoDifference(snapshot.game.elapsedSeconds, 1_800)
+      expectNoDifference(snapshot.game.elapsedSeconds, 1800)
       expectNoDifference(snapshot.game.timerEndsAt, nil)
       expectNoDifference(ScoringFeature.State(snapshot: snapshot).canFinishGame, true)
     }
@@ -269,7 +268,7 @@ extension SupershotTestSuite {
       let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
       } operation: {
         try await client.skip(UUID(3), 0)
@@ -283,7 +282,7 @@ extension SupershotTestSuite {
       expectNoDifference(snapshot.game.elapsedSeconds, 0)
       expectNoDifference(
         snapshot.game.timerEndsAt,
-        Date(timeIntervalSince1970: 1_120)
+        Date(timeIntervalSince1970: 1120)
       )
       expectNoDifference(snapshot.game.isAwaitingCentrePassConfirmation, true)
     }
@@ -293,12 +292,12 @@ extension SupershotTestSuite {
       var game = Self.game()
       game.currentPhaseIndex = 1
       game.isAwaitingCentrePassConfirmation = true
-      game.timerEndsAt = Date(timeIntervalSince1970: 1_100)
+      game.timerEndsAt = Date(timeIntervalSince1970: 1100)
       let database = try await Self.seed(game)
       let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
       } operation: {
         try await client.skip(UUID(3), 1)
@@ -324,7 +323,7 @@ extension SupershotTestSuite {
       let database = try await Self.seed(game, periods: periods)
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
       } operation: {
         @Dependency(\.gameTimer) var client
@@ -339,12 +338,12 @@ extension SupershotTestSuite {
     @Test
     func reconciliationCanCrossAQuarterAndItsBreak() async throws {
       var game = Self.game()
-      game.timerEndsAt = Date(timeIntervalSince1970: 1_050)
+      game.timerEndsAt = Date(timeIntervalSince1970: 1050)
       let database = try await Self.seed(game)
       let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_300)
+        $0.date.now = Date(timeIntervalSince1970: 1300)
         $0.defaultDatabase = database
       } operation: {
         try await client.reconcile(UUID(3))
@@ -361,7 +360,7 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: Self.state()) {
         ScoringFeature()
       } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
         $0.uuid = .incrementing
       }
@@ -375,7 +374,7 @@ extension SupershotTestSuite {
     @Test(arguments: [false, true])
     func runningQuarterRecordsGoalWithAuthoritativeQuarterAndElapsedTime(swappedSides: Bool) async throws {
       var game = Self.game()
-      game.timerEndsAt = Date(timeIntervalSince1970: 1_600)
+      game.timerEndsAt = Date(timeIntervalSince1970: 1600)
       game.swapSides = swappedSides
       let database = try await Self.seed(game)
       var state = Self.state()
@@ -384,7 +383,7 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: state) {
         ScoringFeature()
       } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
         $0.uuid = .incrementing
       }
@@ -419,13 +418,13 @@ extension SupershotTestSuite {
     func scoringAndUndoingDisplayedLeftTeamPreservesOrientation() async throws {
       var game = Self.game()
       game.swapSides = true
-      game.timerEndsAt = Date(timeIntervalSince1970: 1_600)
+      game.timerEndsAt = Date(timeIntervalSince1970: 1600)
       let database = try await Self.seed(game)
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
         ScoringFeature()
       } withDependencies: {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
         $0.uuid = .incrementing
       }
@@ -516,7 +515,7 @@ extension SupershotTestSuite {
       let client = GameTimerClient.live
 
       let snapshot = try await withDependencies {
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.defaultDatabase = database
       } operation: {
         try await client.skip(UUID(3), 6)
@@ -542,7 +541,7 @@ extension SupershotTestSuite {
         ScoringFeature()
       } withDependencies: {
         $0.defaultDatabase = database
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
         $0.gameTimer.endPresentation = { id in endedPresentations.withValue { $0.append(id) } }
       }
 
@@ -551,11 +550,15 @@ extension SupershotTestSuite {
       await store.send(.finishGameButtonTapped)
       await store.receive(\.finishGameResponse)
       await store.receive {
-        if case let .delegate(.gameFinished(id)) = $0 { id == game.id } else { false }
+        if case let .delegate(.gameFinished(id)) = $0 {
+          id == game.id
+        } else {
+          false
+        }
       }
 
       let stored = try await database.read { try Game.find(game.id).fetchOne($0) }
-      expectNoDifference(stored?.endedAt, Date(timeIntervalSince1970: 1_000))
+      expectNoDifference(stored?.endedAt, Date(timeIntervalSince1970: 1000))
       expectNoDifference(stored?.elapsedSeconds, 900)
       expectNoDifference(stored?.timerEndsAt, nil)
       expectNoDifference(endedPresentations.value, [game.id])
@@ -591,10 +594,16 @@ extension SupershotTestSuite {
       state.elapsedSeconds = 900
       let store = TestStore(initialState: state) { ScoringFeature() } withDependencies: {
         $0.defaultDatabase = database
-        $0.date.now = Date(timeIntervalSince1970: 1_000)
+        $0.date.now = Date(timeIntervalSince1970: 1000)
       }
       await store.send(.finishGameButtonTapped)
-      await store.receive { if case .finishGameResponse(.failure) = $0 { true } else { false } }
+      await store.receive {
+        if case .finishGameResponse(.failure) = $0 {
+          true
+        } else {
+          false
+        }
+      }
       let stored = try await database.read { try Game.find(UUID(3)).fetchOne($0) }
       expectNoDifference(stored?.currentPhaseIndex, 0)
       expectNoDifference(stored?.elapsedSeconds, 0)
@@ -603,59 +612,65 @@ extension SupershotTestSuite {
     }
 
     #if os(macOS)
-    @Test func macTimeEditorOpensWithoutControlsSheetDismissal() async {
-      let store = TestStore(initialState: Self.state()) { ScoringFeature() }
-      await store.send(.editTimeButtonTapped) {
-        $0.editedPhaseIndex = 0
-        $0.controlsPresentation = .hiddenForTimeInput
-        $0.timeInput = .init(title: "Edit remaining time", totalSeconds: 900,
-          allowedSeconds: 1...900, selectedUnit: .seconds)
+      @Test func macTimeEditorOpensWithoutControlsSheetDismissal() async {
+        let store = TestStore(initialState: Self.state()) { ScoringFeature() }
+        await store.send(.editTimeButtonTapped) {
+          $0.editedPhaseIndex = 0
+          $0.controlsPresentation = .hiddenForTimeInput
+          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: 900,
+                               allowedSeconds: 1 ... 900, selectedUnit: .seconds)
+        }
+        await store.send(.timeInput(.presented(.cancelButtonTapped)))
+        await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
+        await store.send(.timeInputSheetDidDismiss) {
+          $0.editedPhaseIndex = nil
+          $0.controlsPresentation = .shown
+        }
       }
-      await store.send(.timeInput(.presented(.cancelButtonTapped)))
-      await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
-      await store.send(.timeInputSheetDidDismiss) {
-        $0.editedPhaseIndex = nil
-        $0.controlsPresentation = .shown
-      }
-    }
 
-    @Test func macPaywallDoesNotWaitForControlsSheetDismissal() async {
-      let store = TestStore(initialState: Self.state()) { ScoringFeature() }
-      await store.send(.alarms(.delegate(.proPromotionTapped))) {
-        $0.controlsPresentation = .hiddenForPaywall
+      @Test func macPaywallDoesNotWaitForControlsSheetDismissal() async {
+        let store = TestStore(initialState: Self.state()) { ScoringFeature() }
+        await store.send(.alarms(.delegate(.proPromotionTapped))) {
+          $0.controlsPresentation = .hiddenForPaywall
+        }
+        await store.receive {
+          if case .delegate(.proPromotionTapped) = $0 {
+            true
+          } else {
+            false
+          }
+        }
+        await store.send(.proPaywallDidDismiss) { $0.controlsPresentation = .shown }
       }
-      await store.receive { if case .delegate(.proPromotionTapped) = $0 { true } else { false } }
-      await store.send(.proPaywallDidDismiss) { $0.controlsPresentation = .shown }
-    }
 
-    @Test func macCommandsFollowCourtSidesAndDisableDuringEditing() {
-      var state = Self.state()
-      state.elapsedSeconds = 1
-      state.timerEndsAt = Date(timeIntervalSince1970: 1_900)
-      state.canUndo = true
-      let store = Store(initialState: state) { ScoringFeature() }
-      let commands = ScoringCommandContext(store: store, isPresentingPaywall: false)
-      #expect(commands.canScore)
-      #expect(commands.canToggleTimer)
-      #expect(commands.canUndo)
-      #expect(commands.leftTitle.contains("Ravens"))
-      #expect(commands.rightTitle.contains("Swifts"))
-      state.swapSides = true
-      let swappedStore = Store(initialState: state) { ScoringFeature() }
-      let swapped = ScoringCommandContext(store: swappedStore, isPresentingPaywall: false)
-      #expect(swapped.leftTitle.contains("Swifts"))
-      #expect(swapped.rightTitle.contains("Ravens"))
-      state.timerEndsAt = nil
-      state.controlsPresentation = .hiddenForTimeInput
-      state.timeInput = .init(title: "Time", totalSeconds: 899, allowedSeconds: 1...900)
-      let editingStore = Store(initialState: state) { ScoringFeature() }
-      let editing = ScoringCommandContext(store: editingStore, isPresentingPaywall: false)
-      #expect(!editing.canScore)
-      #expect(!editing.canUndo)
-      #expect(!editing.canToggleTimer)
-      let paywallCommands = ScoringCommandContext(store: store, isPresentingPaywall: true)
-      #expect(!paywallCommands.isEnabled)
-    }
+      @Test func macCommandsFollowCourtSidesAndDisableDuringEditing() {
+        var state = Self.state()
+        state.elapsedSeconds = 1
+        state.timerEndsAt = Date(timeIntervalSince1970: 1900)
+        state.canUndo = true
+        let store = Store(initialState: state) { ScoringFeature() }
+        let commands = ScoringCommandContext(store: store, isPresentingPaywall: false)
+        #expect(commands.canScore)
+        #expect(commands.canToggleTimer)
+        #expect(commands.canUndo)
+        #expect(commands.leftTitle.contains("Ravens"))
+        #expect(commands.rightTitle.contains("Swifts"))
+        state.swapSides = true
+        let swappedStore = Store(initialState: state) { ScoringFeature() }
+        let swapped = ScoringCommandContext(store: swappedStore, isPresentingPaywall: false)
+        #expect(swapped.leftTitle.contains("Swifts"))
+        #expect(swapped.rightTitle.contains("Ravens"))
+        state.timerEndsAt = nil
+        state.controlsPresentation = .hiddenForTimeInput
+        state.timeInput = .init(title: "Time", totalSeconds: 899, allowedSeconds: 1 ... 900)
+        let editingStore = Store(initialState: state) { ScoringFeature() }
+        let editing = ScoringCommandContext(store: editingStore, isPresentingPaywall: false)
+        #expect(!editing.canScore)
+        #expect(!editing.canUndo)
+        #expect(!editing.canToggleTimer)
+        let paywallCommands = ScoringCommandContext(store: store, isPresentingPaywall: true)
+        #expect(!paywallCommands.isEnabled)
+      }
     #endif
 
     private nonisolated static func game() -> Game {

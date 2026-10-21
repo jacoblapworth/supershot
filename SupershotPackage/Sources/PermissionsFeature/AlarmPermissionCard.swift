@@ -20,7 +20,7 @@ package struct AlarmPermissionCard: View {
   package var body: some View {
     Group {
       if proAccess != .unknown,
-        !(hidesWhenAuthorized && timerAlertsEnabled && store.authorization == .authorized)
+         !(hidesWhenAuthorized && timerAlertsEnabled && store.authorization == .authorized)
       {
         VStack(alignment: .leading, spacing: 12) {
           if timerAlertsEnabled, store.authorization == .authorized {
@@ -73,7 +73,8 @@ package struct AlarmPermissionCard: View {
                   openURL(
                     URL(
                       string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
-                    )!)
+                    )!
+                  )
                 #else
                   openURL(URL(string: UIApplication.openSettingsURLString)!)
                 #endif
@@ -97,7 +98,9 @@ package struct AlarmPermissionCard: View {
     }
     .task(id: proAccess) { store.send(.refresh(proAccess)) }
     .onChange(of: scenePhase) { _, phase in
-      if phase == .active { store.send(.refresh(proAccess)) }
+      if phase == .active {
+        store.send(.refresh(proAccess))
+      }
     }
   }
 

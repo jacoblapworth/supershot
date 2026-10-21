@@ -1,14 +1,16 @@
 import Foundation
 
 /// Presentational model for RevenueCat products
-nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
+package nonisolated struct PaywallProduct: Equatable, Identifiable, Sendable {
   package struct Period: Equatable, Sendable {
     package enum Unit: Equatable, Sendable { case day, week, month, year }
     package var value: Int
     package var unit: Unit
 
     package var description: String {
-      if value == 1 { return String(localized: "1 \(billingDescription)") }
+      if value == 1 {
+        return String(localized: "1 \(billingDescription)")
+      }
       return switch unit {
       case .day: String(localized: "\(value) days")
       case .week: String(localized: "\(value) weeks")
@@ -39,9 +41,9 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
 
     package var description: String {
       switch self {
-      case .freeTrial(let period):
+      case let .freeTrial(period):
         String(localized: "\(period.description) free")
-      case .discounted(let price, let period, let payments, let paidUpFront):
+      case let .discounted(price, period, payments, paidUpFront):
         if paidUpFront {
           String(localized: "\(price) for the first \(period.description)")
         } else {
@@ -61,15 +63,19 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
   package var introductoryOffer: IntroductoryOffer?
   package var localizedMonthlyEquivalent: String?
 
-  package var isAnnual: Bool { period == Period(value: 1, unit: .year) }
+  package var isAnnual: Bool {
+    period == Period(value: 1, unit: .year)
+  }
 
   package var priceDescription: String {
-    if let period { return String(localized: "\(localizedPrice) / \(period.billingDescription)") }
+    if let period {
+      return String(localized: "\(localizedPrice) / \(period.billingDescription)")
+    }
     return localizedPrice
   }
 
   package var purchaseButtonTitle: String {
-    if case .freeTrial(let period) = introductoryOffer {
+    if case let .freeTrial(period) = introductoryOffer {
       return String(localized: "Start \(period.description) free trial")
     }
     return String(localized: "Unlock Supershot Pro")
@@ -78,11 +84,12 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
   package var purchaseDetails: String {
     guard let period else { return String(localized: "One-time purchase. No subscription.") }
     let renewal = String(
-      localized: "Renews at \(localizedPrice) / \(period.billingDescription). Cancel anytime.")
+      localized: "Renews at \(localizedPrice) / \(period.billingDescription). Cancel anytime."
+    )
     if let introductoryOffer {
       return String(
         localized:
-          "\(introductoryOffer.description). Then \(localizedPrice) / \(period.billingDescription). Auto-renews. Cancel anytime."
+        "\(introductoryOffer.description). Then \(localizedPrice) / \(period.billingDescription). Auto-renews. Cancel anytime."
       )
     }
     return renewal
@@ -90,9 +97,9 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
 
   package func savings(comparedTo products: [Self]) -> Int? {
     guard isAnnual, let currencyCode,
-      let monthly = products.first(where: {
-        $0.period == Period(value: 1, unit: .month) && $0.currencyCode == currencyCode
-      }), monthly.price > 0, price > 0, price < monthly.price * 12
+          let monthly = products.first(where: {
+            $0.period == Period(value: 1, unit: .month) && $0.currencyCode == currencyCode
+          }), monthly.price > 0, price > 0, price < monthly.price * 12
     else { return nil }
     let percentage = NSDecimalNumber(decimal: (1 - price / (monthly.price * 12)) * 100).doubleValue
     guard percentage.isFinite else { return nil }
@@ -102,10 +109,10 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
 
   package func monthlyEquivalent(comparedTo products: [Self]) -> String? {
     guard isAnnual, let currencyCode,
-      products.contains(where: {
-        $0.period == Period(value: 1, unit: .month) && $0.currencyCode == currencyCode
-          && $0.price > 0
-      })
+          products.contains(where: {
+            $0.period == Period(value: 1, unit: .month) && $0.currencyCode == currencyCode
+              && $0.price > 0
+          })
     else { return nil }
     return localizedMonthlyEquivalent
   }
@@ -127,19 +134,19 @@ nonisolated package struct PaywallProduct: Equatable, Identifiable, Sendable {
   }
 }
 
-nonisolated package enum PaywallPurchaseOutcome: Equatable, Sendable {
+package nonisolated enum PaywallPurchaseOutcome: Equatable, Sendable {
   case completed(SubscriptionEntitlement)
   case cancelled
   case pending
 }
 
-nonisolated package enum PaywallClientError: Error {
+package nonisolated enum PaywallClientError: Error {
   case packageUnavailable
 }
 
-extension PaywallProduct {
-  package enum Preview {
-    static package let lifetime = PaywallProduct(
+package extension PaywallProduct {
+  enum Preview {
+    package static let lifetime = PaywallProduct(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
       title: "Lifetime",
       price: 49.99,
@@ -151,7 +158,7 @@ extension PaywallProduct {
       localizedMonthlyEquivalent: nil
     )
 
-    static package let yearly = PaywallProduct(
+    package static let yearly = PaywallProduct(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
       title: "Yearly",
       price: 19.99,
@@ -163,7 +170,7 @@ extension PaywallProduct {
       localizedMonthlyEquivalent: "$1.67"
     )
 
-    static package let monthly = PaywallProduct(
+    package static let monthly = PaywallProduct(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
       title: "Monthly",
       price: 2.99,

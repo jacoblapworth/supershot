@@ -33,15 +33,13 @@ package struct GameDetailFeature {
     Reduce { _, action in
       switch action {
       case .deleteButtonTapped:
-        return .send(.delegate(.deleteGameButtonTapped))
+        .send(.delegate(.deleteGameButtonTapped))
 
       case .delegate, .viewAppeared:
-        return .none
+        .none
       }
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

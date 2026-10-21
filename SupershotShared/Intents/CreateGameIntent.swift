@@ -1,18 +1,23 @@
-import GameCore
-import AppSettings
 import AppIntents
+import AppSettings
 import Dependencies
 import Foundation
-import SQLiteData
+import GameCore
 import Sharing
+import SQLiteData
 
 struct CreateGameIntent: AppIntent {
   static let title: LocalizedStringResource = "Create Game"
   static let description = IntentDescription(
     "Create a game with four quarters. The timer stays paused until you start it in Supershot."
   )
-  static var supportedModes: IntentModes { .background }
-  static var allowedExecutionTargets: IntentExecutionTargets { .main }
+  static var supportedModes: IntentModes {
+    .background
+  }
+
+  static var allowedExecutionTargets: IntentExecutionTargets {
+    .main
+  }
 
   @Parameter(title: "Team A") var teamA: TeamEntity
   @Parameter(title: "Team B") var teamB: TeamEntity
@@ -40,8 +45,8 @@ struct CreateGameIntent: AppIntent {
     guard firstCentrePass.id == teamA.id || firstCentrePass.id == teamB.id else {
       throw CreateGameError.invalidCentrePass
     }
-    guard (1...5999).contains(quarterDurationSeconds),
-      (0...5999).contains(breakDurationSeconds)
+    guard (1 ... 5999).contains(quarterDurationSeconds),
+          (0 ... 5999).contains(breakDurationSeconds)
     else { throw CreateGameError.invalidDuration }
 
     let breakStartPolicy = defaultBreakStartPolicy
@@ -50,7 +55,7 @@ struct CreateGameIntent: AppIntent {
     let teamAID = teamA.id
     let teamBID = teamB.id
     let centrePassID = firstCentrePass.id
-    let periods = (0..<4).map { position in
+    let periods = (0 ..< 4).map { position in
       GamePeriod(
         id: uuid(), gameID: gameID, position: position,
         durationSeconds: quarterDurationSeconds,
@@ -61,7 +66,7 @@ struct CreateGameIntent: AppIntent {
       let teamIDs = [teamAID, teamBID]
       let teams = try Team.where { $0.id.in(teamIDs) }.fetchAll(db)
       guard let teamA = teams.first(where: { $0.id == teamAID }),
-        let teamB = teams.first(where: { $0.id == teamBID })
+            let teamB = teams.first(where: { $0.id == teamBID })
       else { throw CreateGameError.teamUnavailable }
       let game = Game(
         id: gameID, startedAt: startedAt, teamAID: teamAID,

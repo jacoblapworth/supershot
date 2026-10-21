@@ -61,14 +61,14 @@ private struct TeamScore: View {
   var body: some View {
     VStack(alignment: alignment, spacing: 0) {
       HStack {
-        if hasCentrePass && alignment == .leading {
+        if hasCentrePass, alignment == .leading {
           CentrePassIndicator(direction: .leading)
         }
         Text(name)
           .font(.title3)
           .lineLimit(1)
           .truncationMode(.middle)
-        if hasCentrePass && alignment == .trailing {
+        if hasCentrePass, alignment == .trailing {
           CentrePassIndicator(direction: .trailing)
         }
       }
@@ -81,7 +81,6 @@ private struct TeamScore: View {
     .padding()
     .frame(maxWidth: .infinity, alignment: frameAlignment)
     .opacity(isEnabled ? 1 : 0.65)
-
   }
 }
 

@@ -1,7 +1,7 @@
 import SharedModels
 #if !WIDGET_EXTENSION
-import GameCore
-import GameServices
+  import GameCore
+  import GameServices
 #endif
 //
 //  ScoreGoalIntent.swift
@@ -10,71 +10,82 @@ import GameServices
 //  Created by J on 16/09/2026.
 //
 
-
 #if os(iOS)
-import AlarmKit
-import AppIntents
-import Foundation
+  import AlarmKit
+  import AppIntents
+  import Foundation
 
-#if !WIDGET_EXTENSION
-import Dependencies
-#endif
+  #if !WIDGET_EXTENSION
+    import Dependencies
+  #endif
 
-struct ScoreGoalIntent: LiveActivityIntent {
-  static var allowedExecutionTargets: IntentExecutionTargets { .main }
-  static var isDiscoverable: Bool { false }
-  static var supportedModes: IntentModes { .background }
-  static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
-  static var title: LocalizedStringResource { "Score a goal" }
-
-  @Parameter(title: "Game") var gameID: String
-  @Parameter(title: "Team") var teamID: String
-  @Parameter(title: "Phase") var expectedPhaseIndex: Int
-  @Parameter(title: "Completed Quarter") var completedPeriodNumber: Int?
-
-  init() {}
-
-  init(gameID: UUID, teamID: UUID, expectedPhaseIndex: Int, completedPeriodNumber: Int? = nil) {
-    self.gameID = gameID.uuidString
-    self.teamID = teamID.uuidString
-    self.expectedPhaseIndex = expectedPhaseIndex
-    self.completedPeriodNumber = completedPeriodNumber
-  }
-
-  func perform() async throws -> some IntentResult {
-    #if !WIDGET_EXTENSION
-    guard let gameID = UUID(uuidString: gameID),
-      let teamID = UUID(uuidString: teamID)
-    else { return .result() }
-    @Dependencies.Dependency(\.gameScoring) var gameScoring
-    @Dependencies.Dependency(\.date.now) var now
-    @Dependencies.Dependency(\.uuid) var uuid
-    @Dependencies.Dependency(\.gameTimer) var gameTimer
-    let goalID = uuid()
-    let createdAt = now
-    let phaseIndex = expectedPhaseIndex
-    let scoringContext = completedPeriodNumber.map { GameScoringContext.completedPeriod(number: $0) }
-    do {
-      _ = try await gameScoring.recordGoal(RecordGoalCommand(
-        gameID: gameID, teamID: teamID, expectedPhaseIndex: phaseIndex,
-        goalID: goalID, createdAt: createdAt, scoringContext: scoringContext, source: .liveActivity))
-    } catch {
-      _ = try? await gameTimer.reconcile(gameID)
-      await gameTimer.refreshActivity(gameID)
-      throw GoalScoringIntentError.unavailable
+  struct ScoreGoalIntent: LiveActivityIntent {
+    static var allowedExecutionTargets: IntentExecutionTargets {
+      .main
     }
-    await gameTimer.refreshActivity(gameID)
-    #endif
-    return .result()
-  }
-}
 
-private enum GoalScoringIntentError: Error, CustomLocalizedStringResourceConvertible {
-  case unavailable
-  
-  var localizedStringResource: LocalizedStringResource {
-    "The goal could not be recorded. Open the game to check the score and timer."
+    static var isDiscoverable: Bool {
+      false
+    }
+
+    static var supportedModes: IntentModes {
+      .background
+    }
+
+    static let authenticationPolicy: IntentAuthenticationPolicy = .alwaysAllowed
+    static var title: LocalizedStringResource {
+      "Score a goal"
+    }
+
+    @Parameter(title: "Game") var gameID: String
+    @Parameter(title: "Team") var teamID: String
+    @Parameter(title: "Phase") var expectedPhaseIndex: Int
+    @Parameter(title: "Completed Quarter") var completedPeriodNumber: Int?
+
+    init() {}
+
+    init(gameID: UUID, teamID: UUID, expectedPhaseIndex: Int, completedPeriodNumber: Int? = nil) {
+      self.gameID = gameID.uuidString
+      self.teamID = teamID.uuidString
+      self.expectedPhaseIndex = expectedPhaseIndex
+      self.completedPeriodNumber = completedPeriodNumber
+    }
+
+    func perform() async throws -> some IntentResult {
+      #if !WIDGET_EXTENSION
+        guard let gameID = UUID(uuidString: gameID),
+              let teamID = UUID(uuidString: teamID)
+        else { return .result() }
+        @Dependencies.Dependency(\.gameScoring) var gameScoring
+        @Dependencies.Dependency(\.date.now) var now
+        @Dependencies.Dependency(\.uuid) var uuid
+        @Dependencies.Dependency(\.gameTimer) var gameTimer
+        let goalID = uuid()
+        let createdAt = now
+        let phaseIndex = expectedPhaseIndex
+        let scoringContext = completedPeriodNumber.map { GameScoringContext.completedPeriod(number: $0) }
+        do {
+          _ = try await gameScoring.recordGoal(RecordGoalCommand(
+            gameID: gameID, teamID: teamID, expectedPhaseIndex: phaseIndex,
+            goalID: goalID, createdAt: createdAt, scoringContext: scoringContext, source: .liveActivity
+          ))
+        } catch {
+          _ = try? await gameTimer.reconcile(gameID)
+          await gameTimer.refreshActivity(gameID)
+          throw GoalScoringIntentError.unavailable
+        }
+        await gameTimer.refreshActivity(gameID)
+      #endif
+      return .result()
+    }
   }
-}
+
+  private enum GoalScoringIntentError: Error, CustomLocalizedStringResourceConvertible {
+    case unavailable
+
+    var localizedStringResource: LocalizedStringResource {
+      "The goal could not be recorded. Open the game to check the score and timer."
+    }
+  }
 
 #endif

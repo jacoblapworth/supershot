@@ -5,7 +5,7 @@ import FeatureFlagsClient
 import SubscriptionClient
 import Testing
 
-@Suite struct FeatureFlagsClientTests {
+struct FeatureFlagsClientTests {
   @Test(arguments: ProFeature.allCases, [SubscriptionEntitlement.free, .pro, .unknown])
   func defaultPolicy(feature: ProFeature, access: SubscriptionEntitlement) {
     expectNoDifference(FeatureFlagsClient.live.isEnabled(feature, access), access == .pro)

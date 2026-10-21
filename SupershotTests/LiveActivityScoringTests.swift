@@ -1,167 +1,171 @@
 #if os(iOS)
-import SharedModels
-import WidgetSupport
-import GameCore
-import Database
-import GameServices
-import AlarmClient
-import AppSettings
-import Dependencies
-import DependenciesTestSupport
-import Foundation
-import SQLiteData
-import Testing
+  import AlarmClient
+  import AppSettings
+  import Database
+  import Dependencies
+  import DependenciesTestSupport
+  import Foundation
+  import GameCore
+  import GameServices
+  import SharedModels
+  import SQLiteData
+  @testable import Supershot
+  import Testing
+  import WidgetSupport
 
-@testable import Supershot
-
-extension SupershotTestSuite {
-  @MainActor
-  @Suite(.dependencies {
-    $0.uuid = .incrementing
-    $0.date.now = Date(timeIntervalSince1970: 1_000)
-    $0.gameTimer.refreshActivity = { _ in }
-  })
-  struct LiveActivityScoringTests {
-    @Test
-    func goalIntentRecordsBothTeamsAndAlternatesCentrePass() async throws {
-      @Dependency(\.defaultDatabase) var database
-      try seedGame()
-      _ = try await ScoreGoalIntent(
-        gameID: UUID(3), teamID: UUID(2), expectedPhaseIndex: 0
-      ).perform()
-      let first = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      #expect(first.teamBScore == 1)
-      #expect(first.game.centrePassTeamID == UUID(2))
-      #expect(first.goals.first?.elapsedSeconds == 100)
-      #expect(first.goals.first?.centrePassTeamID == UUID(1))
-      #expect(first.goals.first?.gamePeriodID == testGamePeriodID(gameID: UUID(3), position: 0))
-
-      _ = try await ScoreGoalIntent(
-        gameID: UUID(3), teamID: UUID(1), expectedPhaseIndex: 0
-      ).perform()
-      let second = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      #expect(second.teamAScore == 1)
-      #expect(second.teamBScore == 1)
-      #expect(second.game.centrePassTeamID == UUID(1))
-    }
-
-    @Test(arguments: ["paused", "expired", "break", "finished", "confirmation", "phase", "team"])
-    func rejectsUnavailableGoals(reason: String) async throws {
-      @Dependency(\.defaultDatabase) var database
-      try seedGame(reason: reason)
-      await #expect(throws: (any Error).self) {
-        try await ScoreGoalIntent(
-          gameID: UUID(3), teamID: reason == "team" ? UUID(99) : UUID(1),
-          expectedPhaseIndex: reason == "phase" ? 2 : reason == "break" ? 1 : 0
+  extension SupershotTestSuite {
+    @MainActor
+    @Suite(.dependencies {
+      $0.uuid = .incrementing
+      $0.date.now = Date(timeIntervalSince1970: 1000)
+      $0.gameTimer.refreshActivity = { _ in }
+    })
+    struct LiveActivityScoringTests {
+      @Test
+      func goalIntentRecordsBothTeamsAndAlternatesCentrePass() async throws {
+        @Dependency(\.defaultDatabase) var database
+        try seedGame()
+        _ = try await ScoreGoalIntent(
+          gameID: UUID(3), teamID: UUID(2), expectedPhaseIndex: 0
         ).perform()
+        let first = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect(first.teamBScore == 1)
+        #expect(first.game.centrePassTeamID == UUID(2))
+        #expect(first.goals.first?.elapsedSeconds == 100)
+        #expect(first.goals.first?.centrePassTeamID == UUID(1))
+        #expect(first.goals.first?.gamePeriodID == testGamePeriodID(gameID: UUID(3), position: 0))
+
+        _ = try await ScoreGoalIntent(
+          gameID: UUID(3), teamID: UUID(1), expectedPhaseIndex: 0
+        ).perform()
+        let second = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect(second.teamAScore == 1)
+        #expect(second.teamBScore == 1)
+        #expect(second.game.centrePassTeamID == UUID(1))
       }
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      #expect(snapshot.goals.isEmpty)
-      #expect(snapshot.game.centrePassTeamID == UUID(1))
-    }
 
-    @Test(arguments: [false, true], [(false, false), (false, true), (true, false), (true, true)])
-    func timerControlAvailabilityMatchesResumeIntent(isBreak: Bool, confirmationAndCompletion: (Bool, Bool)) async throws {
-      let (pending, complete) = confirmationAndCompletion
-      @Dependency(\.defaultDatabase) var database
-      try seedGame(reason: isBreak ? "break" : "paused")
-      let duration = isBreak ? 120 : 900
-      let elapsed = complete ? duration : 0
-      try await database.write { db in
-        try Game.find(UUID(3)).update {
-          $0.breakStartPolicy = #bind(BreakStartPolicy.manual)
-          $0.elapsedSeconds = elapsed
-          $0.isAwaitingCentrePassConfirmation = pending
-          $0.timerEndsAt = #bind(nil as Date?)
-        }.execute(db)
-      }
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      let content = GameActivityAttributes.ContentState(
-        centrePassTeamID: UUID(1),
-        elapsedSeconds: elapsed, phaseIndex: snapshot.game.currentPhaseIndex,
-        phase: snapshot.currentPhase, teamAScore: 0, teamBScore: 0,
-        isAwaitingCentrePassConfirmation: pending)
-      let canResume = !complete && (isBreak || !pending)
-      #expect(content.canControlTimer == canResume)
-      _ = try await ResumeGameTimerIntent(
-        gameID: UUID(3), expectedPhaseIndex: snapshot.game.currentPhaseIndex
-      ).perform()
-      let stored = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      #expect((stored.game.timerEndsAt != nil) == canResume)
-      #expect(stored.game.isAwaitingCentrePassConfirmation == pending)
-    }
-
-    @Test(
-      arguments: [(false, false), (false, true), (true, false), (true, true)],
-      [(false, false), (false, true), (true, false), (true, true)])
-    func scoringControlsRequireRunningPlayingTime(
-      phaseAndTimer: (Bool, Bool), confirmationAndCompletion: (Bool, Bool)
-    ) async throws {
-      let (isBreak, running) = phaseAndTimer
-      let (pending, complete) = confirmationAndCompletion
-      try seedGame(reason: isBreak ? "break" : "running")
-      @Dependency(\.defaultDatabase) var database
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
-      let duration = isBreak ? 120 : 900
-      let content = GameActivityAttributes.ContentState(
-        centrePassTeamID: UUID(1), elapsedSeconds: complete ? duration : 0,
-        phaseIndex: snapshot.game.currentPhaseIndex, phase: snapshot.currentPhase,
-        teamAScore: 0, teamBScore: 0,
-        timerEndsAt: running ? Date(timeIntervalSince1970: complete ? 1_000 : 1_100) : nil,
-        isAwaitingCentrePassConfirmation: pending,
-        lateScoringPeriodNumber: isBreak || complete ? 1 : nil)
-      #expect(content.canScoreGoal == (!isBreak && running && !pending && !complete))
-    }
-
-    @Test
-    func rejectedIntentRefreshesActivityEvenIfReconciliationFails() async throws {
-      try seedGame(reason: "paused")
-      let refreshes = ActivityRefreshes()
-      await withDependencies {
-        $0.gameTimer.reconcile = { _ in throw GameScoringError.unavailable }
-        $0.gameTimer.refreshActivity = { await refreshes.record($0) }
-      } operation: {
+      @Test(arguments: ["paused", "expired", "break", "finished", "confirmation", "phase", "team"])
+      func rejectsUnavailableGoals(reason: String) async throws {
+        @Dependency(\.defaultDatabase) var database
+        try seedGame(reason: reason)
         await #expect(throws: (any Error).self) {
           try await ScoreGoalIntent(
-            gameID: UUID(3), teamID: UUID(1), expectedPhaseIndex: 0
+            gameID: UUID(3), teamID: reason == "team" ? UUID(99) : UUID(1),
+            expectedPhaseIndex: reason == "phase" ? 2 : reason == "break" ? 1 : 0
           ).perform()
         }
+        let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect(snapshot.goals.isEmpty)
+        #expect(snapshot.game.centrePassTeamID == UUID(1))
       }
-      #expect(await refreshes.gameIDs == [UUID(3)])
-    }
 
-    private actor ActivityRefreshes {
-      var gameIDs: [UUID] = []
-      func record(_ gameID: UUID) { gameIDs.append(gameID) }
-    }
+      @Test(arguments: [false, true], [(false, false), (false, true), (true, false), (true, true)])
+      func timerControlAvailabilityMatchesResumeIntent(isBreak: Bool, confirmationAndCompletion: (Bool, Bool)) async throws {
+        let (pending, complete) = confirmationAndCompletion
+        @Dependency(\.defaultDatabase) var database
+        try seedGame(reason: isBreak ? "break" : "paused")
+        let duration = isBreak ? 120 : 900
+        let elapsed = complete ? duration : 0
+        try await database.write { db in
+          try Game.find(UUID(3)).update {
+            $0.breakStartPolicy = #bind(BreakStartPolicy.manual)
+            $0.elapsedSeconds = elapsed
+            $0.isAwaitingCentrePassConfirmation = pending
+            $0.timerEndsAt = #bind(nil as Date?)
+          }.execute(db)
+        }
+        let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        let content = GameActivityAttributes.ContentState(
+          centrePassTeamID: UUID(1),
+          elapsedSeconds: elapsed, phaseIndex: snapshot.game.currentPhaseIndex,
+          phase: snapshot.currentPhase, teamAScore: 0, teamBScore: 0,
+          isAwaitingCentrePassConfirmation: pending
+        )
+        let canResume = !complete && (isBreak || !pending)
+        #expect(content.canControlTimer == canResume)
+        _ = try await ResumeGameTimerIntent(
+          gameID: UUID(3), expectedPhaseIndex: snapshot.game.currentPhaseIndex
+        ).perform()
+        let stored = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        #expect((stored.game.timerEndsAt != nil) == canResume)
+        #expect(stored.game.isAwaitingCentrePassConfirmation == pending)
+      }
 
-    private func seedGame(reason: String = "running") throws {
-      @Dependency(\.defaultDatabase) var database
-      try clearDatabase(database)
-      try database.write { db in
-        try Team.insert {
-          Team(id: UUID(1), name: "Ravens")
-          Team(id: UUID(2), name: "Swifts")
-        }.execute(db)
-        try Game.insert {
-          Game(
-            id: UUID(3), startedAt: Date(timeIntervalSince1970: 900),
-            endedAt: reason == "finished" ? Date(timeIntervalSince1970: 999) : nil,
-            teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
-            isAwaitingCentrePassConfirmation: reason == "confirmation",
-            currentPhaseIndex: reason == "break" ? 1 : 0,
-            elapsedSeconds: 0,
-            timerEndsAt: reason == "paused" ? nil : Date(
-              timeIntervalSince1970: reason == "expired" ? 1_000 : 1_800
+      @Test(
+        arguments: [(false, false), (false, true), (true, false), (true, true)],
+        [(false, false), (false, true), (true, false), (true, true)]
+      )
+      func scoringControlsRequireRunningPlayingTime(
+        phaseAndTimer: (Bool, Bool), confirmationAndCompletion: (Bool, Bool)
+      ) async throws {
+        let (isBreak, running) = phaseAndTimer
+        let (pending, complete) = confirmationAndCompletion
+        try seedGame(reason: isBreak ? "break" : "running")
+        @Dependency(\.defaultDatabase) var database
+        let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        let duration = isBreak ? 120 : 900
+        let content = GameActivityAttributes.ContentState(
+          centrePassTeamID: UUID(1), elapsedSeconds: complete ? duration : 0,
+          phaseIndex: snapshot.game.currentPhaseIndex, phase: snapshot.currentPhase,
+          teamAScore: 0, teamBScore: 0,
+          timerEndsAt: running ? Date(timeIntervalSince1970: complete ? 1000 : 1100) : nil,
+          isAwaitingCentrePassConfirmation: pending,
+          lateScoringPeriodNumber: isBreak || complete ? 1 : nil
+        )
+        #expect(content.canScoreGoal == (!isBreak && running && !pending && !complete))
+      }
+
+      @Test
+      func rejectedIntentRefreshesActivityEvenIfReconciliationFails() async throws {
+        try seedGame(reason: "paused")
+        let refreshes = ActivityRefreshes()
+        await withDependencies {
+          $0.gameTimer.reconcile = { _ in throw GameScoringError.unavailable }
+          $0.gameTimer.refreshActivity = { await refreshes.record($0) }
+        } operation: {
+          await #expect(throws: (any Error).self) {
+            try await ScoreGoalIntent(
+              gameID: UUID(3), teamID: UUID(1), expectedPhaseIndex: 0
+            ).perform()
+          }
+        }
+        #expect(await refreshes.gameIDs == [UUID(3)])
+      }
+
+      private actor ActivityRefreshes {
+        var gameIDs: [UUID] = []
+        func record(_ gameID: UUID) {
+          gameIDs.append(gameID)
+        }
+      }
+
+      private func seedGame(reason: String = "running") throws {
+        @Dependency(\.defaultDatabase) var database
+        try clearDatabase(database)
+        try database.write { db in
+          try Team.insert {
+            Team(id: UUID(1), name: "Ravens")
+            Team(id: UUID(2), name: "Swifts")
+          }.execute(db)
+          try Game.insert {
+            Game(
+              id: UUID(3), startedAt: Date(timeIntervalSince1970: 900),
+              endedAt: reason == "finished" ? Date(timeIntervalSince1970: 999) : nil,
+              teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
+              isAwaitingCentrePassConfirmation: reason == "confirmation",
+              currentPhaseIndex: reason == "break" ? 1 : 0,
+              elapsedSeconds: 0,
+              timerEndsAt: reason == "paused" ? nil : Date(
+                timeIntervalSince1970: reason == "expired" ? 1000 : 1800
+              )
             )
-          )
-        }.execute(db)
-        try GamePeriod.insert {
-          testGamePeriods(gameID: UUID(3), breakDurationSeconds: 120)
-        }.execute(db)
+          }.execute(db)
+          try GamePeriod.insert {
+            testGamePeriods(gameID: UUID(3), breakDurationSeconds: 120)
+          }.execute(db)
+        }
       }
     }
   }
-}
 
 #endif

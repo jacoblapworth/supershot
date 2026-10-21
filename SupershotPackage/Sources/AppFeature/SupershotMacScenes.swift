@@ -1,15 +1,15 @@
 #if os(macOS)
+  import AlarmClient
   import AppKit
+  import ComposableArchitecture
   import GamesFeature
   import NewGameFeature
-  import PermissionsFeature
-  import TeamsFeature
-  import AlarmClient
-  import ComposableArchitecture
   import PaywallFeature
+  import PermissionsFeature
   import ScoringFeature
   import SettingsFeature
   import SwiftUI
+  import TeamsFeature
 
   /// Both scenes use the same retained feature store and subscription observation.
   public struct SupershotMacScenes: Scene {
@@ -48,12 +48,18 @@
               ? store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
               : nil
           },
-          set: { if $0 == nil { store.send(.destination(.dismiss)) } }
+          set: {
+            if $0 == nil {
+              store.send(.destination(.dismiss))
+            }
+          }
         )
       ) { PaywallView(store: $0) }
       .task { store.send(.task) }
       .onChange(of: scenePhase) { _, phase in
-        if phase == .active { store.send(.sceneBecameActive) }
+        if phase == .active {
+          store.send(.sceneBecameActive)
+        }
       }
     }
   }
@@ -114,7 +120,6 @@
             .disabled(!scoring.canUndo)
         }
       }
-
     }
   }
 
@@ -126,7 +131,11 @@
         List(
           selection: Binding<AppFeature.Tab?>(
             get: { store.selectedTab },
-            set: { if let tab = $0 { store.send(.selectedTabChanged(tab)) } }
+            set: {
+              if let tab = $0 {
+                store.send(.selectedTabChanged(tab))
+              }
+            }
           )
         ) {
           Label("Games", systemImage: "sportscourt").tag(AppFeature.Tab.games)
@@ -141,19 +150,21 @@
           TeamsListView(
             proAccess: store.proAccess,
             store: store.scope(state: \.teams, action: \.teams),
-            isPresentingPaywall: store.destination?.proPaywall != nil)
+            isPresentingPaywall: store.destination?.proPaywall != nil
+          )
         case .games, .settings:
           GamesHomeView(
             proAccess: store.proAccess,
             store: store.scope(state: \.games, action: \.games),
-            isPresentingPaywall: store.destination?.proPaywall != nil)
+            isPresentingPaywall: store.destination?.proPaywall != nil
+          )
         }
       }
     }
   }
 
-  extension AppFeature.State {
-    package var macHasBlockingPresentation: Bool {
+  package extension AppFeature.State {
+    var macHasBlockingPresentation: Bool {
       if destination != nil || games.alert != nil || teams.destination != nil
         || settings.timeInput != nil || games.pendingGameResume != nil
         || teams.pendingGameResume != nil
@@ -162,29 +173,35 @@
       }
       for path in games.path {
         switch path {
-        case .scoring(let state):
+        case let .scoring(state):
           if state.timeInput != nil || state.alert != nil || state.controlsPresentation != .shown
             || state.isTimerOperationPending || state.isTransitioningPeriod
           {
             return true
           }
-        case .setup(let state):
-          if state.destination != nil || state.isSaving || state.alarms.isRequesting { return true }
+        case let .setup(state):
+          if state.destination != nil || state.isSaving || state.alarms.isRequesting {
+            return true
+          }
         case .gameDetail: break
         }
       }
       for path in teams.path {
         switch path {
-        case .scoring(let state):
+        case let .scoring(state):
           if state.timeInput != nil || state.alert != nil || state.controlsPresentation != .shown
             || state.isTimerOperationPending || state.isTransitioningPeriod
           {
             return true
           }
-        case .setup(let state):
-          if state.destination != nil || state.isSaving || state.alarms.isRequesting { return true }
-        case .teamDetail(let state):
-          if state.editor != nil { return true }
+        case let .setup(state):
+          if state.destination != nil || state.isSaving || state.alarms.isRequesting {
+            return true
+          }
+        case let .teamDetail(state):
+          if state.editor != nil {
+            return true
+          }
         case .gameDetail: break
         }
       }

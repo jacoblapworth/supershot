@@ -9,11 +9,13 @@ struct GameStatisticTests {
     let a = TeamGameStatistics(
       centrePass: CentrePassStatistics(
         conversions: 1, inferredTurnovers: 1, opportunities: 2
-      ))
+      )
+    )
     let b = TeamGameStatistics(
       centrePass: CentrePassStatistics(
         conversions: 3, inferredTurnovers: 3, opportunities: 6
-      ))
+      )
+    )
     expectNoDifference(GameStatistic.centrePassConversion.teamAFraction(teamA: a, teamB: b), 0.5)
     expectNoDifference(GameStatistic.centrePassConversion.text(a), "1/2 · 50%")
   }
@@ -31,7 +33,8 @@ struct GameStatisticTests {
     expectNoDifference(GameStatistic.averageTimeToGoal.accessibleText(.init()), "unavailable")
     expectNoDifference(
       GameStatistic.averageTimeToGoal.accessibleText(.init(averageTimeToGoalSeconds: 90)),
-      "1 minute, 30 seconds")
+      "1 minute, 30 seconds"
+    )
   }
 
   @Test

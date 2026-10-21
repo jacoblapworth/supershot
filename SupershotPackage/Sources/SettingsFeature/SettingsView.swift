@@ -161,18 +161,17 @@ private struct SubscriptionSettingsSection: View {
           \.databaseSharePresentationChanged
         )
       ) {
-        if case .ready(let url) = store.databaseExport {
+        if case let .ready(url) = store.databaseExport {
           DatabaseShareSheet(url: url) {
             store.send(.databaseShareCompleted($0))
           }
           #if os(macOS)
-            .frame(width: 320, height: 120)
+          .frame(width: 320, height: 120)
           #endif
         }
       }
       .alert($store.scope(state: \.alert, action: \.alert))
     }
-
   }
 #endif
 
@@ -186,9 +185,9 @@ private struct FeedbackSettingsSection: View {
         Label("Goal sounds", systemImage: "speaker.wave.2")
       }
       #if os(iOS)
-      Toggle(isOn: Binding($hapticsEnabled)) {
-        Label("Goal haptics", systemImage: "iphone.radiowaves.left.and.right")
-      }
+        Toggle(isOn: Binding($hapticsEnabled)) {
+          Label("Goal haptics", systemImage: "iphone.radiowaves.left.and.right")
+        }
       #endif
     } header: {
       Text("Feedback")
@@ -219,6 +218,7 @@ private struct GameDefaultsSettingsSection: View {
       )
     }
   }
+
   private func durationRow(_ title: String, seconds: Int, field: SettingsFeature.DurationDefault)
     -> some View
   {

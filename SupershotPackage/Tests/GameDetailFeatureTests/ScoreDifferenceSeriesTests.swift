@@ -6,12 +6,13 @@ import GameAnalysis
 import GameCore
 import Testing
 
-@Suite struct ScoreDifferenceSeriesTests {
+struct ScoreDifferenceSeriesTests {
   @Test func weightedGoalsAndLeadChanges() {
     let series = ScoreDifferenceSeries(
       analysis: analysis(events: [
         (1, 10, 2, 0), (1, 20, 2, 1), (1, 30, 2, 3), (1, 40, 3, 3),
-      ]))
+      ])
+    )
     expectNoDifference(series.points.map(\.difference), [0, 2, 1, -1, 0])
     expectNoDifference(series.points.map(\.elapsedSeconds), [0, 10, 20, 30, 40])
     expectNoDifference(series.extent, 2)
@@ -21,7 +22,8 @@ import Testing
     let series = ScoreDifferenceSeries(
       analysis: analysis(events: [
         (1, 10, 2, 0), (1, 10, 2, 1), (1, 10, 2, 3), (1, 10, 3, 3),
-      ]))
+      ])
+    )
     expectNoDifference(series.moments.map(\.difference), [2, 1, -1, 0])
     expectNoDifference(Set(series.moments.map(\.id)).count, 4)
     expectNoDifference(series.nearestMoment(to: 10)?.difference, 0)
@@ -41,12 +43,14 @@ import Testing
     expectNoDifference(quarter.periodEndOffsets, [])
     expectNoDifference(
       ScoreDifferenceSeries(analysis: value).points.map(\.difference),
-      [0, 2, 1, -1, 0, -1])
+      [0, 2, 1, -1, 0, -1]
+    )
   }
 
   @Test func emptyQuarterDoesNotShowGoalsFromOtherQuarters() {
     let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [(1, 10, 2, 0)]), breakdown: .period(2))
+      analysis: analysis(events: [(1, 10, 2, 0)]), breakdown: .period(2)
+    )
     #expect(series.moments.isEmpty)
     expectNoDifference(series.points.map(\.difference), [0])
     expectNoDifference(series.duration, 90)
@@ -55,7 +59,8 @@ import Testing
 
   @Test func winnerIsPositiveEvenWhenTheOtherTeamLedEarlier() {
     let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [(1, 10, 2, 0), (1, 20, 2, 3)]))
+      analysis: analysis(events: [(1, 10, 2, 0), (1, 20, 2, 3)])
+    )
     #expect(!series.positiveTeamIsTeamA)
     expectNoDifference(series.points.map { series.plottedDifference(for: $0) }, [0, -2, 1])
     // Keep actual scores and team-relative margins available for inspection.
@@ -127,8 +132,9 @@ import Testing
   @Test(arguments: [true, false]) func oneSidedScaleIncludesBothSigns(teamA: Bool) {
     let series = ScoreDifferenceSeries(
       analysis: analysis(events: [
-        (1, 10, teamA ? 4 : 0, teamA ? 0 : 4)
-      ]))
+        (1, 10, teamA ? 4 : 0, teamA ? 0 : 4),
+      ])
+    )
     expectNoDifference(series.extent, 4)
     expectNoDifference(series.moments.last?.difference, teamA ? 4 : -4)
   }
@@ -150,7 +156,8 @@ import Testing
     let periods = [
       GamePeriod(
         id: UUID(1), gameID: gameID, position: 0, durationSeconds: 60,
-        breakAfterDurationSeconds: 240),
+        breakAfterDurationSeconds: 240
+      ),
       GamePeriod(id: UUID(2), gameID: gameID, position: 1, durationSeconds: 90),
     ]
     let goals = events.enumerated().map { index, event in
@@ -172,7 +179,8 @@ import Testing
             goals: goals.filter { $0.period == period.number }.reversed(),
             period: period.number, teamAQuarterScore: 0, teamBQuarterScore: 0
           )
-        }),
+        }
+      ),
       periods: periods
     )
   }

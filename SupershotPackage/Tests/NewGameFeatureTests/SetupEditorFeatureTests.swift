@@ -1,13 +1,8 @@
-import ComposableArchitecture
-import Foundation
-import SQLiteData
-import SwiftUI
-import Testing
-
-import TestSupport
 @testable import AlarmClient
 @testable import AppSettings
+import ComposableArchitecture
 @testable import Database
+import Foundation
 @testable import GameAnalysis
 @testable import GameCore
 @testable import GameServices
@@ -18,14 +13,18 @@ import TestSupport
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
+import SQLiteData
 @testable import Styleguide
 @testable import SubscriptionClient
+import SwiftUI
 @testable import TeamEditingFeature
+import Testing
+import TestSupport
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite struct SetupEditorFeatureTests {
+  struct SetupEditorFeatureTests {
     @Test func selectedTeamOpensConfigurationAndPreservesCentrePass() async {
       var state = NewGameFeature.State.previewReady
       state.firstCentrePass = .teamB
@@ -68,16 +67,17 @@ extension SupershotTestSuite {
       await store.send(.editTimingButtonTapped) {
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: $0.timing))
       }
-      await store.send(.destination(.presented(.timingEditor(.editDurationButtonTapped(.quarter)))))
-      {
+      await store.send(.destination(.presented(.timingEditor(.editDurationButtonTapped(.quarter))))) {
         var editor = SetupTimingFeature.State(timing: $0.timing)
         editor.editedDuration = .quarter
         editor.timeInput = .init(
-          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1...5999)
+          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999
+        )
         $0.destination = .timingEditor(editor)
       }
       await store.send(
-        .destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(900)))))))) {
+        .destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(900)))))))
+      ) {
         var timing = $0.timing
         timing.periodDuration = .init(totalSeconds: 900)
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))
@@ -213,7 +213,9 @@ extension SupershotTestSuite {
       await store.send(.colorChanged(ColorPalette.green))
       #expect(store.state.previewTeam.colorHex == ColorPalette.green.hex())
       await store.receive(\.saveResponse)
-      if store.state.isSaving { await store.receive(\.saveResponse) }
+      if store.state.isSaving {
+        await store.receive(\.saveResponse)
+      }
       await store.finish()
       let saved = try await store.dependencies.defaultDatabase.read { db in try Team.find(team.id).fetchOne(db) }
       #expect(saved?.colorHex == ColorPalette.green.hex())

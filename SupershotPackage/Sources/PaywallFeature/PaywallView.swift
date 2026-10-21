@@ -37,7 +37,7 @@ package struct PaywallView: View {
       .ignoresSafeArea()
     }
     #if os(macOS)
-      .frame(minWidth: 440, idealWidth: 520, minHeight: 420, idealHeight: 600)
+    .frame(minWidth: 440, idealWidth: 520, minHeight: 420, idealHeight: 600)
     #endif
     .interactiveDismissDisabled(store.operation != nil)
     .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
@@ -82,7 +82,10 @@ private struct ProPaywallHeader: View {
     }
   }
 
-  private var title: some View { Text("Supershot").font(.title.bold()) }
+  private var title: some View {
+    Text("Supershot").font(.title.bold())
+  }
+
   private var badge: some View {
     Text("PRO")
       .font(.headline.bold())
@@ -124,7 +127,7 @@ private struct ProBenefitCarousel: View {
       .scrollTargetBehavior(.paging)
       .scrollPosition(id: Binding($selection))
       HStack(spacing: 10) {
-        ForEach(0..<2) { index in
+        ForEach(0 ..< 2) { index in
           Button {
             withAnimation { selection = index }
           } label: {
@@ -229,7 +232,7 @@ private struct ProPlanPicker: View {
           .foregroundStyle(.secondary)
           .multilineTextAlignment(.center)
         Button("Try again", action: retry).buttonStyle(.bordered)
-      case .loaded(let products):
+      case let .loaded(products):
         if products.isEmpty {
           Text("Supershot Pro is currently unavailable. Please try again later.")
             .foregroundStyle(.secondary)
@@ -295,7 +298,8 @@ private struct ProPlanCard: View {
         RoundedRectangle(cornerRadius: 22)
           .strokeBorder(
             isSelected ? Color.accentColor : Color.secondary.opacity(0.2),
-            lineWidth: isSelected ? 2 : 1)
+            lineWidth: isSelected ? 2 : 1
+          )
       }
       .contentShape(RoundedRectangle(cornerRadius: 22))
     }
@@ -315,7 +319,9 @@ private struct ProPurchaseSection: View {
     VStack(spacing: 16) {
       Button(action: purchase) {
         HStack(spacing: 10) {
-          if operation == .purchasing { ProgressView().tint(.white) }
+          if operation == .purchasing {
+            ProgressView().tint(.white)
+          }
           Text(product?.purchaseButtonTitle ?? String(localized: "Unlock Supershot Pro"))
             .font(.headline)
             .multilineTextAlignment(.center)
@@ -335,7 +341,9 @@ private struct ProPurchaseSection: View {
       }
       Button(action: restore) {
         HStack {
-          if operation == .restoring { ProgressView() }
+          if operation == .restoring {
+            ProgressView()
+          }
           Text("Restore purchases")
         }
         .frame(minHeight: 44)
@@ -349,13 +357,12 @@ private struct ProPurchaseSection: View {
     }
   }
 
+  @ViewBuilder
   private var legalLinks: some View {
-    Group {
-      Link("Privacy policy", destination: ProPaywallLinks.privacy)
-        .frame(minHeight: 44)
-      Link("Terms of use", destination: ProPaywallLinks.terms)
-        .frame(minHeight: 44)
-    }
+    Link("Privacy policy", destination: ProPaywallLinks.privacy)
+      .frame(minHeight: 44)
+    Link("Terms of use", destination: ProPaywallLinks.terms)
+      .frame(minHeight: 44)
   }
 }
 
@@ -377,5 +384,6 @@ private enum ProPaywallLinks {
       )
     ) {
       PaywallFeature()
-    })
+    }
+  )
 }

@@ -11,7 +11,6 @@ import WidgetSupport
 //
 
 package struct TimerButton: View {
-
   package enum TimerButtonType {
     case play
     case pause
@@ -20,33 +19,33 @@ package struct TimerButton: View {
     package var systemImage: String {
       switch self {
       case .play:
-        return "play.fill"
+        "play.fill"
       case .pause:
-        return "pause.fill"
+        "pause.fill"
       case .skip:
-        return "forward.end.fill"
+        "forward.end.fill"
       }
     }
 
     package var label: String {
       switch self {
       case .play:
-        return "Play"
+        "Play"
       case .pause:
-        return "Pause"
+        "Pause"
       case .skip:
-        return "Skip"
+        "Skip"
       }
     }
 
     package var color: Color {
       switch self {
       case .play:
-        return .green
+        .green
       case .pause:
-        return .orange
+        .orange
       case .skip:
-        return Color(hex: "#F14848")
+        Color(hex: "#F14848")
       }
     }
   }

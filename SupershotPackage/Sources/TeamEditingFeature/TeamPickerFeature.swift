@@ -3,8 +3,8 @@ import Database
 import Foundation
 import GameCore
 import PreviewSupport
-import SQLiteData
 import SharedModels
+import SQLiteData
 import Styleguide
 import WidgetSupport
 
@@ -77,7 +77,7 @@ package struct TeamPickerFeature {
         state.editor = nil
         return .none
 
-      case .editor(.presented(.delegate(.saved(let team)))):
+      case let .editor(.presented(.delegate(.saved(team)))):
         state.editor = nil
         return .send(.delegate(.teamSelected(team)))
 
@@ -97,11 +97,11 @@ package struct TeamPickerFeature {
           await send(.teamsResponse(result))
         }
 
-      case .teamSelected(let team):
+      case let .teamSelected(team):
         guard !state.excludedTeamIDs.contains(team.id) else { return .none }
         return .send(.delegate(.teamSelected(team)))
 
-      case .teamsResponse(.success(let teams)):
+      case let .teamsResponse(.success(teams)):
         state.availableTeams = teams
         state.isLoadingTeams = false
         return .none
@@ -117,7 +117,5 @@ package struct TeamPickerFeature {
     }
   }
 
-  package init() {
-
-  }
+  package init() {}
 }

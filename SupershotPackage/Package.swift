@@ -1,7 +1,7 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Match the executable's existing language and isolation settings during extraction.
+/// Match the executable's existing language and isolation settings during extraction.
 let appSwiftSettings: [SwiftSetting] = [
   .swiftLanguageMode(.v5),
   .defaultIsolation(MainActor.self),
@@ -55,7 +55,8 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/swift-dependencies", exact: "1.14.1"),
     .package(
       url: "https://github.com/tgrapperon/swift-dependencies-additions",
-      revision: "0afff683710e63433847641562da5908fe01205f"),
+      revision: "0afff683710e63433847641562da5908fe01205f"
+    ),
     .package(url: "https://github.com/pointfreeco/swift-sharing", exact: "2.9.1"),
     .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.11.0"),
   ],

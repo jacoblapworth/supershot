@@ -3,11 +3,18 @@ import SharedModels
 import SwiftUI
 import WidgetSupport
 
-nonisolated extension Team {
-  public var color: Color { Color(hex: colorHex) }
+public nonisolated extension Team {
+  var color: Color {
+    Color(hex: colorHex)
+  }
 }
 
-nonisolated extension Game {
-  public var teamABibColor: Color { Color(hex: teamABibColorHex) }
-  public var teamBBibColor: Color { Color(hex: teamBBibColorHex) }
+public nonisolated extension Game {
+  var teamABibColor: Color {
+    Color(hex: teamABibColorHex)
+  }
+
+  var teamBBibColor: Color {
+    Color(hex: teamBBibColorHex)
+  }
 }

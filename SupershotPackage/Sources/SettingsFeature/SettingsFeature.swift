@@ -77,10 +77,11 @@ package struct SettingsFeature {
   package var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
-      case .breakStartPolicyChanged(let policy):
+      case let .breakStartPolicyChanged(policy):
         state.$defaultBreakStartPolicy.withLock { $0 = policy }
         return .none
-      case .editDefaultButtonTapped(let field):
+
+      case let .editDefaultButtonTapped(field):
         guard !state.isCustomerCenterPresented else { return .none }
         #if DEBUG
           guard state.databaseExport == nil else { return .none }
@@ -90,9 +91,11 @@ package struct SettingsFeature {
           title: field == .quarter ? "Quarter length" : "Break length",
           totalSeconds: field == .quarter
             ? state.defaultPeriodDurationSeconds : state.defaultBreakDurationSeconds,
-          allowedSeconds: (field == .quarter ? 1 : 0)...5999)
+          allowedSeconds: (field == .quarter ? 1 : 0) ... 5999
+        )
         return .none
-      case .timeInput(.presented(.delegate(.committed(let seconds)))):
+
+      case let .timeInput(.presented(.delegate(.committed(seconds)))):
         switch state.editedDefault {
         case .quarter: state.$defaultPeriodDurationSeconds.withLock { $0 = seconds }
         case .breakTime: state.$defaultBreakDurationSeconds.withLock { $0 = seconds }
@@ -101,52 +104,57 @@ package struct SettingsFeature {
         state.timeInput = nil
         state.editedDefault = nil
         return .none
+
       case .timeInput(.presented(.delegate(.cancelled))), .timeInput(.dismiss):
         state.timeInput = nil
         state.editedDefault = nil
         return .none
+
       case .timeInput:
         return .none
+
       #if DEBUG
         case .alert:
           return .none
 
         case .exportDatabaseButtonTapped:
-          guard state.timeInput == nil else { return .none }
-          guard state.databaseExport == nil else { return .none }
+          guard state.timeInput == nil, state.databaseExport == nil else { return .none }
           state.databaseExport = .preparing
           return .run { send in
             await send(
               .databaseExportResponse(
-                await Result {
+                Result {
                   try await databaseExportClient.snapshot()
-                }))
+                }
+              )
+            )
           }
 
-        case .databaseExportResponse(.success(let url)):
+        case let .databaseExportResponse(.success(url)):
           state.databaseExport = .ready(url)
           return .none
 
-        case .databaseExportResponse(.failure(let error)):
+        case let .databaseExportResponse(.failure(error)):
           state.databaseExport = nil
           state.alert = .databaseExportFailed(error)
           return .none
 
-        case .databaseSharePresentationChanged(let isPresented):
+        case let .databaseSharePresentationChanged(isPresented):
           guard !isPresented else { return .none }
           return dismissDatabaseShare(state: &state)
 
-        case .databaseShareCompleted(let result):
-          if case .failure(let error) = result {
+        case let .databaseShareCompleted(result):
+          if case let .failure(error) = result {
             state.alert = .databaseExportFailed(error)
           }
           return dismissDatabaseShare(state: &state)
       #endif
-      case .customerCenterPresentationChanged(let isPresented):
+
+      case let .customerCenterPresentationChanged(isPresented):
         state.isCustomerCenterPresented = isPresented
         return .none
 
-      case .customerInfoUpdated(let access):
+      case let .customerInfoUpdated(access):
         return .send(.delegate(.proAccessChanged(access)))
 
       case .delegate:
@@ -169,7 +177,7 @@ package struct SettingsFeature {
 
   #if DEBUG
     private func dismissDatabaseShare(state: inout State) -> Effect<Action> {
-      guard case .ready(let url) = state.databaseExport else { return .none }
+      guard case let .ready(url) = state.databaseExport else { return .none }
       state.databaseExport = nil
       return .run { _ in
         await databaseExportClient.removeSnapshot(url)
@@ -177,14 +185,12 @@ package struct SettingsFeature {
     }
   #endif
 
-  package init() {
-
-  }
+  package init() {}
 }
 
 #if DEBUG
-  extension AlertState where Action == SettingsFeature.Alert {
-    static package func databaseExportFailed(_ error: any Error) -> Self {
+  package extension AlertState where Action == SettingsFeature.Alert {
+    static func databaseExportFailed(_ error: any Error) -> Self {
       Self {
         TextState("Database export failed")
       } actions: {

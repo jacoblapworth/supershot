@@ -1,26 +1,25 @@
 @testable import AlarmClient
-@testable import Database
-@testable import ScoringFeature
 import CustomDump
+@testable import Database
 import Dependencies
 import Foundation
+@testable import GameCore
+@testable import ScoringFeature
+@testable import SharedModels
 import SQLiteData
 import Testing
-
 import TestSupport
-@testable import GameCore
-@testable import SharedModels
 
 extension SupershotTestSuite {
   @MainActor
   struct GameTimelineTests {
-    @Test(arguments: [BreakStartPolicy.automatic, .manual], [0.0, 50.0, 1_000.0])
+    @Test(arguments: [BreakStartPolicy.automatic, .manual], [0.0, 50.0, 1000.0])
     func breakStartPolicyControlsDelayedReconciliation(policy: BreakStartPolicy, delay: Double) throws {
       let timeline = try #require(GameTimeline(periods:
         testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)))
-      let boundary = Date(timeIntervalSince1970: 1_000)
+      let boundary = Date(timeIntervalSince1970: 1000)
       var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: boundary),
-        isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
+                                  isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
       let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing)
       #expect(plan.map(\.phaseIndex) == (policy == .automatic ? [0, 1] : [0]))
       progress.reconcile(in: timeline, now: boundary.addingTimeInterval(delay))
@@ -44,7 +43,7 @@ extension SupershotTestSuite {
     func policyDoesNotCreateOmittedOrFinalBreaks(policy: BreakStartPolicy) throws {
       let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
       var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
-        isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
+                                  isAwaitingCentrePassConfirmation: false, breakStartPolicy: policy)
       progress.complete(in: timeline, boundary: .distantPast)
       #expect(progress.phaseIndex == 1)
       #expect(progress.countdown == GameCountdown())
@@ -57,7 +56,7 @@ extension SupershotTestSuite {
     func unorderedPeriodsProducePhasesWithStableIdentityAndIndividualDurations() throws {
       var periods = testGamePeriods(gameID: UUID(3), count: 3, breakDurations: [120, 300])
       periods[1].durationSeconds = 600
-      periods[2].durationSeconds = 1_200
+      periods[2].durationSeconds = 1200
       let timeline = try #require(GameTimeline(periods: [periods[2], periods[0], periods[1]]))
       expectNoDifference(timeline.periods, periods)
       expectNoDifference(timeline.phases, [
@@ -65,7 +64,7 @@ extension SupershotTestSuite {
         .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120),
         .period(testGamePeriodReference(number: 2), durationSeconds: 600),
         .breakTime(after: testGamePeriodReference(number: 2), durationSeconds: 300),
-        .period(testGamePeriodReference(number: 3), durationSeconds: 1_200),
+        .period(testGamePeriodReference(number: 3), durationSeconds: 1200),
       ])
     }
 
@@ -99,9 +98,9 @@ extension SupershotTestSuite {
       expectNoDifference(zero.phases, omitted.phases)
       #expect(zero.phases.count == 2)
       var progress = GameProgress(phaseIndex: 0,
-        countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1_000)),
-        isAwaitingCentrePassConfirmation: false)
-      progress.reconcile(in: zero, now: Date(timeIntervalSince1970: 2_000))
+                                  countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1000)),
+                                  isAwaitingCentrePassConfirmation: false)
+      progress.reconcile(in: zero, now: Date(timeIntervalSince1970: 2000))
       #expect(progress.phaseIndex == 1)
       expectNoDifference(progress.countdown, GameCountdown())
       #expect(progress.lateScoringPeriodNumber == 1)
@@ -112,9 +111,9 @@ extension SupershotTestSuite {
     func mixedBreaksUseCompactIndexesForProgressAndAlarms() throws {
       let timeline = try #require(GameTimeline(periods:
         testGamePeriods(gameID: UUID(3), count: 3, breakDurations: [0, 120])))
-      let boundary = Date(timeIntervalSince1970: 1_000)
+      let boundary = Date(timeIntervalSince1970: 1000)
       var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
-        isAwaitingCentrePassConfirmation: false)
+                                  isAwaitingCentrePassConfirmation: false)
       progress.complete(in: timeline, boundary: boundary)
       #expect(progress.phaseIndex == 1)
       #expect(timeline.phase(at: 1)?.associatedPeriod.id == testGamePeriodID(gameID: UUID(3), position: 1))
@@ -129,17 +128,18 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: ["first", "break", "waiting", "live", "final"])
-    func activePrecedingAndScoringPeriodsHaveDistinctMeanings(stage: String) throws {
+    func activePrecedingAndScoringPeriodsHaveDistinctMeanings(stage: String) {
       let periods = testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)
       let index = stage == "first" ? 0 : stage == "break" ? 1 : 2
       let snapshot = GameSnapshot(
         game: Game(id: UUID(3), startedAt: .distantPast, teamAID: UUID(1), teamBID: UUID(2),
-          isAwaitingCentrePassConfirmation: stage == "break" || stage == "waiting",
-          lateScoringPeriodNumber: stage == "first" || stage == "live" ? nil : stage == "final" ? 2 : 1,
-          currentPhaseIndex: index, elapsedSeconds: stage == "final" ? 900 : 0,
-          timerEndsAt: stage == "break" || stage == "live" ? .distantFuture : nil),
+                   isAwaitingCentrePassConfirmation: stage == "break" || stage == "waiting",
+                   lateScoringPeriodNumber: stage == "first" || stage == "live" ? nil : stage == "final" ? 2 : 1,
+                   currentPhaseIndex: index, elapsedSeconds: stage == "final" ? 900 : 0,
+                   timerEndsAt: stage == "break" || stage == "live" ? .distantFuture : nil),
         goals: [], periods: periods,
-        teamA: Team(id: UUID(1), name: "Ravens"), teamB: Team(id: UUID(2), name: "Swifts"))
+        teamA: Team(id: UUID(1), name: "Ravens"), teamB: Team(id: UUID(2), name: "Swifts")
+      )
       let state = ScoringFeature.State(snapshot: snapshot)
       let activeID: UUID? = stage == "break" ? nil : periods[index == 0 ? 0 : 1].id
       let precedingID: UUID? = stage == "first" ? nil : periods[0].id
@@ -155,10 +155,10 @@ extension SupershotTestSuite {
     @Test
     func finalPeriodWithoutBreaksCompletesWithoutAdvancingOrRestarting() throws {
       let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
-      let boundary = Date(timeIntervalSince1970: 1_000)
+      let boundary = Date(timeIntervalSince1970: 1000)
       var progress = GameProgress(phaseIndex: 1, countdown: GameCountdown(endsAt: boundary),
-        isAwaitingCentrePassConfirmation: false)
-      progress.reconcile(in: timeline, now: boundary.addingTimeInterval(1_000))
+                                  isAwaitingCentrePassConfirmation: false)
+      progress.reconcile(in: timeline, now: boundary.addingTimeInterval(1000))
       #expect(progress.phaseIndex == 1)
       #expect(progress.isFinalPeriodComplete(in: timeline))
       #expect(progress.lateScoringPeriodNumber == 2)
@@ -167,20 +167,20 @@ extension SupershotTestSuite {
     }
 
     #if os(iOS)
-    @Test
-    func liveActivityEncodingPreservesPhaseIdentityAndUsesItsDuration() throws {
-      let phase = GamePhase.breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120)
-      let content = GameActivityAttributes.ContentState(centrePassTeamID: UUID(1), elapsedSeconds: 20,
-        phaseIndex: 1, phase: phase, teamAScore: 0, teamBScore: 0,
-        isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 1)
-      let encoded = try JSONEncoder().encode(content)
-      let decoded = try JSONDecoder().decode(GameActivityAttributes.ContentState.self, from: encoded)
-      expectNoDifference(decoded, content)
-      #expect(decoded.phase.associatedPeriod.id == testGamePeriodID(gameID: UUID(3), position: 0))
-      #expect(decoded.remainingSeconds == 100)
-      let json = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-      #expect(json["currentDurationSeconds"] == nil)
-    }
+      @Test
+      func liveActivityEncodingPreservesPhaseIdentityAndUsesItsDuration() throws {
+        let phase = GamePhase.breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120)
+        let content = GameActivityAttributes.ContentState(centrePassTeamID: UUID(1), elapsedSeconds: 20,
+                                                          phaseIndex: 1, phase: phase, teamAScore: 0, teamBScore: 0,
+                                                          isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 1)
+        let encoded = try JSONEncoder().encode(content)
+        let decoded = try JSONDecoder().decode(GameActivityAttributes.ContentState.self, from: encoded)
+        expectNoDifference(decoded, content)
+        #expect(decoded.phase.associatedPeriod.id == testGamePeriodID(gameID: UUID(3), position: 0))
+        #expect(decoded.remainingSeconds == 100)
+        let json = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        #expect(json["currentDurationSeconds"] == nil)
+      }
 
     #endif
 
@@ -188,7 +188,7 @@ extension SupershotTestSuite {
     func invalidCursorDoesNotReportCompletionOrResolveAPeriod() throws {
       let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 1)))
       var progress = GameProgress(phaseIndex: -1, countdown: GameCountdown(),
-        isAwaitingCentrePassConfirmation: false)
+                                  isAwaitingCentrePassConfirmation: false)
       #expect(!progress.isFinalPeriodComplete(in: timeline))
       progress.reconcile(in: timeline, now: .distantFuture)
       #expect(timeline.phase(at: -1) == nil)

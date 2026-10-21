@@ -9,7 +9,7 @@
   import SubscriptionClient
   import UserNotifications
 
-  nonisolated package struct GameNotificationRequest: Equatable, Sendable {
+  package nonisolated struct GameNotificationRequest: Equatable, Sendable {
     package var id: String
     package var date: Date
     package var title: String
@@ -18,7 +18,7 @@
   }
 
   /// A small boundary lets scheduling and races be tested without system permission prompts.
-  nonisolated package struct NotificationDeliveryClient: Sendable {
+  package nonisolated struct NotificationDeliveryClient: Sendable {
     package var authorization: @Sendable () async -> AlarmAuthorizationStatus
     package var add: @Sendable (GameNotificationRequest) async throws -> Void
     package var pendingIDs: @Sendable () async -> [String]
@@ -36,12 +36,14 @@
           content.sound = .default
           content.userInfo = ["gameID": request.gameID.uuidString]
           let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false)
+            timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false
+          )
           try await center.add(
-            UNNotificationRequest(identifier: request.id, content: content, trigger: trigger))
+            UNNotificationRequest(identifier: request.id, content: content, trigger: trigger)
+          )
         },
         pendingIDs: { await center.pendingNotificationRequests().map(\.identifier) },
-        deliveredIDs: { await center.deliveredNotifications().map { $0.request.identifier } },
+        deliveredIDs: { await center.deliveredNotifications().map(\.request.identifier) },
         remove: { ids in
           center.removePendingNotificationRequests(withIdentifiers: ids)
           center.removeDeliveredNotifications(withIdentifiers: ids)
@@ -77,27 +79,29 @@
       let task = Task {
         _ = await previous?.value
         guard self.cancellations[id, default: 0] == cancellation, await self.isCurrent(snapshot),
-          self.cancellations[id, default: 0] == cancellation
+              self.cancellations[id, default: 0] == cancellation
         else { return false }
         await self.removeRequests(for: id)
         guard self.cancellations[id, default: 0] == cancellation,
-          await self.delivery.authorization() == .authorized,
-          self.cancellations[id, default: 0] == cancellation
+              await self.delivery.authorization() == .authorized,
+              self.cancellations[id, default: 0] == cancellation
         else { return false }
         let alarms = ScheduledGameAlarm.plan(
-          timeline: snapshot.timeline, progress: snapshot.game.timing)
+          timeline: snapshot.timeline, progress: snapshot.game.timing
+        )
         do {
           for alarm in alarms where alarm.date > self.now() {
             guard self.cancellations[id, default: 0] == cancellation else { break }
-            let title: String
-            switch alarm.phase {
-            case .period(let period, _): title = "Quarter \(period.number) ended"
-            case .breakTime: title = "Break ended"
+            let title = switch alarm.phase {
+            case let .period(period, _): "Quarter \(period.number) ended"
+            case .breakTime: "Break ended"
             }
             try await self.delivery.add(
               GameNotificationRequest(
                 id: Self.prefix(id) + String(alarm.phaseIndex), date: alarm.date,
-                title: title, body: "\(snapshot.teamA.name) vs \(snapshot.teamB.name)", gameID: id))
+                title: title, body: "\(snapshot.teamA.name) vs \(snapshot.teamB.name)", gameID: id
+              )
+            )
             if self.cancellations[id, default: 0] != cancellation {
               await self.removeRequests(for: id)
               break
@@ -111,7 +115,9 @@
       }
       tasks[id] = task
       let failed = await task.value
-      if revisions[id] == revision { tasks[id] = nil }
+      if revisions[id] == revision {
+        tasks[id] = nil
+      }
       return failed
     }
 
@@ -126,40 +132,50 @@
       }
       tasks[id] = task
       _ = await task.value
-      if revisions[id] == revision { tasks[id] = nil }
+      if revisions[id] == revision {
+        tasks[id] = nil
+      }
     }
 
     package func reconcile(keeping gameIDs: Set<Game.ID>) async {
       let pending = await delivery.pendingIDs()
       let delivered = await delivery.deliveredIDs()
       let ids = Set((pending + delivered).compactMap(Self.gameID))
-      for id in ids.union(tasks.keys) where !gameIDs.contains(id) { await cancel(id) }
+      for id in ids.union(tasks.keys) where !gameIDs.contains(id) {
+        await cancel(id)
+      }
     }
 
     private func nextRevision(_ id: Game.ID) -> Int {
       revisions[id, default: 0] += 1
       return revisions[id]!
     }
+
     private func removeRequests(for id: Game.ID) async {
       let pending = await delivery.pendingIDs()
       let delivered = await delivery.deliveredIDs()
       await delivery.remove(
-        Array(Set(pending + delivered).filter { $0.hasPrefix(Self.prefix(id)) }))
+        Array(Set(pending + delivered).filter { $0.hasPrefix(Self.prefix(id)) })
+      )
     }
+
     package nonisolated static func prefix(_ id: Game.ID) -> String {
       "supershot.game.\(id.uuidString).phase."
     }
+
     private nonisolated static func gameID(_ identifier: String) -> Game.ID? {
       let components = identifier.split(separator: ".")
       guard components.count == 5, components[0] == "supershot", components[1] == "game",
-        components[3] == "phase"
+            components[3] == "phase"
       else { return nil }
       return UUID(uuidString: String(components[2]))
     }
   }
 
   nonisolated extension AlarmClient {
-    public static var macNotifications: Self { macNotifications(delivery: .live) }
+    public static var macNotifications: Self {
+      macNotifications(delivery: .live)
+    }
 
     package static func macNotifications(delivery: NotificationDeliveryClient) -> Self {
       @Dependency(\.defaultDatabase) var database
@@ -168,8 +184,9 @@
       @Dependency(\.date) var date
       let scheduler = MacNotificationScheduler(delivery: delivery, now: { date.now }) { snapshot in
         guard !Task.isCancelled,
-          featureFlags.isEnabled(
-            .timerAlerts, (try? await subscription.currentAccess()) ?? .unknown)
+              await featureFlags.isEnabled(
+                .timerAlerts, (try? subscription.currentAccess()) ?? .unknown
+              )
         else {
           return false
         }

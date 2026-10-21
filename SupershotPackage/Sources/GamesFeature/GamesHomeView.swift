@@ -8,9 +8,9 @@ import GameServices
 import NewGameFeature
 import PaywallFeature
 import PreviewSupport
-import SQLiteData
 import ScoringFeature
 import SharedModels
+import SQLiteData
 import Styleguide
 import SubscriptionClient
 import SwiftUI
@@ -27,24 +27,24 @@ package struct GamesHomeView: View {
       gamesList
     } destination: { pathStore in
       switch pathStore.case {
-      case .gameDetail(let gameDetailStore):
+      case let .gameDetail(gameDetailStore):
         GameDetailView(
           store: gameDetailStore,
           showsProPromotion: proAccess == .free,
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
-      case .scoring(let scoringStore):
+      case let .scoring(scoringStore):
         ScoringView(
           store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall
         )
         #if os(iOS)
+        .toolbarVisibility(.hidden, for: .tabBar)
+        #endif
+      case let .setup(setupStore):
+        NewGameView(store: setupStore, proAccess: proAccess)
+        #if os(iOS)
           .toolbarVisibility(.hidden, for: .tabBar)
         #endif
-      case .setup(let setupStore):
-        NewGameView(store: setupStore, proAccess: proAccess)
-          #if os(iOS)
-            .toolbarVisibility(.hidden, for: .tabBar)
-          #endif
       }
     }
     .alert($store.scope(state: \.alert, action: \.alert))
@@ -70,7 +70,7 @@ package struct GamesHomeView: View {
             exploreProTapped: { store.send(.proPromotionTapped) }
           )
           #if os(macOS)
-            .fixedSize(horizontal: false, vertical: true)
+          .fixedSize(horizontal: false, vertical: true)
           #endif
           .listRowBackground(Color.clear)
           .listRowInsets(.all, 0)
@@ -123,23 +123,23 @@ package struct GamesHomeView: View {
     #if os(iOS)
       .navigationBarTitleDisplayMode(.large)
     #endif
-    .toolbar {
-      #if os(macOS)
-        ToolbarItem(placement: .principal) {
-          GamesFilterControl(selection: store.filter) { filter in
-            store.send(.filterButtonTapped(filter))
+      .toolbar {
+        #if os(macOS)
+          ToolbarItem(placement: .principal) {
+            GamesFilterControl(selection: store.filter) { filter in
+              store.send(.filterButtonTapped(filter))
+            }
           }
+        #endif
+        ToolbarItem(placement: .primaryAction) {
+          Button {
+            store.send(.newGameButtonTapped)
+          } label: {
+            Label("New game", systemImage: "plus")
+          }
+          .disabled(store.pendingGameResume != nil)
         }
-      #endif
-      ToolbarItem(placement: .primaryAction) {
-        Button {
-          store.send(.newGameButtonTapped)
-        } label: {
-          Label("New game", systemImage: "plus")
-        }
-        .disabled(store.pendingGameResume != nil)
       }
-    }
   }
 
   private func gameRows(_ games: [GameListItem]) -> some View {
