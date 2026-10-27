@@ -38,7 +38,7 @@ package nonisolated struct FixtureParsingContext: Sendable {
   }
 }
 
-package nonisolated enum FixtureParserAvailability: Equatable, Sendable {
+package nonisolated enum GameParserAvailability: Equatable, Sendable {
   case available
   case deviceNotEligible
   case intelligenceNotEnabled
@@ -46,8 +46,8 @@ package nonisolated enum FixtureParserAvailability: Equatable, Sendable {
   case unavailable
 }
 
-package nonisolated enum FixtureParserError: Error, Equatable, Sendable, LocalizedError {
-  case unavailable(FixtureParserAvailability)
+package nonisolated enum GameParserError: Error, Equatable, Sendable, LocalizedError {
+  case unavailable(GameParserAvailability)
   case unsupportedInput
   case inputTooLong(maximumBytes: Int)
   case outputTooLong(maximumFixtures: Int)

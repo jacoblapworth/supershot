@@ -37,9 +37,9 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FixtureParserTests"
-               BuildableName = "FixtureParserTests"
-               BlueprintName = "FixtureParserTests"
+               BlueprintIdentifier = "GameParserTests"
+               BuildableName = "GameParserTests"
+               BlueprintName = "GameParserTests"
                ReferencedContainer = "container:SupershotPackage">
             </BuildableReference>
          </TestableReference>

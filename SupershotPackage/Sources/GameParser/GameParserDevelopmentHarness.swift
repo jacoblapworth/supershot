@@ -1,7 +1,7 @@
 import Foundation
 
 /// Callable on an eligible iOS device or Mac. Deliberately has no persistence or app lifecycle dependencies.
-package nonisolated enum FixtureParserDevelopmentHarness {
+package nonisolated enum GameParserDevelopmentHarness {
   package static let single = "Coles Hot Chooks vs IMG & Friends"
   package static let sample = """
   18:30  Coles Hot Chooks vs IMG & Friends
@@ -24,22 +24,22 @@ package nonisolated enum FixtureParserDevelopmentHarness {
   """
 
   package struct Report: Sendable {
-    package var availability: FixtureParserAvailability
+    package var availability: GameParserAvailability
     package var elapsed: Duration
-    package var result: Result<[FixtureDraft], FixtureParserError>
+    package var result: Result<[FixtureDraft], GameParserError>
   }
 
   package static func run(
     text: String = sample,
     context: FixtureParsingContext? = nil,
-    parser: FixtureParser = .live
+    parser: GameParser = .live
   ) async -> Report {
     let clock = ContinuousClock()
     let start = clock.now
     let availability = parser.availability()
-    let result: Result<[FixtureDraft], FixtureParserError>
+    let result: Result<[FixtureDraft], GameParserError>
     do { result = try await .success(parser.parse(text, context: context)) } catch let error
-      as FixtureParserError
+      as GameParserError
     { result = .failure(error) } catch { result = .failure(.generationFailed) }
     return Report(
       availability: availability, elapsed: start.duration(to: clock.now), result: result

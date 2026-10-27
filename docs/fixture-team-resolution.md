@@ -1,6 +1,6 @@
 # Fixture team resolution (L-152)
 
-`FixtureTeamResolution` is a pure package target depending on `FixtureParser`,
+`FixtureTeamResolution` is a pure package target depending on `GameParser`,
 `GameCore` and Ordo One's `FuzzyMatch` **1.4.0**. It has no database client and
 never creates teams or games. Review UI and transactional import remain the
 responsibility of L-153/L-154/L-155.
@@ -24,8 +24,9 @@ an explicit `unique`, `ambiguous` or `unmatched` result.
    behavior follows the pinned library configuration. The score is a ranking
    value, not a probability of identity or model confidence.
 4. Fuzzy candidates rank by descending score, then normalized name ascending,
-   then UUID string ascending. Equal scores are never broken into an automatic
-   selection. Even one fuzzy candidate returns `ambiguous`, requiring review.
+   then UUID string ascending. Equal scores retain that stable ordering.
+   Even one fuzzy candidate returns `ambiguous`; the result represents candidate
+   ranking rather than a conclusive identity decision.
    No candidate produces `unmatched`, which proposes a new team.
 
 ## Batch review contract
@@ -38,8 +39,9 @@ and Netball & Chill in the parent sample each yield one proposed identity.
 Different keys never merge because of fuzzy similarity.
 
 Unique exact entries select `.existing(id)`; unmatched entries select `.proposed`;
-ambiguous entries have no selection. These choices remain transient. Confirmation
-belongs to the caller, even when every entry has a default selection.
+ambiguous entries have no selection. These choices remain transient. The caller
+decides how to apply them. New Game selects the first ranked candidate automatically
+and exposes alternatives in the team slot for correction.
 
 - `select(_:for:)` applies a reviewed choice to every occurrence of that key. It
   accepts any team from the saved snapshot, allowing manual correction outside
@@ -70,10 +72,10 @@ required game settings before import.
 rank order, duplicate exact names, tied fuzzy scores, snapshot-order independence,
 fuzzy review, unmatched names, shared batch proposals/selections, edit invalidation,
 missing names, same-team conflicts and stale saved identities. It is registered
-with both app schemes and the focused `FixtureParser` scheme.
+with both app schemes and the focused `GameParser` scheme.
 
 ```sh
-xcodebuild test -workspace Supershot.xcworkspace -scheme FixtureParser \
+xcodebuild test -workspace Supershot.xcworkspace -scheme GameParser \
   -destination 'platform=macOS' -skipMacroValidation \
   -only-testing:FixtureTeamResolutionTests
 ```

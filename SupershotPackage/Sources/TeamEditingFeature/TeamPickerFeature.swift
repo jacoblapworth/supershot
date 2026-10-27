@@ -6,6 +6,7 @@ import PreviewSupport
 import SharedModels
 import SQLiteData
 import Styleguide
+import SwiftUI
 import WidgetSupport
 
 @Reducer
@@ -19,9 +20,12 @@ package struct TeamPickerFeature {
     package var excludedTeamIDs: Set<Team.ID>
     package var isLoadingTeams = false
     package var searchText = ""
+    package var proposedTeam: Team?
 
-    package init(excluding excludedTeamIDs: Set<Team.ID> = []) {
+    package init(excluding excludedTeamIDs: Set<Team.ID> = [], proposedTeam: Team? = nil) {
       self.excludedTeamIDs = excludedTeamIDs
+      self.proposedTeam = proposedTeam
+      searchText = proposedTeam?.name ?? ""
     }
 
     package var filteredTeams: [Team] {
@@ -67,7 +71,12 @@ package struct TeamPickerFeature {
         return .send(.delegate(.cancelled))
 
       case .createTeamButtonTapped:
-        state.editor = TeamEditorFeature.State()
+        var editor = TeamEditorFeature.State()
+        editor.name = state.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let proposedTeam = state.proposedTeam {
+          editor.color = proposedTeam.color
+        }
+        state.editor = editor
         return .none
 
       case .delegate:

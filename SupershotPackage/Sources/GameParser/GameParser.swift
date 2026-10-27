@@ -2,18 +2,21 @@ import Dependencies
 import Foundation
 
 /// FoundationModels stays behind this boundary; tests can stub generation without bypassing validation.
-package nonisolated struct FixtureParser: Sendable {
+package nonisolated struct GameParser: Sendable {
   package static let maximumInputBytes = 6000
   package static let maximumFixtures = 12
-  package var availability: @Sendable () -> FixtureParserAvailability
+  package var availability: @Sendable () -> GameParserAvailability
+  private var extractStructured: @Sendable (String) -> [ExtractedFixture]?
   private var generate: @Sendable (String) async throws -> [ExtractedFixture]
 
   package init(
-    availability: @escaping @Sendable () -> FixtureParserAvailability,
-    generate: @escaping @Sendable (String) async throws -> [ExtractedFixture]
+    availability: @escaping @Sendable () -> GameParserAvailability,
+    generate: @escaping @Sendable (String) async throws -> [ExtractedFixture],
+    extractStructured: @escaping @Sendable (String) -> [ExtractedFixture]? = { _ in nil }
   ) {
     self.availability = availability
     self.generate = generate
+    self.extractStructured = extractStructured
   }
 
   package func parse(_ text: String, context: FixtureParsingContext? = nil) async throws
@@ -22,23 +25,28 @@ package nonisolated struct FixtureParser: Sendable {
     do {
       try Task.checkCancellation()
       guard text.utf8.count <= Self.maximumInputBytes else {
-        throw FixtureParserError.inputTooLong(maximumBytes: Self.maximumInputBytes)
+        throw GameParserError.inputTooLong(maximumBytes: Self.maximumInputBytes)
       }
       guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-        throw FixtureParserError.unsupportedInput
+        throw GameParserError.unsupportedInput
       }
-      let status = availability()
-      guard status == .available else { throw FixtureParserError.unavailable(status) }
-      let rows = try await generate(text)
+      let rows: [ExtractedFixture]
+      if let structured = extractStructured(text) {
+        rows = structured
+      } else {
+        let status = availability()
+        guard status == .available else { throw GameParserError.unavailable(status) }
+        rows = try await generate(text)
+      }
       try Task.checkCancellation()
       guard rows.count <= Self.maximumFixtures else {
-        throw FixtureParserError.outputTooLong(maximumFixtures: Self.maximumFixtures)
+        throw GameParserError.outputTooLong(maximumFixtures: Self.maximumFixtures)
       }
-      guard !rows.isEmpty else { throw FixtureParserError.unsupportedInput }
+      guard !rows.isEmpty else { throw GameParserError.unsupportedInput }
       // Require exact, non-overlapping source excerpts, and restore source order independently of generation.
       var located: [(Range<String.Index>, ExtractedFixture)] = []
       for row in rows {
-        guard !row.source.isEmpty else { throw FixtureParserError.generationFailed }
+        guard !row.source.isEmpty else { throw GameParserError.generationFailed }
         var search = text.startIndex ..< text.endIndex
         var match: Range<String.Index>?
         while let range = text.range(of: row.source, range: search) {
@@ -48,27 +56,27 @@ package nonisolated struct FixtureParser: Sendable {
           }
           search = range.upperBound ..< text.endIndex
         }
-        guard let range = match else { throw FixtureParserError.generationFailed }
+        guard let range = match else { throw GameParserError.generationFailed }
         located.append((range, row))
       }
       return located.sorted { $0.0.lowerBound < $1.0.lowerBound }.map { range, row in
         row.validated(
-          sourceLine: text[..<range.lowerBound].filter { $0 == "\n" }.count + 1,
+          sourceLine: text[..<range.lowerBound].unicodeScalars.filter { $0 == "\n" }.count + 1,
           context: context
         )
       }
     } catch is CancellationError {
-      throw FixtureParserError.cancelled
-    } catch let error as FixtureParserError {
+      throw GameParserError.cancelled
+    } catch let error as GameParserError {
       if Task.isCancelled {
-        throw FixtureParserError.cancelled
+        throw GameParserError.cancelled
       }
       throw error
     } catch {
       if Task.isCancelled {
-        throw FixtureParserError.cancelled
+        throw GameParserError.cancelled
       }
-      throw FixtureParserError.generationFailed
+      throw GameParserError.generationFailed
     }
   }
 }
@@ -98,18 +106,18 @@ package nonisolated struct ExtractedFixture: Sendable {
 }
 
 package extension DependencyValues {
-  nonisolated var fixtureParser: FixtureParser {
-    get { self[FixtureParserKey.self] }
-    set { self[FixtureParserKey.self] = newValue }
+  nonisolated var gameParser: GameParser {
+    get { self[GameParserKey.self] }
+    set { self[GameParserKey.self] = newValue }
   }
 }
 
-private nonisolated enum FixtureParserKey: DependencyKey {
-  static var liveValue: FixtureParser {
+private nonisolated enum GameParserKey: DependencyKey {
+  static var liveValue: GameParser {
     .live
   }
 
-  static var testValue: FixtureParser {
-    FixtureParser(availability: { .unavailable }, generate: { _ in [] })
+  static var testValue: GameParser {
+    GameParser(availability: { .unavailable }, generate: { _ in [] })
   }
 }

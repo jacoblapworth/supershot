@@ -180,11 +180,10 @@ package struct SetupTimingSummaryView: View {
   package var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Label("Timing", systemImage: "timer").font(.headline)
+        Text(timing.summary)
         Spacer()
         Button("Edit", action: edit).accessibilityLabel("Edit timing")
       }
-      Text(timing.summary).font(.subheadline).foregroundStyle(.secondary)
       Text(
         timing.breakStartPolicy == .automatic
           ? "Breaks start automatically" : "Breaks start manually"

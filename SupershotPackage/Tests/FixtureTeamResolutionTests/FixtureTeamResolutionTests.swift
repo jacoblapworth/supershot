@@ -1,7 +1,7 @@
-@testable import FixtureParser
 @testable import FixtureTeamResolution
 import Foundation
 import GameCore
+@testable import GameParser
 import Testing
 
 struct FixtureTeamResolutionTests {

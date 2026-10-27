@@ -36,7 +36,7 @@
             <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="FeatureFlagsClientTests" BuildableName="FeatureFlagsClientTests" BlueprintName="FeatureFlagsClientTests" ReferencedContainer="container:SupershotPackage"/>
          </TestableReference>
          <TestableReference skipped="NO" parallelizable="YES">
-            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="FixtureParserTests" BuildableName="FixtureParserTests" BlueprintName="FixtureParserTests" ReferencedContainer="container:SupershotPackage"/>
+            <BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="GameParserTests" BuildableName="GameParserTests" BlueprintName="GameParserTests" ReferencedContainer="container:SupershotPackage"/>
          </TestableReference>
          <TestableReference
             skipped = "NO"

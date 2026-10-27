@@ -66,7 +66,7 @@ package nonisolated struct TeamMatchCandidate: Equatable, Sendable {
 package nonisolated enum TeamNameResolution: Equatable, Sendable {
   /// Only one normalized exact saved-team match may be automatically selected.
   case unique(Team.ID, candidates: [TeamMatchCandidate])
-  /// Includes a single fuzzy candidate: all fuzzy results require review.
+  /// Includes a single fuzzy candidate. Callers decide how to apply these suggestions.
   case ambiguous([TeamMatchCandidate])
   case unmatched
 

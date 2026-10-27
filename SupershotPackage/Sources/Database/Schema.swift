@@ -40,6 +40,7 @@ public extension DependencyValues {
           "createdAt" TEXT NOT NULL,
           "scheduledAt" TEXT,
           "court" TEXT,
+          "division" TEXT,
           "endedAt" TEXT,
           "teamAID" TEXT NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE,
           "teamABibColorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF',
