@@ -166,6 +166,7 @@
   package extension AppFeature.State {
     var macHasBlockingPresentation: Bool {
       if destination != nil || games.alert != nil || teams.destination != nil
+        || games.newGame != nil || teams.newGame != nil
         || settings.timeInput != nil || games.pendingGameResume != nil
         || teams.pendingGameResume != nil
       {
@@ -179,10 +180,6 @@
           {
             return true
           }
-        case let .setup(state):
-          if state.destination != nil || state.isSaving || state.alarms.isRequesting {
-            return true
-          }
         case .gameDetail: break
         }
       }
@@ -192,10 +189,6 @@
           if state.timeInput != nil || state.alert != nil || state.controlsPresentation != .shown
             || state.isTimerOperationPending || state.isTransitioningPeriod
           {
-            return true
-          }
-        case let .setup(state):
-          if state.destination != nil || state.isSaving || state.alarms.isRequesting {
             return true
           }
         case let .teamDetail(state):

@@ -19,7 +19,6 @@ import SubscriptionClient
 package enum GamesPath {
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
-  case setup(NewGameFeature)
 }
 
 extension GamesPath.State: Equatable {}
@@ -40,14 +39,14 @@ package struct GamesFeature {
   package struct State: Equatable {
     @Presents package var alert: AlertState<Alert>?
     package var filter = GamesFilter.all
+    @Presents package var newGame: NewGameFeature.State?
     package var path = StackState<GamesPath.State>()
     package var pendingGameResume: PendingGameResume?
 
     package func hasGameRoute(for gameID: Game.ID) -> Bool {
-      path.contains {
+      newGame?.gameID == gameID || path.contains {
         switch $0 {
         case let .scoring(scoring): scoring.gameID == gameID
-        case let .setup(setup): setup.gameID == gameID
         default: false
         }
       }
@@ -74,6 +73,7 @@ package struct GamesFeature {
     case gameDeepLinkOpened(Game.ID)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped
+    case newGame(PresentationAction<NewGameFeature.Action>)
     case path(StackActionOf<GamesPath>)
     case proPromotionTapped
     case setupExitSaveFailed(NewGameFeature.State)
@@ -110,11 +110,10 @@ package struct GamesFeature {
         return .none
 
       case let .gameDeepLinkOpened(gameID):
+        if state.newGame?.gameID == gameID {
+          return .none
+        }
         for (id, destination) in zip(state.path.ids, state.path) {
-          if case let .setup(setup) = destination, setup.gameID == gameID {
-            state.path.pop(to: id)
-            return .none
-          }
           guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
             continue
           }
@@ -138,7 +137,7 @@ package struct GamesFeature {
         return resumeGame(gameID: game.id, state: &state)
 
       case .newGameButtonTapped:
-        state.path.append(.setup(NewGameFeature.State()))
+        state.newGame = NewGameFeature.State()
         return .none
 
       case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):
@@ -148,10 +147,17 @@ package struct GamesFeature {
         )
         return .none
 
-      case let .path(.element(id: id, action: .setup(.delegate(.gameStarted(scoring))))):
-        state.path.pop(from: id)
+      case let .newGame(.presented(.delegate(.gameStarted(scoring)))):
+        state.newGame = nil
         state.path.append(.scoring(scoring))
         return .none
+
+      case .newGame(.presented(.delegate(.gameSaved))):
+        state.newGame = nil
+        return .none
+
+      case .newGame(.presented(.delegate(.proPromotionTapped))):
+        return .send(.delegate(.proPromotionTapped))
 
       case .path(.element(id: let id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))):
         guard case let .gameDetail(gameDetail) = state.path[id: id] else {
@@ -161,8 +167,7 @@ package struct GamesFeature {
         state.path.pop(from: id)
         return .send(.deleteGameButtonTapped(gameID))
 
-      case .path(.element(id: _, action: .setup(.delegate(.proPromotionTapped)))),
-           .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
+      case .path(.element(id: _, action: .scoring(.delegate(.proPromotionTapped)))):
         return .send(.delegate(.proPromotionTapped))
 
       case var .setupExitSaveFailed(setup):
@@ -172,15 +177,15 @@ package struct GamesFeature {
         setup.closesAfterSave = true
         setup.failedSaveIntent = .close
         setup.errorMessage = "Could not save the game. Your changes are still here. Try again."
-        state.path.append(.setup(setup))
+        state.newGame = setup
         return .none
 
-      case let .path(.popFrom(id)):
-        guard case let .setup(setup) = state.path[id: id], !setup.hasStarted,
+      case .newGame(.dismiss):
+        guard let setup = state.newGame, !setup.hasStarted, setup.describeGame.source.isEmpty,
               let draft = setup.draft, draft != setup.lastSavedDraft
         else { return .none }
         let requiresExistingGame = setup.requiresExistingGame
-        // This parent-owned effect survives removal of the setup route and its effects.
+        // This parent-owned effect survives dismissal of the setup sheet and its effects.
         return .run { send in
           do {
             _ = try await database.write { db in
@@ -191,8 +196,7 @@ package struct GamesFeature {
           }
         }
 
-      case .path(.element(id: let id, action: .setup(.delegate(.gameSaved)))):
-        state.path.pop(from: id)
+      case .newGame:
         return .none
 
       case .path:
@@ -206,7 +210,7 @@ package struct GamesFeature {
         state.pendingGameResume = nil
 
         if snapshot.game.isPlanned {
-          state.path.append(.setup(NewGameFeature.State(snapshot: snapshot)))
+          state.newGame = NewGameFeature.State(snapshot: snapshot)
         } else if snapshot.game.isInProgress {
           state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
         } else {
@@ -222,6 +226,9 @@ package struct GamesFeature {
         state.alert = .gameUnavailable
         return .none
       }
+    }
+    .ifLet(\.$newGame, action: \.newGame) {
+      NewGameFeature()
     }
     .forEach(\.path, action: \.path) {
       GamesPath.body

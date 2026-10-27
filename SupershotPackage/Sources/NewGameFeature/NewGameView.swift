@@ -84,12 +84,14 @@ package struct NewGameView: View {
     .scrollDismissesKeyboard(.interactively)
     .background(Color.setupBackground.ignoresSafeArea())
     .environment(\.usesGroupedSetupContainers, true)
-    .navigationTitle(store.requiresExistingGame ? "Planned game" : "New game")
+    .navigationTitle("New game")
     .navigationBarBackButtonHidden()
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
-        Button("Back", systemImage: "chevron.backward") { store.send(.closeButtonTapped) }
-          .disabled(store.isSaving)
+        Button("Close", systemImage: "xmark") {
+          store.send(.closeButtonTapped)
+        }
+        .disabled(store.isSaving)
       }
       ToolbarItem(placement: .primaryAction) {
         Button(
@@ -157,7 +159,9 @@ package struct NewGameView: View {
     store.rightTeam.team?.name
   }
 
-  package init(store: StoreOf<NewGameFeature>, proAccess: SubscriptionEntitlement = .unknown) {
+  package init(
+    store: StoreOf<NewGameFeature>, proAccess: SubscriptionEntitlement = .unknown
+  ) {
     self.store = store
     self.proAccess = proAccess
   }

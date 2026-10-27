@@ -40,12 +40,13 @@ package struct GamesHomeView: View {
         #if os(iOS)
         .toolbarVisibility(.hidden, for: .tabBar)
         #endif
-      case let .setup(setupStore):
-        NewGameView(store: setupStore, proAccess: proAccess)
-        #if os(iOS)
-          .toolbarVisibility(.hidden, for: .tabBar)
-        #endif
       }
+    }
+    .sheet(item: $store.scope(state: \.newGame, action: \.newGame)) { setupStore in
+      NavigationStack {
+        NewGameView(store: setupStore, proAccess: proAccess)
+      }
+      .interactiveDismissDisabled(setupStore.isSaving)
     }
     .alert($store.scope(state: \.alert, action: \.alert))
   }

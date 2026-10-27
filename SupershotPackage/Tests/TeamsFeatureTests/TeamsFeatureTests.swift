@@ -61,10 +61,10 @@ extension SupershotTestSuite {
       setup.leftTeam.bibColor = team.color
       expectNoDifference(
         Array(store.state.path),
-        [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .setup(setup)]
+        [.teamDetail(TeamDetailFeature.State(teamID: team.id))]
       )
 
-      let setupID = store.state.path.ids[1]
+      expectNoDifference(store.state.newGame, setup)
       let scoring = ScoringFeature.State(
         centrePassTeamID: team.id,
         gameID: UUID(3),
@@ -74,8 +74,9 @@ extension SupershotTestSuite {
         teamB: ScoringFeature.Team(id: UUID(2), bibColor: ColorPalette.red, name: "Swifts")
       )
       await store.send(
-        .path(.element(id: setupID, action: .setup(.delegate(.gameStarted(scoring)))))
+        .newGame(.presented(.delegate(.gameStarted(scoring))))
       )
+      #expect(store.state.newGame == nil)
       expectNoDifference(
         Array(store.state.path),
         [.teamDetail(TeamDetailFeature.State(teamID: team.id)), .scoring(scoring)]

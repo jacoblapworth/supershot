@@ -49,9 +49,9 @@ extension SupershotTestSuite {
         #expect(!state.macHasBlockingPresentation)
         var setup = NewGameFeature.State()
         setup.isSaving = true
-        state.games.path.append(.setup(setup))
+        state.games.newGame = setup
         #expect(state.macHasBlockingPresentation)
-        state.games.path.removeAll()
+        state.games.newGame = nil
         var teamDetail = TeamDetailFeature.State(teamID: UUID(1))
         teamDetail.editor = TeamEditorFeature.State(team: Team(id: UUID(1), name: "Ravens"))
         state.teams.path.append(.teamDetail(teamDetail))
@@ -357,7 +357,7 @@ extension SupershotTestSuite {
     @Test
     func tabsRetainIndependentNavigationHistories() async {
       var state = AppFeature.State()
-      state.games.path.append(.setup(NewGameFeature.State()))
+      state.games.newGame = NewGameFeature.State()
       state.teams.path.append(
         .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
       )
@@ -369,7 +369,8 @@ extension SupershotTestSuite {
         $0.selectedTab = .teams
       }
 
-      expectNoDifference(store.state.games.path.count, 1)
+      #expect(store.state.games.newGame != nil)
+      expectNoDifference(store.state.games.path.count, 0)
       expectNoDifference(store.state.teams.path.count, 1)
     }
 

@@ -344,16 +344,16 @@ extension SupershotTestSuite {
       var setup = NewGameFeature.State()
       setup.alarms.access = .free
       var games = GamesFeature.State()
-      games.path.append(.setup(setup))
+      games.newGame = setup
       let gamesStore = TestStore(initialState: games) { GamesFeature() }
       gamesStore.exhaustivity = .off(showSkippedAssertions: false)
-      await gamesStore.send(.path(.element(id: games.path.ids[0], action: .setup(.alarms(.enableButtonTapped)))))
+      await gamesStore.send(.newGame(.presented(.alarms(.enableButtonTapped))))
       await gamesStore.receive(\.delegate)
       var teams = TeamsFeature.State()
-      teams.path.append(.setup(setup))
+      teams.newGame = setup
       let teamsStore = TestStore(initialState: teams) { TeamsFeature() }
       teamsStore.exhaustivity = .off(showSkippedAssertions: false)
-      await teamsStore.send(.path(.element(id: teams.path.ids[0], action: .setup(.alarms(.enableButtonTapped)))))
+      await teamsStore.send(.newGame(.presented(.alarms(.enableButtonTapped))))
       await teamsStore.receive(\.delegate)
     }
   }
