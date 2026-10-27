@@ -1,13 +1,15 @@
 import SharedModels
 import SwiftUI
 
+/// An initials avatar with a generated background color by default.
+/// Use `.backgroundStyle(_:)` to supply a color, gradient, or material.
+/// Initials inherit the foreground style; use `.foregroundStyle(_:)` to customize them.
 public struct AvatarView: View {
   // MARK: - Public API
 
   public let label: String
-  ///  public var size: CGFloat
-  public var color: Color?
 
+  @Environment(\.backgroundStyle) private var backgroundStyle
   @Environment(\.controlSize) private var controlSize
 
   private var size: CGFloat {
@@ -23,21 +25,19 @@ public struct AvatarView: View {
 
   // MARK: - Init
 
-  public init(label: String, color: Color? = nil) {
+  public init(_ label: String) {
     self.label = label
-    self.color = color
   }
 
   // MARK: - Body
 
   public var body: some View {
     let initials = AvatarView.makeInitials(from: label)
-    let bg = color ?? AvatarView.color(for: label)
+    let bg = backgroundStyle ?? AnyShapeStyle(AvatarView.color(for: label))
 
     Text(initials)
       .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
       .minimumScaleFactor(0.5)
-      .foregroundStyle(.white)
       .frame(width: size, height: size)
       .background(
         Circle()
@@ -117,18 +117,28 @@ public extension AvatarView {
 
 #Preview("AvatarView") {
   VStack(spacing: 16) {
-    AvatarView(label: "Ada Lovelace")
-    AvatarView(label: "grace hopper")
+    AvatarView("Ada Lovelace")
+      .foregroundStyle(.white)
+    AvatarView("Material")
+      .backgroundStyle(.thinMaterial)
+      .foregroundStyle(.primary)
+    AvatarView("Gradient")
+      .backgroundStyle(.blue.gradient)
+      .foregroundStyle(.white)
+    AvatarView("Foreground")
+      .backgroundStyle(.thinMaterial)
+      .foregroundStyle(.purple.gradient)
+    AvatarView("grace hopper")
       .controlSize(.small)
-    AvatarView(label: "single")
+    AvatarView("single")
       .controlSize(.mini)
-    AvatarView(label: "")
+    AvatarView("")
       .controlSize(.large)
-    AvatarView(label: "😀 Emoji User")
+    AvatarView("😀 Emoji User")
       .controlSize(.extraLarge)
     HStack {
       ForEach(["Alice", "Bob", "Charlie", "Diana", "Eve", "Frank"], id: \.self) { name in
-        AvatarView(label: name)
+        AvatarView(name)
       }
     }
   }

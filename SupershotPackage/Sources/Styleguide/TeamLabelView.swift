@@ -16,7 +16,8 @@ package struct TeamLabelView: View {
   package var alignment: HorizontalAlignment = .leading
 
   private var avatar: some View {
-    AvatarView(label: name, color: color)
+    AvatarView(name)
+      .backgroundStyle(color)
       .controlSize(.mini)
   }
 

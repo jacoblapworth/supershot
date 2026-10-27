@@ -13,70 +13,58 @@ package struct GameOverviewView: View {
 
   package var body: some View {
     VStack(spacing: 20) {
-      Image(systemName: "flag.checkered")
-        .font(.system(size: 40, weight: .semibold))
-        .foregroundStyle(.secondary)
-
-      Text(detail.resultTitle)
-        .font(.largeTitle.bold())
-        .multilineTextAlignment(.center)
-
-      HStack(alignment: .top, spacing: 16) {
-        GameDetailScore(
-          alignment: .leading,
-          color: detail.teamABibColor,
-          name: detail.teamAName,
-          score: detail.teamAScore
-        )
-
-        Text("–")
-          .font(.title.bold())
+      VStack(spacing: 8) {
+        Label("Full time", systemImage: "flag.checkered")
+          .font(.subheadline.weight(.semibold))
           .foregroundStyle(.secondary)
-          .padding(.top, 36)
 
-        GameDetailScore(
-          alignment: .trailing,
-          color: detail.teamBBibColor,
-          name: detail.teamBName,
-          score: detail.teamBScore
-        )
+        Text(detail.resultTitle)
+          .font(.title2.bold())
+          .multilineTextAlignment(.center)
       }
 
-      QuarterScoreBreakdown(
-        quarters: detail.goalTimeline.quarters,
-        teamABibColor: detail.teamABibColor,
-        teamAName: detail.teamAName,
-        teamBBibColor: detail.teamBBibColor,
-        teamBName: detail.teamBName
+      ScoreboardView(
+        left: .init(name: detail.teamAName, color: detail.teamABibColor, score: detail.teamAScore),
+        right: .init(name: detail.teamBName, color: detail.teamBBibColor, score: detail.teamBScore)
       )
 
-      Divider()
+      VStack(spacing: 20) {
+        QuarterScoreBreakdown(
+          quarters: detail.goalTimeline.quarters,
+          teamABibColor: detail.teamABibColor,
+          teamAName: detail.teamAName,
+          teamBBibColor: detail.teamBBibColor,
+          teamBName: detail.teamBName
+        )
 
-      VStack(alignment: .leading, spacing: 8) {
-        if let scheduledAt = detail.scheduledAt {
-          LabeledContent("Scheduled") {
-            Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
+        Divider()
+
+        VStack(alignment: .leading, spacing: 8) {
+          if let scheduledAt = detail.scheduledAt {
+            LabeledContent("Scheduled") {
+              Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
+            }
+          }
+          if let court = detail.court {
+            LabeledContent("Court", value: court)
+          }
+          LabeledContent("Started") {
+            Text(detail.startedAt.formatted(date: .abbreviated, time: .shortened))
+          }
+          LabeledContent("Finished") {
+            Text(detail.endedAt.formatted(date: .abbreviated, time: .shortened))
+          }
+          LabeledContent("Timing") {
+            Text(detail.timingSummary)
+              .multilineTextAlignment(.trailing)
           }
         }
-        if let court = detail.court {
-          LabeledContent("Court", value: court)
-        }
-        LabeledContent("Started") {
-          Text(detail.startedAt.formatted(date: .abbreviated, time: .shortened))
-        }
-        LabeledContent("Finished") {
-          Text(detail.endedAt.formatted(date: .abbreviated, time: .shortened))
-        }
-        LabeledContent("Timing") {
-          Text(detail.timingSummary)
-            .multilineTextAlignment(.trailing)
-        }
+        .font(.subheadline)
       }
-      .font(.subheadline)
+      .padding()
+      .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
     .frame(maxWidth: .infinity)
-    .padding()
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
   }
 
   package init(detail: CompletedGameDetail) {
@@ -151,35 +139,6 @@ private struct QuarterScoreBreakdown: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: alignment)
-  }
-}
-
-private struct GameDetailScore: View {
-  var alignment: HorizontalAlignment
-  var color: Color
-  var name: String
-  var score: Int
-
-  var body: some View {
-    VStack(alignment: alignment, spacing: 8) {
-      Capsule()
-        .fill(color)
-        .frame(width: 36, height: 6)
-        .accessibilityHidden(true)
-
-      Text(name)
-        .font(.headline)
-        .lineLimit(3)
-        .multilineTextAlignment(alignment == .leading ? .leading : .trailing)
-
-      Text("\(score)")
-        .font(.system(.largeTitle, design: .rounded, weight: .bold))
-        .monospacedDigit()
-    }
-    .frame(
-      maxWidth: .infinity,
-      alignment: alignment == .leading ? .leading : .trailing
-    )
   }
 }
 
