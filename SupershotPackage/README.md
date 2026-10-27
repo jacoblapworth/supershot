@@ -12,6 +12,8 @@ versions used before extraction; update them deliberately in a separate change.
 
 ## Boundaries
 
+- `FixtureTeamResolution` matches parsed fixture names against saved-team snapshots
+  and holds transient batch review choices. See [the matching contract](../docs/fixture-team-resolution.md).
 - `SharedModels` contains lightweight values shared by the app and widgets.
 - `WidgetSupport` contains the shared avatar, phase label and colour helpers. Widgets
   depend only on these two targets, without persistence, RevenueCat or TCA.

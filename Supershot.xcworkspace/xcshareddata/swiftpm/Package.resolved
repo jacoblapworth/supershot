@@ -1,5 +1,5 @@
 {
-  "originHash" : "22c2a72a00c2d327178c8cb6d16bb6a39c460a5d20b122cfab1d8498f07d85b2",
+  "originHash" : "f6e112d39a26e97bd6dff32e677afaf5a030f4bbdfe2738e3f4792f63bb869f0",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "dcccb979a2183b8df3334237e3dc1ae2b4116a86",
         "version" : "1.2.0"
+      }
+    },
+    {
+      "identity" : "fuzzymatch",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ordo-one/FuzzyMatch.git",
+      "state" : {
+        "revision" : "ea09aa7faa3c1832716d1ccdb81dcb83bea89774",
+        "version" : "1.4.0"
       }
     },
     {
