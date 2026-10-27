@@ -17,6 +17,7 @@ let package = Package(
   name: "SupershotPackage",
   platforms: [.iOS("27.0"), .macOS("27.0")],
   products: [
+    .library(name: "FixtureTeamResolution", targets: ["FixtureTeamResolution"]),
     .library(name: "FixtureParser", targets: ["FixtureParser"]),
     .executable(name: "FixtureParserHarness", targets: ["FixtureParserHarness"]),
     .library(name: "TestSupport", targets: ["TestSupport"]),
@@ -46,6 +47,7 @@ let package = Package(
     .library(name: "AppFeature", targets: ["AppFeature"]),
   ],
   dependencies: [
+    .package(url: "https://github.com/ordo-one/FuzzyMatch.git", exact: "1.4.0"),
     .package(url: "https://github.com/apple/swift-collections", exact: "1.6.0"),
     .package(url: "https://github.com/pointfreeco/swift-custom-dump", exact: "1.6.1"),
     .package(url: "https://github.com/groue/GRDB.swift", exact: "7.11.1"),
@@ -61,6 +63,16 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", exact: "1.11.0"),
   ],
   targets: [
+    .target(
+      name: "FixtureTeamResolution",
+      dependencies: ["FixtureParser", "GameCore", .product(name: "FuzzyMatch", package: "FuzzyMatch")],
+      swiftSettings: appSwiftSettings
+    ),
+    .testTarget(
+      name: "FixtureTeamResolutionTests",
+      dependencies: ["FixtureTeamResolution", "FixtureParser", "GameCore"],
+      swiftSettings: appSwiftSettings
+    ),
     .target(
       name: "FixtureParser",
       dependencies: [.product(name: "Dependencies", package: "swift-dependencies")],
