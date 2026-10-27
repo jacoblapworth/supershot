@@ -1,13 +1,17 @@
-# Fixture draft extraction (L-151)
+# Game parser (L-151)
 
-`FixtureParser` is a package-scoped, injectable service, available through
-`@Dependency(\.fixtureParser)`. `parse(_:context:)` returns ordered transient
+`GameParser` is a package-scoped, injectable service, available through
+`@Dependency(\.gameParser)`. `parse(_:context:)` returns ordered transient
 `FixtureDraft` values. There are no database dependencies, writes, team identities,
 game settings, inferred time zones, or clock/lifecycle effects.
 
 The live implementation explicitly uses Apple's on-device
 `SystemLanguageModel.default`, a fresh session per request, and guided `@Generable`
-output. Availability is checked for each call. Tests inject `ExtractedFixture`
+output for natural-language descriptions. Explicit time-prefixed matchup rows
+(such as `19:10  The lodgers vs IMG & Friends`) use a deterministic extractor
+before model availability is checked. It preserves whitespace, punctuation and
+ampersands, and only handles an input when every nonempty line matches. Additional
+metadata or ambiguous separators fall back to the model. Tests inject `ExtractedFixture`
 responses at the generation boundary, so source grounding, ordering and validation
 still run. No test requires Apple Intelligence.
 
@@ -22,10 +26,11 @@ still run. No test requires Apple Intelligence.
 - Missing team names and equal names (case/outer-whitespace insensitive) are flagged.
   Incomplete rows remain drafts with their source and validation issues for correction.
 - Supported date components are unambiguous Gregorian `YYYY-MM-DD` dates, plus
-  `today`, `tomorrow` and `yesterday` resolved using a caller-supplied calendar,
-  reference date and time zone. Other date text stays available with an issue for
+  `today`, `tomorrow`, `yesterday` and weekday names (including `next Friday`)
+  resolved using a caller-supplied calendar, reference date and time zone. Other date text stays available with an issue for
   later correction. No context is taken implicitly from the system clock or zone.
-- Supported time components are 24-hour `H:mm` / `HH:mm`. Invalid or unsupported
+- Supported time components include 24-hour `H:mm` / `HH:mm` and 12-hour
+  times such as `7pm` and `7:30 PM`. Invalid or unsupported
   time text remains available with a validation issue. Time-only fixtures have no
   date or zone. A valid clock time duplicated into the model's date slot is discarded.
 - Date and time validity are checked independently. Invalid dates cannot silently
@@ -35,18 +40,38 @@ still run. No test requires Apple Intelligence.
   The pasted text is supplied as extraction data, separate from session instructions.
 - Extraction is probabilistic: source grounding prevents invented field values but
   cannot prove that the model included every fixture or assigned every field correctly.
-  Review and correction belong to subsequent issues, before persistence.
+  New Game applies the resolved values automatically and lets users correct them
+  in the setup controls before starting or saving.
+
+## New Game integration
+
+`DescribeGameFeature` parses immediately after the paste action and after a 500 ms
+pause while typing. It populates teams and metadata directly; the highest-ranked
+saved-team candidate is used automatically, and unmatched names become in-memory
+teams with random colours. The existing team cards open the team picker and
+configuration flow for corrections. Proposed teams seed the picker and its
+Create new team editor with the parsed name and colour, without a separate
+confirmation step before starting or saving the game.
+
+Once there is text, the input replaces Paste with Clear. Clearing removes the
+teams, schedule, court and division populated by the description. Manually set
+fields that the parser never populated are preserved. Request revisions prevent
+late parsing results from refilling the setup after clearing or changing the text.
+
+Typing, parsing and closing this implicit setup do not create teams or games.
+The existing Start or Save action writes any proposed teams and the game together
+in one transaction. A failed write rolls everything back.
 
 ## Development harness
 
-Open `SupershotWorkspace.xcworkspace`, select the shared **FixtureParser** scheme
+Open `Supershot.xcworkspace`, select the shared **GameParser** scheme
 and **My Mac**, then Run. The command-line harness prints availability, elapsed
 wall-clock time and the drafts/errors for both the single matchup and the complete
 six-fixture parent sample. Its `--stdin` argument accepts another pasted text fixture.
-It is also runnable with `swift run --package-path SupershotPackage FixtureParserHarness`.
+It is also runnable with `swift run --package-path SupershotPackage GameParserHarness`.
 
-For an eligible iOS development host, depend on the `FixtureParser` target and call
-`await FixtureParserDevelopmentHarness.run()` from that package's development code.
+For an eligible iOS development host, depend on the `GameParser` target and call
+`await GameParserDevelopmentHarness.run()` from that package's development code.
 It returns a typed report and does not require a production screen. The harness is
 not linked into the production app. Run on physical hardware with Apple Intelligence
 enabled and model assets ready; simulator tests do not establish inference quality.
@@ -54,12 +79,12 @@ enabled and model assets ready; simulator tests do not establish inference quali
 Focused deterministic tests:
 
 ```sh
-xcodebuild test -workspace SupershotWorkspace.xcworkspace \
-  -scheme FixtureParser -configuration Debug \
+xcodebuild test -workspace Supershot.xcworkspace \
+  -scheme GameParser -configuration Debug \
   -destination 'platform=macOS' -skipMacroValidation
 ```
 
-`FixtureParserTests` is also registered with both existing app test schemes for CI.
+`GameParserTests` is also registered with both existing app test schemes for CI.
 
 ## Evidence
 

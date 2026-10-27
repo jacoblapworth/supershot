@@ -1,13 +1,66 @@
 import CustomDump
 import Dependencies
 import DependenciesTestSupport
-@testable import FixtureParser
 import Foundation
+@testable import GameParser
 import Testing
 
-struct FixtureParserTests {
-  func parser(_ rows: [ExtractedFixture]) -> FixtureParser {
-    FixtureParser(availability: { .available }, generate: { _ in rows })
+struct GameParserTests {
+  func parser(_ rows: [ExtractedFixture]) -> GameParser {
+    GameParser(availability: { .available }, generate: { _ in rows })
+  }
+
+  @Test(arguments: [
+    "19:10  The lodgers vs IMG & Friends",
+    "19:10\tThe lodgers VS IMG & Friends",
+    "  19:10 The lodgers v. IMG & Friends  ",
+  ])
+  func liveParserReadsExplicitMatchupWithoutModelGeneration(source: String) async throws {
+    let draft = try #require(try await GameParser.live.parse(source).first)
+    expectNoDifference(draft.firstTeam, "The lodgers")
+    expectNoDifference(draft.secondTeam, "IMG & Friends")
+    expectNoDifference(draft.time, DateComponents(hour: 19, minute: 10))
+    #expect(draft.date == nil)
+    #expect(draft.dateText == nil)
+    expectNoDifference(draft.source, source)
+    expectNoDifference(draft.issues, [])
+  }
+
+  @Test
+  func structuredMatchupsWorkWhenModelIsUnavailableAndKeepAllRows() async throws {
+    let parser = GameParser(
+      availability: { .modelNotReady },
+      generate: { _ in
+        Issue.record("Structured input must not invoke model generation")
+        return []
+      },
+      extractStructured: StructuredFixtureExtractor.extract
+    )
+    let text = "19:10  The lodgers vs IMG & Friends\r\n19:50 A vs B"
+    let drafts = try await parser.parse(text)
+    expectNoDifference(drafts.count, 2)
+    expectNoDifference(drafts.map(\.sourceLine), [1, 2])
+    expectNoDifference(drafts.map(\.firstTeam), ["The lodgers", "A"])
+  }
+
+  @Test(arguments: [
+    "19:10 The lodgers vs IMG & Friends Court 2",
+    "19:10 The lodgers vs IMG & Friends tomorrow",
+    "19:10 The lodgers vs IMG & Friends\nDivision 1 • Court 2",
+    "19:10 A vs B; 19:50 C vs D",
+    "24:10 The lodgers vs IMG & Friends",
+  ])
+  func richerOrAmbiguousInputFallsBackToModel(source: String) async throws {
+    #expect(StructuredFixtureExtractor.extract(source) == nil)
+    let parser = GameParser(
+      availability: { .available },
+      generate: { input in
+        #expect(input == source)
+        throw GameParserError.generationFailed
+      },
+      extractStructured: StructuredFixtureExtractor.extract
+    )
+    await #expect(throws: GameParserError.generationFailed) { try await parser.parse(source) }
   }
 
   @Test func samplePreservesOrderPunctuationAndMissingDates() async throws {
@@ -17,7 +70,7 @@ struct FixtureParserTests {
       ("The lodgers", "Netball & Chill"), ("Netball & Chill", "One Team, One Dream"),
     ]
     let times = ["18:30", "19:10", "19:50", "18:30", "19:10", "19:50"]
-    let sources = FixtureParserDevelopmentHarness.sample.components(separatedBy: "\n\n")
+    let sources = GameParserDevelopmentHarness.sample.components(separatedBy: "\n\n")
     let rows = sources.enumerated().map { index, source in
       ExtractedFixture(
         source: source, firstTeam: pairs[index].0, secondTeam: pairs[index].1,
@@ -26,7 +79,7 @@ struct FixtureParserTests {
       )
     }
     // Validation owns source ordering even if the generator reverses its output.
-    let drafts = try await parser(rows.reversed()).parse(FixtureParserDevelopmentHarness.sample)
+    let drafts = try await parser(rows.reversed()).parse(GameParserDevelopmentHarness.sample)
     expectNoDifference(drafts.count, 6)
     for (index, draft) in drafts.enumerated() {
       expectNoDifference(draft.firstTeam, pairs[index].0)
@@ -58,19 +111,19 @@ struct FixtureParserTests {
   @Test func cancellationBeforeGenerationAndDuringFailure() async {
     let task = Task {
       withUnsafeCurrentTask { $0?.cancel() }
-      let parser = FixtureParser(availability: { .available }, generate: neverGenerateGeneration)
-      await #expect(throws: FixtureParserError.cancelled) { try await parser.parse("A vs B") }
+      let parser = GameParser(availability: { .available }, generate: neverGenerateGeneration)
+      await #expect(throws: GameParserError.cancelled) { try await parser.parse("A vs B") }
     }
     await task.value
     let failureTask = Task {
-      let parser = FixtureParser(
+      let parser = GameParser(
         availability: { .available },
         generate: { _ in
           withUnsafeCurrentTask { $0?.cancel() }
-          throw FixtureParserError.generationFailed
+          throw GameParserError.generationFailed
         }
       )
-      await #expect(throws: FixtureParserError.cancelled) { try await parser.parse("A vs B") }
+      await #expect(throws: GameParserError.cancelled) { try await parser.parse("A vs B") }
     }
     await failureTask.value
   }
@@ -88,7 +141,7 @@ struct FixtureParserTests {
   }
 
   @Test func singleAndPartialRows() async throws {
-    let source = FixtureParserDevelopmentHarness.single
+    let source = GameParserDevelopmentHarness.single
     let drafts = try await parser([
       .init(source: source, firstTeam: "Coles Hot Chooks", secondTeam: "IMG & Friends"),
     ]).parse(source)
@@ -122,6 +175,30 @@ struct FixtureParserTests {
       missing.first?.issues,
       [.valueNotInSource(field: "secondTeam"), .missingFirstTeam, .missingSecondTeam]
     )
+  }
+
+  @Test(arguments: [("7pm", 19, 0), ("7:30 PM", 19, 30), ("12am", 0, 0), ("12:15pm", 12, 15)])
+  func parsesTwelveHourTime(text: String, hour: Int, minute: Int) async throws {
+    let source = "A vs B at \(text)"
+    let fixture = try #require(try await parser([
+      ExtractedFixture(source: source, firstTeam: "A", secondTeam: "B", time: text),
+    ]).parse(source).first)
+    expectNoDifference(fixture.time, DateComponents(hour: hour, minute: minute))
+    expectNoDifference(fixture.issues, [])
+  }
+
+  @Test
+  func resolvesWeekdayInExplicitContext() async throws {
+    let reference = try #require(ISO8601DateFormatter().date(from: "2026-10-27T12:00:00Z"))
+    let context = try FixtureParsingContext(
+      calendar: Calendar(identifier: .gregorian), referenceDate: reference,
+      timeZone: #require(TimeZone(secondsFromGMT: 0))
+    )
+    let source = "A vs B Friday"
+    let fixture = try #require(try await parser([
+      ExtractedFixture(source: source, firstTeam: "A", secondTeam: "B", date: "Friday"),
+    ]).parse(source, context: context).first)
+    expectNoDifference(fixture.date, DateComponents(year: 2026, month: 10, day: 30))
   }
 
   @Test(arguments: ["24:00", "19:60", "-1:30", "7:5", "noon"])
@@ -183,60 +260,60 @@ struct FixtureParserTests {
   }
 
   @Test func emptyIrrelevantUnavailableAndLimits() async throws {
-    let neverGenerate = FixtureParser(
+    let neverGenerate = GameParser(
       availability: { .available },
       generate: { _ in
         Issue.record("Generation should not run")
         return []
       }
     )
-    await #expect(throws: FixtureParserError.unsupportedInput) {
+    await #expect(throws: GameParserError.unsupportedInput) {
       try await neverGenerate.parse(" \n")
     }
-    await #expect(throws: FixtureParserError.inputTooLong(maximumBytes: 6000)) {
+    await #expect(throws: GameParserError.inputTooLong(maximumBytes: 6000)) {
       try await neverGenerate.parse(String(repeating: "&", count: 6001))
     }
-    await #expect(throws: FixtureParserError.unsupportedInput) {
+    await #expect(throws: GameParserError.unsupportedInput) {
       try await parser([]).parse("Shopping list")
     }
     for status in [
-      FixtureParserAvailability.deviceNotEligible, .intelligenceNotEnabled, .modelNotReady,
+      GameParserAvailability.deviceNotEligible, .intelligenceNotEnabled, .modelNotReady,
       .unavailable,
     ] {
-      let unavailable = FixtureParser(availability: { status }, generate: neverGenerateGeneration)
-      await #expect(throws: FixtureParserError.unavailable(status)) {
+      let unavailable = GameParser(availability: { status }, generate: neverGenerateGeneration)
+      await #expect(throws: GameParserError.unavailable(status)) {
         try await unavailable.parse("A vs B")
       }
     }
-    await #expect(throws: FixtureParserError.outputTooLong(maximumFixtures: 12)) {
+    await #expect(throws: GameParserError.outputTooLong(maximumFixtures: 12)) {
       try await parser(Array(repeating: .init(source: "A vs B"), count: 13)).parse("A vs B")
     }
   }
 
   @Test func rejectsFabricatedSourceAndMapsFailures() async throws {
-    await #expect(throws: FixtureParserError.generationFailed) {
+    await #expect(throws: GameParserError.generationFailed) {
       try await parser([.init(source: "invented")]).parse("A vs B")
     }
-    let failure = FixtureParser(
+    let failure = GameParser(
       availability: { .available }, generate: { _ in throw CocoaError(.coderInvalidValue) }
     )
-    await #expect(throws: FixtureParserError.generationFailed) { try await failure.parse("A vs B") }
-    let cancelled = FixtureParser(
+    await #expect(throws: GameParserError.generationFailed) { try await failure.parse("A vs B") }
+    let cancelled = GameParser(
       availability: { .available }, generate: { _ in throw CancellationError() }
     )
-    await #expect(throws: FixtureParserError.cancelled) { try await cancelled.parse("A vs B") }
+    await #expect(throws: GameParserError.cancelled) { try await cancelled.parse("A vs B") }
   }
 
   @Test func cancellationAfterGenerationDiscardsDrafts() async {
     let task = Task {
-      let parser = FixtureParser(
+      let parser = GameParser(
         availability: { .available },
         generate: { _ in
           withUnsafeCurrentTask { $0?.cancel() }
           return [.init(source: "A vs B", firstTeam: "A", secondTeam: "B")]
         }
       )
-      await #expect(throws: FixtureParserError.cancelled) { try await parser.parse("A vs B") }
+      await #expect(throws: GameParserError.cancelled) { try await parser.parse("A vs B") }
     }
     await task.value
   }
@@ -244,9 +321,9 @@ struct FixtureParserTests {
   @Test func dependencyCanBeOverridden() async throws {
     let stub = parser([.init(source: "A vs B", firstTeam: "A", secondTeam: "B")])
     let drafts = try await withDependencies {
-      $0.fixtureParser = stub
+      $0.gameParser = stub
     } operation: {
-      @Dependency(\.fixtureParser) var parser
+      @Dependency(\.gameParser) var parser
       return try await parser.parse("A vs B")
     }
     expectNoDifference(drafts.first?.firstTeam, "A")

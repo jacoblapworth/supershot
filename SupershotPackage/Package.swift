@@ -18,8 +18,8 @@ let package = Package(
   platforms: [.iOS("27.0"), .macOS("27.0")],
   products: [
     .library(name: "FixtureTeamResolution", targets: ["FixtureTeamResolution"]),
-    .library(name: "FixtureParser", targets: ["FixtureParser"]),
-    .executable(name: "FixtureParserHarness", targets: ["FixtureParserHarness"]),
+    .library(name: "GameParser", targets: ["GameParser"]),
+    .executable(name: "GameParserHarness", targets: ["GameParserHarness"]),
     .library(name: "TestSupport", targets: ["TestSupport"]),
     .library(name: "SharedModels", targets: ["SharedModels"]),
     .library(name: "WidgetSupport", targets: ["WidgetSupport"]),
@@ -65,28 +65,28 @@ let package = Package(
   targets: [
     .target(
       name: "FixtureTeamResolution",
-      dependencies: ["FixtureParser", "GameCore", .product(name: "FuzzyMatch", package: "FuzzyMatch")],
+      dependencies: ["GameParser", "GameCore", .product(name: "FuzzyMatch", package: "FuzzyMatch")],
       swiftSettings: appSwiftSettings
     ),
     .testTarget(
       name: "FixtureTeamResolutionTests",
-      dependencies: ["FixtureTeamResolution", "FixtureParser", "GameCore"],
+      dependencies: ["FixtureTeamResolution", "GameParser", "GameCore"],
       swiftSettings: appSwiftSettings
     ),
     .target(
-      name: "FixtureParser",
+      name: "GameParser",
       dependencies: [.product(name: "Dependencies", package: "swift-dependencies")],
       swiftSettings: appSwiftSettings
     ),
     .executableTarget(
-      name: "FixtureParserHarness",
-      dependencies: ["FixtureParser"],
+      name: "GameParserHarness",
+      dependencies: ["GameParser"],
       swiftSettings: appSwiftSettings
     ),
     .testTarget(
-      name: "FixtureParserTests",
+      name: "GameParserTests",
       dependencies: [
-        "FixtureParser",
+        "GameParser",
         .product(name: "CustomDump", package: "swift-custom-dump"),
         .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
       ],
@@ -251,7 +251,7 @@ let package = Package(
       dependencies: [
         "GameAnalysis", "PermissionsFeature", "SubscriptionClient", "SharedModels", "GameCore",
         "Database", "GameServices", "AppSettings", "LocationClient", "Styleguide", "WidgetSupport",
-        "TeamEditingFeature", "ScoringFeature", "PreviewSupport",
+        "TeamEditingFeature", "ScoringFeature", "PreviewSupport", "GameParser", "FixtureTeamResolution",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "Sharing", package: "swift-sharing"),
@@ -469,7 +469,7 @@ let package = Package(
       name: "NewGameFeatureTests",
       dependencies: [
         "AlarmClient", "AppSettings", "Database", "GameAnalysis", "GameCore", "GameServices",
-        "LocationClient", "NewGameFeature", "PermissionsFeature", "PreviewSupport",
+        "LocationClient", "NewGameFeature", "PermissionsFeature", "PreviewSupport", "GameParser", "FixtureTeamResolution",
         "ScoringFeature", "SharedModels", "SoundEffectsClient", "Styleguide", "SubscriptionClient",
         "TeamEditingFeature", "TestSupport", "WidgetSupport",
         .product(name: "SQLiteData", package: "sqlite-data"),

@@ -42,6 +42,7 @@ package struct NewGameTeamsView: View {
         team: store.rightTeam.team
       )
     }
+    .disabled(store.isSaving || store.describeGame.isBusy)
   }
 
   package init(store: StoreOf<NewGameFeature>) {

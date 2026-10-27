@@ -1,7 +1,7 @@
 import Foundation
 import FoundationModels
 
-nonisolated extension FixtureParser {
+nonisolated extension GameParser {
   static var live: Self {
     Self(
       availability: {
@@ -35,7 +35,7 @@ nonisolated extension FixtureParser {
             options: GenerationOptions(samplingMode: .greedy, maximumResponseTokens: 3000)
           )
           guard !response.content.exceedsFixtureLimit else {
-            throw FixtureParserError.outputTooLong(maximumFixtures: Self.maximumFixtures)
+            throw GameParserError.outputTooLong(maximumFixtures: Self.maximumFixtures)
           }
           return response.content.fixtures.map {
             ExtractedFixture(
@@ -46,15 +46,16 @@ nonisolated extension FixtureParser {
         } catch let error as LanguageModelError {
           switch error {
           case .unsupportedLanguageOrLocale, .guardrailViolation, .refusal:
-            throw FixtureParserError.unsupportedInput
+            throw GameParserError.unsupportedInput
           case .contextSizeExceeded:
-            throw FixtureParserError.inputTooLong(maximumBytes: Self.maximumInputBytes)
-          default: throw FixtureParserError.generationFailed
+            throw GameParserError.inputTooLong(maximumBytes: Self.maximumInputBytes)
+          default: throw GameParserError.generationFailed
           }
         } catch is SystemLanguageModel.Error {
-          throw FixtureParserError.unavailable(.modelNotReady)
+          throw GameParserError.unavailable(.modelNotReady)
         }
-      }
+      },
+      extractStructured: StructuredFixtureExtractor.extract
     )
   }
 }

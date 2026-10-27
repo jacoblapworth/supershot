@@ -27,14 +27,11 @@ package struct SetupLocationView: View {
     VStack(alignment: .leading, spacing: 16) {
       switch store.location {
       case .idle:
-        ContentUnavailableView {
-          Label("Remember where you played", systemImage: "mappin.and.ellipse")
-        } description: {
-          Text("Add your current location to save the venue with this game.")
-        } actions: {
-          Button("Add location") { store.send(.locationButtonTapped) }
-            .fontWeight(.medium)
-            .buttonStyle(.glassProminent)
+        HStack {
+          Label("Current location", systemImage: "mappin.and.ellipse")
+          Spacer()
+          Button("Add") { store.send(.locationButtonTapped) }
+            .accessibilityLabel("Add current location")
         }
 
       case .denied:

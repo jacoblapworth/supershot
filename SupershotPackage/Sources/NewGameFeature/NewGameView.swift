@@ -1,6 +1,7 @@
 import AppSettings
 import ComposableArchitecture
 import Database
+import FixtureTeamResolution
 import GameAnalysis
 import GameCore
 import GameServices
@@ -22,25 +23,57 @@ package struct NewGameView: View {
 
   package var body: some View {
     ScrollView {
-      VStack(spacing: 20) {
-        NewGameTeamsView(store: store)
-        SetupGameDetailsView(store: store)
+      VStack(alignment: .leading, spacing: 24) {
+        DescribeGameView(store: store.scope(state: \.describeGame, action: \.describeGame))
+          .disabled(store.isSaving)
 
-        if store.leftTeam.team != nil, store.rightTeam.team != nil {
-          SetupCentrePassView(
-            firstCentrePass: $store.firstCentrePass,
-            leftTeamName: store.leftTeam.team?.name ?? "Left",
-            rightTeamName: store.rightTeam.team?.name ?? "Right"
-          )
+        SetupSection("Teams") {
+          NewGameTeamsView(store: store)
+        }
+        SetupSection("Game details") {
+          SetupGameDetailsView(store: store)
         }
 
-        SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
+        if let leftTeamName, let rightTeamName {
+          SetupSection("First centre pass") {
+            SetupCentrePassView(
+              firstCentrePass: $store.firstCentrePass,
+              leftTeamName: leftTeamName,
+              rightTeamName: rightTeamName
+            )
+          }
+        }
 
-        AlarmPermissionCard(
-          store: store.scope(state: \.alarms, action: \.alarms),
-          proAccess: proAccess
+        SetupSection("Timing") {
+          SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
+        }
+
+        if proAccess != .unknown {
+          SetupSection("Quarter alerts") {
+            AlarmPermissionCard(
+              store: store.scope(state: \.alarms, action: \.alarms),
+              proAccess: proAccess,
+              showsHeading: false
+            )
+          }
+        }
+        SetupSection("Location") {
+          SetupLocationView(store: store)
+        }
+
+        SetupStartBar(
+          canStartGame: store.canStartGame,
+          configurationSummary: store.configurationSummary,
+          errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
+          isSaving: store.isSaving,
+          startGameTapped: {
+            store.send(store.scheduledAt == nil ? .startGameButtonTapped : .saveGameButtonTapped)
+          },
+          isScheduled: store.scheduledAt != nil,
+          startNowTapped: { store.send(.startGameButtonTapped) },
+          retryTapped: { store.send(.retrySaveButtonTapped) },
+          canRetry: store.failedSaveIntent != nil
         )
-        SetupLocationView(store: store)
       }
       #if os(macOS)
       .frame(maxWidth: 680)
@@ -48,12 +81,28 @@ package struct NewGameView: View {
       #endif
       .padding()
     }
+    .scrollDismissesKeyboard(.interactively)
+    .background(Color.setupBackground.ignoresSafeArea())
+    .environment(\.usesGroupedSetupContainers, true)
     .navigationTitle(store.requiresExistingGame ? "Planned game" : "New game")
     .navigationBarBackButtonHidden()
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Back", systemImage: "chevron.backward") { store.send(.closeButtonTapped) }
           .disabled(store.isSaving)
+      }
+      ToolbarItem(placement: .primaryAction) {
+        Button(
+          store.scheduledAt == nil ? "Start game" : "Start now",
+          systemImage: "play.fill"
+        ) {
+          store.send(.startGameButtonTapped)
+        }
+        .labelStyle(.iconOnly)
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.circle)
+        .disabled(!store.canStartGame)
+        .accessibilityIdentifier("gameSetup.start")
       }
     }
     .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }
@@ -64,21 +113,6 @@ package struct NewGameView: View {
       } else {
         store.send(.sceneBecameInactive)
       }
-    }
-    .safeAreaInset(edge: .bottom) {
-      SetupStartBar(
-        canStartGame: store.canStartGame,
-        configurationSummary: store.configurationSummary,
-        errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
-        isSaving: store.isSaving,
-        startGameTapped: {
-          store.send(store.scheduledAt == nil ? .startGameButtonTapped : .saveGameButtonTapped)
-        },
-        isScheduled: store.scheduledAt != nil,
-        startNowTapped: { store.send(.startGameButtonTapped) },
-        retryTapped: { store.send(.retrySaveButtonTapped) },
-        canRetry: store.failedSaveIntent != nil
-      )
     }
     .sheet(
       item: $store.scope(state: \.destination, action: \.destination),
@@ -115,6 +149,14 @@ package struct NewGameView: View {
     }
   }
 
+  private var leftTeamName: String? {
+    store.leftTeam.team?.name
+  }
+
+  private var rightTeamName: String? {
+    store.rightTeam.team?.name
+  }
+
   package init(store: StoreOf<NewGameFeature>, proAccess: SubscriptionEntitlement = .unknown) {
     self.store = store
     self.proAccess = proAccess
@@ -130,5 +172,26 @@ package struct NewGameView: View {
 #Preview("Ready to start") {
   NavigationStack {
     NewGameView(store: setupPreviewStore(.previewReady))
+  }
+}
+
+private struct SetupSection<Content: View>: View {
+  let title: String
+  @ViewBuilder var content: Content
+
+  init(_ title: String, @ViewBuilder content: () -> Content) {
+    self.title = title
+    self.content = content()
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text(title)
+        .font(.headline)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .accessibilityAddTraits(.isHeader)
+      content
+    }
   }
 }

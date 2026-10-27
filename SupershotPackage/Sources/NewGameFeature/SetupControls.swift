@@ -22,9 +22,6 @@ package struct SetupCentrePassView: View {
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      Label("First centre pass", systemImage: "arrow.left.arrow.right")
-        .font(.headline)
-
       Picker("First centre pass", selection: $firstCentrePass) {
         Text(leftTeamName)
           .tag(NewGameFeature.TeamSide.teamA)
@@ -100,8 +97,7 @@ package struct SetupStartBar: View {
         .buttonStyle(.glass)
       }
     }
-    .padding()
-    .background(.bar)
+    .setupCardStyle()
   }
 
   package init(
@@ -166,8 +162,6 @@ package struct SetupGameDetailsView: View {
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Label("Game details", systemImage: "calendar")
-        .font(.headline)
       Toggle(
         "Scheduled date and time",
         isOn: Binding(
@@ -175,6 +169,7 @@ package struct SetupGameDetailsView: View {
           set: { store.send(.scheduleToggleChanged($0)) }
         )
       )
+      Divider()
       if store.scheduledAt != nil {
         DatePicker(
           "Scheduled",
@@ -186,11 +181,25 @@ package struct SetupGameDetailsView: View {
       } else {
         Text("Now").foregroundStyle(.secondary)
       }
-      LabeledContent("Court") {
+      Divider()
+      LabeledContent {
         TextField("Optional", text: $store.court)
-          .textFieldStyle(.roundedBorder)
+          .keyboardType(.numbersAndPunctuation)
+          .textFieldStyle(.plain)
           .accessibilityLabel("Court")
           .accessibilityIdentifier("gameSetup.court")
+      } label: {
+        Label("Court", systemImage: "sportscourt")
+      }
+      Divider()
+      LabeledContent {
+        TextField("Optional", text: $store.division)
+          .keyboardType(.numbersAndPunctuation)
+          .textFieldStyle(.plain)
+          .accessibilityLabel("Division")
+          .accessibilityIdentifier("gameSetup.division")
+      } label: {
+        Label("Division", systemImage: "chart.bar.fill")
       }
     }
     .setupCardStyle()

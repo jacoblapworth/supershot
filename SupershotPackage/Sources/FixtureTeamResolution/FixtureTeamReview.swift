@@ -1,6 +1,6 @@
-import FixtureParser
 import Foundation
 import GameCore
+import GameParser
 
 /// A batch owns one shared review entry per normalized name, in first-occurrence order.
 /// Proposed identities are comparison keys, not allocated database IDs.

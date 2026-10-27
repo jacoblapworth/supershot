@@ -14,6 +14,7 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   public var createdAt: Date
   public var scheduledAt: Date?
   public var court: String?
+  public var division: String?
   public var endedAt: Date?
   public var teamAID: Team.ID
   public var teamABibColorHex = "#007AFF"
@@ -55,12 +56,13 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
     isAwaitingCentrePassConfirmation: Bool = false, lateScoringPeriodNumber: Int? = nil,
     currentPhaseIndex: Int = 0, elapsedSeconds: Int = 0, timerEndsAt: Date? = nil,
     breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
-    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil
+    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil, division: String? = nil
   ) {
     self.id = id
     self.createdAt = createdAt ?? startedAt ?? Date()
     self.scheduledAt = scheduledAt
     self.court = court
+    self.division = division
     self.startedAt = startedAt
     self.endedAt = endedAt
     self.teamAID = teamAID

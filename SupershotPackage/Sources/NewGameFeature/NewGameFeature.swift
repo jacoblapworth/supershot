@@ -30,6 +30,14 @@ package struct NewGameFeature {
     case failed
   }
 
+  package nonisolated enum DescriptionField: Hashable, Sendable {
+    case firstTeam
+    case secondTeam
+    case scheduledAt
+    case court
+    case division
+  }
+
   package nonisolated enum TeamSide: Equatable, Hashable, Sendable {
     case teamA
     case teamB
@@ -71,11 +79,14 @@ package struct NewGameFeature {
 
   @ObservableState
   package struct State: Equatable {
+    package var describeGame = DescribeGameFeature.State()
     package var gameID: Game.ID
     package var createdAt: Date
     package var periodIDs: [GamePeriod.ID]
     package var scheduledAt: Date?
     package var court = ""
+    package var division = ""
+    package var parsedFields: Set<DescriptionField> = []
     package var requiresExistingGame = false
     package var lastSavedDraft: GameSetupDraft?
     package var inFlightDraft: GameSetupDraft?
@@ -144,6 +155,7 @@ package struct NewGameFeature {
       requiresExistingGame = true
       scheduledAt = snapshot.game.scheduledAt
       court = snapshot.game.court ?? ""
+      division = snapshot.game.division ?? ""
       leftTeam.team = snapshot.teamA
       leftTeam.bibColor = snapshot.game.teamABibColor
       rightTeam.team = snapshot.teamB
@@ -166,10 +178,12 @@ package struct NewGameFeature {
 
     /// Only committed setup values are included; temporary child-editor edits stay transient.
     package var draft: GameSetupDraft? {
-      guard let teamA = leftTeam.team, let teamB = rightTeam.team,
+      guard !describeGame.isBusy,
+            let teamA = leftTeam.team, let teamB = rightTeam.team,
             teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
       else { return nil }
       let court = court.trimmingCharacters(in: .whitespacesAndNewlines)
+      let division = division.trimmingCharacters(in: .whitespacesAndNewlines)
       let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration]
       return GameSetupDraft(
         game: Game(
@@ -180,7 +194,8 @@ package struct NewGameFeature {
           latitude: gameLocation?.latitude, longitude: gameLocation?.longitude,
           pointOfInterestName: gameLocation?.pointOfInterestName,
           breakStartPolicy: timing.breakStartPolicy, createdAt: createdAt,
-          scheduledAt: scheduledAt, court: court.isEmpty ? nil : court
+          scheduledAt: scheduledAt, court: court.isEmpty ? nil : court,
+          division: division.isEmpty ? nil : division
         ),
         periods: periodIDs.enumerated().map { position, id in
           GamePeriod(
@@ -188,7 +203,8 @@ package struct NewGameFeature {
             durationSeconds: periodDuration.totalSeconds!,
             breakAfterDurationSeconds: position < breaks.count ? breaks[position].totalSeconds : nil
           )
-        }
+        },
+        teamsToCreate: describeGame.pendingTeams.filter { $0.id == teamA.id || $0.id == teamB.id }
       )
     }
 
@@ -202,6 +218,7 @@ package struct NewGameFeature {
       leftTeam.team != nil
         && rightTeam.team != nil
         && hasDifferentSelectedTeams
+        && !describeGame.isBusy
         && !isSavingTeamConfiguration
         && (periodDuration.totalSeconds ?? 0) > 0
         && breakDurationsAreValid
@@ -210,6 +227,7 @@ package struct NewGameFeature {
 
     package var canSwapTeams: Bool {
       leftTeam.team != nil && rightTeam.team != nil && destination == nil && !isSaving
+        && !describeGame.isBusy
     }
 
     package var configurationSummary: String {
@@ -262,6 +280,7 @@ package struct NewGameFeature {
     case saveGameButtonTapped
     case retrySaveButtonTapped
     case plannedGameResponse(Result<GameSnapshot, any Error>)
+    case describeGame(DescribeGameFeature.Action)
     case delegate(Delegate)
     case destination(PresentationAction<NewGameDestination.Action>)
     case destinationDidDismiss
@@ -288,19 +307,67 @@ package struct NewGameFeature {
   @Dependency(\.locationClient) package var locationClient
 
   package var body: some Reducer<State, Action> {
+    Scope(state: \.describeGame, action: \.describeGame) { DescribeGameFeature() }
     Scope(state: \.alarms, action: \.alarms) { AlarmPermissionFeature() }
     BindingReducer()
     Reduce { state, action in
       switch action {
+      case let .describeGame(.delegate(.populated(revision, first, second, metadata))):
+        guard revision == state.describeGame.revision else { return .none }
+        applyDescribedTeams(first, second, state: &state)
+        if metadata.scheduledAt != nil || state.parsedFields.contains(.scheduledAt) {
+          state.scheduledAt = metadata.scheduledAt
+          state.parsedFields.insert(.scheduledAt)
+        }
+        if metadata.court != nil || state.parsedFields.contains(.court) {
+          state.court = metadata.court ?? ""
+          state.parsedFields.insert(.court)
+        }
+        if metadata.division != nil || state.parsedFields.contains(.division) {
+          state.division = metadata.division ?? ""
+          state.parsedFields.insert(.division)
+        }
+        state.errorMessage = nil
+        return .none
+
+      case let .describeGame(.delegate(.cleared(revision))):
+        guard revision == state.describeGame.revision else { return .none }
+        if state.parsedFields.contains(.firstTeam) {
+          state.leftTeam = TeamSelection(bibColor: ColorPalette.blue)
+        }
+        if state.parsedFields.contains(.secondTeam) {
+          state.rightTeam = TeamSelection(bibColor: ColorPalette.red)
+        }
+        if state.parsedFields.contains(.scheduledAt) {
+          state.scheduledAt = nil
+        }
+        if state.parsedFields.contains(.court) {
+          state.court = ""
+        }
+        if state.parsedFields.contains(.division) {
+          state.division = ""
+        }
+        state.parsedFields = []
+        state.errorMessage = nil
+        return .none
+
+      case .describeGame:
+        return .none
+
       case let .scheduleToggleChanged(scheduled):
         state.scheduledAt = scheduled ? (state.scheduledAt ?? now) : nil
         return .none
 
       case .configurationChanged, .sceneBecameInactive:
-        guard !state.hasStarted, state.draft != state.lastSavedDraft else { return .none }
+        guard state.describeGame.source.isEmpty,
+              !state.hasStarted, state.draft != state.lastSavedDraft else { return .none }
         return save(state: &state, intent: .autosave)
 
-      case .closeButtonTapped, .saveGameButtonTapped:
+      case .closeButtonTapped:
+        guard state.describeGame.source.isEmpty else { return .send(.delegate(.gameSaved)) }
+        return save(state: &state, intent: .close)
+
+      case .saveGameButtonTapped:
         return save(state: &state, intent: .close)
 
       case .retrySaveButtonTapped:
@@ -442,9 +509,12 @@ package struct NewGameFeature {
         return .none
 
       case let .selectTeamButtonTapped(side):
-        guard !state.isSaving else { return .none }
+        guard !state.isSaving, !state.describeGame.isBusy else { return .none }
         let selectedTeam = side == .teamA ? state.leftTeam.team : state.rightTeam.team
-        if let selectedTeam {
+        let proposal = selectedTeam.flatMap { selected in
+          state.describeGame.pendingTeams.first { $0.id == selected.id }
+        }
+        if let selectedTeam, proposal == nil {
           state.destination = .teamConfiguration(
             NewGameTeamConfiguration.State(
               configuration: SetupTeamFeature.State(
@@ -458,7 +528,9 @@ package struct NewGameFeature {
         }
         state.destination = .teamPicker(
           NewGameTeamPicker.State(
-            picker: TeamPickerFeature.State(excluding: excludedTeamIDs(for: side, state: state)),
+            picker: TeamPickerFeature.State(
+              excluding: excludedTeamIDs(for: side, state: state), proposedTeam: proposal
+            ),
             side: side
           )
         )
@@ -496,6 +568,14 @@ package struct NewGameFeature {
 
       case .swapTeamsButtonTapped:
         guard state.canSwapTeams else { return .none }
+        let firstWasParsed = state.parsedFields.remove(.firstTeam) != nil
+        let secondWasParsed = state.parsedFields.remove(.secondTeam) != nil
+        if firstWasParsed {
+          state.parsedFields.insert(.secondTeam)
+        }
+        if secondWasParsed {
+          state.parsedFields.insert(.firstTeam)
+        }
         let leftTeam = state.leftTeam
         state.leftTeam = state.rightTeam
         state.rightTeam = leftTeam
@@ -513,6 +593,23 @@ package struct NewGameFeature {
     }
     .ifLet(\.$destination, action: \.destination) {
       NewGameDestination.body
+    }
+  }
+
+  private func applyDescribedTeams(_ first: Team?, _ second: Team?, state: inout State) {
+    if let first {
+      state.leftTeam.team = first
+      state.leftTeam.bibColor = first.color
+      state.parsedFields.insert(.firstTeam)
+    } else if state.parsedFields.contains(.firstTeam) {
+      state.leftTeam = TeamSelection(bibColor: ColorPalette.blue)
+    }
+    if let second {
+      state.rightTeam.team = second
+      state.rightTeam.bibColor = second.color
+      state.parsedFields.insert(.secondTeam)
+    } else if state.parsedFields.contains(.secondTeam) {
+      state.rightTeam = TeamSelection(bibColor: ColorPalette.red)
     }
   }
 

@@ -16,6 +16,7 @@ package struct AlarmPermissionCard: View {
   package let store: StoreOf<AlarmPermissionFeature>
   package let proAccess: SubscriptionEntitlement
   package var hidesWhenAuthorized = false
+  package var showsHeading = true
 
   package var body: some View {
     Group {
@@ -33,8 +34,10 @@ package struct AlarmPermissionCard: View {
             #endif
           } else {
             HStack {
-              Label("Never miss the quarter", systemImage: "alarm.fill")
-                .font(.headline)
+              if showsHeading {
+                Label("Never miss the quarter", systemImage: "alarm.fill")
+                  .font(.headline)
+              }
               if !timerAlertsEnabled {
                 Text("PRO")
                   .font(.caption.bold())
@@ -118,10 +121,11 @@ package struct AlarmPermissionCard: View {
 
   package init(
     store: StoreOf<AlarmPermissionFeature>, proAccess: SubscriptionEntitlement,
-    hidesWhenAuthorized: Bool = false
+    hidesWhenAuthorized: Bool = false, showsHeading: Bool = true
   ) {
     self.store = store
     self.proAccess = proAccess
     self.hidesWhenAuthorized = hidesWhenAuthorized
+    self.showsHeading = showsHeading
   }
 }
