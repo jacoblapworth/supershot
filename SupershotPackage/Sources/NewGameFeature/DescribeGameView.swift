@@ -5,12 +5,15 @@ import SwiftUI
 
 package struct DescribeGameView: View {
   @Bindable var store: StoreOf<DescribeGameFeature>
+  @FocusState private var isDescriptionFocused: Bool
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack(spacing: 12) {
-        TextField("Describe the game", text: $store.source, axis: .vertical)
-          .lineLimit(1 ... 4)
+        TextField("Describe the game", text: $store.source)
+          .focused($isDescriptionFocused)
+          .submitLabel(.done)
+          .onSubmit { isDescriptionFocused = false }
           .textFieldStyle(.plain)
           .accessibilityHint("Teams and game details fill in automatically as you type.")
           .accessibilityIdentifier("gameSetup.description")

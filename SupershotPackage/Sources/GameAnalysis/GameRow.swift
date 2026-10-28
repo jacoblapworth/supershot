@@ -212,7 +212,9 @@ private struct TeamScore: View {
     GameRow(game: .previewInProgress)
     GameRow(game: .previewCompleted)
   }
+#if os(iOS)
   .listRowSpacing(8)
+#endif
 }
 
 #Preview("In-progress game") {

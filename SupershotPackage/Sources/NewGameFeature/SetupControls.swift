@@ -162,24 +162,32 @@ package struct SetupGameDetailsView: View {
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      Toggle(
-        "Scheduled date and time",
-        isOn: Binding(
-          get: { store.scheduledAt != nil },
-          set: { store.send(.scheduleToggleChanged($0)) }
-        )
-      )
-      Divider()
-      if store.scheduledAt != nil {
-        DatePicker(
-          "Scheduled",
-          selection: Binding(
-            get: { store.scheduledAt ?? store.createdAt },
-            set: { store.scheduledAt = $0 }
-          )
-        )
-      } else {
-        Text("Now").foregroundStyle(.secondary)
+      TimelineView(.everyMinute) { context in
+        HStack {
+          DatePicker(
+            selection: Binding(
+              get: { store.scheduledAt ?? context.date },
+              set: { store.scheduledAt = $0 }
+            )
+          ) {
+            Label("Start", systemImage: "calendar")
+          }
+          .datePickerStyle(.compact)
+          .accessibilityIdentifier("gameSetup.dateTime")
+
+          if store.scheduledAt != nil {
+            Button {
+              store.scheduledAt = nil
+            } label: {
+              Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Clear date and time")
+            .accessibilityHint("Use the current date and time")
+            .accessibilityIdentifier("gameSetup.clearDateTime")
+          }
+        }
       }
       Divider()
       LabeledContent {

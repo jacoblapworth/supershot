@@ -122,9 +122,9 @@ package struct GamesHomeView: View {
     }
     .scrollContentBackground(.hidden)
     .background(.background)
-    .listRowSpacing(8)
     .navigationTitle("Games")
     #if os(iOS)
+      .listRowSpacing(8)
       .navigationBarTitleDisplayMode(.large)
     #endif
       .toolbar {
@@ -169,7 +169,9 @@ package struct GamesHomeView: View {
         }
       }
     }
+    #if os(iOS)
     .listRowSpacing(8)
+    #endif
   }
 
   package init(

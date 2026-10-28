@@ -30,18 +30,19 @@ package struct NewGameView: View {
         SetupSection("Teams") {
           NewGameTeamsView(store: store)
         }
-        SetupSection("Game details") {
-          SetupGameDetailsView(store: store)
-        }
-
+        
         if let leftTeamName, let rightTeamName {
-          SetupSection("First centre pass") {
+          SetupSection("Centre pass") {
             SetupCentrePassView(
               firstCentrePass: $store.firstCentrePass,
               leftTeamName: leftTeamName,
               rightTeamName: rightTeamName
             )
           }
+        }
+        
+        SetupSection("Game details") {
+          SetupGameDetailsView(store: store)
         }
 
         SetupSection("Timing") {
