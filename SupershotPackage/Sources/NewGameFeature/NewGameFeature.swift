@@ -276,7 +276,6 @@ package struct NewGameFeature {
     case closeButtonTapped
     case configurationChanged
     case sceneBecameInactive
-    case scheduleToggleChanged(Bool)
     case saveGameButtonTapped
     case retrySaveButtonTapped
     case plannedGameResponse(Result<GameSnapshot, any Error>)
@@ -352,10 +351,6 @@ package struct NewGameFeature {
         return .none
 
       case .describeGame:
-        return .none
-
-      case let .scheduleToggleChanged(scheduled):
-        state.scheduledAt = scheduled ? (state.scheduledAt ?? now) : nil
         return .none
 
       case .configurationChanged, .sceneBecameInactive:

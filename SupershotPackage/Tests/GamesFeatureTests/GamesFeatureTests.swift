@@ -45,11 +45,10 @@ extension SupershotTestSuite {
         $0.filter = .completed
       }
       await store.send(.newGameButtonTapped) {
-        $0.path.append(.setup(withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }))
+        $0.newGame = withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }
       }
-      let setupID = store.state.path.ids[0]
-      await store.send(.path(.popFrom(id: setupID))) {
-        $0.path.removeAll()
+      await store.send(.newGame(.dismiss)) {
+        $0.newGame = nil
       }
       expectNoDifference(store.state.filter, .completed)
       await store.send(.filterButtonTapped(.all)) {
@@ -153,7 +152,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.newGameButtonTapped) {
-        $0.path.append(.setup(withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }))
+        $0.newGame = withDependencies { $0.uuid = .incrementing } operation: { NewGameFeature.State() }
       }
     }
 

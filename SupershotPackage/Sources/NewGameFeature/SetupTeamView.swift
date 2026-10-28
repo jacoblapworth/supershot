@@ -19,49 +19,51 @@ package struct SetupTeamView: View {
   @Bindable package var store: StoreOf<SetupTeamFeature>
   package var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 24) {
-          HStack(spacing: 16) {
-            Circle().fill(store.previewTeam.color).frame(width: 56, height: 56)
-              .accessibilityHidden(true)
-            Text(store.previewTeam.name).font(.title2.bold())
-            Spacer()
-            Button {
-              store.send(.changeTeamButtonTapped)
-            } label: {
-              Label("Change team", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
-            }
-            .buttonStyle(.bordered).disabled(store.isSaving)
-            .labelStyle(.iconOnly)
+      VStack(alignment: .leading, spacing: 24) {
+        HStack(spacing: 16) {
+          Circle().fill(store.previewTeam.color).frame(width: 56, height: 56)
+            .accessibilityHidden(true)
+          Text(store.previewTeam.name).font(.title2.bold())
+          Spacer()
+          Button {
+            store.send(.changeTeamButtonTapped)
+          } label: {
+            Label("Change team", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
+              .font(.title2)
           }
-          PaletteColorPicker(
-            color: Binding(
-              get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }
-            ),
-            title: "Colour"
-          )
-          if store.isSaving {
-            ProgressView("Saving colour…")
-          }
-          if let errorMessage = store.errorMessage {
-            Text(errorMessage).foregroundStyle(.red)
-            Button("Retry") { store.send(.retryButtonTapped) }
-          }
-        }.padding()
-      }
-      .navigationTitle("Team")
-      .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Done") { store.send(.doneButtonTapped) }.disabled(store.isSaving)
+          .buttonBorderShape(.circle)
+          .buttonStyle(.bordered)
+          .disabled(store.isSaving)
+          .controlSize(.large)
+          .labelStyle(.iconOnly)
         }
-      }
-      .sheet(item: $store.scope(state: \.picker, action: \.picker)) { picker in
-        NavigationStack {
-          TeamPickerView(store: picker).navigationTitle("Select team")
+        PaletteColorPicker(
+          color: Binding(
+            get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }
+          ),
+          title: "Colour"
+        )
+        if store.isSaving {
+          ProgressView("Saving colour…")
         }
-        .presentationDetents([.medium, .large])
-        .presentationBackground(.thinMaterial)
-      }
+        if let errorMessage = store.errorMessage {
+          Text(errorMessage).foregroundStyle(.red)
+          Button("Retry") { store.send(.retryButtonTapped) }
+        }
+      }.padding()
+        .navigationTitle("Team")
+        .toolbar {
+          ToolbarItem(placement: .confirmationAction) {
+            Button("Done") { store.send(.doneButtonTapped) }.disabled(store.isSaving)
+          }
+        }
+        .sheet(item: $store.scope(state: \.picker, action: \.picker)) { picker in
+          NavigationStack {
+            TeamPickerView(store: picker).navigationTitle("Select team")
+          }
+          .presentationDetents([.medium, .large])
+          .presentationBackground(.thinMaterial)
+        }
     }
     #if os(macOS)
     .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)

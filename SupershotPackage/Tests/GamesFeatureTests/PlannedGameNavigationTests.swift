@@ -56,46 +56,47 @@ extension SupershotTestSuite {
         }
         return false
       }
-      guard case let .setup(setup) = store.state.path.last else {
-        Issue.record("Expected planned setup")
+      guard let setup = store.state.newGame else {
+        Issue.record("Expected saved game in the new game sheet")
         return
       }
       expectNoDifference(setup.draft, state.draft)
     }
 
-    @Test func nativePopSavesInParentAfterSetupRouteIsRemoved() async throws {
+    @Test func sheetDismissalSavesInParentAfterSetupIsRemoved() async throws {
       @Dependency(\.defaultDatabase) var database
       let setup = try setup()
       var state = GamesFeature.State()
-      state.path.append(.setup(setup))
+      state.newGame = setup
       let store = TestStore(initialState: state) { GamesFeature() }
       store.exhaustivity = .off(showSkippedAssertions: false)
-      await store.send(.path(.popFrom(id: store.state.path.ids[0])))
+      await store.send(.newGame(.dismiss))
       await store.finish()
       #expect(store.state.path.isEmpty)
+      #expect(store.state.newGame == nil)
       let gameID = setup.gameID
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
       #expect(snapshot.game.isPlanned)
       expectNoDifference(snapshot.game.court, "3")
     }
 
-    @Test func failedPopSaveRestoresEditorForRetry() async throws {
+    @Test func failedDismissalSaveRestoresSheetForRetry() async throws {
       @Dependency(\.defaultDatabase) var database
       let setup = try setup()
       let teamID = try #require(setup.leftTeam.team?.id)
       try await database.write { db in try Team.find(teamID).delete().execute(db) }
       var state = GamesFeature.State()
-      state.path.append(.setup(setup))
+      state.newGame = setup
       let store = TestStore(initialState: state) { GamesFeature() }
       store.exhaustivity = .off(showSkippedAssertions: false)
-      await store.send(.path(.popFrom(id: store.state.path.ids[0])))
+      await store.send(.newGame(.dismiss))
       await store.receive {
         if case .setupExitSaveFailed = $0 {
           return true
         }
         return false
       }
-      guard case let .setup(restored) = store.state.path.last else {
+      guard let restored = store.state.newGame else {
         Issue.record("Expected setup to be restored after save failure")
         return
       }

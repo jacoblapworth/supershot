@@ -42,14 +42,18 @@ package struct TeamsListView: View {
         #if os(iOS)
         .toolbarVisibility(.hidden, for: .tabBar)
         #endif
-      case let .setup(setupStore):
-        NewGameView(store: setupStore, proAccess: proAccess)
       case let .teamDetail(teamDetailStore):
         TeamDetailView(
           store: teamDetailStore,
           isResumingGame: store.pendingGameResume != nil
         )
       }
+    }
+    .sheet(item: $store.scope(state: \.newGame, action: \.newGame)) { setupStore in
+      NavigationStack {
+        NewGameView(store: setupStore, proAccess: proAccess)
+      }
+      .interactiveDismissDisabled(setupStore.isSaving)
     }
     .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
     .sheet(item: $store.scope(state: \.destination?.teamEditor, action: \.destination.teamEditor)) {
