@@ -73,7 +73,8 @@ extension SupershotTestSuite {
       #expect(game.centrePassTeamID == teamB.id)
       #expect(game.timerEndsAt == nil)
       #expect(game.elapsedSeconds == 0)
-      #expect(game.startedAt == Date(timeIntervalSince1970: 1000))
+      #expect(game.startedAt == nil)
+      #expect(game.createdAt == Date(timeIntervalSince1970: 1000))
       #expect(game.teamABibColorHex == teamA.colorHex)
       #expect(game.teamBBibColorHex == teamB.colorHex)
       let periods = try await database.read {

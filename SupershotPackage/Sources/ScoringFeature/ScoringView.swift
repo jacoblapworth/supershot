@@ -21,6 +21,7 @@ package struct ScoringView: View {
   @Fetch private var analysisResponse: GameAnalysisRequest.Value
   @State private var selectedAnalysis = GameAnalysisTab.playByPlay
   @State private var viewportHeight: CGFloat = 0
+  @State private var controlsHeight: CGFloat = 176
   @State private var isScoreboardAboveViewport = false
   @Bindable package var store: StoreOf<ScoringFeature>
   package let proAccess: SubscriptionEntitlement
@@ -55,20 +56,7 @@ package struct ScoringView: View {
       ScrollView {
         LazyVStack(spacing: 20, pinnedViews: [.sectionHeaders]) {
           VStack {
-            TimerView(
-              canEditTime: store.canEditTime,
-              editTimeTapped: { store.send(.editTimeButtonTapped) },
-              clockPhase: store.clockPhase,
-              currentDurationSeconds: store.currentDurationSeconds,
-              elapsedSeconds: store.elapsedSeconds,
-              isPeriodComplete: store.isPeriodComplete,
-              isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
-              isTimerRunning: store.isTimerRunning,
-              period: store.period,
-              pauseTimerTapped: { store.send(.pauseTimerButtonTapped) },
-              skipBreakTapped: { store.send(.skipBreakButtonTapped) },
-              startTimerTapped: { store.send(.startTimerButtonTapped) }
-            )
+            TimerView(state: store.timerViewState) { store.send(.controlTapped($0)) }
 
             ScoreboardView(
               courtLayout: store.courtLayout
@@ -87,8 +75,10 @@ package struct ScoringView: View {
                   Text(scheduledAt.formatted(date: .abbreviated, time: .shortened))
                 }
               }
-              LabeledContent("Started") {
-                Text(store.startedAt.formatted(date: .abbreviated, time: .shortened))
+              if let startedAt = store.startedAt {
+                LabeledContent("Started") {
+                  Text(startedAt.formatted(date: .abbreviated, time: .shortened))
+                }
               }
               if let court = store.court {
                 LabeledContent("Court", value: court)
@@ -99,40 +89,11 @@ package struct ScoringView: View {
             .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
           }
           #if os(macOS)
-            MacScoringControls(store: store)
             AlarmPermissionCard(
               store: store.scope(state: \.alarms, action: \.alarms),
               proAccess: proAccess, hidesWhenAuthorized: true
             )
           #endif
-          if store.isShowingLastCentrePassBanner {
-            LastCentrePassBanner(
-              centrePassTeam: store.centrePassTeam,
-              isTransitioningPeriod: store.isTransitioningPeriod,
-              period: store.lastCompletedQuarterNumber,
-              lastCentrePassNotTakenTapped: {
-                store.send(.lastCentrePassNotTakenButtonTapped)
-              },
-              lastCentrePassTakenTapped: {
-                store.send(.lastCentrePassTakenButtonTapped)
-              }
-            )
-          }
-
-          if store.canFinishGame {
-            ScoringGameControls(
-              canFinishGame: store.canFinishGame,
-              canMoveToNextQuarter: store.canMoveToNextQuarter,
-              clockPhase: store.clockPhase,
-              isShowingLastCentrePassBanner: store.isShowingLastCentrePassBanner,
-              isTransitioningPeriod: store.isTransitioningPeriod,
-              period: store.period,
-              endQuarterTapped: { store.send(.endQuarterButtonTapped) },
-              finishGameTapped: { store.send(.finishGameButtonTapped) },
-              skipBreakTapped: { store.send(.skipBreakButtonTapped) }
-            )
-          }
-
           Section {
             GameAnalysisContentView(
               analysis: analysisResponse.analysis,
@@ -165,9 +126,14 @@ package struct ScoringView: View {
       .coordinateSpace(name: "scoringViewport")
       #if os(iOS)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-          Color
-            .clear
-            .frame(height: 112)
+          Color.clear.frame(height: controlsHeight)
+        }
+      #else
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.controlTapped($0)) }
+            .frame(maxWidth: .infinity)
+            .background(.ultraThinMaterial)
+            .disabled(isPresentingPaywall || store.controlsPresentation != .shown)
         }
       #endif
         .background {
@@ -201,13 +167,19 @@ package struct ScoringView: View {
               } label: {
                 Label("Swap sides", systemImage: "arrow.left.arrow.right")
               }
-              .disabled(store.isSavingCourtOrientation)
+              .disabled(store.isSavingCourtOrientation || !store.canOperate)
 
               Button {
                 store.send(.swapCentrePass)
               } label: {
                 Label("Change centre pass", systemImage: "arrow.left.circle.fill")
               }
+              .disabled(!store.canOperate)
+
+              Button("End Quarter", systemImage: "forward.end.fill") {
+                store.send(.endQuarterButtonTapped)
+              }
+              .disabled(!store.canMoveToNextQuarter)
 
             } label: {
               Label("Options", systemImage: "ellipsis")
@@ -217,40 +189,18 @@ package struct ScoringView: View {
       #if os(iOS)
         .sheet(
           isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
-          onDismiss: { store.send(.controlsSheetDidDismiss) },
-          content: {
-            VStack(alignment: .leading, spacing: 12) {
-              if store.canScoreGoal {
-                HStack(spacing: 16) {
-                  goalButton(for: store.courtLayout.left)
-                  goalButton(for: store.courtLayout.right)
-                }
-                .environment(\.layoutDirection, .leftToRight)
-              } else if store.currentPhase.isPlayingPeriod, !store.isPeriodComplete,
-                        !store.isShowingLastCentrePassBanner
-              {
-                Button(action: { store.send(.startTimerButtonTapped) }) {
-                  Label("Start Quarter", systemImage: "play.fill")
-                    .fontWeight(.medium)
-                    .padding(8)
-                }
-                .tint(.green)
-              }
-            }
-            .padding()
-            .buttonSizing(.flexible)
-            .buttonStyle(.glassProminent)
+          onDismiss: { store.send(.controlsSheetDidDismiss) }
+        ) {
+          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.controlTapped($0)) }
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { controlsHeight = $0 }
             .presentationDetents(.sizeToFit)
             .presentationBackgroundInteraction(.enabled)
             .presentationBackground(alignment: .topLeading) {}
             .interactiveDismissDisabled()
             .presentationContentInteraction(.resizes)
             .presentationDragIndicator(.hidden)
-            #if os(iOS)
-              .presentationPlacement(.leading)
-            #endif
-          }
-        )
+            .presentationPlacement(.leading)
+        }
       #endif
         .sheet(
           item: $store.scope(state: \.timeInput, action: \.timeInput),
@@ -289,17 +239,6 @@ package struct ScoringView: View {
     }
   }
 
-  private func goalButton(for courtTeam: ScoringFeature.CourtTeam) -> some View {
-    Button(action: { store.send(.goalButtonTapped(courtTeam.id)) }) {
-      Label("Goal", systemImage: "plus")
-        .padding(24)
-    }
-    .tint(courtTeam.team.bibColor)
-    .accessibilityLabel("Goal for \(courtTeam.team.name)")
-    .font(.title2.bold())
-    .labelStyle(.iconOnly)
-  }
-
   private func scenePhaseChanged(
     _: ScenePhase,
     _ newValue: ScenePhase
@@ -308,32 +247,28 @@ package struct ScoringView: View {
   }
 }
 
-#Preview("Quarter") {
+#Preview("Scoring scenarios") {
   let _ = prepareDependencies {
     try! $0.bootstrapDatabase()
     try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
-  NavigationStack {
-    ScoringView(store: scoringPreviewStore(.previewQuarter))
-  }
+  ScoringScenarioPreview()
 }
 
-#Preview("Quarter complete") {
-  let _ = prepareDependencies {
-    try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
-  }
-  NavigationStack {
-    ScoringView(store: scoringPreviewStore(.previewQuarterComplete))
-  }
-}
+private struct ScoringScenarioPreview: View {
+  @State private var scenario = ScoringPreviewScenario.running
 
-#Preview("Break") {
-  let _ = prepareDependencies {
-    try! $0.bootstrapDatabase()
-    try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
-  }
-  NavigationStack {
-    ScoringView(store: scoringPreviewStore(.previewBreak))
+  var body: some View {
+    NavigationStack {
+      ScoringView(store: scoringPreviewStore(scenario.state))
+        .id(scenario)
+        .toolbar {
+          ToolbarItem(placement: .automatic) {
+            Picker("Scenario", selection: $scenario) {
+              ForEach(ScoringPreviewScenario.allCases) { Text($0.rawValue).tag($0) }
+            }
+          }
+        }
+    }
   }
 }

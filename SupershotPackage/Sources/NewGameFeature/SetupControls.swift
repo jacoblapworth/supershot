@@ -43,13 +43,13 @@ package struct SetupCentrePassView: View {
 }
 
 package struct SetupStartBar: View {
-  package var canStartGame: Bool
+  package var canPrepareScoring: Bool
   package var configurationSummary: String
   package var errorMessage: String?
   package var isSaving: Bool
-  package var startGameTapped: () -> Void
+  package var prepareScoringTapped: () -> Void
   package var isScheduled = false
-  package var startNowTapped: () -> Void = {}
+  package var prepareScoringNowTapped: () -> Void = {}
   package var retryTapped: () -> Void = {}
   package var canRetry = false
 
@@ -70,29 +70,29 @@ package struct SetupStartBar: View {
       }
 
       Button {
-        startGameTapped()
+        prepareScoringTapped()
       } label: {
         if isSaving {
           ProgressView()
             .frame(maxWidth: .infinity)
         } else {
-          Text(isScheduled ? "Save game" : "Start game")
+          Text(isScheduled ? "Save game" : "Ready to score")
             .padding(8)
             .frame(maxWidth: .infinity)
         }
       }
       .buttonStyle(.glassProminent)
       .buttonSizing(.flexible)
-      .disabled(!canStartGame)
+      .disabled(!canPrepareScoring)
       if isScheduled {
         Button {
-          startNowTapped()
+          prepareScoringNowTapped()
         } label: {
-          Text("Start now")
+          Text("Ready to score now")
             .padding(8)
         }
 
-        .disabled(!canStartGame)
+        .disabled(!canPrepareScoring)
         .buttonSizing(.flexible)
         .buttonStyle(.glass)
       }
@@ -101,18 +101,18 @@ package struct SetupStartBar: View {
   }
 
   package init(
-    canStartGame: Bool, configurationSummary: String, errorMessage: String? = nil, isSaving: Bool,
-    startGameTapped: @escaping () -> Void,
-    isScheduled: Bool = false, startNowTapped: @escaping () -> Void = {},
+    canPrepareScoring: Bool, configurationSummary: String, errorMessage: String? = nil, isSaving: Bool,
+    prepareScoringTapped: @escaping () -> Void,
+    isScheduled: Bool = false, prepareScoringNowTapped: @escaping () -> Void = {},
     retryTapped: @escaping () -> Void = {}, canRetry: Bool = false
   ) {
-    self.canStartGame = canStartGame
+    self.canPrepareScoring = canPrepareScoring
     self.configurationSummary = configurationSummary
     self.errorMessage = errorMessage
     self.isSaving = isSaving
-    self.startGameTapped = startGameTapped
+    self.prepareScoringTapped = prepareScoringTapped
     self.isScheduled = isScheduled
-    self.startNowTapped = startNowTapped
+    self.prepareScoringNowTapped = prepareScoringNowTapped
     self.retryTapped = retryTapped
     self.canRetry = canRetry
   }
@@ -129,31 +129,31 @@ package struct SetupStartBar: View {
 
 #Preview("Start game") {
   SetupStartBar(
-    canStartGame: true,
+    canPrepareScoring: true,
     configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: nil,
     isSaving: false,
-    startGameTapped: {}
+    prepareScoringTapped: {}
   )
 }
 
 #Preview("Start game error") {
   SetupStartBar(
-    canStartGame: false,
+    canPrepareScoring: false,
     configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: "Team names must be unique.",
     isSaving: false,
-    startGameTapped: {}
+    prepareScoringTapped: {}
   )
 }
 
 #Preview("Saving game") {
   SetupStartBar(
-    canStartGame: false,
+    canPrepareScoring: false,
     configurationSummary: "8 min quarters · 1 min breaks",
     errorMessage: nil,
     isSaving: true,
-    startGameTapped: {}
+    prepareScoringTapped: {}
   )
 }
 
@@ -192,7 +192,9 @@ package struct SetupGameDetailsView: View {
       Divider()
       LabeledContent {
         TextField("Optional", text: $store.court)
+        #if os(iOS)
           .keyboardType(.numbersAndPunctuation)
+        #endif
           .textFieldStyle(.plain)
           .accessibilityLabel("Court")
           .accessibilityIdentifier("gameSetup.court")
@@ -202,7 +204,9 @@ package struct SetupGameDetailsView: View {
       Divider()
       LabeledContent {
         TextField("Optional", text: $store.division)
+        #if os(iOS)
           .keyboardType(.numbersAndPunctuation)
+        #endif
           .textFieldStyle(.plain)
           .accessibilityLabel("Division")
           .accessibilityIdentifier("gameSetup.division")

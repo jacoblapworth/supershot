@@ -89,3 +89,39 @@ struct GameTimingTests {
     )
   }
 }
+
+extension GameTimingTests {
+  @Test(arguments: [0, 1, 120])
+  func phaseStatusComesFromElapsedTimeAndCorrections(elapsed: Int) throws {
+    let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
+    let now = Date(timeIntervalSince1970: 1000)
+    var timing = GameTimingState(phaseIndex: 0, countdown: GameCountdown())
+    expectNoDifference(timing.status(in: timeline), .ready)
+    _ = timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 0, now: now)
+    expectNoDifference(timing.status(in: timeline), .running)
+    _ = timing.apply(.pause, in: timeline, expectedPhaseIndex: 0,
+                     now: now.addingTimeInterval(TimeInterval(elapsed)))
+    expectNoDifference(timing.status(in: timeline), elapsed == 0 ? .ready : .paused)
+    _ = timing.apply(.setRemainingTime(900), in: timeline, expectedPhaseIndex: 0, now: now)
+    expectNoDifference(timing.status(in: timeline), .ready)
+    _ = timing.apply(.setRemainingTime(600), in: timeline, expectedPhaseIndex: 0, now: now)
+    expectNoDifference(timing.status(in: timeline), .paused)
+    let restart = timing.apply(.startOrResume, in: timeline, expectedPhaseIndex: 0, now: now)
+    expectNoDifference(restart.transitions, [.periodStarted(testGamePeriodReference(number: 1))])
+    _ = timing.apply(.skip, in: timeline, expectedPhaseIndex: 0, now: now)
+    expectNoDifference(timing.phaseIndex, 1)
+    expectNoDifference(timing.status(in: timeline), .ready)
+  }
+
+  @Test(arguments: [BreakStartPolicy.automatic, .manual])
+  func breakStatusFollowsPolicyAndNextQuarterIsReady(policy: BreakStartPolicy) throws {
+    let timeline = try #require(GameTimeline(periods: testGamePeriods(
+      gameID: UUID(3), count: 2, breakDurationSeconds: 120
+    )))
+    var timing = GameTimingState(phaseIndex: 0, countdown: GameCountdown(), breakStartPolicy: policy)
+    _ = timing.apply(.skip, in: timeline, expectedPhaseIndex: 0, now: .distantPast)
+    expectNoDifference(timing.status(in: timeline), policy == .automatic ? .running : .ready)
+    _ = timing.apply(.skip, in: timeline, expectedPhaseIndex: 1, now: .distantPast)
+    expectNoDifference(timing.status(in: timeline), .ready)
+  }
+}

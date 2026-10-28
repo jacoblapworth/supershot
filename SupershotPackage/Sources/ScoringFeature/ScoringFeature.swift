@@ -27,9 +27,13 @@ package struct ScoringFeature {
     case hiddenForPaywall
   }
 
-  package nonisolated enum ClockPhase: Equatable, Sendable {
-    case breakTime
-    case quarter
+  /// One mutually exclusive operation owns progression at a time.
+  package nonisolated enum Operation: Equatable, Sendable {
+    case starting(phaseIndex: Int)
+    case pausing(phaseIndex: Int)
+    case skipping(phaseIndex: Int)
+    case confirmingCentrePass(period: Int)
+    case finishing
   }
 
   package nonisolated struct Team: Equatable, Identifiable, Sendable {
@@ -74,7 +78,7 @@ package struct ScoringFeature {
   package struct State: Equatable {
     @Presents package var timeInput: TimeInputFeature.State?
     package var editedPhaseIndex: Int?
-    package var isTimerOperationPending = false
+    package var operation: Operation?
     @Presents package var alert: AlertState<Alert>?
     package var alarms = AlarmPermissionFeature.State()
     package var controlsPresentation = ControlsPresentation.shown
@@ -91,26 +95,38 @@ package struct ScoringFeature {
     package var hasShownAlarmSchedulingFailureAlert = false
     package var isSavingCourtOrientation = false
     package var isShowingLastCentrePassBanner = false
-    package var isTransitioningPeriod = false
     package var lateScoringPeriodNumber: Int?
-    package var periods: [GamePeriod]
     package var scheduledAt: Date?
     package var court: String?
-    package let startedAt: Date
+    package var startedAt: Date?
     package var teamA: Team
     package var teamAScore = 0
     package var teamB: Team
     package var teamBScore = 0
     package var timerEndsAt: Date?
-    package var presentationDetent: PresentationDetent = .height(112)
-    package var detents: Set<PresentationDetent> = [.height(112), .height(200)]
+    private var validatedTimeline: GameTimeline
+
+    package var periods: [GamePeriod] {
+      get { validatedTimeline.periods }
+      set {
+        guard let timeline = GameTimeline(periods: newValue),
+              timeline.phase(at: currentPhaseIndex) != nil
+        else {
+          preconditionFailure("Scoring requires a valid timeline and phase")
+        }
+        validatedTimeline = timeline
+      }
+    }
 
     package var timeline: GameTimeline {
-      GameTimeline(periods: periods)!
+      validatedTimeline
     }
 
     package var currentPhase: GamePhase {
-      timeline.phase(at: currentPhaseIndex)!
+      guard let phase = timeline.phase(at: currentPhaseIndex) else {
+        preconditionFailure("Scoring phase must belong to its timeline")
+      }
+      return phase
     }
 
     package var activePlayingPeriod: GamePeriod? {
@@ -131,10 +147,6 @@ package struct ScoringFeature {
         elapsedSeconds = newValue.elapsedSeconds
         timerEndsAt = newValue.endsAt
       }
-    }
-
-    package var clockPhase: ClockPhase {
-      currentPhase.isBreak ? .breakTime : .quarter
     }
 
     package var period: Int {
@@ -165,32 +177,51 @@ package struct ScoringFeature {
       )
     }
 
+    package var controlsAreAvailable: Bool {
+      controlsPresentation == .shown && timeInput == nil && alert == nil
+    }
+
+    package var canOperate: Bool {
+      controlsAreAvailable && operation == nil
+    }
+
     package var canEditTime: Bool {
-      !isTimerRunning && !isPeriodComplete && !isTransitioningPeriod
-        && !isTimerOperationPending && !isShowingLastCentrePassBanner
+      !isTimerRunning && !isPeriodComplete && operation == nil
+        && !isShowingLastCentrePassBanner
+    }
+
+    package var canStartOrResume: Bool {
+      canOperate && !isTimerRunning && !isPeriodComplete
+        && (currentPhase.isBreak || !isShowingLastCentrePassBanner)
+    }
+
+    package var canPause: Bool {
+      canOperate && isTimerRunning
+    }
+
+    package var canSkipBreak: Bool {
+      canOperate && currentPhase.isBreak
     }
 
     package var canScoreGoal: Bool {
-      scoringContext != nil && !isTransitioningPeriod
+      startedAt != nil && scoringContext != nil && canOperate
     }
 
     package var canUndoGoal: Bool {
-      canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation)
+      canOperate && canUndo && (!isShowingLastCentrePassBanner || canUndoDuringConfirmation)
     }
 
     package var canFinishGame: Bool {
-      GameProgress(
-        phaseIndex: currentPhaseIndex, countdown: countdown,
-        isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner
-      )
-      .isFinalPeriodComplete(in: timeline) && !isShowingLastCentrePassBanner
+      startedAt != nil && canOperate
+        && GameProgress(
+          phaseIndex: currentPhaseIndex, countdown: countdown,
+          isAwaitingCentrePassConfirmation: isShowingLastCentrePassBanner
+        ).isFinalPeriodComplete(in: timeline) && !isShowingLastCentrePassBanner
     }
 
     package var canMoveToNextQuarter: Bool {
-      currentPhase.isPlayingPeriod
-        && !isPeriodComplete
-        && !isShowingLastCentrePassBanner
-        && !isTransitioningPeriod
+      startedAt != nil && canOperate && currentPhase.isPlayingPeriod
+        && !isPeriodComplete && !isShowingLastCentrePassBanner
     }
 
     package var centrePassTeam: Team {
@@ -223,22 +254,20 @@ package struct ScoringFeature {
 
     package init(
       timeInput: TimeInputFeature.State? = nil, editedPhaseIndex: Int? = nil,
-      isTimerOperationPending: Bool = false, alert: AlertState<Alert>? = nil,
+      operation: Operation? = nil, alert: AlertState<Alert>? = nil,
       alarms: AlarmPermissionFeature.State = AlarmPermissionFeature.State(),
       controlsPresentation: ControlsPresentation = ControlsPresentation.shown,
       canUndo: Bool = false, canUndoDuringConfirmation: Bool = false, centrePassTeamID: Team.ID,
       currentPhaseIndex: Int = 0, elapsedSeconds: Int = 0, swapSides: Bool = false, gameID: Game.ID,
       goalFeedbackTrigger: Int = 0, hasShownAlarmSchedulingFailureAlert: Bool = false,
       isSavingCourtOrientation: Bool = false, isShowingLastCentrePassBanner: Bool = false,
-      isTransitioningPeriod: Bool = false, lateScoringPeriodNumber: Int? = nil,
-      periods: [GamePeriod], startedAt: Date, teamA: Team, teamAScore: Int = 0, teamB: Team,
-      teamBScore: Int = 0, timerEndsAt: Date? = nil,
-      presentationDetent: PresentationDetent = .height(112),
-      detents: Set<PresentationDetent> = [.height(112), .height(200)]
+      lateScoringPeriodNumber: Int? = nil,
+      periods: [GamePeriod], startedAt: Date?, teamA: Team, teamAScore: Int = 0, teamB: Team,
+      teamBScore: Int = 0, timerEndsAt: Date? = nil
     ) {
       self.timeInput = timeInput
       self.editedPhaseIndex = editedPhaseIndex
-      self.isTimerOperationPending = isTimerOperationPending
+      self.operation = operation
       self.alert = alert
       self.alarms = alarms
       self.controlsPresentation = controlsPresentation
@@ -253,21 +282,24 @@ package struct ScoringFeature {
       self.hasShownAlarmSchedulingFailureAlert = hasShownAlarmSchedulingFailureAlert
       self.isSavingCourtOrientation = isSavingCourtOrientation
       self.isShowingLastCentrePassBanner = isShowingLastCentrePassBanner
-      self.isTransitioningPeriod = isTransitioningPeriod
       self.lateScoringPeriodNumber = lateScoringPeriodNumber
-      self.periods = periods
+      guard let timeline = GameTimeline(periods: periods),
+            timeline.phase(at: currentPhaseIndex) != nil
+      else {
+        preconditionFailure("Scoring requires a valid timeline and phase")
+      }
+      validatedTimeline = timeline
       self.startedAt = startedAt
       self.teamA = teamA
       self.teamAScore = teamAScore
       self.teamB = teamB
       self.teamBScore = teamBScore
       self.timerEndsAt = timerEndsAt
-      self.presentationDetent = presentationDetent
-      self.detents = detents
     }
   }
 
   package enum Action: BindableAction {
+    case controlTapped(ScoringControlAction)
     case alarms(AlarmPermissionFeature.Action)
     case alarmScheduleResponse(Bool)
     case alert(PresentationAction<Alert>)
@@ -320,6 +352,7 @@ package struct ScoringFeature {
   private nonisolated enum CancelID: Hashable, Sendable {
     case timer
     case timerOperation
+    case reconcile
   }
 
   #if os(iOS)
@@ -338,6 +371,18 @@ package struct ScoringFeature {
     BindingReducer()
     Reduce { state, action in
       switch action {
+      case let .controlTapped(action):
+        switch action {
+        case .startOrResume: return .send(.startTimerButtonTapped)
+        case .pause: return .send(.pauseTimerButtonTapped)
+        case .skipBreak: return .send(.skipBreakButtonTapped)
+        case .finishGame: return .send(.finishGameButtonTapped)
+        case .editTime: return .send(.editTimeButtonTapped)
+        case let .goal(teamID): return .send(.goalButtonTapped(teamID))
+        case .confirmCentrePass(true): return .send(.lastCentrePassTakenButtonTapped)
+        case .confirmCentrePass(false): return .send(.lastCentrePassNotTakenButtonTapped)
+        }
+
       case .alarms(.delegate(.proPromotionTapped)):
         guard state.controlsPresentation == .shown else { return .none }
         #if os(macOS)
@@ -349,7 +394,7 @@ package struct ScoringFeature {
         #endif
 
       case .editTimeButtonTapped:
-        guard state.canEditTime, state.controlsPresentation == .shown else { return .none }
+        guard state.canEditTime, state.controlsAreAvailable else { return .none }
         state.editedPhaseIndex = state.currentPhaseIndex
         #if os(macOS)
           state.controlsPresentation = .hiddenForTimeInput
@@ -363,7 +408,8 @@ package struct ScoringFeature {
         return .none
 
       case let .timeInput(.presented(.delegate(.committed(seconds)))):
-        guard let phaseIndex = state.editedPhaseIndex, state.canEditTime,
+        guard state.timeInput?.isSaving == false,
+              let phaseIndex = state.editedPhaseIndex, state.canEditTime,
               phaseIndex == state.currentPhaseIndex,
               (1 ... state.currentDurationSeconds).contains(seconds)
         else {
@@ -447,7 +493,7 @@ package struct ScoringFeature {
         return .none
 
       case .swapSidesButtonTapped:
-        guard !state.isSavingCourtOrientation else { return .none }
+        guard state.canOperate, !state.isSavingCourtOrientation else { return .none }
         state.isSavingCourtOrientation = true
         let gameID = state.gameID
         return .run { send in
@@ -476,13 +522,14 @@ package struct ScoringFeature {
         return .none
 
       case .swapCentrePass:
+        guard state.canOperate else { return .none }
         state.centrePassTeamID =
           state.teamA.id == state.centrePassTeamID ? state.teamB.id : state.teamA.id
         return updateCentrePassEffect(gameID: state.gameID, teamID: state.centrePassTeamID)
 
       case let .centrePassTeamButtonTapped(teamID):
         guard
-          state.currentPhase.isPlayingPeriod,
+          state.canOperate, state.currentPhase.isPlayingPeriod,
           !state.isShowingLastCentrePassBanner,
           teamID == state.teamA.id || teamID == state.teamB.id,
           teamID != state.centrePassTeamID
@@ -503,16 +550,23 @@ package struct ScoringFeature {
 
       case .finishGameButtonTapped:
         guard state.canFinishGame else { return .none }
+        state.operation = .finishing
         return .merge(
           .cancel(id: CancelID.timer),
+          .cancel(id: CancelID.reconcile),
           finishGameEffect(state: state)
         )
 
       case let .finishGameResponse(.success(gameID)):
+        guard state.operation == .finishing else { return .none }
+        state.operation = nil
         return .send(.delegate(.gameFinished(gameID)))
 
       case .finishGameResponse(.failure):
-        return .none
+        guard state.operation == .finishing else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t end game")
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case let .goalButtonTapped(teamID):
         guard teamID == state.teamA.id || teamID == state.teamB.id else { return .none }
@@ -558,84 +612,79 @@ package struct ScoringFeature {
         return resolveLastCentrePass(state: &state, wasLastCentrePassTaken: true)
 
       case let .lastCentrePassResponse(.success(snapshot)):
+        guard case .confirmingCentrePass = state.operation else { return .none }
         state.centrePassTeamID = snapshot.centrePassTeamID
         state.isShowingLastCentrePassBanner = false
-        state.isTransitioningPeriod = false
-        return refreshActivityEffect(gameID: state.gameID)
+        state.operation = nil
+        return reconcileTimerEffect(gameID: state.gameID)
 
       case .lastCentrePassResponse(.failure):
-        state.isTransitioningPeriod = false
+        guard case .confirmingCentrePass = state.operation else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t save centre pass")
         return .none
 
       case .pauseTimerButtonTapped:
-        guard state.isTimerRunning, !state.isTransitioningPeriod, state.timeInput == nil else {
+        guard state.canPause else {
           return .none
         }
         synchronizeTimer(state: &state, now: now)
         state.timerEndsAt = nil
-        state.isTimerOperationPending = true
+        state.operation = .pausing(phaseIndex: state.currentPhaseIndex)
         return .merge(
           .cancel(id: CancelID.timer),
+          .cancel(id: CancelID.reconcile),
           pauseTimerEffect(gameID: state.gameID, expectedPhaseIndex: state.currentPhaseIndex)
         )
 
       case let .timerPauseResponse(.success(snapshot)):
-        state.isTimerOperationPending = false
+        guard state.operation == .pausing(phaseIndex: state.currentPhaseIndex) else { return .none }
+        state.operation = nil
         applyTimer(snapshot.game, to: &state)
-        return .none
+        return state.isTimerRunning ? timerEffect() : .cancel(id: CancelID.timer)
 
       case .timerPauseResponse(.failure):
-        state.isTimerOperationPending = false
+        guard case .pausing = state.operation else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t pause clock")
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameActive:
-        guard !state.isTransitioningPeriod else { return .none }
+        guard state.operation == nil else { return .none }
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .sceneBecameInactive:
         return .cancel(id: CancelID.timer)
 
       case .skipBreakButtonTapped:
-        guard state.currentPhase.isBreak, !state.isTransitioningPeriod else { return .none }
+        guard state.canSkipBreak else { return .none }
         return skipCurrentPhase(state: &state)
 
       case let .skipPhaseResponse(.success(snapshot)):
+        guard state.operation == .skipping(phaseIndex: state.currentPhaseIndex) else { return .none }
         applyTimer(snapshot.game, to: &state)
-        state.isTransitioningPeriod = false
+        state.operation = nil
         guard state.isTimerRunning else { return .cancel(id: CancelID.timer) }
         return timerEffect()
 
       case .skipPhaseResponse(.failure):
-        state.isTransitioningPeriod = false
+        guard case .skipping = state.operation else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t advance game")
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .startTimerButtonTapped:
-        guard
-          !state.isTimerRunning,
-          !state.isTimerOperationPending,
-          state.timeInput == nil,
-          state.controlsPresentation == .shown,
-          !state.isTransitioningPeriod,
-          !state.isPeriodComplete,
-          state.currentPhase.isBreak || !state.isShowingLastCentrePassBanner
-        else { return .none }
-        state.timerEndsAt = GameTimerClient.endDate(
-          durationSeconds: state.currentDurationSeconds,
-          elapsedSeconds: state.elapsedSeconds,
-          now: now
-        )
+        guard state.canStartOrResume else { return .none }
+        state.operation = .starting(phaseIndex: state.currentPhaseIndex)
         return .merge(
-          startTimerEffect(
-            gameID: state.gameID,
-            expectedPhaseIndex: state.currentPhaseIndex
-          ),
-          timerEffect()
+          .cancel(id: CancelID.reconcile),
+          startTimerEffect(gameID: state.gameID, expectedPhaseIndex: state.currentPhaseIndex)
         )
 
       case .timerTick:
-        guard state.isTimerRunning, !state.isTransitioningPeriod else { return .none }
+        guard state.isTimerRunning else { return .none }
         synchronizeTimer(state: &state, now: now)
-        guard state.isPeriodComplete else { return .none }
+        guard state.isPeriodComplete, state.operation == nil else { return .none }
         state.timerEndsAt = nil
         return .merge(
           .cancel(id: CancelID.timer),
@@ -643,6 +692,7 @@ package struct ScoringFeature {
         )
 
       case let .timerReconcileResponse(.success(snapshot)):
+        guard state.operation == nil else { return .none }
         state.teamAScore = snapshot.teamAScore
         state.teamBScore = snapshot.teamBScore
         state.canUndo = !snapshot.goals.isEmpty
@@ -656,16 +706,19 @@ package struct ScoringFeature {
         return .none
 
       case let .timerStartResponse(.success(update)):
-        state.isTimerOperationPending = false
+        guard state.operation == .starting(phaseIndex: state.currentPhaseIndex) else { return .none }
+        state.operation = nil
         applyTimer(update.snapshot.game, to: &state)
         if update.alarmSchedulingFailed, !state.hasShownAlarmSchedulingFailureAlert {
           state.alert = .alarmSchedulingFailed
           state.hasShownAlarmSchedulingFailureAlert = true
         }
-        return .none
+        return state.isTimerRunning ? timerEffect() : .cancel(id: CancelID.timer)
 
       case .timerStartResponse(.failure):
-        state.isTimerOperationPending = false
+        guard case .starting = state.operation else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t start clock")
         return reconcileTimerEffect(gameID: state.gameID)
 
       case .undoButtonTapped:
@@ -696,6 +749,7 @@ package struct ScoringFeature {
   }
 
   private func applyTimer(_ game: Game, to state: inout State) {
+    state.startedAt = game.startedAt
     state.swapSides = game.swapSides
     state.lateScoringPeriodNumber = game.lateScoringPeriodNumber
     state.currentPhaseIndex = game.currentPhaseIndex
@@ -709,9 +763,10 @@ package struct ScoringFeature {
     let gameID = state.gameID
     let phaseIndex = state.currentPhaseIndex
     state.timerEndsAt = nil
-    state.isTransitioningPeriod = true
+    state.operation = .skipping(phaseIndex: phaseIndex)
     return .merge(
       .cancel(id: CancelID.timer),
+      .cancel(id: CancelID.reconcile),
       .run { send in
         await send(
           .skipPhaseResponse(
@@ -729,13 +784,13 @@ package struct ScoringFeature {
     state: inout State,
     wasLastCentrePassTaken: Bool
   ) -> Effect<Action> {
-    guard state.isShowingLastCentrePassBanner, !state.isTransitioningPeriod else {
+    guard state.isShowingLastCentrePassBanner, state.canOperate else {
       return .none
     }
-    state.isTransitioningPeriod = true
-    return resolveLastCentrePassEffect(
-      state: state,
-      wasLastCentrePassTaken: wasLastCentrePassTaken
+    state.operation = .confirmingCentrePass(period: state.lastCompletedQuarterNumber)
+    return .merge(
+      .cancel(id: CancelID.reconcile),
+      resolveLastCentrePassEffect(state: state, wasLastCentrePassTaken: wasLastCentrePassTaken)
     )
   }
 
@@ -825,7 +880,7 @@ package struct ScoringFeature {
         )
       )
     }
-    .cancellable(id: CancelID.timerOperation, cancelInFlight: true)
+    .cancellable(id: CancelID.reconcile, cancelInFlight: true)
   }
 
   private func refreshActivityEffect(gameID: Game.ID) -> Effect<Action> {
@@ -884,6 +939,12 @@ package struct ScoringFeature {
 }
 
 package extension AlertState where Action == ScoringFeature.Alert {
+  static func operationFailed(_ title: String) -> Self {
+    Self { TextState(title) } actions: {
+      ButtonState(role: .cancel, action: .dismissButtonTapped) { TextState("OK") }
+    } message: { TextState("Please try again.") }
+  }
+
   static var alarmSchedulingFailed: Self {
     Self {
       TextState("Quarter alerts unavailable")

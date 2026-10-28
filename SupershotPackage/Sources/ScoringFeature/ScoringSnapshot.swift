@@ -14,9 +14,6 @@ import WidgetSupport
 
 package extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {
-    guard let startedAt = snapshot.game.startedAt else {
-      preconditionFailure("A planned game must be started before entering scoring")
-    }
     let currentPhaseIndex = snapshot.game.currentPhaseIndex
     let currentDuration = snapshot.currentPhase.durationSeconds
 
@@ -36,7 +33,7 @@ package extension ScoringFeature.State {
       isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
       lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber,
       periods: snapshot.periods,
-      startedAt: startedAt,
+      startedAt: snapshot.game.startedAt,
       teamA: ScoringFeature.Team(
         id: snapshot.teamA.id,
         bibColor: snapshot.game.teamABibColor,

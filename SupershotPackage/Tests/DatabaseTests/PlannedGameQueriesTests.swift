@@ -72,8 +72,9 @@ extension SupershotTestSuite {
       let finalPhaseIndex = try #require(GameTimeline(periods: draft.periods)?.phases.count) - 1
       let finalDuration = try #require(draft.periods.last?.durationSeconds)
       try database.write { db in
-        _ = try draft.save(db, startingAt: startedAt)
+        _ = try draft.save(db)
         try Game.find(draft.game.id).update {
+          $0.startedAt = #bind(startedAt)
           $0.endedAt = #bind(Date(timeIntervalSince1970: 4000))
           $0.currentPhaseIndex = #bind(finalPhaseIndex)
           $0.elapsedSeconds = #bind(finalDuration)
@@ -89,11 +90,29 @@ extension SupershotTestSuite {
       #expect(snapshot.isFinalPeriodComplete)
     }
 
+    @Test func editingSetupResetsAnUnstartedClockToMatchTheNewPeriods() throws {
+      @Dependency(\.defaultDatabase) var database
+      var draft = try setup()
+      try database.write { db in
+        _ = try draft.save(db)
+        try Game.find(draft.game.id).update { $0.elapsedSeconds = 300 }.execute(db)
+      }
+      draft.periods[0].durationSeconds = 60
+      let snapshot = try database.write { try draft.save($0, requiresExistingGame: true) }
+      #expect(snapshot.game.startedAt == nil)
+      expectNoDifference(snapshot.game.elapsedSeconds, 0)
+      expectNoDifference(snapshot.game.timing.status(in: snapshot.timeline), .ready)
+    }
+
     @Test func staleSaveCannotOverwriteStartedGame() throws {
       @Dependency(\.defaultDatabase) var database
       let draft = try setup()
-      let started = try database.write {
-        try draft.save($0, startingAt: Date(timeIntervalSince1970: 3000))
+      let started = try database.write { db in
+        _ = try draft.save(db)
+        try Game.find(draft.game.id).update {
+          $0.startedAt = #bind(Date(timeIntervalSince1970: 3000))
+        }.execute(db)
+        return try GameSnapshot.fetch(db, gameID: draft.game.id)
       }
       #expect(throws: GameSetupDraft.SaveError.self) {
         try database.write { db in _ = try draft.save(db) }

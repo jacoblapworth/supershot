@@ -51,7 +51,7 @@ struct CreateGameIntent: AppIntent {
 
     let breakStartPolicy = defaultBreakStartPolicy
     let gameID = uuid()
-    let startedAt = now
+    let createdAt = now
     let teamAID = teamA.id
     let teamBID = teamB.id
     let centrePassID = firstCentrePass.id
@@ -69,10 +69,10 @@ struct CreateGameIntent: AppIntent {
             let teamB = teams.first(where: { $0.id == teamBID })
       else { throw CreateGameError.teamUnavailable }
       let game = Game(
-        id: gameID, startedAt: startedAt, teamAID: teamAID,
+        id: gameID, startedAt: nil, teamAID: teamAID,
         teamABibColorHex: teamA.colorHex, teamBID: teamBID,
         teamBBibColorHex: teamB.colorHex, centrePassTeamID: centrePassID,
-        breakStartPolicy: breakStartPolicy
+        breakStartPolicy: breakStartPolicy, createdAt: createdAt
       )
       try Game.insert { game }.execute(db)
       try GamePeriod.insert { periods }.execute(db)

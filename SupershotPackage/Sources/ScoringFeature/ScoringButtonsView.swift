@@ -1,62 +1,39 @@
-import AlarmClient
-import AppSettings
-import Database
-import GameAnalysis
-import GameCore
-import GameServices
-import PermissionsFeature
-import PreviewSupport
-import SharedModels
-import SoundEffectsClient
-import Styleguide
-import SubscriptionClient
-import WidgetSupport
+import SwiftUI
 
-//
-//  ScoringButtonsView.swift
-//  Supershot
-//
-//  Created by J on 13/10/2026.
-//
-//
-// import SwiftUI
-//
-// struct ScoringButtonsView: View {
-//
-//  var body: some View {
-//    ScrollView {
-//      VStack(alignment: .leading, spacing: 12) {
-//
-//          HStack(spacing: 16) {
-//            goalButton(for: store.courtLayout.left)
-//            goalButton(for: store.courtLayout.right)
-//          }
-//          .environment(\.layoutDirection, .leftToRight)
-//      }
-//      .padding()
-//    }
-//    .scrollDisabled(true)
-//    .buttonSizing(.flexible)
-//    .buttonStyle(.glassProminent)
-//    .presentationDetents(store.detents, selection: $store.presentationDetent)
-//    .presentationBackgroundInteraction(.enabled)
-//    .presentationBackground(alignment: .topLeading) {}
-//    .interactiveDismissDisabled()
-//    .presentationContentInteraction(.resizes)
-//    .presentationDragIndicator(.hidden)
-// #if os(iOS)
-//    .presentationPlacement(.leading)
-//  }
-//
-//
-//  private func goalButton(for courtTeam: ScoringFeature.CourtTeam) -> some View {
-//    Button(action: { store.send(.goalButtonTapped(courtTeam.id)) }) {
-//      Label("Goal", systemImage: "plus")
-//        .padding(24)
-//    }
-//    .tint(courtTeam.team.bibColor)
-//    .accessibilityLabel("Goal for \(courtTeam.team.name)")
-//    .font(.title2.bold())
-//    .labelStyle(.iconOnly)
-//  }
-// }
+package struct ScoringButtonsView: View {
+  package var courtLayout: ScoringFeature.CourtLayout
+  package var isEnabled: Bool
+  package var onAction: (ScoringControlAction) -> Void
+
+  package var body: some View {
+    HStack(spacing: 16) {
+      goalButton(for: courtLayout.left)
+      goalButton(for: courtLayout.right)
+    }
+    .environment(\.layoutDirection, .leftToRight)
+    .buttonSizing(.flexible)
+    .buttonStyle(.glassProminent)
+    .disabled(!isEnabled)
+  }
+
+  private func goalButton(for team: ScoringFeature.CourtTeam) -> some View {
+    Button { onAction(.goal(team.id)) } label: {
+      Label("Goal", systemImage: "plus")
+        .font(.title2.bold())
+        .frame(maxWidth: .infinity, minHeight: 80)
+    }
+    .tint(team.team.bibColor)
+    .accessibilityLabel("Goal for \(team.team.name)")
+    .accessibilityIdentifier("scoring.goal.\(team.id)")
+    .labelStyle(.iconOnly)
+  }
+}
+
+#Preview("Goal buttons") {
+  VStack(spacing: 24) {
+    ScoringButtonsView(courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
+                       isEnabled: true, onAction: { _ in })
+    ScoringButtonsView(courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
+                       isEnabled: false, onAction: { _ in })
+  }.padding()
+}

@@ -547,8 +547,8 @@ extension SupershotTestSuite {
 
       expectNoDifference(store.state.canScoreGoal, true)
       expectNoDifference(store.state.canFinishGame, true)
-      await store.send(.finishGameButtonTapped)
-      await store.receive(\.finishGameResponse)
+      await store.send(.finishGameButtonTapped) { $0.operation = .finishing }
+      await store.receive(\.finishGameResponse) { $0.operation = nil }
       await store.receive {
         if case let .delegate(.gameFinished(id)) = $0 {
           id == game.id
@@ -595,14 +595,24 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: state) { ScoringFeature() } withDependencies: {
         $0.defaultDatabase = database
         $0.date.now = Date(timeIntervalSince1970: 1000)
+        $0.gameTimer.reconcile = { _ in
+          try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+        }
       }
-      await store.send(.finishGameButtonTapped)
+      await store.send(.finishGameButtonTapped) { $0.operation = .finishing }
       await store.receive {
         if case .finishGameResponse(.failure) = $0 {
           true
         } else {
           false
         }
+      } assert: {
+        $0.operation = nil
+        $0.alert = .operationFailed("Couldn’t end game")
+      }
+      await store.receive(\.timerReconcileResponse) {
+        $0.currentPhaseIndex = 0
+        $0.elapsedSeconds = 0
       }
       let stored = try await database.read { try Game.find(UUID(3)).fetchOne($0) }
       expectNoDifference(stored?.currentPhaseIndex, 0)

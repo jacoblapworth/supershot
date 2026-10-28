@@ -61,7 +61,8 @@ public extension DependencyValues {
             CHECK ("breakStartPolicy" IN ('automatic', 'manual')),
           CHECK ("teamAID" != "teamBID"),
           CHECK ("endedAt" IS NULL OR "startedAt" IS NOT NULL),
-          CHECK ("startedAt" IS NOT NULL OR "timerEndsAt" IS NULL)
+          CHECK ("startedAt" IS NOT NULL OR "timerEndsAt" IS NULL),
+          CHECK ("startedAt" IS NOT NULL OR "currentPhaseIndex" = 0)
         ) STRICT
         """
       )

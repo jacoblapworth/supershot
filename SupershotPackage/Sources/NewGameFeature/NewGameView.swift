@@ -30,7 +30,7 @@ package struct NewGameView: View {
         SetupSection("Teams") {
           NewGameTeamsView(store: store)
         }
-        
+
         if let leftTeamName, let rightTeamName {
           SetupSection("Centre pass") {
             SetupCentrePassView(
@@ -40,7 +40,7 @@ package struct NewGameView: View {
             )
           }
         }
-        
+
         SetupSection("Game details") {
           SetupGameDetailsView(store: store)
         }
@@ -63,15 +63,15 @@ package struct NewGameView: View {
         }
 
         SetupStartBar(
-          canStartGame: store.canStartGame,
+          canPrepareScoring: store.canPrepareScoring,
           configurationSummary: store.configurationSummary,
           errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
           isSaving: store.isSaving,
-          startGameTapped: {
-            store.send(store.scheduledAt == nil ? .startGameButtonTapped : .saveGameButtonTapped)
+          prepareScoringTapped: {
+            store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
           },
           isScheduled: store.scheduledAt != nil,
-          startNowTapped: { store.send(.startGameButtonTapped) },
+          prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
           retryTapped: { store.send(.retrySaveButtonTapped) },
           canRetry: store.failedSaveIntent != nil
         )
@@ -96,16 +96,16 @@ package struct NewGameView: View {
       }
       ToolbarItem(placement: .primaryAction) {
         Button(
-          store.scheduledAt == nil ? "Start game" : "Start now",
-          systemImage: "play.fill"
+          store.scheduledAt == nil ? "Ready to score" : "Ready to score now",
+          systemImage: "arrow.right"
         ) {
-          store.send(.startGameButtonTapped)
+          store.send(.prepareScoringButtonTapped)
         }
         .labelStyle(.iconOnly)
         .buttonStyle(.glassProminent)
         .buttonBorderShape(.circle)
-        .disabled(!store.canStartGame)
-        .accessibilityIdentifier("gameSetup.start")
+        .disabled(!store.canPrepareScoring)
+        .accessibilityIdentifier("gameSetup.prepareScoring")
       }
     }
     .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }

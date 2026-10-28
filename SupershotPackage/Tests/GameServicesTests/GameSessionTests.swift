@@ -167,8 +167,7 @@ extension SupershotTestSuite {
       )
     }
 
-    @Test(.dependencies { $0.date.now = Date(timeIntervalSince1970: 1000) })
-    func plannedGamesRejectEverySessionCommandWithoutChangingState() async throws {
+    @Test func unstartedGameAllowsPreparationButRejectsScoringAndProgression() async throws {
       @Dependency(\.defaultDatabase) var database
       _ = try seed()
       try await database.write { db in
@@ -176,11 +175,9 @@ extension SupershotTestSuite {
       }
       let before = try await read()
       let commands: [GameSessionCommand] = [
-        .reconcile, .timing(.startOrResume, expectedPhaseIndex: nil),
         .timing(.pause, expectedPhaseIndex: nil), .timing(.skip, expectedPhaseIndex: nil),
         .recordGoal(command(context: .livePeriod(number: 1))), .undoGoal,
-        .selectCentrePass(UUID(2)), .resolveCentrePass(completedPeriod: 1, taken: true),
-        .finish, .swapSides,
+        .resolveCentrePass(completedPeriod: 1, taken: true), .finish,
       ]
       for command in commands {
         let update = try await execute(command)
@@ -188,14 +185,62 @@ extension SupershotTestSuite {
         expectNoDifference(update.snapshot, before)
         _ = await GamePresentationClient.live.update(update, command)
       }
-      await #expect(throws: GameSessionRejection.gameNotStarted) {
-        try await GameTimerClient.live.startOrResume(UUID(3), nil)
+      let reconciled = try await execute(.reconcile)
+      expectNoDifference(reconciled.outcome, .unchanged)
+      let prepared = try await execute(.selectCentrePass(UUID(2)))
+      expectNoDifference(prepared.snapshot.game.centrePassTeamID, UUID(2))
+      let swapped = try await execute(.swapSides)
+      #expect(swapped.snapshot.game.swapSides)
+      let corrected = try await execute(.timing(.setRemainingTime(600), expectedPhaseIndex: 0))
+      #expect(corrected.snapshot.game.startedAt == nil)
+      #expect(corrected.snapshot.scoringContext == nil)
+      #expect(!corrected.snapshot.isFinalPeriodComplete)
+    }
+
+    @Test func firstClockStartsLifecycleOnceAndImmediatePauseIsReady() async throws {
+      @Dependency(\.defaultDatabase) var database
+      _ = try seed()
+      try await database.write { db in
+        try Game.find(UUID(3)).update { $0.startedAt = #bind(nil as Date?) }.execute(db)
       }
-      await #expect(throws: GameSessionRejection.gameNotStarted) {
-        try await GameTimerClient.live.reconcile(UUID(3))
+      let stale = try await execute(.timing(.startOrResume, expectedPhaseIndex: 2))
+      expectNoDifference(stale.outcome, .rejected(.stalePhase))
+      #expect(stale.snapshot.game.startedAt == nil)
+      let started = try await execute(.timing(.startOrResume, expectedPhaseIndex: 0))
+      expectNoDifference(started.outcome, .applied)
+      expectNoDifference(started.snapshot.game.startedAt, now)
+      expectNoDifference(started.snapshot.game.timerEndsAt, now.addingTimeInterval(900))
+      let duplicate = try await execute(.timing(.startOrResume, expectedPhaseIndex: 0),
+                                        at: now.addingTimeInterval(1))
+      expectNoDifference(duplicate.outcome, .unchanged)
+      expectNoDifference(duplicate.snapshot.game.startedAt, now)
+      let paused = try await execute(.timing(.pause, expectedPhaseIndex: 0))
+      expectNoDifference(paused.snapshot.game.elapsedSeconds, 0)
+      expectNoDifference(paused.snapshot.game.timing.status(in: paused.snapshot.timeline), .ready)
+      let corrected = try await execute(.timing(.setRemainingTime(900), expectedPhaseIndex: 0))
+      expectNoDifference(corrected.snapshot.game.timing.status(in: corrected.snapshot.timeline), .ready)
+      let resumed = try await execute(.timing(.startOrResume, expectedPhaseIndex: 0),
+                                      at: now.addingTimeInterval(10))
+      expectNoDifference(resumed.snapshot.game.startedAt, now)
+      expectNoDifference(resumed.snapshot.game.timerEndsAt, now.addingTimeInterval(910))
+      let persisted = try await read()
+      expectNoDifference(persisted, resumed.snapshot)
+    }
+
+    @Test func failedFirstClockCommitDoesNotMarkGameStarted() async throws {
+      @Dependency(\.defaultDatabase) var database
+      _ = try seed()
+      try await database.write { db in
+        try Game.find(UUID(3)).update { $0.startedAt = #bind(nil as Date?) }.execute(db)
+        try db.execute(sql: "CREATE TEMP TRIGGER reject_start BEFORE UPDATE ON games BEGIN SELECT RAISE(ABORT, 'test failure'); END")
       }
-      #expect(before.scoringContext == nil)
-      #expect(!before.isFinalPeriodComplete)
+      let before = try await read()
+      await #expect(throws: (any Error).self) {
+        try await execute(.timing(.startOrResume, expectedPhaseIndex: 0))
+      }
+      let persisted = try await read()
+      expectNoDifference(persisted, before)
+      try await database.write { try $0.execute(sql: "DROP TRIGGER reject_start") }
     }
 
     private func execute(_ command: GameSessionCommand, at date: Date? = nil) async throws

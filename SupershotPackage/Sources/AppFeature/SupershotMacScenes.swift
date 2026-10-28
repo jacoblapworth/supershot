@@ -176,7 +176,7 @@
         switch path {
         case let .scoring(state):
           if state.timeInput != nil || state.alert != nil || state.controlsPresentation != .shown
-            || state.isTimerOperationPending || state.isTransitioningPeriod
+            || state.operation != nil
           {
             return true
           }
@@ -187,7 +187,7 @@
         switch path {
         case let .scoring(state):
           if state.timeInput != nil || state.alert != nil || state.controlsPresentation != .shown
-            || state.isTimerOperationPending || state.isTransitioningPeriod
+            || state.operation != nil
           {
             return true
           }

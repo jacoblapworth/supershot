@@ -32,6 +32,23 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
   public var countdown: GameCountdown
   public var breakStartPolicy = BreakStartPolicy.automatic
 
+  public enum PhaseStatus: Equatable, Sendable {
+    case ready
+    case running
+    case paused
+    case complete
+  }
+
+  public func status(in timeline: GameTimeline) -> PhaseStatus? {
+    guard let phase = timeline.phase(at: phaseIndex) else { return nil }
+    let projection = countdown.projection(durationSeconds: phase.durationSeconds)
+    switch projection.status {
+    case .complete: return .complete
+    case .running: return .running
+    case .paused: return projection.elapsedSeconds == 0 ? .ready : .paused
+    }
+  }
+
   public func isFinalPeriodComplete(in timeline: GameTimeline) -> Bool {
     guard let phase = timeline.phase(at: phaseIndex) else { return false }
     return phaseIndex == timeline.phases.count - 1
@@ -90,7 +107,8 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
       countdown.endsAt = endsAt
       return GameTimingResult(
         status: .applied,
-        transitions: phase.isPlayingPeriod ? [.periodStarted(phase.associatedPeriod)] : []
+        transitions: phase.isPlayingPeriod
+          ? [.periodStarted(phase.associatedPeriod)] : []
       )
     case .pause:
       guard countdown.isRunning else { return GameTimingResult(status: .unchanged) }

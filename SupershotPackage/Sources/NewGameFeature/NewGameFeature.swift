@@ -93,7 +93,7 @@ package struct NewGameFeature {
     package var pendingSaveIntent: SaveIntent?
     package var failedSaveIntent: SaveIntent?
     package var closesAfterSave = false
-    package var hasStarted = false
+    package var hasEnteredScoring = false
     package var alarms = AlarmPermissionFeature.State()
     package var timing = SetupTiming()
     package var customizesBreaks: Bool {
@@ -214,7 +214,7 @@ package struct NewGameFeature {
         && secondBreakDuration.totalSeconds != nil
     }
 
-    package var canStartGame: Bool {
+    package var canPrepareScoring: Bool {
       leftTeam.team != nil
         && rightTeam.team != nil
         && hasDifferentSelectedTeams
@@ -264,10 +264,10 @@ package struct NewGameFeature {
     }
   }
 
-  package enum SaveIntent: Equatable {
+  package nonisolated enum SaveIntent: Equatable, Sendable {
     case autosave
     case close
-    case start
+    case score
   }
 
   package enum Action: BindableAction {
@@ -289,13 +289,13 @@ package struct NewGameFeature {
     case sceneBecameActive
     case locationResponse(Result<GameLocation, any Error>)
     case selectTeamButtonTapped(TeamSide)
-    case startGameButtonTapped
-    case startGameResponse(Result<ScoringFeature.State, any Error>)
+    case prepareScoringButtonTapped
+    case prepareScoringResponse(Result<ScoringFeature.State, any Error>)
     case swapTeamsButtonTapped
     case task
 
     package enum Delegate {
-      case gameStarted(ScoringFeature.State)
+      case scoringPrepared(ScoringFeature.State)
       case gameSaved
       case proPromotionTapped
     }
@@ -355,7 +355,7 @@ package struct NewGameFeature {
 
       case .configurationChanged, .sceneBecameInactive:
         guard state.describeGame.source.isEmpty,
-              !state.hasStarted, state.draft != state.lastSavedDraft else { return .none }
+              !state.hasEnteredScoring, state.draft != state.lastSavedDraft else { return .none }
         return save(state: &state, intent: .autosave)
 
       case .closeButtonTapped:
@@ -532,7 +532,7 @@ package struct NewGameFeature {
         state.errorMessage = nil
         return .none
 
-      case .startGameButtonTapped:
+      case .prepareScoringButtonTapped:
         guard state.leftTeam.team != nil, state.rightTeam.team != nil else {
           state.errorMessage = "Choose both teams."
           return .none
@@ -546,17 +546,17 @@ package struct NewGameFeature {
           return .none
         }
 
-        return save(state: &state, intent: .start)
+        return save(state: &state, intent: .score)
 
-      case let .startGameResponse(.success(scoring)):
-        state.hasStarted = true
+      case let .prepareScoringResponse(.success(scoring)):
+        state.hasEnteredScoring = true
         state.inFlightDraft = nil
         state.isSaving = false
-        return .send(.delegate(.gameStarted(scoring)))
+        return .send(.delegate(.scoringPrepared(scoring)))
 
-      case .startGameResponse(.failure):
-        state.failedSaveIntent = .start
-        state.errorMessage = "Could not start the game. Your changes are still here. Try again."
+      case .prepareScoringResponse(.failure):
+        state.failedSaveIntent = .score
+        state.errorMessage = "Could not prepare scoring. Your changes are still here. Try again."
         state.isSaving = false
         state.inFlightDraft = nil
         return .none
@@ -618,7 +618,7 @@ package struct NewGameFeature {
   }
 
   private func save(state: inout State, intent: SaveIntent) -> Effect<Action> {
-    guard !state.hasStarted else { return .none }
+    guard !state.hasEnteredScoring else { return .none }
     if state.isSaving {
       if intent != .autosave {
         state.pendingSaveIntent = intent
@@ -628,7 +628,7 @@ package struct NewGameFeature {
     guard let draft = state.draft else {
       return intent == .close ? .send(.delegate(.gameSaved)) : .none
     }
-    if intent != .start, draft == state.lastSavedDraft {
+    if intent != .score, draft == state.lastSavedDraft {
       return intent == .close ? .send(.delegate(.gameSaved)) : .none
     }
     state.closesAfterSave = intent == .close
@@ -637,19 +637,18 @@ package struct NewGameFeature {
     state.isSaving = true
     state.inFlightDraft = draft
     let requiresExistingGame = state.requiresExistingGame
-    let startedAt = intent == .start ? now : nil
     return .run { send in
       let result = await Result {
         try await database.write { db in
-          try draft.save(db, startingAt: startedAt, requiresExistingGame: requiresExistingGame)
+          try draft.save(db, requiresExistingGame: requiresExistingGame)
         }
       }
-      if intent == .start {
+      if intent == .score {
         switch result {
         case let .success(snapshot):
-          await send(.startGameResponse(.success(ScoringFeature.State(snapshot: snapshot))))
+          await send(.prepareScoringResponse(.success(ScoringFeature.State(snapshot: snapshot))))
         case let .failure(error):
-          await send(.startGameResponse(.failure(error)))
+          await send(.prepareScoringResponse(.failure(error)))
         }
       } else {
         await send(.plannedGameResponse(result))

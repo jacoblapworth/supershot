@@ -74,7 +74,7 @@ extension SupershotTestSuite {
         teamB: ScoringFeature.Team(id: UUID(2), bibColor: ColorPalette.red, name: "Swifts")
       )
       await store.send(
-        .newGame(.presented(.delegate(.gameStarted(scoring))))
+        .newGame(.presented(.delegate(.scoringPrepared(scoring))))
       )
       #expect(store.state.newGame == nil)
       expectNoDifference(

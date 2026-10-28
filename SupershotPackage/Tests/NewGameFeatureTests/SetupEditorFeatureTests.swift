@@ -160,7 +160,7 @@ extension SupershotTestSuite {
         $0.rightTeam = state.leftTeam
         $0.firstCentrePass = .teamB
       }
-      #expect(store.state.canStartGame)
+      #expect(store.state.canPrepareScoring)
     }
 
     @Test func replacementPickerExcludesOpponentAndCancelKeepsTeam() async {
