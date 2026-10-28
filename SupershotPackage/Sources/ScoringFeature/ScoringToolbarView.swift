@@ -6,11 +6,11 @@ package struct ScoringToolbarView: View {
   package var onAction: (ScoringControlAction) -> Void
 
   package var body: some View {
-    VStack(spacing: 12) {
+    VStack(spacing: 16) {
       Group {
         switch state.content {
         case .none:
-          Color.clear.frame(height: 52).accessibilityHidden(true)
+          EmptyView()
         case let .primary(control):
           Button { onAction(control.action) } label: {
             ZStack {
@@ -32,13 +32,12 @@ package struct ScoringToolbarView: View {
           LastCentrePassBanner(state: confirmation, onAction: onAction)
         }
       }
-      .frame(minHeight: 52)
 
       ScoringButtonsView(courtLayout: state.courtLayout, isEnabled: state.canScore,
                          onAction: onAction)
     }
     .padding()
-    .frame(maxWidth: 960)
+    .frame(maxWidth: 420)
   }
 }
 

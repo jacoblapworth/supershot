@@ -3,30 +3,48 @@ import SwiftUI
 package struct LastCentrePassBanner: View {
   package var state: CentrePassConfirmationState
   package var onAction: (ScoringControlAction) -> Void
-
+  @State package var taken = true
+  
   package var body: some View {
-    VStack(spacing: 12) {
-      HStack(spacing: 8) {
-        Circle().fill(state.team.bibColor).frame(width: 12, height: 12)
-          .accessibilityHidden(true)
-        Text("Did **\(state.team.name)** take the last centre pass in Quarter \(state.period)?")
-          .font(.subheadline)
+    HStack(spacing: 12) {
+      Text("Centre pass taken?")
+        .font(.headline)
+        .padding(.leading, 16)
+      Spacer()
+      Picker(selection: $taken) {
+        Text("Yes")
+          .tag(true)
+        Text("No")
+          .tag(false)
+      } label: {
+        Text("Centre pass taken?")
       }
-      HStack(spacing: 10) {
-        Button("No, not taken") { onAction(.confirmCentrePass(false)) }
-        Button("Yes, pass taken") { onAction(.confirmCentrePass(true)) }
-      }
-      .buttonSizing(.flexible)
-      .buttonStyle(.bordered)
-      .fontWeight(.medium)
-      .controlSize(.large)
       .disabled(state.availability != .enabled)
-      if state.availability == .pending {
-        ProgressView("Saving centre pass…").font(.caption)
+      .tint(.blue)
+      .pickerStyle(.segmented)
+      .fixedSize()
+
+      Button {
+        onAction(.confirmCentrePass(taken))
+      } label: {
+        ZStack {
+          if state.availability == .pending {
+            ProgressView()
+              .controlSize(.regular)
+          }
+          Label("Confirm", systemImage: "checkmark")
+        }
       }
+      .disabled(state.availability == .pending)
+      .buttonStyle(.borderedProminent)
+      .buttonBorderShape(.circle)
+      .labelStyle(.iconOnly)
     }
+    .padding(8)
     .frame(maxWidth: .infinity)
+    .controlSize(.large)
     .accessibilityElement(children: .contain)
+    .background(Material.thick, in: RoundedRectangle(cornerRadius: 32))
   }
 }
 
