@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>AppURLScheme</key>
+	<string>$(APP_URL_SCHEME)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -15,10 +17,10 @@
 			</array>
 		</dict>
 	</array>
+	<key>GamesWidgetAppGroup</key>
+	<string>$(GAMES_WIDGET_APP_GROUP)</string>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Supershot uses alarms to alert you when a game quarter ends.</string>
-	<key>AppURLScheme</key>
-	<string>$(APP_URL_SCHEME)</string>
 	<key>RevenueCatAPIKey</key>
 	<string>$(REVENUECAT_API_KEY)</string>
 	<key>UIBackgroundModes</key>

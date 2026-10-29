@@ -82,12 +82,18 @@ package struct AppFeature {
       Reduce { state, action in
         switch action {
         case let .deepLinkOpened(url):
-          guard let gameID = gameID(from: url) else { return .none }
+          guard isAppURL(url) else { return .none }
+          guard url.host == "new-game" || gameID(from: url) != nil else { return .none }
           guard state.hasCompletedWelcome else {
             state.pendingDeepLink = url
             return .none
           }
 
+          if url.host == "new-game" {
+            state.selectedTab = .games
+            return .send(.games(.newGameButtonTapped))
+          }
+          guard let gameID = gameID(from: url) else { return .none }
           if state.games.hasGameRoute(for: gameID) {
             state.selectedTab = .games
             return .send(.games(.gameDeepLinkOpened(gameID)))
@@ -240,13 +246,13 @@ package struct AppFeature {
     }
   }
 
+  private func isAppURL(_ url: URL) -> Bool {
+    ["supershot", Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot-dev"]
+      .contains(url.scheme ?? "")
+  }
+
   private func gameID(from url: URL) -> Game.ID? {
-    guard
-      [
-        "supershot",
-        Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot-dev",
-      ].contains(url.scheme ?? ""), url.host == "game"
-    else { return nil }
+    guard isAppURL(url), url.host == "game" else { return nil }
     return UUID(uuidString: url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
   }
 

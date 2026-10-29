@@ -538,6 +538,7 @@
 				ENABLE_PREVIEWS = YES;
 				"ENABLE_RESOURCE_ACCESS_LOCATION[sdk=macosx*]" = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				GAMES_WIDGET_APP_GROUP = group.nz.lapworth.Supershot.dev;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Supershot Dev";
@@ -592,6 +593,7 @@
 				ENABLE_PREVIEWS = YES;
 				"ENABLE_RESOURCE_ACCESS_LOCATION[sdk=macosx*]" = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
+				GAMES_WIDGET_APP_GROUP = group.nz.lapworth.Supershot;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Supershot/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Supershot;
@@ -689,8 +691,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				APP_URL_SCHEME = "supershot-dev";
+				CODE_SIGN_ENTITLEMENTS = SupershotWidgets/SupershotWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				GAMES_WIDGET_APP_GROUP = group.nz.lapworth.Supershot.dev;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SupershotWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
@@ -721,8 +726,11 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				APP_URL_SCHEME = supershot;
+				CODE_SIGN_ENTITLEMENTS = SupershotWidgets/SupershotWidgets.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				GAMES_WIDGET_APP_GROUP = group.nz.lapworth.Supershot;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = SupershotWidgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;

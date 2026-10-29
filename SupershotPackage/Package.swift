@@ -118,7 +118,8 @@ let package = Package(
     .target(
       name: "Database",
       dependencies: [
-        "SharedModels", "GameCore",
+        "SharedModels", "GameCore", "WidgetSupport",
+        .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "Dependencies", package: "swift-dependencies"),
       ],

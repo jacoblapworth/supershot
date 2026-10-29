@@ -4,6 +4,7 @@ import CustomDump
 import Dependencies
 import Foundation
 @testable import GameCore
+import GameDetailFeature
 import GameServices
 @testable import GamesFeature
 @testable import NewGameFeature
@@ -61,6 +62,54 @@ extension SupershotTestSuite {
         return
       }
       expectNoDifference(setup.draft, state.draft)
+    }
+
+    @Test func staleWidgetAndWarmSetupResolveLatestCompletedStatus() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let setupState = try setup()
+      let draft = try #require(setupState.draft)
+      try await database.write { db in
+        _ = try draft.save(db)
+        try Game.find(draft.game.id).update {
+          $0.startedAt = #bind(Date(timeIntervalSince1970: 1000))
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 2000))
+        }.execute(db)
+      }
+      var state = GamesFeature.State()
+      state.newGame = setupState
+      let store = TestStore(initialState: state) { GamesFeature() } withDependencies: {
+        $0.gameTimer.reconcile = { _ in
+          Issue.record("Completed games must open analysis without timer reconciliation")
+          throw GameSetupDraft.SaveError.gameAlreadyStarted
+        }
+      }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      await store.send(.gameDeepLinkOpened(draft.game.id))
+      await store.receive {
+        if case .resumeGameResponse(_, .success) = $0 { return true }
+        return false
+      }
+      #expect(store.state.newGame == nil)
+      guard case let .gameDetail(detail) = store.state.path.last else {
+        Issue.record("Expected analysis for the latest completed status")
+        return
+      }
+      #expect(detail.gameID == draft.game.id)
+    }
+
+    @Test func deletedWidgetGameDismissesStaleSetupAndShowsUnavailable() async throws {
+      let setupState = try setup()
+      var state = GamesFeature.State()
+      state.newGame = setupState
+      let store = TestStore(initialState: state) { GamesFeature() }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      await store.send(.gameDeepLinkOpened(setupState.gameID))
+      await store.receive {
+        if case .resumeGameResponse(_, .failure) = $0 { return true }
+        return false
+      }
+      #expect(store.state.newGame == nil)
+      #expect(store.state.alert == .gameUnavailable)
     }
 
     @Test func sheetDismissalSavesInParentAfterSetupIsRemoved() async throws {

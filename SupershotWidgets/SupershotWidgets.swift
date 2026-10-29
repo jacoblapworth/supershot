@@ -6,6 +6,7 @@ import WidgetSupport
 @main
 struct SupershotWidgets: WidgetBundle {
   var body: some Widget {
+    GamesWidget()
     GameLiveActivity()
   }
 }
