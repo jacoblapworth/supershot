@@ -22,35 +22,41 @@ package struct NewGameView: View {
   package var proAccess: SubscriptionEntitlement = .unknown
 
   package var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 24) {
+    List {
+      Group {
         DescribeGameView(store: store.scope(state: \.describeGame, action: \.describeGame))
           .disabled(store.isSaving)
 
-        SetupSection("Teams") {
+        Section {
           NewGameTeamsView(store: store)
+        } header: {
+          Text("Teams")
         }
+        .listRowBackground(Color.clear)
+        .listRowInsets(.all, 0)
 
         if let leftTeamName, let rightTeamName {
-          SetupSection("Centre pass") {
+          Section {
             SetupCentrePassView(
               firstCentrePass: $store.firstCentrePass,
               leftTeamName: leftTeamName,
               rightTeamName: rightTeamName
             )
+          } header: {
+            Text("Centre pass")
           }
         }
 
-        SetupSection("Game details") {
+        Section {
           SetupGameDetailsView(store: store)
+        } header: {
+          Text("Game details")
         }
 
-        SetupSection("Timing") {
+        Section("Timing") {
           SetupTimingSummaryView(timing: store.timing) { store.send(.editTimingButtonTapped) }
-        }
 
-        if proAccess != .unknown {
-          SetupSection("Quarter alerts") {
+          if proAccess != .unknown {
             AlarmPermissionCard(
               store: store.scope(state: \.alarms, action: \.alarms),
               proAccess: proAccess,
@@ -58,33 +64,43 @@ package struct NewGameView: View {
             )
           }
         }
-        SetupSection("Location") {
+        Section("Location") {
           SetupLocationView(store: store)
         }
 
-        SetupStartBar(
-          canPrepareScoring: store.canPrepareScoring,
-          configurationSummary: store.configurationSummary,
-          errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
-          isSaving: store.isSaving,
-          prepareScoringTapped: {
-            store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
-          },
-          isScheduled: store.scheduledAt != nil,
-          prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
-          retryTapped: { store.send(.retrySaveButtonTapped) },
-          canRetry: store.failedSaveIntent != nil
-        )
+        Section {
+          SetupStartBar(
+            canPrepareScoring: store.canPrepareScoring,
+            configurationSummary: store.configurationSummary,
+            errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
+            isSaving: store.isSaving,
+            prepareScoringTapped: {
+              store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
+            },
+            isScheduled: store.scheduledAt != nil,
+            prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
+            retryTapped: { store.send(.retrySaveButtonTapped) },
+            canRetry: store.failedSaveIntent != nil
+          )
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(.all, 0)
+        .listRowSeparator(.hidden)
       }
-      #if os(macOS)
-      .frame(maxWidth: 680)
-      .frame(maxWidth: .infinity)
-      #endif
-      .padding()
+      .environment(\.usesNativeSetupRows, true)
     }
+    #if os(macOS)
+    .frame(maxWidth: 680)
+    .frame(maxWidth: .infinity)
+    #endif
+    #if os(iOS)
+    .listStyle(.insetGrouped)
+    #else
+    .listStyle(.inset)
+    #endif
+    .scrollContentBackground(.hidden)
     .scrollDismissesKeyboard(.interactively)
     .background(Color.setupBackground.ignoresSafeArea())
-    .environment(\.usesGroupedSetupContainers, true)
     .navigationTitle("New game")
     .navigationBarBackButtonHidden()
     .toolbar {
@@ -110,16 +126,9 @@ package struct NewGameView: View {
     }
     .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }
     .task { store.send(.task) }
-    .onChange(of: scenePhase) { _, phase in
-      if phase == .active {
-        store.send(.sceneBecameActive)
-      } else {
-        store.send(.sceneBecameInactive)
-      }
-    }
+    .onChange(of: scenePhase) { _, phase in scenePhaseChanged(phase) }
     .sheet(
-      item: $store.scope(state: \.destination, action: \.destination),
-      onDismiss: { store.send(.destinationDidDismiss) }
+      item: $store.scope(state: \.destination, action: \.destination)
     ) { destinationStore in
       switch destinationStore.case {
       case let .teamConfiguration(configurationStore):
@@ -152,6 +161,14 @@ package struct NewGameView: View {
     }
   }
 
+  private func scenePhaseChanged(_ phase: ScenePhase) {
+    if phase == .active {
+      store.send(.sceneBecameActive)
+    } else {
+      store.send(.sceneBecameInactive)
+    }
+  }
+
   private var leftTeamName: String? {
     store.leftTeam.team?.name
   }
@@ -177,26 +194,5 @@ package struct NewGameView: View {
 #Preview("Ready to start") {
   NavigationStack {
     NewGameView(store: setupPreviewStore(.previewReady))
-  }
-}
-
-private struct SetupSection<Content: View>: View {
-  let title: String
-  @ViewBuilder var content: Content
-
-  init(_ title: String, @ViewBuilder content: () -> Content) {
-    self.title = title
-    self.content = content()
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text(title)
-        .font(.headline)
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 16)
-        .accessibilityAddTraits(.isHeader)
-      content
-    }
   }
 }

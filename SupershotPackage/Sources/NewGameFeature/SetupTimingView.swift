@@ -19,82 +19,98 @@ package struct SetupTimingView: View {
   @Bindable package var store: StoreOf<SetupTimingFeature>
 
   package var body: some View {
-    VStack(alignment: .leading, spacing: 18) {
-      Label("Timing", systemImage: "timer")
-        .font(.headline)
-
-      durationRow(
-        "Quarters",
-        duration: store.timing.periodDuration, field: .quarter
-      )
-
-      HStack {
-        Text("Start breaks")
-        Spacer()
-        Picker("Start breaks", selection: $store.timing.breakStartPolicy) {
-          Text("Automatically").tag(BreakStartPolicy.automatic)
-          Text("Manually").tag(BreakStartPolicy.manual)
+    List {
+      Section {
+        SetupDurationRow(title: "Quarters", duration: store.timing.periodDuration) {
+          store.send(.editDurationButtonTapped(.quarter))
         }
-        .labelsHidden()
+      } footer: {
+        Text(store.timing.summary)
       }
-      Text(
-        store.timing.breakStartPolicy == .automatic
+      
+      Section {
+        if store.timing.customizesBreaks {
+          SetupDurationRow(title: "After quarter 1", duration: store.timing.firstBreakDuration) {
+            store.send(.editDurationButtonTapped(.firstBreak))
+          }
+          SetupDurationRow(title: "Half time", duration: store.timing.halfTimeDuration) {
+            store.send(.editDurationButtonTapped(.halfTime))
+          }
+          SetupDurationRow(title: "After quarter 3", duration: store.timing.secondBreakDuration) {
+            store.send(.editDurationButtonTapped(.secondBreak))
+          }
+
+          Button("Use first break for all") {
+            store.send(.useFirstBreakForAllButtonTapped)
+          }
+          .buttonStyle(.borderless)
+        } else {
+          SetupDurationRow(title: "Breaks", duration: store.timing.firstBreakDuration) {
+            store.send(.editDurationButtonTapped(.allBreaks))
+          }
+
+          Button("Customize each break") {
+            store.send(.customizeBreaksButtonTapped)
+          }
+          .buttonStyle(.borderless)
+        }
+        Toggle("Auto start breaks", isOn: $store.timing.breakStartPolicy.isAutomatic)
+      } header: {
+        Text("Breaks")
+      } footer: {
+        Text(
+          store.timing.breakStartPolicy == .automatic
           ? "Breaks start when a quarter ends."
           : "Breaks wait for you to tap Start break."
-      )
-      .font(.subheadline).foregroundStyle(.secondary)
-
-      Divider()
-
-      if store.timing.customizesBreaks {
-        durationRow(
-          "After quarter 1",
-          duration: store.timing.firstBreakDuration, field: .firstBreak
         )
-        durationRow(
-          "Half time",
-          duration: store.timing.halfTimeDuration, field: .halfTime
-        )
-        durationRow(
-          "After quarter 3",
-          duration: store.timing.secondBreakDuration, field: .secondBreak
-        )
+      }
 
-        Button("Use first break for all") {
-          store.send(.useFirstBreakForAllButtonTapped)
+      if !store.timing.isValid {
+        Section {
+          Label("Enter valid quarter and break durations.", systemImage: "exclamationmark.triangle")
+            .foregroundStyle(.red)
         }
-        .buttonStyle(.bordered)
-      } else {
-        durationRow(
-          "Breaks",
-          duration: store.timing.firstBreakDuration, field: .allBreaks
-        )
-
-        Button("Customize each break") {
-          store.send(.customizeBreaksButtonTapped)
-        }
-        .buttonStyle(.bordered)
       }
     }
-    .setupCardStyle()
-  }
-
-  private func durationRow(
-    _ label: String, duration: NewGameFeature.DurationDraft, field: SetupTimingFeature.DurationField
-  ) -> some View {
-    HStack {
-      Text(label)
-      Spacer()
-      Text(duration.formatted)
-        .monospacedDigit()
-        .foregroundStyle(.secondary)
-      Button("Edit") { store.send(.editDurationButtonTapped(field)) }
-        .accessibilityLabel("Edit \(label)")
-    }
+    #if os(iOS)
+    .listStyle(.insetGrouped)
+    #else
+    .listStyle(.inset)
+    #endif
+    .scrollContentBackground(.hidden)
+    .background(Color.setupBackground.ignoresSafeArea())
   }
 
   package init(store: StoreOf<SetupTimingFeature>) {
     self.store = store
+  }
+}
+
+private struct SetupDurationRow: View {
+  let title: LocalizedStringKey
+  let duration: NewGameFeature.DurationDraft
+  var edit: () -> Void
+
+  var body: some View {
+    Button(action: edit) {
+      HStack {
+        Text(title)
+          .foregroundStyle(.primary)
+        Spacer()
+        Text(duration.formatted)
+          .monospacedDigit()
+          .foregroundStyle(.secondary)
+        Image(systemName: "chevron.right")
+          .font(.footnote.weight(.semibold))
+          .foregroundStyle(.tertiary)
+          .accessibilityHidden(true)
+      }
+      .contentShape(.rect)
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(title))
+    .accessibilityValue(duration.formatted)
+    .accessibilityHint("Edit duration")
   }
 }
 

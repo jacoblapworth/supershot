@@ -15,7 +15,7 @@ package nonisolated enum GamesFilter: String, CaseIterable, Identifiable, Sendab
     switch self {
     case .all: "All"
     case .planned: "Planned"
-    case .inProgress: "In progress"
+    case .inProgress: "In Progress"
     case .completed: "Completed"
     }
   }

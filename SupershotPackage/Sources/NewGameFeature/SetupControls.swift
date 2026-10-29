@@ -65,7 +65,9 @@ package struct SetupStartBar: View {
           .foregroundStyle(.red)
           .frame(maxWidth: .infinity, alignment: .leading)
         if canRetry {
-          Button("Retry", action: retryTapped).disabled(isSaving)
+          Button("Retry", action: retryTapped)
+            .buttonStyle(.borderless)
+            .disabled(isSaving)
         }
       }
 
@@ -161,59 +163,60 @@ package struct SetupGameDetailsView: View {
   @Bindable var store: StoreOf<NewGameFeature>
 
   package var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      TimelineView(.everyMinute) { context in
-        HStack {
-          DatePicker(
-            selection: Binding(
-              get: { store.scheduledAt ?? context.date },
-              set: { store.scheduledAt = $0 }
-            )
-          ) {
-            Label("Start", systemImage: "calendar")
-          }
-          .datePickerStyle(.compact)
-          .accessibilityIdentifier("gameSetup.dateTime")
+    TimelineView(.everyMinute) { context in
+      HStack {
+        DatePicker(
+          selection: Binding(
+            get: { store.scheduledAt ?? context.date },
+            set: { store.scheduledAt = $0 }
+          )
+        ) {
+          Label("Start", systemImage: "calendar")
+        }
+        .datePickerStyle(.compact)
+        .accessibilityIdentifier("gameSetup.dateTime")
 
-          if store.scheduledAt != nil {
-            Button {
-              store.scheduledAt = nil
-            } label: {
-              Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Clear date and time")
-            .accessibilityHint("Use the current date and time")
-            .accessibilityIdentifier("gameSetup.clearDateTime")
+        if store.scheduledAt != nil {
+          Button {
+            store.scheduledAt = nil
+          } label: {
+            Image(systemName: "xmark.circle.fill")
+              .foregroundStyle(.secondary)
           }
+          .buttonStyle(.plain)
+          .accessibilityLabel("Clear date and time")
+          .accessibilityHint("Use the current date and time")
+          .accessibilityIdentifier("gameSetup.clearDateTime")
         }
       }
-      Divider()
-      LabeledContent {
-        TextField("Optional", text: $store.court)
-        #if os(iOS)
-          .keyboardType(.numbersAndPunctuation)
-        #endif
-          .textFieldStyle(.plain)
-          .accessibilityLabel("Court")
-          .accessibilityIdentifier("gameSetup.court")
-      } label: {
-        Label("Court", systemImage: "sportscourt")
-      }
-      Divider()
-      LabeledContent {
-        TextField("Optional", text: $store.division)
-        #if os(iOS)
-          .keyboardType(.numbersAndPunctuation)
-        #endif
-          .textFieldStyle(.plain)
-          .accessibilityLabel("Division")
-          .accessibilityIdentifier("gameSetup.division")
-      } label: {
-        Label("Division", systemImage: "chart.bar.fill")
-      }
     }
-    .setupCardStyle()
+    TextField(text: $store.court, prompt: Text("Optional")) {
+      Label("Court", systemImage: "sportscourt")
+    }
+    .labelStyle(.titleAndIcon)
+    .labelsVisibility(.visible)
+    
+    LabeledContent {
+      TextField("Optional", text: $store.court)
+      #if os(iOS)
+        .keyboardType(.numbersAndPunctuation)
+      #endif
+        .textFieldStyle(.plain)
+        .accessibilityLabel("Court")
+        .accessibilityIdentifier("gameSetup.court")
+    } label: {
+      Label("Court", systemImage: "sportscourt")
+    }
+    LabeledContent {
+      TextField("Optional", text: $store.division)
+      #if os(iOS)
+        .keyboardType(.numbersAndPunctuation)
+      #endif
+        .textFieldStyle(.plain)
+        .accessibilityLabel("Division")
+        .accessibilityIdentifier("gameSetup.division")
+    } label: {
+      Label("Division", systemImage: "chart.bar.fill")
+    }
   }
 }

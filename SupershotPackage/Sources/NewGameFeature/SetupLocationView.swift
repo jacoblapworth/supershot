@@ -31,6 +31,7 @@ package struct SetupLocationView: View {
           Label("Current location", systemImage: "mappin.and.ellipse")
           Spacer()
           Button("Add") { store.send(.locationButtonTapped) }
+            .buttonStyle(.borderless)
             .accessibilityLabel("Add current location")
         }
 
@@ -84,6 +85,7 @@ package struct SetupLocationView: View {
           Button("Refresh", systemImage: "arrow.clockwise") {
             store.send(.locationButtonTapped)
           }
+          .buttonStyle(.borderless)
           .labelStyle(.iconOnly)
           .font(.subheadline)
         }

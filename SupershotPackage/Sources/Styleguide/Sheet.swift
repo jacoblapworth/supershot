@@ -39,7 +39,7 @@ package struct SizeToFitModifier: ViewModifier {
         }
     }
     .scrollDisabled(true)
-    .frame(maxWidth: .infinity, alignment: .center)
+    .frame(maxWidth: .infinity, alignment: .bottom)
   }
 
   package init(additional: Set<PresentationDetent>) {

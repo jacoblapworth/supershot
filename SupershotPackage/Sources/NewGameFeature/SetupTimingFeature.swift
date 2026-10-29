@@ -182,12 +182,14 @@ package struct SetupTimingSummaryView: View {
       HStack {
         Text(timing.summary)
         Spacer()
-        Button("Edit", action: edit).accessibilityLabel("Edit timing")
+        Button("Edit", action: edit)
+          .buttonStyle(.borderless)
+          .accessibilityLabel("Edit timing")
       }
-      Text(
-        timing.breakStartPolicy == .automatic
-          ? "Breaks start automatically" : "Breaks start manually"
-      )
+      HStack {
+        Text("Auto start breaks")
+        Image(systemName: timing.breakStartPolicy == .automatic ? "checkmark.circle.fill" : "xmark.circle.fill")
+      }
       .font(.subheadline).foregroundStyle(.secondary)
     }
     .setupCardStyle()
@@ -203,27 +205,20 @@ package struct SetupTimingEditorView: View {
   @Bindable package var store: StoreOf<SetupTimingFeature>
   package var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 16) {
-          Text(store.timing.summary).font(.subheadline).foregroundStyle(.secondary)
-          SetupTimingView(store: store)
-          if !store.timing.isValid {
-            Text("Enter valid quarter and break durations.").foregroundStyle(.red)
+      SetupTimingView(store: store)
+        .sheet(item: $store.scope(state: \.timeInput, action: \.timeInput)) {
+          TimeInputView(store: $0)
+        }
+        .navigationTitle("Timing")
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            Button(role: .cancel) { store.send(.cancelButtonTapped) }
           }
-        }.padding()
-      }
-      .sheet(item: $store.scope(state: \.timeInput, action: \.timeInput)) {
-        TimeInputView(store: $0)
-      }
-      .navigationTitle("Timing")
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") { store.send(.cancelButtonTapped) }
+          ToolbarItem(placement: .confirmationAction) {
+            Button(role: .confirm) { store.send(.doneButtonTapped) }
+              .disabled(!store.timing.isValid)
+          }
         }
-        ToolbarItem(placement: .confirmationAction) {
-          Button("Done") { store.send(.doneButtonTapped) }.disabled(!store.timing.isValid)
-        }
-      }
     }
     .presentationDetents([.large])
     #if os(macOS)

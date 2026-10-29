@@ -56,15 +56,15 @@ package struct GamesHomeView: View {
     let plannedGames = visibleGames.filter(\.isPlanned)
     let historyGames = visibleGames.filter { !$0.isPlanned }
     return List {
-      #if os(iOS)
-        Section {
-          GamesFilterControl(selection: store.filter) { filter in
-            store.send(.filterButtonTapped(filter))
-          }
-          .listRowBackground(Color.clear)
-          .listRowInsets(.all, 0)
-        }
-      #endif
+//      #if os(iOS)
+//        Section {
+//          GamesFilterControl(selection: store.filter) { filter in
+//            store.send(.filterButtonTapped(filter))
+//          }
+//          .listRowBackground(Color.clear)
+//          .listRowInsets(.all, 0)
+//        }
+//      #endif
       if proAccess == .free {
         Section {
           ProPromotionCard(
@@ -120,6 +120,25 @@ package struct GamesHomeView: View {
         }
       }
     }
+//    .safeAreaInset(edge: .top, content: {
+//      GamesFilterControl(selection: store.filter) { filter in
+//        store.send(.filterButtonTapped(filter))
+//      }
+//    })
+    .toolbar(content: {
+      ToolbarItem(id: "filters", placement: .largeSubtitle) {
+        GamesFilterControl(selection: store.filter) { filter in
+          store.send(.filterButtonTapped(filter))
+        }
+      }
+      
+      ToolbarItem(id: "filters", placement: .subtitle) {
+        GamesFilterControl(selection: store.filter) { filter in
+          store.send(.filterButtonTapped(filter))
+        }
+      }
+    })
+    .scrollEdgeEffectStyle(.soft, for: .top)
     .scrollContentBackground(.hidden)
     .background(.background)
     .navigationTitle("Games")

@@ -117,7 +117,6 @@ package struct NewGameFeature {
     package var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     package var location = LocationState.idle
     @Presents package var destination: NewGameDestination.State?
-    package var pendingTeamConfiguration: NewGameTeamConfiguration.State?
     package var periodDuration: DurationDraft {
       get { timing.periodDuration }
       set { timing.periodDuration = newValue }
@@ -282,7 +281,6 @@ package struct NewGameFeature {
     case describeGame(DescribeGameFeature.Action)
     case delegate(Delegate)
     case destination(PresentationAction<NewGameDestination.Action>)
-    case destinationDidDismiss
     case editTimingButtonTapped
     case locationButtonTapped
     case locationAuthorizationResponse(LocationAuthorizationStatus)
@@ -448,13 +446,6 @@ package struct NewGameFeature {
           state.rightTeam.team = team
           state.rightTeam.bibColor = team.color
         }
-        state.pendingTeamConfiguration = NewGameTeamConfiguration.State(
-          configuration: SetupTeamFeature.State(
-            team: team,
-            excluding: excludedTeamIDs(for: picker.side, state: state)
-          ),
-          side: picker.side
-        )
         state.destination = nil
         state.errorMessage = nil
         return .none
@@ -491,12 +482,6 @@ package struct NewGameFeature {
         return .none
 
       case .destination:
-        return .none
-
-      case .destinationDidDismiss:
-        guard let pendingTeamConfiguration = state.pendingTeamConfiguration else { return .none }
-        state.pendingTeamConfiguration = nil
-        state.destination = .teamConfiguration(pendingTeamConfiguration)
         return .none
 
       case .editTimingButtonTapped:

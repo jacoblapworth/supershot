@@ -192,11 +192,11 @@ package struct ScoringView: View {
           onDismiss: { store.send(.controlsSheetDidDismiss) }
         ) {
           ScoringToolbarView(state: store.scoringToolbarState) { store.send(.controlTapped($0)) }
-            .ignoresSafeArea()
+            .ignoresSafeArea(.container, edges: .bottom)
             .presentationSizing(.fitted)
+//            .presentationDetents([.height(110)])
             .presentationDetents(.sizeToFit)
             .presentationBackgroundInteraction(.enabled)
-            .presentationBackground(alignment: .topLeading) {}
             .interactiveDismissDisabled()
             .presentationDragIndicator(.hidden)
             .presentationPlacement(.leading)

@@ -52,6 +52,11 @@ package struct TeamDetailView: View {
     .toolbar {
       if let team = response.team {
         ToolbarItem(placement: .primaryAction) {
+          Button("Edit", systemImage: "pencil") {
+            store.send(.editButtonTapped(team))
+          }
+        }
+        ToolbarItem(placement: .primaryAction) {
           Menu {
             Button("Edit", systemImage: "pencil") {
               store.send(.editButtonTapped(team))

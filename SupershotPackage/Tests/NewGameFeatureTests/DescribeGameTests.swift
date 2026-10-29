@@ -326,9 +326,9 @@ extension SupershotTestSuite {
       #expect(selected.id != proposal.id)
       #expect(store.destination == nil)
       #expect(store.draft?.teamsToCreate.map(\.id) == [opponent.id])
-      store.send(.destinationDidDismiss)
+      store.send(.selectTeamButtonTapped(.teamB))
       guard case let .teamConfiguration(configuration) = store.destination else {
-        Issue.record("The created team must use the existing configuration flow")
+        Issue.record("Tapping the created team must open its configuration")
         return
       }
       expectNoDifference(configuration.configuration.savedTeam, selected)

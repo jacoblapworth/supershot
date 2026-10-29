@@ -17,17 +17,10 @@ struct GamesFilterControl: View {
               }
               .font(.footnote.weight(.semibold))
               .fixedSize()
-//              .padding(.horizontal, 8)
-//              .padding(.vertical, 8)
               .contentShape(.capsule)
             }
-            .controlSize(.small)
+            .controlSize(.regular)
             .buttonStyle(.glass)
-//            .glassEffect(
-//              .regular.tint(selection == filter ? .accentColor.opacity(0.25) : .clear)
-//                .interactive(),
-//              in: .capsule
-//            )
             .tint(selection == filter ? .blue : nil)
             .accessibilityLabel(Text(filter.title))
             .accessibilityAddTraits(selection == filter ? [.isSelected] : [])
@@ -38,33 +31,33 @@ struct GamesFilterControl: View {
       }
       .padding(.vertical, 4)
 
-      Menu {
-        ForEach(GamesFilter.allCases) { filter in
-          Button {
-            filterTapped(filter)
-          } label: {
-            if selection == filter {
-              Label(filter.title, systemImage: "checkmark")
-            } else {
-              Text(filter.title)
-            }
-          }
-          .accessibilityAddTraits(selection == filter ? [.isSelected] : [])
-          .accessibilityIdentifier("gamesFilter.\(filter.rawValue)")
-        }
-      } label: {
-        ViewThatFits(in: .horizontal) {
-          Label(selection.title, systemImage: "line.3.horizontal.decrease")
-            .fixedSize()
-          Image(systemName: "line.3.horizontal.decrease")
-        }
-        .font(.caption.weight(.semibold))
-        .frame(minHeight: 44)
-      }
-      .buttonStyle(.glass)
-      .accessibilityLabel("Filter games")
-      .accessibilityValue(Text(selection.title))
-      .accessibilityIdentifier("gamesFilter.menu")
+//      Menu {
+//        ForEach(GamesFilter.allCases) { filter in
+//          Button {
+//            filterTapped(filter)
+//          } label: {
+//            if selection == filter {
+//              Label(filter.title, systemImage: "checkmark")
+//            } else {
+//              Text(filter.title)
+//            }
+//          }
+//          .accessibilityAddTraits(selection == filter ? [.isSelected] : [])
+//          .accessibilityIdentifier("gamesFilter.\(filter.rawValue)")
+//        }
+//      } label: {
+//        ViewThatFits(in: .horizontal) {
+//          Label(selection.title, systemImage: "line.3.horizontal.decrease")
+//            .fixedSize()
+//          Image(systemName: "line.3.horizontal.decrease")
+//        }
+//        .font(.caption.weight(.semibold))
+//        .frame(minHeight: 44)
+//      }
+//      .buttonStyle(.glass)
+//      .accessibilityLabel("Filter games")
+//      .accessibilityValue(Text(selection.title))
+//      .accessibilityIdentifier("gamesFilter.menu")
     }
   }
 }

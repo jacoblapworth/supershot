@@ -204,17 +204,15 @@ private struct GameDefaultsSettingsSection: View {
     Section {
       durationRow("Quarter length", seconds: store.defaultPeriodDurationSeconds, field: .quarter)
       durationRow("Break length", seconds: store.defaultBreakDurationSeconds, field: .breakTime)
-      Picker(
-        "Start breaks", selection: $store.defaultBreakStartPolicy.sending(\.breakStartPolicyChanged)
-      ) {
-        Text("Automatically").tag(BreakStartPolicy.automatic)
-        Text("Manually").tag(BreakStartPolicy.manual)
-      }
+      Toggle(
+        "Auto start breaks",
+        isOn: $store.defaultBreakStartPolicy.sending(\.breakStartPolicyChanged).isAutomatic
+      )
     } header: {
       Text("New game defaults")
     } footer: {
       Text(
-        "These settings are used for new games and can be changed during setup. Automatic breaks start when a quarter ends; manual breaks wait for you to tap Start break."
+        "These settings are used for new games and can be changed during setup. When Auto start breaks is on, breaks start when a quarter ends. When it is off, breaks wait for you to tap Start break."
       )
     }
   }
