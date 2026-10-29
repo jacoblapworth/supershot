@@ -111,6 +111,9 @@ package struct TeamsListView: View {
     }
     .navigationTitle("Teams")
     .searchable(text: $store.searchText, prompt: "Search teams")
+    .searchPresentationToolbarBehavior(.automatic)
+    .searchToolbarBehavior(.automatic)
+    .tabViewSearchActivation(.searchTabSelection)
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         Button {

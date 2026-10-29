@@ -5,6 +5,11 @@ import SQLiteData
 public nonisolated enum BreakStartPolicy: String, Codable, CaseIterable, Sendable, QueryBindable {
   case automatic
   case manual
+
+  public var isAutomatic: Bool {
+    get { self == .automatic }
+    set { self = newValue ? .automatic : .manual }
+  }
 }
 
 @Table

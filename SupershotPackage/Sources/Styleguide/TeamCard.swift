@@ -75,7 +75,7 @@ private struct TeamCardBackground: View {
 
   var body: some View {
     #if os(iOS)
-      let backgroundColor = Color(uiColor: .secondarySystemBackground)
+    let backgroundColor = Color(uiColor: .secondarySystemGroupedBackground)
     #else
       let backgroundColor = Color(nsColor: .controlBackgroundColor)
     #endif

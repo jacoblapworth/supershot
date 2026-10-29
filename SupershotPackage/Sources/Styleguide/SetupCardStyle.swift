@@ -14,18 +14,10 @@ package extension Color {
       Color(nsColor: .windowBackgroundColor)
     #endif
   }
-
-  static var setupContainer: Color {
-    #if os(iOS)
-      Color(uiColor: .secondarySystemGroupedBackground)
-    #else
-      Color(nsColor: .controlBackgroundColor)
-    #endif
-  }
 }
 
 package extension EnvironmentValues {
-  @Entry var usesGroupedSetupContainers = false
+  @Entry var usesNativeSetupRows = false
 }
 
 package extension View {
@@ -35,15 +27,15 @@ package extension View {
 }
 
 private struct SetupCardModifier: ViewModifier {
-  @Environment(\.usesGroupedSetupContainers) private var grouped
+  @Environment(\.usesNativeSetupRows) private var usesNativeRows
 
   func body(content: Content) -> some View {
     content
-      .padding()
+      .padding(usesNativeRows ? 0 : 16)
       .frame(maxWidth: .infinity, alignment: .leading)
       .background {
-        RoundedRectangle(cornerRadius: grouped ? 24 : 16)
-          .fill(grouped ? AnyShapeStyle(Color.setupContainer) : AnyShapeStyle(.thinMaterial))
+        RoundedRectangle(cornerRadius: 16)
+          .fill(usesNativeRows ? AnyShapeStyle(.clear) : AnyShapeStyle(.thinMaterial))
       }
   }
 }
