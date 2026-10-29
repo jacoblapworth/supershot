@@ -19,7 +19,7 @@ package struct SetupTeamView: View {
   @Bindable package var store: StoreOf<SetupTeamFeature>
   package var body: some View {
     NavigationStack {
-      VStack(alignment: .leading, spacing: 24) {
+      List {
         HStack(spacing: 16) {
           Circle().fill(store.previewTeam.color).frame(width: 56, height: 56)
             .accessibilityHidden(true)
@@ -37,33 +37,36 @@ package struct SetupTeamView: View {
           .controlSize(.large)
           .labelStyle(.iconOnly)
         }
-        PaletteColorPicker(
-          color: Binding(
-            get: { store.previewTeam.color }, set: { store.send(.colorChanged($0)) }
-          ),
-          title: "Colour"
-        )
-        if store.isSaving {
-          ProgressView("Saving colour…")
+        Section {
+          PaletteColorPicker(
+            color: Binding(
+              get: { store.previewTeam.color },
+              set: { store.send(.colorChanged($0)) }
+            )
+          )
+          if store.isSaving {
+            ProgressView("Saving colour…")
+          }
         }
         if let errorMessage = store.errorMessage {
           Text(errorMessage).foregroundStyle(.red)
           Button("Retry") { store.send(.retryButtonTapped) }
         }
-      }.padding()
-        .navigationTitle("Team")
-        .toolbar {
-          ToolbarItem(placement: .confirmationAction) {
-            Button("Done") { store.send(.doneButtonTapped) }.disabled(store.isSaving)
-          }
+      }
+      .navigationTitle("Team")
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button(role: .confirm) { store.send(.doneButtonTapped) }
+            .disabled(store.isSaving)
         }
-        .sheet(item: $store.scope(state: \.picker, action: \.picker)) { picker in
-          NavigationStack {
-            TeamPickerView(store: picker).navigationTitle("Select team")
-          }
-          .presentationDetents([.medium, .large])
-          .presentationBackground(.thinMaterial)
+      }
+      .sheet(item: $store.scope(state: \.picker, action: \.picker)) { picker in
+        NavigationStack {
+          TeamPickerView(store: picker).navigationTitle("Select team")
         }
+        .presentationDetents([.medium, .large])
+        .presentationBackground(.thinMaterial)
+      }
     }
     #if os(macOS)
     .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)

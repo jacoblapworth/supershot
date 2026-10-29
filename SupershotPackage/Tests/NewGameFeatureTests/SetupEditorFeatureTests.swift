@@ -43,23 +43,16 @@ extension SupershotTestSuite {
       #expect(store.state.firstCentrePass == .teamB)
     }
 
-    @Test func pickerDismissalOpensConfiguration() async {
+    @Test func dismissingPickerReturnsToSetupWithoutSelectingTeam() async {
       var state = NewGameFeature.State()
-      state.leftTeam.team = .previewFoxes
-      state.pendingTeamConfiguration = NewGameTeamConfiguration.State(
-        configuration: SetupTeamFeature.State(team: .previewFoxes),
-        side: .teamA
+      state.destination = .teamPicker(
+        NewGameTeamPicker.State(picker: TeamPickerFeature.State(), side: .teamA)
       )
       let store = TestStore(initialState: state) { NewGameFeature() }
-      await store.send(.destinationDidDismiss) {
-        $0.destination = .teamConfiguration(
-          NewGameTeamConfiguration.State(
-            configuration: SetupTeamFeature.State(team: .previewFoxes),
-            side: .teamA
-          )
-        )
-        $0.pendingTeamConfiguration = nil
+      await store.send(.destination(.dismiss)) {
+        $0.destination = nil
       }
+      #expect(store.state.leftTeam.team == nil)
     }
 
     @Test func timingDraftIsIsolatedUntilDone() async {

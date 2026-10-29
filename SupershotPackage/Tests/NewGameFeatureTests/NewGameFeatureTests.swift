@@ -112,14 +112,14 @@ extension SupershotTestSuite {
       }
     }
 
-    @Test
-    func pickedTeamSetsMatchTeamAndBibColor() async {
+    @Test(arguments: [NewGameFeature.TeamSide.teamA, .teamB])
+    func pickingTeamReturnsToSetupWithTeamAndBibColor(side: NewGameFeature.TeamSide) async {
       let foxes = Team(id: UUID(2), name: "Foxes", colorHex: "#34C759")
       var state = NewGameFeature.State()
       state.destination = .teamPicker(
         NewGameTeamPicker.State(
           picker: TeamPickerFeature.State(),
-          side: .teamA
+          side: side
         )
       )
       let store = TestStore(initialState: state) {
@@ -129,22 +129,52 @@ extension SupershotTestSuite {
       await store.send(
         .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(foxes))))))
       ) {
-        $0.leftTeam.bibColor = Color(hex: "#34C759")
-        $0.leftTeam.team = foxes
-        $0.pendingTeamConfiguration = NewGameTeamConfiguration.State(
-          configuration: SetupTeamFeature.State(team: foxes),
-          side: .teamA
-        )
+        if side == .teamA {
+          $0.leftTeam.bibColor = foxes.color
+          $0.leftTeam.team = foxes
+        } else {
+          $0.rightTeam.bibColor = foxes.color
+          $0.rightTeam.team = foxes
+        }
         $0.destination = nil
       }
-      await store.send(.destinationDidDismiss) {
+    }
+
+    @Test(arguments: [NewGameFeature.TeamSide.teamA, .teamB])
+    func tappingSelectedTeamOpensColourEditor(side: NewGameFeature.TeamSide) async {
+      let foxes = Team(id: UUID(2), name: "Foxes", colorHex: "#34C759")
+      let ravens = Team(id: UUID(1), name: "Ravens", colorHex: "#007AFF")
+      var state = NewGameFeature.State()
+      state.leftTeam.team = side == .teamA ? foxes : ravens
+      state.rightTeam.team = side == .teamB ? foxes : ravens
+      let store = TestStore(initialState: state) {
+        NewGameFeature()
+      }
+
+      await store.send(.selectTeamButtonTapped(side)) {
         $0.destination = .teamConfiguration(
           NewGameTeamConfiguration.State(
-            configuration: SetupTeamFeature.State(team: foxes),
-            side: .teamA
+            configuration: SetupTeamFeature.State(team: foxes, excluding: [ravens.id]),
+            side: side
           )
         )
-        $0.pendingTeamConfiguration = nil
+      }
+
+      var updatedFoxes = foxes
+      updatedFoxes.colorHex = "#FF9500"
+      await store.send(
+        .destination(.presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(updatedFoxes))))))
+      ) {
+        if side == .teamA {
+          $0.leftTeam.team = updatedFoxes
+          $0.leftTeam.bibColor = updatedFoxes.color
+        } else {
+          $0.rightTeam.team = updatedFoxes
+          $0.rightTeam.bibColor = updatedFoxes.color
+        }
+      }
+      await store.send(.destination(.presented(.teamConfiguration(.configuration(.delegate(.done)))))) {
+        $0.destination = nil
       }
     }
 

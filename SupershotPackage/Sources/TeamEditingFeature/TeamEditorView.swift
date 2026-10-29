@@ -15,26 +15,20 @@ package struct TeamEditorView: View {
     Form {
       Section {
         TextField("Team name", text: $store.name)
-          .textFieldStyle(.roundedBorder)
+//          .textFieldStyle(.roundedBorder)
+          .font(.title2)
+          .fontWeight(.semibold)
           .focused($focus, equals: .name)
-          .disabled(store.isSaving)
-        PaletteColorPicker(
-          color: $store.color,
-          title: "Team color"
-        )
-        .disabled(store.isSaving)
+
         #if os(macOS)
           .keyboardShortcut(.cancelAction)
         #endif
       }
 
       Section {
-        Label(
-          "Name changes update game history. Team color changes do not change past bib colors.",
-          systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90"
+        PaletteColorPicker(
+          color: $store.color
         )
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
       }
 
       if let errorMessage = store.errorMessage {
@@ -44,6 +38,7 @@ package struct TeamEditorView: View {
         }
       }
     }
+    .disabled(store.isSaving)
     .bind($store.focus, to: $focus)
     .navigationTitle(store.isCreating ? "New team" : "Edit team")
     #if os(iOS)
@@ -56,22 +51,23 @@ package struct TeamEditorView: View {
     #endif
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button("Cancel") {
-            store.send(.cancelButtonTapped)
-          }
-          .disabled(store.isSaving)
+          Button(role: .cancel, action: { store.send(.cancelButtonTapped) })
+            .disabled(store.isSaving)
         }
         ToolbarItem(placement: .confirmationAction) {
-          Button {
+          Button(role: .confirm) {
             store.send(.saveButtonTapped)
-          } label: {
-            if store.isSaving {
-              ProgressView()
-            } else {
-              Text("Save")
-            }
           }
           .disabled(!store.canSave)
+//          Button {
+//            store.send(.saveButtonTapped)
+//          } label: {
+//            if store.isSaving {
+//              ProgressView()
+//            } else {
+//              Text("Save")
+//            }
+//          }
           #if os(macOS)
             .keyboardShortcut(.defaultAction)
           #endif
