@@ -274,11 +274,20 @@ extension SupershotTestSuite {
         $0.alarmClient.reconcileAlarms = { ids in
           expectNoDifference(ids, showsActivity ? [] : [UUID(3)])
         }
+        $0.alarmClient.reconcileActivities = { ids in
+          expectNoDifference(ids, showsActivity ? [UUID(3)] : [])
+          events.withValue { $0.append("reconcileActivities") }
+        }
         $0.alarmClient.endActivity = { _ in events.withValue { $0.append("endActivity") } }
       }
       await store.send(.proAccessUpdated(.pro)) { $0.proAccess = .pro }
       await store.finish()
-      expectNoDifference(events.value, showsActivity ? ["activity"] : ["endActivity", "alarm"])
+      expectNoDifference(
+        events.value,
+        showsActivity
+          ? ["reconcileActivities", "activity"]
+          : ["reconcileActivities", "endActivity", "alarm"]
+      )
       let after = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
       expectNoDifference(after, before)
     }
@@ -296,6 +305,20 @@ extension SupershotTestSuite {
       await store.finish()
       expectNoDifference(store.state.proAccess, .pro)
       expectNoDifference(events.value, 0)
+    }
+
+    @Test func freeAccessReconcilesActivitiesEvenWithoutStoredGames() async throws {
+      let reconciliations = LockIsolated<[Set<UUID>]>([])
+      let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
+        try! clearDatabase($0.defaultDatabase)
+        $0.featureFlags = FeatureFlagsClient { _, _ in false }
+        $0.alarmClient.reconcileActivities = { ids in
+          reconciliations.withValue { $0.append(ids) }
+        }
+      }
+      await store.send(.proAccessUpdated(.free)) { $0.proAccess = .free }
+      await store.finish()
+      expectNoDifference(reconciliations.value, [[]])
     }
 
     @Test

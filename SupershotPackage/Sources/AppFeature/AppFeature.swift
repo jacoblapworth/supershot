@@ -210,6 +210,7 @@ package struct AppFeature {
     .run { _ in
       let gameIDs = try await unfinishedGameIDs()
       await alarmClient.reconcileAlarms([])
+      await alarmClient.reconcileActivities([])
       for gameID in gameIDs {
         await gameTimer.endPresentation(gameID)
       }
@@ -225,6 +226,7 @@ package struct AppFeature {
       let schedulesAlerts = allowsAlerts && authorization == .authorized
       let gameIDs = try await unfinishedGameIDs()
       await alarmClient.reconcileAlarms(schedulesAlerts ? Set(gameIDs) : [])
+      await alarmClient.reconcileActivities(showsActivity ? Set(gameIDs) : [])
       for gameID in gameIDs {
         if showsActivity {
           await gameTimer.refreshActivity(gameID)
