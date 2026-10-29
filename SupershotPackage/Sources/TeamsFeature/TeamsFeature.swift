@@ -70,6 +70,7 @@ package struct TeamsFeature {
       newGame?.gameID == gameID || path.contains {
         switch $0 {
         case let .scoring(scoring): scoring.gameID == gameID
+        case let .gameDetail(detail): detail.gameID == gameID
         default: false
         }
       }
@@ -134,18 +135,6 @@ package struct TeamsFeature {
         return deleteTeamEffect(teamID: teamID)
 
       case let .gameDeepLinkOpened(gameID):
-        if state.newGame?.gameID == gameID {
-          return .none
-        }
-        for (id, destination) in zip(state.path.ids, state.path) {
-          guard case let .scoring(scoring) = destination, scoring.gameID == gameID else {
-            continue
-          }
-          state.path.pop(to: id)
-          return .send(
-            .path(.element(id: id, action: .scoring(.sceneBecameActive)))
-          )
-        }
         state.clearResumeAlert()
         return resumeGame(gameID: gameID, state: &state)
 
@@ -250,6 +239,31 @@ package struct TeamsFeature {
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
 
+        // Resolve the persisted status before reusing a route left open in a warm app.
+        if state.newGame?.gameID == request.gameID {
+          if snapshot.game.isPlanned { return .none }
+          state.newGame = nil
+        }
+        for (id, destination) in zip(state.path.ids, state.path) {
+          switch destination {
+          case let .scoring(scoring) where scoring.gameID == request.gameID:
+            if snapshot.game.isInProgress {
+              state.path.pop(to: id)
+              return .send(.path(.element(id: id, action: .scoring(.sceneBecameActive))))
+            }
+            state.path.pop(from: id)
+          case let .gameDetail(detail) where detail.gameID == request.gameID:
+            if (snapshot.game.endedAt != nil) {
+              state.path.pop(to: id)
+              return .none
+            }
+            state.path.pop(from: id)
+          default:
+            continue
+          }
+          break
+        }
+
         if snapshot.game.isPlanned {
           state.newGame = NewGameFeature.State(snapshot: snapshot)
         } else if snapshot.game.isInProgress {
@@ -264,6 +278,19 @@ package struct TeamsFeature {
       case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
+        if state.newGame?.gameID == request.gameID { state.newGame = nil }
+        for (id, destination) in zip(state.path.ids, state.path) {
+          let matches: Bool
+          switch destination {
+          case let .scoring(scoring): matches = scoring.gameID == request.gameID
+          case let .gameDetail(detail): matches = detail.gameID == request.gameID
+          default: matches = false
+          }
+          if matches {
+            state.path.pop(from: id)
+            break
+          }
+        }
         if case var .teamEditor(editor) = state.destination {
           editor.alert = .gameUnavailable
           state.destination = .teamEditor(editor)
@@ -357,7 +384,7 @@ package struct TeamsFeature {
         let snapshot = try await database.read {
           try GameSnapshot.fetch($0, gameID: request.gameID)
         }
-        if snapshot.game.isPlanned {
+        if snapshot.game.isPlanned || (snapshot.game.endedAt != nil) {
           return snapshot
         }
         return try await gameTimer.reconcile(request.gameID)
@@ -379,7 +406,7 @@ package extension AlertState where Action == TeamsFeature.Alert {
         TextState("OK")
       }
     } message: {
-      TextState("This unfinished game could not be opened.")
+      TextState("This game could not be opened. It may have been deleted.")
     }
   }
 }
