@@ -68,20 +68,15 @@ nonisolated extension AlarmClient {
             state: GameActivityAttributes.ContentState(snapshot: snapshot),
             staleDate: snapshot.game.timerEndsAt
           )
-          if let activity = Activity<GameActivityAttributes>.activities.first(
-            where: { $0.attributes.gameID == snapshot.game.id }
-          ) {
-            await activity.update(content)
-          } else if
-            startsIfNeeded,
-
-            snapshot.game.timerEndsAt != nil
-            || snapshot.game.elapsedSeconds > 0
-            || snapshot.game.currentPhaseIndex > 0,
-
-            ActivityAuthorizationInfo().areActivitiesEnabled
-          {
-            _ = try? Activity.request(
+          await gameActivities.update(gameID: snapshot.game.id, content: content) {
+            guard
+              startsIfNeeded,
+              snapshot.game.timerEndsAt != nil
+              || snapshot.game.elapsedSeconds > 0
+              || snapshot.game.currentPhaseIndex > 0,
+              ActivityAuthorizationInfo().areActivitiesEnabled
+            else { return nil }
+            return try? Activity.request(
               attributes: GameActivityAttributes(snapshot: snapshot),
               content: content,
               pushType: nil
@@ -91,12 +86,11 @@ nonisolated extension AlarmClient {
         cancelAlarm: { gameID, phaseCount in
           cancelAlarms(for: gameID, phaseCount: phaseCount)
         },
+        reconcileActivities: { gameIDs in
+          await gameActivities.reconcile(keeping: gameIDs)
+        },
         endActivity: { gameID in
-          for activity in Activity<GameActivityAttributes>.activities
-            where activity.attributes.gameID == gameID
-          {
-            await activity.end(nil, dismissalPolicy: .immediate)
-          }
+          await gameActivities.end(gameID: gameID)
         }
       )
     #elseif os(macOS)
@@ -108,6 +102,16 @@ nonisolated extension AlarmClient {
 }
 
 #if os(iOS)
+  @MainActor
+  private let gameActivities = GameActivityManager<Activity<GameActivityAttributes>, ActivityContent<GameActivityAttributes.ContentState>>(
+    activities: { Activity<GameActivityAttributes>.activities },
+    id: { $0.id },
+    gameID: { $0.attributes.gameID },
+    isReusable: { $0.activityState == .active || $0.activityState == .stale },
+    update: { await $0.update($1) },
+    end: { await $0.end(nil, dismissalPolicy: .immediate) }
+  )
+
   private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
     var gameID: UUID
     var phaseIndex: Int
