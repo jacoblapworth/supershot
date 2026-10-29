@@ -1,31 +1,7 @@
 #if os(macOS)
   import ComposableArchitecture
+  import GameCore
   import SwiftUI
-
-  struct MacScoringControls: View {
-    let store: StoreOf<ScoringFeature>
-
-    var body: some View {
-      HStack(spacing: 16) {
-        ForEach([store.courtLayout.left, store.courtLayout.right]) { team in
-          Button {
-            store.send(.goalButtonTapped(team.id))
-          } label: {
-            Label("Goal for \(team.team.name)", systemImage: "plus")
-              .font(.headline)
-              .frame(maxWidth: .infinity, minHeight: 44)
-          }
-          .tint(team.team.bibColor)
-        }
-      }
-      .environment(\.layoutDirection, .leftToRight)
-      .buttonStyle(.borderedProminent)
-      .disabled(
-        !store.canScoreGoal || store.controlsPresentation != .shown
-          || store.alert != nil || store.isTimerOperationPending
-      )
-    }
-  }
 
   /// Commands are published only by the currently visible scoring screen.
   package struct ScoringCommandContext {
@@ -33,9 +9,7 @@
     let isPresentingPaywall: Bool
 
     package var isEnabled: Bool {
-      !isPresentingPaywall && store.timeInput == nil && store.alert == nil
-        && store.controlsPresentation == .shown && !store.isTimerOperationPending
-        && !store.isTransitioningPeriod && !store.isSavingCourtOrientation
+      !isPresentingPaywall && store.canOperate && !store.isSavingCourtOrientation
     }
 
     package var canScore: Bool {
@@ -47,11 +21,17 @@
     }
 
     package var canToggleTimer: Bool {
-      isEnabled && !store.isPeriodComplete && !store.isShowingLastCentrePassBanner
+      isEnabled && (store.canPause || store.canStartOrResume)
     }
 
     package var timerTitle: String {
-      store.isTimerRunning ? "Pause Timer" : "Start Timer"
+      if store.canPause {
+        return "Pause Timer"
+      }
+      if case let .primary(control) = store.scoringToolbarState.content {
+        return control.title
+      }
+      return store.phaseStatus == .paused ? "Resume Timer" : "Start Break"
     }
 
     package var leftTitle: String {
@@ -89,8 +69,4 @@
     }
   }
 
-  #Preview {
-    MacScoringControls(store: scoringPreviewStore(.previewQuarter))
-      .padding()
-  }
 #endif

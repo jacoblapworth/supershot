@@ -1,5 +1,6 @@
 import Foundation
 import GameCore
+import SharedModels
 import SQLiteData
 
 /// A complete, valid setup. Saving never changes a game that has already started.
@@ -21,7 +22,7 @@ package nonisolated struct GameSetupDraft: Equatable, Sendable {
   }
 
   package func save(
-    _ db: Database, startingAt: Date? = nil, requiresExistingGame: Bool = false
+    _ db: Database, requiresExistingGame: Bool = false
   ) throws -> GameSnapshot {
     guard game.teamAID != game.teamBID, GameTimeline(periods: periods) != nil,
           periods.allSatisfy({ $0.gameID == game.id })
@@ -38,11 +39,20 @@ package nonisolated struct GameSetupDraft: Equatable, Sendable {
       }
     }
     var saved = game
-    saved.startedAt = startingAt
+    saved.startedAt = nil
+    saved.currentPhaseIndex = 0
+    saved.countdown = GameCountdown()
+    saved.isAwaitingCentrePassConfirmation = false
+    saved.lateScoringPeriodNumber = nil
     if let existing = try Game.find(game.id).fetchOne(db) {
       guard existing.isPlanned else { throw SaveError.gameAlreadyStarted }
       try Game.find(game.id).update {
         $0.startedAt = #bind(saved.startedAt)
+        $0.currentPhaseIndex = saved.currentPhaseIndex
+        $0.elapsedSeconds = saved.elapsedSeconds
+        $0.timerEndsAt = #bind(saved.timerEndsAt)
+        $0.isAwaitingCentrePassConfirmation = saved.isAwaitingCentrePassConfirmation
+        $0.lateScoringPeriodNumber = #bind(saved.lateScoringPeriodNumber)
         $0.scheduledAt = #bind(saved.scheduledAt)
         $0.court = #bind(saved.court)
         $0.division = #bind(saved.division)

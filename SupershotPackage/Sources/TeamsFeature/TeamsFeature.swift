@@ -196,7 +196,7 @@ package struct TeamsFeature {
         state.newGame = setup
         return .none
 
-      case let .newGame(.presented(.delegate(.gameStarted(scoring)))):
+      case let .newGame(.presented(.delegate(.scoringPrepared(scoring)))):
         state.newGame = nil
         state.path.append(.scoring(scoring))
         return .none
@@ -222,7 +222,7 @@ package struct TeamsFeature {
         return .none
 
       case .newGame(.dismiss):
-        guard let setup = state.newGame, !setup.hasStarted, setup.describeGame.source.isEmpty,
+        guard let setup = state.newGame, !setup.hasEnteredScoring, setup.describeGame.source.isEmpty,
               let draft = setup.draft, draft != setup.lastSavedDraft
         else { return .none }
         let requiresExistingGame = setup.requiresExistingGame

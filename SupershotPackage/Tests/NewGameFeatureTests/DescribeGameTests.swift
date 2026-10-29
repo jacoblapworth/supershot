@@ -61,8 +61,8 @@ extension SupershotTestSuite {
       expectNoDifference(store.scheduledAt, Date(timeIntervalSince1970: 86400 + 19 * 3600 + 30 * 60))
       #expect(store.court == "2")
       #expect(store.division == "A")
-      #expect(store.canStartGame)
-      #expect(!store.hasStarted)
+      #expect(store.canPrepareScoring)
+      #expect(!store.hasEnteredScoring)
       #expect(store.describeGame.pendingTeams.isEmpty)
     }
 
@@ -82,7 +82,7 @@ extension SupershotTestSuite {
       expectNoDifference(store.leftTeam.team, a)
       expectNoDifference(store.rightTeam.team, b)
       expectNoDifference(store.scheduledAt, Date(timeIntervalSince1970: 19 * 3600 + 10 * 60))
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       #expect(store.describeGame.errorMessage == nil)
     }
 
@@ -111,7 +111,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func newTeamsAreReadyWithoutConfirmationAndSavedAtomicallyOnStart() async throws {
+    func newTeamsAreSavedAtomicallyWhenPreparingScoring() async throws {
       @Dependency(\.defaultDatabase) var database
       let store = try await setup()
       await store.send(.describeGame(.pasted(Self.description))).finish()
@@ -120,18 +120,18 @@ extension SupershotTestSuite {
       #expect(a.name == "Ravens")
       #expect(b.name == "Swifts")
       #expect(a.colorHex != b.colorHex)
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       await store.send(.configurationChanged).finish()
       await store.send(.sceneBecameInactive).finish()
       let before = try await database.read { try (Team.fetchCount($0), Game.fetchCount($0)) }
       #expect(before.0 == 0)
       #expect(before.1 == 0)
-      await store.send(.startGameButtonTapped).finish()
-      #expect(store.hasStarted)
+      await store.send(.prepareScoringButtonTapped).finish()
+      #expect(store.hasEnteredScoring)
       let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: store.gameID) }
       expectNoDifference(snapshot.teamA, a)
       expectNoDifference(snapshot.teamB, b)
-      #expect(snapshot.game.startedAt != nil)
+      #expect(snapshot.game.startedAt == nil)
       #expect(snapshot.game.court == "2")
       #expect(snapshot.game.division == "A")
     }
@@ -174,7 +174,7 @@ extension SupershotTestSuite {
       #expect(store.court.isEmpty)
       #expect(store.division.isEmpty)
       #expect(store.parsedFields.isEmpty)
-      #expect(!store.canStartGame)
+      #expect(!store.canPrepareScoring)
       let counts = try await database.read { try (Team.fetchCount($0), Game.fetchCount($0)) }
       #expect(counts.0 == 0)
       #expect(counts.1 == 0)
@@ -205,7 +205,7 @@ extension SupershotTestSuite {
       #expect(store.court.isEmpty)
       #expect(store.division.isEmpty)
       #expect(store.leftTeam.team?.name == "Ravens")
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
     }
 
     @Test
@@ -286,7 +286,7 @@ extension SupershotTestSuite {
         .picker(.presented(.teamSelected(replacement)))
       ))))).finish()
       expectNoDifference(store.leftTeam.team, replacement)
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       #expect(store.draft?.teamsToCreate.isEmpty == true)
     }
 
@@ -333,7 +333,7 @@ extension SupershotTestSuite {
       }
       expectNoDifference(configuration.configuration.savedTeam, selected)
       await store.send(.destination(.presented(.teamConfiguration(.configuration(.doneButtonTapped))))).finish()
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       await store.send(.saveGameButtonTapped).finish()
       let teams = try await database.read { try Team.fetchAll($0) }
       #expect(teams.count == 2)
@@ -352,7 +352,7 @@ extension SupershotTestSuite {
       await store.send(.destination(.presented(.teamPicker(.picker(.cancelButtonTapped))))).finish()
       expectNoDifference(store.rightTeam.team, original)
       #expect(store.destination == nil)
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       let count = try await database.read { try Team.fetchCount($0) }
       #expect(count == 0)
     }
@@ -364,10 +364,10 @@ extension SupershotTestSuite {
         [ExtractedFixture(source: source, firstTeam: "Ravens", secondTeam: "Ravens")]
       })
       await store.send(.describeGame(.pasted("Ravens vs Ravens"))).finish()
-      #expect(!store.canStartGame)
+      #expect(!store.canPrepareScoring)
       store.send(.selectTeamButtonTapped(.teamB))
       await store.send(.destination(.presented(.teamPicker(.picker(.teamSelected(saved)))))).finish()
-      #expect(store.canStartGame)
+      #expect(store.canPrepareScoring)
       #expect(store.draft?.teamsToCreate.count == 1)
       await store.send(.saveGameButtonTapped).finish()
       #expect(store.errorMessage == nil)

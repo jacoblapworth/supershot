@@ -119,8 +119,18 @@ package nonisolated enum GameSessionTransaction {
     now: Date
   ) throws -> GameSessionUpdate {
     let stored = try GameSnapshot.fetch(db, gameID: gameID)
-    guard !stored.game.isPlanned else {
-      return GameSessionUpdate(outcome: .rejected(.gameNotStarted), snapshot: stored)
+    if stored.game.isPlanned {
+      // An unstarted game can be prepared in scoring, but only its first clock can
+      // start its lifecycle. Progression, goals, and finishing still require play.
+      switch command {
+      case .reconcile, .selectCentrePass, .swapSides,
+           .timing(.setRemainingTime, _):
+        break
+      case .timing(.startOrResume, _) where stored.game.currentPhaseIndex == 0:
+        break
+      default:
+        return GameSessionUpdate(outcome: .rejected(.gameNotStarted), snapshot: stored)
+      }
     }
     var game = stored.game
     var outcome = GameSessionUpdate.Outcome.unchanged
@@ -162,6 +172,11 @@ package nonisolated enum GameSessionTransaction {
             expectedPhaseIndex: expectedPhaseIndex, now: commandDate
           )
           game.progress.apply(result.transitions)
+          if result.status == .applied, timingCommand == .startOrResume,
+             game.startedAt == nil
+          {
+            game.startedAt = commandDate
+          }
           switch result.status {
           case .applied: outcome = .applied
           case .unchanged: outcome = .unchanged
@@ -271,6 +286,7 @@ package nonisolated enum GameSessionTransaction {
       $0.centrePassTeamID = #bind(game.centrePassTeamID)
       $0.lateScoringPeriodNumber = #bind(game.lateScoringPeriodNumber)
       $0.isAwaitingCentrePassConfirmation = game.isAwaitingCentrePassConfirmation
+      $0.startedAt = #bind(game.startedAt)
       $0.currentPhaseIndex = game.currentPhaseIndex
       $0.elapsedSeconds = game.elapsedSeconds
       $0.timerEndsAt = #bind(game.timerEndsAt)

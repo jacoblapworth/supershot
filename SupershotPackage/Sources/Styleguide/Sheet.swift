@@ -17,15 +17,29 @@ package enum SizeToFitPresentationDetent {
 package struct SizeToFitModifier: ViewModifier {
   package let additional: Set<PresentationDetent>
   @State private var contentHeight = 0.0
+  @State private var presentationDetents: Set<PresentationDetent> = [.medium]
+  @State private var selectedPresentationDetent: PresentationDetent = .medium
+
 
   package func body(content: Content) -> some View {
-    content
-      .onGeometryChange(for: CGFloat.self) {
-        $0.size.height
-      } action: { height in
-        contentHeight = height
-      }
-      .presentationDetents(Set([.height(contentHeight)]).union(additional))
+    ScrollView {
+      content
+        .presentationDetents(presentationDetents, selection: $selectedPresentationDetent)
+        .onGeometryChange(for: CGFloat.self) {
+          $0.size.height
+        } action: { height in
+          contentHeight = height
+          presentationDetents.insert(.height(height))
+          selectedPresentationDetent = .height(height)
+        }
+        .transaction { transaction in
+          transaction.addAnimationCompletion(criteria: .removed) {
+            presentationDetents = [selectedPresentationDetent]
+          }
+        }
+    }
+    .scrollDisabled(true)
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   package init(additional: Set<PresentationDetent>) {

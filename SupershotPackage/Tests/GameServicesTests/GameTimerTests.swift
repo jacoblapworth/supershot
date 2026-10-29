@@ -73,7 +73,7 @@ extension SupershotTestSuite {
         #expect(recovered.game.breakStartPolicy == .manual)
         #expect(recovered.game.countdown == GameCountdown())
         let ui = ScoringFeature.State(snapshot: recovered)
-        #expect(ui.clockPhase == .breakTime)
+        #expect(ui.currentPhase.isBreak)
         #expect(ui.timeRemainingSeconds == 120)
         #expect(ui.scoringPeriod?.number == 1)
         let started = try await client.startOrResume(UUID(3), 1)
@@ -210,7 +210,7 @@ extension SupershotTestSuite {
     }
 
     @Test
-    func delayedStartResponseCannotOverwritePause() async throws {
+    func pendingStartIgnoresDuplicateStartAndPauseUntilCommitted() async throws {
       let responseClock = TestClock()
       let timerClock = TestClock()
       let store = Self.makeScoringStore(clock: timerClock)
@@ -223,32 +223,22 @@ extension SupershotTestSuite {
         return GameTimerUpdate(snapshot: GameSnapshot(game: game, goals: snapshot.goals,
                                                       periods: snapshot.periods, teamA: snapshot.teamA, teamB: snapshot.teamB))
       }
-      store.dependencies.gameTimer.pause = { _, _ in snapshot }
-      await store.send(.startTimerButtonTapped) {
+      await store.send(.startTimerButtonTapped) { $0.operation = .starting(phaseIndex: 0) }
+      await store.send(.startTimerButtonTapped)
+      await store.send(.pauseTimerButtonTapped)
+      #expect(!store.state.isTimerRunning)
+      await responseClock.advance(by: .seconds(1))
+      await store.receive(\.timerStartResponse) {
+        $0.operation = nil
         $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
       }
-      await store.send(.pauseTimerButtonTapped) {
-        $0.timerEndsAt = nil
-        $0.isTimerOperationPending = true
-      }
-      await store.receive {
-        if case .timerPauseResponse = $0 {
-          true
-        } else {
-          false
-        }
-      } assert: {
-        $0.isTimerOperationPending = false
-      }
-      await responseClock.advance(by: .seconds(1))
-      #expect(!store.state.isTimerRunning)
+      await store.send(.sceneBecameInactive)
       await store.finish()
     }
 
     @Test
-    func timeEditorCoordinatesSheetsAndRestoresControlsDetent() async {
+    func timeEditorRestoresControlsWithoutMovingGoals() async {
       let store = Self.makeScoringStore()
-      let originalDetent = store.state.presentationDetent
       await Self.openTimeEditor(store)
       await store.send(.timeInput(.presented(.cancelButtonTapped)))
       await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
@@ -256,7 +246,6 @@ extension SupershotTestSuite {
         $0.editedPhaseIndex = nil
         $0.controlsPresentation = .shown
       }
-      #expect(store.state.presentationDetent == originalDetent)
       #expect(store.state.elapsedSeconds == 0)
     }
 
@@ -316,7 +305,7 @@ extension SupershotTestSuite {
         switch condition {
         case 0: state.timerEndsAt = Date(timeIntervalSince1970: 1900)
         case 1: state.elapsedSeconds = state.currentDurationSeconds
-        case 2: state.isTimerOperationPending = true
+        case 2: state.operation = .pausing(phaseIndex: state.currentPhaseIndex)
         default: state.isShowingLastCentrePassBanner = true
         }
         let store = Self.makeScoringStore(state: state)
@@ -587,12 +576,14 @@ extension SupershotTestSuite {
       store.dependencies.alarmClient = Self.alarmClient(events: events, alarmUnavailable: true)
 
       await store.send(.startTimerButtonTapped) {
-        $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
+        $0.operation = .starting(phaseIndex: 0)
       }
       await store.receive {
         guard case .timerStartResponse(.success) = $0 else { return false }
         return true
       } assert: {
+        $0.operation = nil
+        $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
         $0.alert = .alarmSchedulingFailed
         $0.hasShownAlarmSchedulingFailureAlert = true
       }
@@ -602,33 +593,36 @@ extension SupershotTestSuite {
 
       await store.send(.pauseTimerButtonTapped) {
         $0.timerEndsAt = nil
-        $0.isTimerOperationPending = true
+        $0.operation = .pausing(phaseIndex: $0.currentPhaseIndex)
       }
       await store.receive {
         guard case .timerPauseResponse(.success) = $0 else { return false }
         return true
       } assert: {
-        $0.isTimerOperationPending = false
+        $0.operation = nil
       }
 
       await store.send(.startTimerButtonTapped) {
-        $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
+        $0.operation = .starting(phaseIndex: 0)
       }
       await store.receive {
         guard case .timerStartResponse(.success) = $0 else { return false }
         return true
+      } assert: {
+        $0.operation = nil
+        $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
       }
       expectNoDifference(store.state.alert, nil)
 
       await store.send(.pauseTimerButtonTapped) {
         $0.timerEndsAt = nil
-        $0.isTimerOperationPending = true
+        $0.operation = .pausing(phaseIndex: $0.currentPhaseIndex)
       }
       await store.receive {
         guard case .timerPauseResponse(.success) = $0 else { return false }
         return true
       } assert: {
-        $0.isTimerOperationPending = false
+        $0.operation = nil
       }
       await store.finish()
     }

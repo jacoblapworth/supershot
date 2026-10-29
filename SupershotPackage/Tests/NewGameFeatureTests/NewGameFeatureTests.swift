@@ -221,7 +221,7 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: [0, 60], [BreakStartPolicy.automatic, .manual])
-    func startGameUsesPersistedTeamsAndGameSpecificBibColors(breakSeconds: Int, policy: BreakStartPolicy) async throws {
+    func preparingScoringUsesPersistedTeamsAndGameSpecificBibColors(breakSeconds: Int, policy: BreakStartPolicy) async throws {
       let ravens = Team(id: UUID(1), name: "Ravens", colorHex: ColorPalette.blue.hex())
       let swifts = Team(id: UUID(2), name: "Swifts", colorHex: ColorPalette.red.hex())
       var state = NewGameFeature.State()
@@ -254,20 +254,20 @@ extension SupershotTestSuite {
         }
       }
 
-      await store.send(.startGameButtonTapped) {
+      await store.send(.prepareScoringButtonTapped) {
         $0.inFlightDraft = $0.draft
         $0.isSaving = true
       }
       await store.receive {
-        guard case .startGameResponse(.success) = $0 else { return false }
+        guard case .prepareScoringResponse(.success) = $0 else { return false }
         return true
       } assert: {
         $0.inFlightDraft = nil
-        $0.hasStarted = true
+        $0.hasEnteredScoring = true
         $0.isSaving = false
       }
       await store.receive {
-        guard case .delegate(.gameStarted) = $0 else { return false }
+        guard case .delegate(.scoringPrepared) = $0 else { return false }
         return true
       }
 
