@@ -28,7 +28,7 @@ package struct NewGameView: View {
           .disabled(store.isSaving)
 
         Section {
-          NewGameTeamsView(store: store)
+          TeamSlotsView(store: store)
         } header: {
           Text("Teams")
         }
@@ -37,7 +37,7 @@ package struct NewGameView: View {
 
         if let leftTeamName, let rightTeamName {
           Section {
-            SetupCentrePassView(
+            CentrePassView(
               firstCentrePass: $store.firstCentrePass,
               leftTeamName: leftTeamName,
               rightTeamName: rightTeamName
@@ -48,7 +48,7 @@ package struct NewGameView: View {
         }
 
         Section {
-          SetupGameDetailsView(store: store)
+          GameDetailsView(store: store)
         } header: {
           Text("Game details")
         }
@@ -98,11 +98,24 @@ package struct NewGameView: View {
     #else
     .listStyle(.inset)
     #endif
-    .scrollContentBackground(.hidden)
+    .scrollEdgeEffectStyle(.soft, for: .all)
     .scrollDismissesKeyboard(.interactively)
     .background(Color.setupBackground.ignoresSafeArea())
     .navigationTitle("New game")
     .navigationBarBackButtonHidden()
+    .safeAreaBar(edge: .bottom, content: {
+      if store.canPrepareScoring {
+        Button {
+          store.send(.prepareScoringButtonTapped)
+        } label: {
+          Text("Continue")
+            .padding(8)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonSizing(.flexible)
+        .padding()
+      }
+    })
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
         Button("Close", systemImage: "xmark") {
@@ -131,6 +144,9 @@ package struct NewGameView: View {
       item: $store.scope(state: \.destination, action: \.destination)
     ) { destinationStore in
       switch destinationStore.case {
+      case let .locationPicker(pickerStore):
+        SetupLocationPickerView(store: pickerStore)
+
       case let .teamConfiguration(configurationStore):
         SetupTeamView(
           store: configurationStore.scope(
@@ -178,7 +194,8 @@ package struct NewGameView: View {
   }
 
   package init(
-    store: StoreOf<NewGameFeature>, proAccess: SubscriptionEntitlement = .unknown
+    store: StoreOf<NewGameFeature>,
+    proAccess: SubscriptionEntitlement = .unknown
   ) {
     self.store = store
     self.proAccess = proAccess

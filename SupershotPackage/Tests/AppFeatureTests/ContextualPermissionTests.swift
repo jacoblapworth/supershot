@@ -110,15 +110,25 @@ extension SupershotTestSuite {
           status.setValue(.authorized)
           return .authorized
         }
-        $0.locationClient.currentLocation = { LocationClient.previewLocation }
+        $0.locationClient.currentLocation = { LocationClient.previewCoordinates }
       }
       await store.send(.task)
       #expect(requests.value == 0)
       await store.send(.locationButtonTapped) { $0.location = .requesting }
       await store.send(.locationButtonTapped)
       await clock.advance(by: .seconds(1))
-      await store.receive(\.locationAuthorizationResponse) { $0.location = .loading }
-      await store.receive(\.locationResponse) { $0.location = .loaded(LocationClient.previewLocation) }
+      await store.receive(\.locationAuthorizationResponse) {
+        $0.location = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.locationResponse) {
+        $0.location = .loaded
+        $0.currentLocation = LocationClient.previewCoordinates
+        $0.selectedLocation = LocationClient.previewCoordinates
+        $0.nearbyPlacesStatus = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.nearbyPlacesResponse) { $0.nearbyPlacesStatus = .loaded }
       #expect(requests.value == 1)
     }
 
@@ -150,11 +160,24 @@ extension SupershotTestSuite {
         $0.locationClient.authorizationStatus = { .authorized }
         $0.locationClient.currentLocation = { throw PermissionTestError.unavailable }
       }
-      await store.send(.task) { $0.location = .loading }
+      await store.send(.task) {
+        $0.location = .loading
+        $0.locationRequestID += 1
+      }
       await store.receive(\.locationResponse) { $0.location = .failed }
-      store.dependencies.locationClient.currentLocation = { LocationClient.previewLocation }
-      await store.send(.locationButtonTapped) { $0.location = .loading }
-      await store.receive(\.locationResponse) { $0.location = .loaded(LocationClient.previewLocation) }
+      store.dependencies.locationClient.currentLocation = { LocationClient.previewCoordinates }
+      await store.send(.locationButtonTapped) {
+        $0.location = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.locationResponse) {
+        $0.location = .loaded
+        $0.currentLocation = LocationClient.previewCoordinates
+        $0.selectedLocation = LocationClient.previewCoordinates
+        $0.nearbyPlacesStatus = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.nearbyPlacesResponse) { $0.nearbyPlacesStatus = .loaded }
     }
 
     @Test
@@ -164,8 +187,18 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: state) { NewGameFeature() } withDependencies: {
         $0.locationClient = .preview
       }
-      await store.send(.sceneBecameActive) { $0.location = .loading }
-      await store.receive(\.locationResponse) { $0.location = .loaded(LocationClient.previewLocation) }
+      await store.send(.sceneBecameActive) {
+        $0.location = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.locationResponse) {
+        $0.location = .loaded
+        $0.currentLocation = LocationClient.previewCoordinates
+        $0.selectedLocation = LocationClient.previewCoordinates
+        $0.nearbyPlacesStatus = .loading
+        $0.locationRequestID += 1
+      }
+      await store.receive(\.nearbyPlacesResponse) { $0.nearbyPlacesStatus = .loaded }
       await store.send(.sceneBecameActive)
     }
 

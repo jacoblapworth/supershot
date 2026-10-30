@@ -44,7 +44,7 @@ package struct LastCentrePassBanner: View {
     .frame(maxWidth: .infinity)
     .controlSize(.large)
     .accessibilityElement(children: .contain)
-    .background(Material.thick, in: RoundedRectangle(cornerRadius: 32))
+    .background(Material.thin, in: RoundedRectangle(cornerRadius: 32))
   }
 }
 

@@ -14,7 +14,7 @@ import WidgetSupport
   import AppKit
 #endif
 
-package struct TeamCard: View {
+package struct TeamSlotView: View {
   package var action: () -> Void
   package var team: Team?
 
@@ -111,14 +111,14 @@ private struct TeamCardBackground: View {
 }
 
 #Preview("Selected") {
-  TeamCard(action: {}, team: Team(id: UUID(), name: "Foxes", colorHex: "#34C759"))
+  TeamSlotView(action: {}, team: Team(id: UUID(), name: "Foxes", colorHex: "#34C759"))
 }
 
 #Preview("Empty") {
-  TeamCard(action: {})
+  TeamSlotView(action: {})
 }
 
 #Preview("Selected · Dark") {
-  TeamCard(action: {}, team: Team(id: UUID(), name: "Foxes", colorHex: "#34C759"))
+  TeamSlotView(action: {}, team: Team(id: UUID(), name: "Foxes", colorHex: "#34C759"))
     .preferredColorScheme(.dark)
 }

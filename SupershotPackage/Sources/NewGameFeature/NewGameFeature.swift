@@ -20,15 +20,7 @@ import WidgetSupport
 
 @Reducer
 package struct NewGameFeature {
-  package nonisolated enum LocationState: Equatable, Sendable {
-    case idle
-    case requesting
-    case denied
-    case restricted
-    case loaded(GameLocation)
-    case loading
-    case failed
-  }
+  package typealias LocationState = SetupLocationStatus
 
   package nonisolated enum DescriptionField: Hashable, Sendable {
     case firstTeam
@@ -84,6 +76,14 @@ package struct NewGameFeature {
     package var createdAt: Date
     package var periodIDs: [GamePeriod.ID]
     package var scheduledAt: Date?
+    package var scheduled: Bool {
+      get { scheduledAt != nil }
+      set {
+        @Dependency(\.date.now) var now
+        scheduledAt = newValue ? (scheduledAt ?? now) : nil
+      }
+    }
+
     package var court = ""
     package var division = ""
     package var parsedFields: Set<DescriptionField> = []
@@ -116,6 +116,12 @@ package struct NewGameFeature {
     package var isSaving = false
     package var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
     package var location = LocationState.idle
+    package var currentLocation: GameLocation?
+    package var selectedLocation: GameLocation?
+    package var preservesLocationSelection = false
+    package var locationRequestID = 0
+    package var nearbyPlaces: [NearbyPlace] = []
+    package var nearbyPlacesStatus = NearbyPlacesStatus.idle
     @Presents package var destination: NewGameDestination.State?
     package var periodDuration: DurationDraft {
       get { timing.periodDuration }
@@ -152,6 +158,7 @@ package struct NewGameFeature {
       createdAt = snapshot.game.createdAt
       periodIDs = snapshot.periods.map(\.id)
       requiresExistingGame = true
+      preservesLocationSelection = true
       scheduledAt = snapshot.game.scheduledAt
       court = snapshot.game.court ?? ""
       division = snapshot.game.division ?? ""
@@ -170,7 +177,8 @@ package struct NewGameFeature {
       secondBreakDuration = .init(totalSeconds: breaks.dropFirst(2).first ?? 0)
       customizesBreaks = Set(breaks).count > 1
       if let location = snapshot.game.location {
-        self.location = .loaded(location)
+        self.location = .loaded
+        selectedLocation = location
       }
       lastSavedDraft = draft
     }
@@ -253,8 +261,7 @@ package struct NewGameFeature {
     }
 
     package var gameLocation: GameLocation? {
-      guard case let .loaded(location) = location else { return nil }
-      return location
+      selectedLocation
     }
 
     package var teamNameErrorMessage: String? {
@@ -285,7 +292,9 @@ package struct NewGameFeature {
     case locationButtonTapped
     case locationAuthorizationResponse(LocationAuthorizationStatus)
     case sceneBecameActive
-    case locationResponse(Result<GameLocation, any Error>)
+    case locationResponse(Int, Result<GameLocation, any Error>)
+    case nearbyPlacesResponse(Int, Result<[NearbyPlace], any Error>)
+    case changeLocationButtonTapped
     case selectTeamButtonTapped(TeamSide)
     case prepareScoringButtonTapped
     case prepareScoringResponse(Result<ScoringFeature.State, any Error>)
@@ -405,6 +414,7 @@ package struct NewGameFeature {
         guard state.location != .loading, state.location != .requesting else { return .none }
         if locationClient.authorizationStatus() == .notDetermined {
           state.location = .requesting
+          updateLocationPicker(state: &state)
           return .run { send in
             await send(.locationAuthorizationResponse(locationClient.requestAuthorization()))
           }
@@ -416,24 +426,76 @@ package struct NewGameFeature {
         return loadLocation(state: &state, authorization: status)
 
       case .sceneBecameActive:
-        if state.requiresExistingGame {
-          switch state.location {
-          case .idle, .loaded: return .none
-          default: break
-          }
-        }
         guard state.location != .loading, state.location != .requesting else { return .none }
-        if case .loaded = state.location, locationClient.authorizationStatus() == .authorized {
+        if state.currentLocation != nil, state.location == .loaded, locationClient.authorizationStatus() == .authorized {
           return .none
         }
         return loadLocation(state: &state)
 
-      case let .locationResponse(.success(location)):
-        state.location = .loaded(location)
+      case .changeLocationButtonTapped:
+        state.destination = .locationPicker(locationPickerState(state))
+        if state.currentLocation == nil {
+          guard state.location != .loading, state.location != .requesting else { return .none }
+          return loadLocation(state: &state)
+        }
+        if state.nearbyPlacesStatus == .failed {
+          return loadNearbyPlaces(state: &state)
+        }
         return .none
 
-      case .locationResponse(.failure):
-        state.location = .failed
+      case let .locationResponse(requestID, result):
+        guard requestID == state.locationRequestID else { return .none }
+        switch result {
+        case let .success(location):
+          state.location = .loaded
+          state.currentLocation = location
+          if !state.preservesLocationSelection {
+            state.selectedLocation = location
+          }
+          return loadNearbyPlaces(state: &state)
+        case .failure:
+          state.location = .failed
+          updateLocationPicker(state: &state)
+          return .none
+        }
+
+      case let .nearbyPlacesResponse(requestID, result):
+        guard requestID == state.locationRequestID else { return .none }
+        switch result {
+        case let .success(places):
+          state.nearbyPlaces = places
+          state.nearbyPlacesStatus = .loaded
+          if !state.preservesLocationSelection, let nearest = places.first {
+            state.selectedLocation = nearest.location
+          }
+        case .failure:
+          state.nearbyPlacesStatus = .failed
+        }
+        updateLocationPicker(state: &state)
+        return .none
+
+      case let .destination(.presented(.locationPicker(.placeTapped(id)))):
+        guard let place = state.nearbyPlaces.first(where: { $0.id == id }) else { return .none }
+        state.selectedLocation = place.location
+        state.preservesLocationSelection = true
+        state.destination = nil
+        return .none
+
+      case .destination(.presented(.locationPicker(.currentLocationTapped))):
+        guard let location = state.currentLocation else { return .none }
+        state.selectedLocation = location
+        state.preservesLocationSelection = true
+        state.destination = nil
+        return .none
+
+      case .destination(.presented(.locationPicker(.retryButtonTapped))):
+        if state.currentLocation != nil, state.location == .loaded {
+          return loadNearbyPlaces(state: &state)
+        }
+        return loadLocation(state: &state)
+
+      case .destination(.presented(.locationPicker(.closeButtonTapped))):
+        state.destination = nil
         return .none
 
       case let .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(team)))))):
@@ -567,7 +629,9 @@ package struct NewGameFeature {
         return .none
 
       case .task:
-        guard !state.requiresExistingGame, state.location == .idle else { return .none }
+        guard state.currentLocation == nil, state.location == .idle || state.location == .loaded else {
+          return .none
+        }
         return loadLocation(state: &state)
       }
     }
@@ -641,38 +705,74 @@ package struct NewGameFeature {
     }
   }
 
+  private func locationPickerState(_ state: State) -> SetupLocationPickerFeature.State {
+    .init(
+      currentLocation: state.currentLocation,
+      selectedLocation: state.selectedLocation,
+      places: state.nearbyPlaces,
+      status: state.nearbyPlacesStatus,
+      locationStatus: state.location
+    )
+  }
+
+  private func updateLocationPicker(state: inout State) {
+    guard case .locationPicker = state.destination else { return }
+    state.destination = .locationPicker(locationPickerState(state))
+  }
+
+  private func loadNearbyPlaces(state: inout State) -> Effect<Action> {
+    guard let location = state.currentLocation else { return .none }
+    state.locationRequestID += 1
+    let requestID = state.locationRequestID
+    state.nearbyPlacesStatus = .loading
+    updateLocationPicker(state: &state)
+    return .run { send in
+      let result = await Result { try await locationClient.nearbyPlaces(location) }
+      guard !Task.isCancelled else { return }
+      await send(.nearbyPlacesResponse(requestID, result))
+    }
+    .cancellable(id: CancelID.nearbyPlaces, cancelInFlight: true)
+  }
+
   private func loadLocation(
     state: inout State,
     authorization: LocationAuthorizationStatus? = nil
   ) -> Effect<Action> {
+    let invalidatesRequest = state.location == .loading || state.nearbyPlacesStatus == .loading
+    state.nearbyPlacesStatus = .idle
     switch authorization ?? locationClient.authorizationStatus() {
     case .notDetermined:
       state.location = .idle
-      return .none
     case .denied:
       state.location = .denied
-      return .none
     case .restricted:
       state.location = .restricted
-      return .none
     case .authorized:
-      break
+      state.location = .loading
     }
-    state.location = .loading
-    return .run { send in
-      await send(
-        .locationResponse(
-          Result {
-            try await locationClient.currentLocation()
-          }
-        )
-      )
+    if state.location == .loading || invalidatesRequest {
+      state.locationRequestID += 1
     }
-    .cancellable(id: CancelID.location, cancelInFlight: true)
+    updateLocationPicker(state: &state)
+    let cancelSearch = Effect<Action>.cancel(id: CancelID.nearbyPlaces)
+    guard state.location == .loading else {
+      return .merge(cancelSearch, .cancel(id: CancelID.location))
+    }
+    let requestID = state.locationRequestID
+    return .merge(
+      cancelSearch,
+      .run { send in
+        let result = await Result { try await locationClient.currentLocation() }
+        guard !Task.isCancelled else { return }
+        await send(.locationResponse(requestID, result))
+      }
+      .cancellable(id: CancelID.location, cancelInFlight: true)
+    )
   }
 
   private nonisolated enum CancelID {
     case location
+    case nearbyPlaces
   }
 
   package init() {}
@@ -680,6 +780,7 @@ package struct NewGameFeature {
 
 @Reducer
 package enum NewGameDestination {
+  case locationPicker(SetupLocationPickerFeature)
   case teamConfiguration(NewGameTeamConfiguration)
   case teamPicker(NewGameTeamPicker)
   case timingEditor(SetupTimingFeature)

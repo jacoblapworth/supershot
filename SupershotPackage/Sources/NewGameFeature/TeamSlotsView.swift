@@ -15,12 +15,12 @@ import SwiftUI
 import TeamEditingFeature
 import WidgetSupport
 
-package struct NewGameTeamsView: View {
+package struct TeamSlotsView: View {
   @Bindable package var store: StoreOf<NewGameFeature>
 
   package var body: some View {
     HStack(spacing: 10) {
-      TeamCard(
+      TeamSlotView(
         action: { store.send(.selectTeamButtonTapped(.teamA)) },
         team: store.leftTeam.team
       )
@@ -37,7 +37,7 @@ package struct NewGameTeamsView: View {
       .disabled(!store.canSwapTeams)
       .accessibilityLabel("Swap left and right teams")
 
-      TeamCard(
+      TeamSlotView(
         action: { store.send(.selectTeamButtonTapped(.teamB)) },
         team: store.rightTeam.team
       )
@@ -51,16 +51,16 @@ package struct NewGameTeamsView: View {
 }
 
 #Preview("Empty matchup") {
-  NewGameTeamsView(store: setupPreviewStore())
+  TeamSlotsView(store: setupPreviewStore())
     .padding()
 }
 
 #Preview("Selected matchup") {
-  NewGameTeamsView(store: setupPreviewStore(.previewReady))
+  TeamSlotsView(store: setupPreviewStore(.previewReady))
     .padding()
 }
 
 #Preview("Loading matchup") {
-  NewGameTeamsView(store: setupPreviewStore(.previewLoading))
+  TeamSlotsView(store: setupPreviewStore(.previewLoading))
     .padding()
 }

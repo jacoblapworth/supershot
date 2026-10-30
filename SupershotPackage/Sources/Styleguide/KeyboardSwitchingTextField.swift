@@ -9,6 +9,7 @@ package struct KeyboardOption: Identifiable {
   package let id: String
   package let title: LocalizedStringResource
   package let accessibilityLabel: LocalizedStringResource
+  package let systemImage: String
   #if os(iOS)
     package let keyboardType: UIKeyboardType
 
@@ -16,34 +17,37 @@ package struct KeyboardOption: Identifiable {
       id: String,
       title: LocalizedStringResource,
       accessibilityLabel: LocalizedStringResource,
-      keyboardType: UIKeyboardType
+      keyboardType: UIKeyboardType,
+      systemImage: String
     ) {
       self.id = id
       self.title = title
       self.accessibilityLabel = accessibilityLabel
       self.keyboardType = keyboardType
+      self.systemImage = systemImage
     }
   #else
-    private init(id: String, title: LocalizedStringResource, accessibilityLabel: LocalizedStringResource) {
+    private init(id: String, title: LocalizedStringResource, accessibilityLabel: LocalizedStringResource, systemImage: String) {
       self.id = id
       self.title = title
       self.accessibilityLabel = accessibilityLabel
+      self.systemImage = systemImage
     }
   #endif
 
   package static var alphabet: Self {
     #if os(iOS)
-      Self(id: "alphabet", title: "ABC", accessibilityLabel: "Alphabet keyboard", keyboardType: .asciiCapable)
+      Self(id: "alphabet", title: "ABC", accessibilityLabel: "Alphabet keyboard", keyboardType: .asciiCapable, systemImage: "textformat.characters")
     #else
-      Self(id: "alphabet", title: "ABC", accessibilityLabel: "Alphabet keyboard")
+      Self(id: "alphabet", title: "ABC", accessibilityLabel: "Alphabet keyboard", systemImage: "textformat.characters")
     #endif
   }
 
   package static var numeric: Self {
     #if os(iOS)
-      Self(id: "numeric", title: "123", accessibilityLabel: "Numeric keyboard", keyboardType: .numberPad)
+      Self(id: "numeric", title: "123", accessibilityLabel: "Numeric keyboard", keyboardType: .numberPad, systemImage: "numbers")
     #else
-      Self(id: "numeric", title: "123", accessibilityLabel: "Numeric keyboard")
+      Self(id: "numeric", title: "123", accessibilityLabel: "Numeric keyboard", systemImage: "numbers")
     #endif
   }
 }
@@ -399,43 +403,37 @@ package struct KeyboardSwitchingTextField: View {
     }
   }
 
-  private struct KeyboardAccessoryView: View {
-    let options: [KeyboardOption]
-    let selectedID: String
-    let select: (String) -> Void
-
-    var body: some View {
-      GlassEffectContainer {
-        HStack(spacing: 0) {
-          ForEach(options) { option in
-            Button {
-              select(option.id)
-            } label: {
-              Text(option.title)
-                .font(.body.weight(.semibold))
-                .padding(.horizontal, 14)
-                .frame(minWidth: 44, minHeight: 44)
-                .foregroundStyle(option.id == selectedID ? Color.accentColor : Color.primary)
-                .background {
-                  Capsule().fill(Color.accentColor.opacity(option.id == selectedID ? 0.16 : 0))
-                }
-                .contentShape(.capsule)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(option.accessibilityLabel))
-            .accessibilityAddTraits(option.id == selectedID ? [.isSelected] : [])
-            .accessibilityIdentifier("keyboardOption.\(option.id)")
-          }
+private struct KeyboardAccessoryView: View {
+  let options: [KeyboardOption]
+  let selectedID: String
+  let select: (String) -> Void
+  
+  var body: some View {
+    HStack(spacing: 0) {
+      Picker("Keyboard", selection: Binding(get: { selectedID }, set: { id in
+        select(id)
+      })) {
+        ForEach(options) { option in
+          Label(option.title, systemImage: option.systemImage)
+            .tag(option.id)
         }
-        .padding(4)
-        .glassEffect(.regular.interactive(), in: .capsule)
       }
+      .labelStyle(.iconOnly)
+      .pickerStyle(.segmented)
+      .fixedSize()
+      .padding(8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .glassEffect(.regular, in: .rect(cornerRadius: 16))
       .padding(.horizontal, 16)
       .padding(.vertical, 6)
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
+}
 #endif
+
+#Preview {
+  KeyboardAccessoryView(options: [.alphabet, .numeric], selectedID: "alphabet", select: { _ in })
+}
 
 #Preview("Independent keyboard accessories") {
   @Previewable @State var court = "12"
