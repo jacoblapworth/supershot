@@ -190,31 +190,25 @@ package struct SetupGameDetailsView: View {
         }
       }
     }
-    TextField(text: $store.court, prompt: Text("Optional")) {
-      Label("Court", systemImage: "sportscourt")
-    }
-    .labelStyle(.titleAndIcon)
-    .labelsVisibility(.visible)
-    
     LabeledContent {
-      TextField("Optional", text: $store.court)
-      #if os(iOS)
-        .keyboardType(.numbersAndPunctuation)
-      #endif
-        .textFieldStyle(.plain)
-        .accessibilityLabel("Court")
-        .accessibilityIdentifier("gameSetup.court")
+      KeyboardSwitchingTextField(
+        "Court",
+        text: $store.court,
+        keyboardTypes: [.alphabet, .numeric],
+        initialKeyboardType: .numeric,
+        accessibilityIdentifier: "gameSetup.court"
+      )
     } label: {
       Label("Court", systemImage: "sportscourt")
     }
     LabeledContent {
-      TextField("Optional", text: $store.division)
-      #if os(iOS)
-        .keyboardType(.numbersAndPunctuation)
-      #endif
-        .textFieldStyle(.plain)
-        .accessibilityLabel("Division")
-        .accessibilityIdentifier("gameSetup.division")
+      KeyboardSwitchingTextField(
+        "Division",
+        text: $store.division,
+        keyboardTypes: [.alphabet, .numeric],
+        initialKeyboardType: .numeric,
+        accessibilityIdentifier: "gameSetup.division"
+      )
     } label: {
       Label("Division", systemImage: "chart.bar.fill")
     }
