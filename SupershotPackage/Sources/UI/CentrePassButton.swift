@@ -42,3 +42,24 @@ package struct CentrePassButton: View {
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
+
+#Preview("Centre pass selection") {
+  @Previewable @State var firstTeamSelected = true
+
+  HStack(spacing: 12) {
+    CentrePassButton(color: .blue, isSelected: firstTeamSelected, name: "Silver Ferns") {
+      firstTeamSelected = true
+    }
+    CentrePassButton(color: .red, isSelected: !firstTeamSelected, name: "Australian Diamonds") {
+      firstTeamSelected = false
+    }
+  }
+  .padding()
+  .frame(width: 360)
+}
+
+#Preview("Disabled centre pass") {
+  CentrePassButton(color: .blue, isSelected: true, name: "Silver Ferns", action: {})
+    .disabled(true)
+    .padding()
+}

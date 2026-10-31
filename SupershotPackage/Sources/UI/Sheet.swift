@@ -52,3 +52,23 @@ package extension View {
     modifier(SizeToFitModifier(additional: additional))
   }
 }
+
+#Preview("Sheet fitted to content") {
+  @Previewable @State var isPresented = true
+  @Previewable @State var showsDetails = false
+
+  Button("Show sheet") { isPresented = true }
+    .sheet(isPresented: $isPresented) {
+      VStack(alignment: .leading, spacing: 16) {
+        Text("Game summary").font(.headline)
+        Toggle("Show details", isOn: $showsDetails)
+        if showsDetails {
+          Text("Silver Ferns versus Diamonds")
+          Text("Four 15-minute quarters")
+        }
+        Button("Done") { isPresented = false }
+      }
+      .padding(24)
+      .presentationDetents(.sizeToFit)
+    }
+}

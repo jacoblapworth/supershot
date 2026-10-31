@@ -53,19 +53,22 @@ package struct FooterCardView: View {
   package init() {}
 }
 
-#if os(iOS)
-  #Preview {
-    NavigationView {
-      FooterCardView()
-    }.toolbar {
-      ToolbarItemGroup(placement: .bottomBar) {
-        HStack {
-          Text("Test")
-          Text("Test")
-        }
-        .background(in: .containerRelative)
+#Preview("Footer card") {
+  NavigationStack {
+    FooterCardView()
+      .toolbar {
+        #if os(iOS)
+          ToolbarItemGroup(placement: .bottomBar) {
+            Text("Silver Ferns")
+            Spacer()
+            Text("Diamonds")
+          }
+        #else
+          ToolbarItemGroup {
+            Text("Silver Ferns")
+            Text("Diamonds")
+          }
+        #endif
       }
-    }
   }
-
-#endif
+}

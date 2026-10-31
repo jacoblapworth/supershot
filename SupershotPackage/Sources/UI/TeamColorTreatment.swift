@@ -29,3 +29,25 @@ package struct TeamColorTreatment {
     )
   }
 }
+
+#Preview("Standard contrast") {
+  Text("Silver Ferns")
+    .foregroundStyle(.white)
+    .padding()
+    .background(
+      TeamColorTreatment(
+        resolvedColor: Color.yellow.resolve(in: EnvironmentValues()), contrast: .standard
+      ).background
+    )
+}
+
+#Preview("Increased contrast") {
+  Text("Silver Ferns")
+    .foregroundStyle(.white)
+    .padding()
+    .background(
+      TeamColorTreatment(
+        resolvedColor: Color.yellow.resolve(in: EnvironmentValues()), contrast: .increased
+      ).background
+    )
+}

@@ -39,3 +39,17 @@ public nonisolated enum ColorPalette {
     Option(color: indigo, name: "Indigo"),
   ]
 }
+
+#Preview("Palette swatches") {
+  LazyVGrid(columns: [GridItem(.adaptive(minimum: 90))], spacing: 16) {
+    ForEach(ColorPalette.options) { option in
+      VStack(spacing: 8) {
+        Circle().fill(option.color).frame(width: 44, height: 44)
+        Text(option.name).font(.caption)
+        Text(option.color.hex()).font(.caption2.monospaced())
+      }
+    }
+  }
+  .padding()
+  .frame(width: 360)
+}

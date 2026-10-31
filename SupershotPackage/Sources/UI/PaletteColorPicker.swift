@@ -79,3 +79,12 @@ package struct PaletteColorItem: View {
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
+
+#Preview("Palette item selection") {
+  @Previewable @State var isSelected = true
+
+  PaletteColorItem(color: .blue, isSelected: isSelected) {
+    isSelected.toggle()
+  }
+  .padding()
+}

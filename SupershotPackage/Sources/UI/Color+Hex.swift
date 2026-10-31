@@ -27,3 +27,13 @@ public extension Color {
     )
   }
 }
+
+#Preview("Hex colours and invalid-value fallback") {
+  HStack(spacing: 16) {
+    Color(hex: "#34C759")
+    Color(hex: "#FFCB00")
+    Color(hex: "invalid")
+  }
+  .frame(height: 80)
+  .padding()
+}

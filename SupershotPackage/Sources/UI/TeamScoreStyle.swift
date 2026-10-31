@@ -24,3 +24,14 @@ private struct TeamScoreStyle: ViewModifier {
       .shadow(color: .white.opacity(luminance < 0.12 ? 0.4 : 0), radius: 1)
   }
 }
+
+#Preview("Team score colours") {
+  HStack(spacing: 24) {
+    Text("24").teamScoreStyle(color: .blue)
+    Text("18").teamScoreStyle(color: .yellow)
+    Text("12").teamScoreStyle(color: .black)
+  }
+  .font(.system(size: 64, weight: .bold))
+  .padding()
+  .background(.black)
+}

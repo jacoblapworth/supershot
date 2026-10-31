@@ -165,3 +165,60 @@ public struct GameCardView: View {
     return String(localized: "\(game.teamAName) \(game.teamAScore), \(game.teamBName) \(game.teamBScore), \(status), \(dateText)\(court)")
   }
 }
+
+private enum GameCardPreviewData {
+  static let date = Date(timeIntervalSince1970: 1_793_448_000)
+
+  static var planned: WidgetGame {
+    WidgetGame(
+      id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
+      createdAt: date, scheduledAt: date, court: "2",
+      teamAName: "Silver Ferns", teamAColorHex: "#007AFF",
+      teamBName: "Diamonds", teamBColorHex: "#FFCB00"
+    )
+  }
+
+  static var active: WidgetGame {
+    var game = planned
+    game.startedAt = date
+    game.period = 3
+    game.teamAScore = 28
+    game.teamBScore = 24
+    return game
+  }
+
+  static var completed: WidgetGame {
+    var game = active
+    game.period = 4
+    game.endedAt = date.addingTimeInterval(3600)
+    game.teamAScore = 42
+    game.teamBScore = 38
+    return game
+  }
+}
+
+#Preview("Game cards · planned, live and final") {
+  VStack(spacing: 16) {
+    GameCardView(game: GameCardPreviewData.planned)
+    GameCardView(game: GameCardPreviewData.active)
+    GameCardView(game: GameCardPreviewData.completed)
+  }
+  .frame(width: 360)
+  .padding()
+}
+
+#Preview("Compact game cards") {
+  VStack(spacing: 12) {
+    GameCardView(game: GameCardPreviewData.planned, compact: true).frame(height: 100)
+    GameCardView(game: GameCardPreviewData.active, compact: true).frame(height: 100)
+    GameCardView(game: GameCardPreviewData.completed, compact: true).frame(height: 100)
+  }
+  .frame(width: 340)
+  .padding()
+}
+
+#Preview("Featured game card") {
+  GameCardView(game: GameCardPreviewData.active, compact: true, featured: true)
+    .frame(width: 170, height: 170)
+    .padding()
+}

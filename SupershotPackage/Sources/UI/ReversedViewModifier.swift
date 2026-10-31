@@ -32,3 +32,19 @@ package extension Group where Content: View {
     modifier(ReversedModifier(reversed: flag))
   }
 }
+
+#Preview("Reverse court order") {
+  @Previewable @State var reversed = false
+
+  VStack(spacing: 24) {
+    Toggle("Reverse teams", isOn: $reversed.animation())
+    HStack {
+      Group {
+        Label("Silver Ferns", systemImage: "circle.fill").foregroundStyle(.blue)
+        Label("Diamonds", systemImage: "circle.fill").foregroundStyle(.yellow)
+      }
+      .reversed(reversed)
+    }
+  }
+  .padding()
+}

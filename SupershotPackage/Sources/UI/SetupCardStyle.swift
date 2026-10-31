@@ -39,3 +39,18 @@ private struct SetupCardModifier: ViewModifier {
       }
   }
 }
+
+#Preview("Standalone setup card") {
+  Label("Quarter length: 15 minutes", systemImage: "timer")
+    .setupCardStyle()
+    .padding()
+    .background(Color.setupBackground)
+}
+
+#Preview("Native setup row") {
+  List {
+    Label("Quarter length: 15 minutes", systemImage: "timer")
+      .setupCardStyle()
+  }
+  .environment(\.usesNativeSetupRows, true)
+}
