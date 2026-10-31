@@ -784,6 +784,18 @@ package enum NewGameDestination {
   case teamConfiguration(NewGameTeamConfiguration)
   case teamPicker(NewGameTeamPicker)
   case timingEditor(SetupTimingFeature)
+
+  /// The synthesized conformance does not infer the reducer's main-actor isolation.
+  @CasePathable
+  @dynamicMemberLookup
+  @ObservableState
+  package enum State: @MainActor CaseReducerState {
+    package typealias StateReducer = NewGameDestination
+    case locationPicker(SetupLocationPickerFeature.State)
+    case teamConfiguration(NewGameTeamConfiguration.State)
+    case teamPicker(NewGameTeamPicker.State)
+    case timingEditor(SetupTimingFeature.State)
+  }
 }
 
 extension NewGameDestination.State: Equatable {}

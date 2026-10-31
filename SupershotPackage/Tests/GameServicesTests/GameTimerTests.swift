@@ -829,7 +829,7 @@ extension SupershotTestSuite {
       }
     }
 
-    private nonisolated static func scoringState() -> ScoringFeature.State {
+    private static func scoringState() -> ScoringFeature.State {
       ScoringFeature.State(
         centrePassTeamID: UUID(1),
         gameID: UUID(3),

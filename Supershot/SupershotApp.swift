@@ -52,7 +52,14 @@ import SwiftUI
     #if os(macOS)
       SupershotMacScenes()
     #else
-      WindowGroup { SupershotRootView() }
+      WindowGroup {
+        // Hosted tests provide their own stores and databases; do not start the live UI effects.
+        if case .test = context {
+          EmptyView()
+        } else {
+          SupershotRootView()
+        }
+      }
     #endif
   }
 }

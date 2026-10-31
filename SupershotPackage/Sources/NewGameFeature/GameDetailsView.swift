@@ -9,10 +9,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
+import UI
 import WidgetSupport
 
 package struct GameDetailsView: View {

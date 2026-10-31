@@ -85,7 +85,7 @@ extension SupershotTestSuite {
         store.state.courtLayout,
         ScoringFeature.CourtLayout(left: originalLayout.right, right: originalLayout.left)
       )
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(snapshot.game.swapSides, true)
       expectNoDifference(snapshot.game.teamAID, state.teamA.id)
       expectNoDifference(snapshot.game.teamBID, state.teamB.id)
@@ -103,7 +103,7 @@ extension SupershotTestSuite {
         $0.swapSides = false
       }
       expectNoDifference(store.state, state)
-      let restored = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let restored = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(restored.game, game)
       await store.finish()
     }
@@ -201,7 +201,7 @@ extension SupershotTestSuite {
       var game = Self.game()
       game.swapSides = true
       let database = try await Self.seed(game)
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       let store = TestStore(initialState: Self.state()) {
         ScoringFeature()
       }
@@ -406,7 +406,7 @@ extension SupershotTestSuite {
       expectNoDifference(goal?.gamePeriodID, testGamePeriodID(gameID: UUID(3), position: 0))
       expectNoDifference(goal?.elapsedSeconds, 300)
       expectNoDifference(goal?.teamID, UUID(1))
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       let reopened = ScoringFeature.State(snapshot: snapshot)
       let scoredTeam = swappedSides ? reopened.courtLayout.right : reopened.courtLayout.left
       expectNoDifference(scoredTeam.id, UUID(1))
@@ -421,7 +421,7 @@ extension SupershotTestSuite {
       game.swapSides = true
       game.timerEndsAt = Date(timeIntervalSince1970: 1600)
       let database = try await Self.seed(game)
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
         ScoringFeature()
       } withDependencies: {
@@ -452,7 +452,7 @@ extension SupershotTestSuite {
       expectNoDifference(store.state.courtLayout.left.id, UUID(2))
       expectNoDifference(store.state.courtLayout.left.score, 0)
       expectNoDifference(store.state.courtLayout.right.hasCentrePass, true)
-      let reopened = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let reopened = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(reopened.game.swapSides, true)
       expectNoDifference(reopened.goals, [])
       await store.finish()
@@ -529,7 +529,7 @@ extension SupershotTestSuite {
       game.lateScoringPeriodNumber = 4
       let database = try await Self.seed(game)
       let endedPresentations = LockIsolated<[Game.ID]>([])
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
         ScoringFeature()
       } withDependencies: {
@@ -550,7 +550,7 @@ extension SupershotTestSuite {
         }
       }
 
-      let stored = try await database.read { try Game.find(game.id).fetchOne($0) }
+      let stored = try await database.read { [gameID = game.id] in try Game.find(gameID).fetchOne($0) }
       expectNoDifference(stored?.endedAt, Date(timeIntervalSince1970: 1000))
       expectNoDifference(stored?.elapsedSeconds, 900)
       expectNoDifference(stored?.timerEndsAt, nil)
@@ -566,7 +566,7 @@ extension SupershotTestSuite {
       game.lateScoringPeriodNumber = 4
       game.isAwaitingCentrePassConfirmation = true
       let database = try await Self.seed(game)
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
+      let snapshot = try await database.read { [gameID = game.id] in try GameSnapshot.fetch($0, gameID: gameID) }
       let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
         ScoringFeature()
       }
@@ -574,7 +574,7 @@ extension SupershotTestSuite {
       expectNoDifference(store.state.canScoreGoal, true)
       expectNoDifference(store.state.canFinishGame, false)
       await store.send(.finishGameButtonTapped)
-      let stored = try await database.read { try Game.find(game.id).fetchOne($0) }
+      let stored = try await database.read { [gameID = game.id] in try Game.find(gameID).fetchOne($0) }
       expectNoDifference(stored?.endedAt, nil)
       await store.finish()
     }

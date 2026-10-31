@@ -99,9 +99,9 @@ extension SupershotTestSuite {
         $0.gameParser = GameParser(availability: { .available }, generate: { DescribeGameTests.row($0) })
       }
       store.exhaustivity = .off
-      await store.send(.binding(.set(\.source, "Ravens")))
+      await store.send(.binding(.allCasePaths.source.embed("Ravens")))
       await clock.advance(by: .milliseconds(300))
-      await store.send(.binding(.set(\.source, "Ravens vs Swifts")))
+      await store.send(.binding(.allCasePaths.source.embed("Ravens vs Swifts")))
       await clock.advance(by: .milliseconds(499))
       #expect(store.state.review == nil)
       #expect(store.state.isDebouncing)
@@ -133,7 +133,7 @@ extension SupershotTestSuite {
       #expect(before.1 == 0)
       await store.send(.prepareScoringButtonTapped).finish()
       #expect(store.hasEnteredScoring)
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: store.gameID) }
+      let snapshot = try await database.read { [gameID = store.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(snapshot.teamA, a)
       expectNoDifference(snapshot.teamB, b)
       #expect(snapshot.game.startedAt == nil)
@@ -149,7 +149,7 @@ extension SupershotTestSuite {
       let saving = store.send(.saveGameButtonTapped)
       store.send(.saveGameButtonTapped)
       await saving.finish()
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: store.gameID) }
+      let snapshot = try await database.read { [gameID = store.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       #expect(snapshot.game.isPlanned)
       #expect(snapshot.game.court == "2")
       #expect(snapshot.game.division == "A")
@@ -193,7 +193,7 @@ extension SupershotTestSuite {
       state.scheduledAt = Date(timeIntervalSince1970: 5000)
       let store = try await setup(state: state)
       await store.send(.describeGame(.pasted("Ravens vs Swifts"))).finish()
-      await store.send(.describeGame(.binding(.set(\.source, "")))).finish()
+      await store.send(.describeGame(.binding(.allCasePaths.source.embed("")))).finish()
       #expect(store.leftTeam.team == nil)
       #expect(store.rightTeam.team == nil)
       #expect(store.court == "Manual court")
@@ -225,7 +225,7 @@ extension SupershotTestSuite {
         })
       }
       store.exhaustivity = .off
-      await store.send(.binding(.set(\.source, "Ravens vs Swifts")))
+      await store.send(.binding(.allCasePaths.source.embed("Ravens vs Swifts")))
       await store.send(.clearButtonTapped)
       await store.receive(\.delegate)
       await clock.advance(by: .seconds(1))
@@ -319,7 +319,7 @@ extension SupershotTestSuite {
       }
       #expect(editor.name == proposal.name)
       #expect(editor.color == proposal.color)
-      store.send(pickerEditor(.binding(.set(\.name, "Corrected Swifts"))))
+      store.send(pickerEditor(.binding(.allCasePaths.name.embed("Corrected Swifts"))))
       await store.send(pickerEditor(.saveButtonTapped)).finish()
       let selected = try #require(store.rightTeam.team)
       #expect(selected.name == "Corrected Swifts")
@@ -339,7 +339,7 @@ extension SupershotTestSuite {
       let teams = try await database.read { try Team.fetchAll($0) }
       #expect(teams.count == 2)
       #expect(!teams.contains { $0.id == proposal.id })
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: store.gameID) }
+      let snapshot = try await database.read { [gameID = store.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(snapshot.teamB, selected)
     }
 

@@ -35,7 +35,7 @@ public extension DependencyValues {
     liveValue: AlarmAuthorizationClient.live,
     previewValue: AlarmAuthorizationClient.authorized
   )
-  var alarmAuthorization: AlarmAuthorizationClient = .authorized
+  nonisolated var alarmAuthorization: AlarmAuthorizationClient = .authorized
 }
 
 public nonisolated extension AlarmAuthorizationClient {

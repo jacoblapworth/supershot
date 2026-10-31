@@ -5,7 +5,8 @@ import GameCore
 import SharedModels
 
 #if os(iOS)
-  import ActivityKit
+  // ActivityKit's Activity is not Sendable, but its async update/end APIs cross executors.
+  @preconcurrency import ActivityKit
   import AlarmKit
   import SwiftUI
 #endif
@@ -101,14 +102,19 @@ nonisolated extension AlarmClient {
 
 #if os(iOS)
   @MainActor
-  private let gameActivities = GameActivityManager<Activity<GameActivityAttributes>, ActivityContent<GameActivityAttributes.ContentState>>(
-    activities: { Activity<GameActivityAttributes>.activities },
-    id: { $0.id },
-    gameID: { $0.attributes.gameID },
-    isReusable: { $0.activityState == .active || $0.activityState == .stale },
-    update: { await $0.update($1) },
-    end: { await $0.end(nil, dismissalPolicy: .immediate) }
-  )
+  private let gameActivities = makeGameActivities()
+
+  @MainActor
+  private func makeGameActivities() -> GameActivityManager<Activity<GameActivityAttributes>, ActivityContent<GameActivityAttributes.ContentState>> {
+    GameActivityManager(
+      activities: { Activity<GameActivityAttributes>.activities },
+      id: { $0.id },
+      gameID: { $0.attributes.gameID },
+      isReusable: { $0.activityState == .active || $0.activityState == .stale },
+      update: { await $0.update($1) },
+      end: { await $0.end(nil, dismissalPolicy: .immediate) }
+    )
+  }
 
   private nonisolated struct SupershotAlarmMetadata: AlarmMetadata {
     var gameID: UUID

@@ -435,9 +435,11 @@ package struct KeyboardSwitchingTextField: View {
   }
 #endif
 
-#Preview {
-  KeyboardAccessoryView(options: [.alphabet, .numeric], selectedID: "alphabet", select: { _ in })
-}
+#if os(iOS)
+  #Preview {
+    KeyboardAccessoryView(options: [.alphabet, .numeric], selectedID: "alphabet", select: { _ in })
+  }
+#endif
 
 #Preview("Independent keyboard accessories") {
   @Previewable @State var court = "12"

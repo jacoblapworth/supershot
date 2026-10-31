@@ -38,17 +38,17 @@ extension SupershotTestSuite {
       }
 
       #expect(!store.state.scheduled)
-      await store.send(.binding(.set(\.scheduled, true))) {
+      await store.send(.binding(.allCasePaths.scheduled.embed(true))) {
         $0.scheduledAt = now
       }
       #expect(store.state.scheduled)
 
       let selectedTime = now.addingTimeInterval(3600)
-      await store.send(.binding(.set(\.scheduledAt, selectedTime))) {
+      await store.send(.binding(.allCasePaths.scheduledAt.embed(selectedTime))) {
         $0.scheduledAt = selectedTime
       }
-      await store.send(.binding(.set(\.scheduled, true)))
-      await store.send(.binding(.set(\.scheduled, false))) {
+      await store.send(.binding(.allCasePaths.scheduled.embed(true)))
+      await store.send(.binding(.allCasePaths.scheduled.embed(false))) {
         $0.scheduledAt = nil
       }
       #expect(!store.state.scheduled)
