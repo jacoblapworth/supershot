@@ -1,6 +1,7 @@
+import AppUI
 import PreviewSupport
-import Styleguide
 import SwiftUI
+import UI
 
 package extension ScoreboardView {
   init(courtLayout: ScoringFeature.CourtLayout) {

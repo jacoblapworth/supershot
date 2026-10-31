@@ -187,9 +187,9 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "StyleguideTests"
-               BuildableName = "StyleguideTests"
-               BlueprintName = "StyleguideTests"
+               BlueprintIdentifier = "UITests"
+               BuildableName = "UITests"
+               BlueprintName = "UITests"
                ReferencedContainer = "container:SupershotPackage">
             </BuildableReference>
          </TestableReference>

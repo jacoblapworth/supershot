@@ -86,7 +86,9 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(.gameDeepLinkOpened(draft.game.id))
       await store.receive {
-        if case .resumeGameResponse(_, .success) = $0 { return true }
+        if case .resumeGameResponse(_, .success) = $0 {
+          return true
+        }
         return false
       }
       #expect(store.state.newGame == nil)
@@ -105,7 +107,9 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(.gameDeepLinkOpened(setupState.gameID))
       await store.receive {
-        if case .resumeGameResponse(_, .failure) = $0 { return true }
+        if case .resumeGameResponse(_, .failure) = $0 {
+          return true
+        }
         return false
       }
       #expect(store.state.newGame == nil)
@@ -156,8 +160,13 @@ extension SupershotTestSuite {
     @Test func plansSortAboveHistoryAndAreExcludedFromInProgress() {
       func row(_ id: Int, scheduled: Double? = nil, created: Double? = nil) -> GameListItem {
         GameListItem(
-          id: UUID(id), startedAt: nil, teamAName: "A", teamAScore: 0,
-          teamBName: "B", teamBScore: 0, createdAt: Date(timeIntervalSince1970: created ?? Double(id)),
+          id: UUID(id),
+          startedAt: nil,
+          teamAName: "A",
+          teamAScore: 0,
+          teamBName: "B",
+          teamBScore: 0,
+          createdAt: Date(timeIntervalSince1970: created ?? Double(id)),
           scheduledAt: scheduled.map(Date.init(timeIntervalSince1970:))
         )
       }
@@ -167,16 +176,16 @@ extension SupershotTestSuite {
       let sooner = row(4, scheduled: 1000)
       let sameTime = row(6, scheduled: 1000, created: 0)
       let active = GameListItem(
-        id: UUID(5), startedAt: Date(), teamAName: "A", teamAScore: 0,
-        teamBName: "B", teamBScore: 0
+        id: UUID(5),
+        startedAt: Date(),
+        teamAName: "A",
+        teamAScore: 0,
+        teamBName: "B",
+        teamBScore: 0
       )
       let rows = [unscheduled, active, later, newerUnscheduled, sooner, sameTime]
-      expectNoDifference(
-        GamesFilter.all.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1), UUID(5)]
-      )
-      expectNoDifference(
-        GamesFilter.planned.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1)]
-      )
+      expectNoDifference(GamesFilter.all.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1), UUID(5)])
+      expectNoDifference(GamesFilter.planned.games(from: rows).map(\.id), [UUID(6), UUID(4), UUID(3), UUID(2), UUID(1)])
       expectNoDifference(GamesFilter.inProgress.games(from: rows), [active])
     }
   }

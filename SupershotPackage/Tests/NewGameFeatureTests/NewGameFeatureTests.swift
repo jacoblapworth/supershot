@@ -1,5 +1,6 @@
 @testable import AlarmClient
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -16,12 +17,12 @@ import Foundation
 @testable import SharedModels
 @testable import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 @testable import TeamEditingFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -89,9 +90,7 @@ extension SupershotTestSuite {
     func pickerFiltersExcludedTeams() async {
       let ravens = Team(id: UUID(1), name: "Ravens")
       let swifts = Team(id: UUID(2), name: "Swifts")
-      let store = TestStore(
-        initialState: TeamPickerFeature.State(excluding: [ravens.id])
-      ) {
+      let store = TestStore(initialState: TeamPickerFeature.State(excluding: [ravens.id])) {
         TeamPickerFeature()
       }
 
@@ -129,12 +128,10 @@ extension SupershotTestSuite {
       }
 
       await store.send(.selectTeamButtonTapped(.teamA)) {
-        $0.destination = .teamPicker(
-          NewGameTeamPicker.State(
-            picker: TeamPickerFeature.State(excluding: [ravens.id]),
-            side: .teamA
-          )
-        )
+        $0.destination = .teamPicker(NewGameTeamPicker.State(
+          picker: TeamPickerFeature.State(excluding: [ravens.id]),
+          side: .teamA
+        ))
       }
     }
 
@@ -142,19 +139,15 @@ extension SupershotTestSuite {
     func pickingTeamReturnsToSetupWithTeamAndBibColor(side: NewGameFeature.TeamSide) async {
       let foxes = Team(id: UUID(2), name: "Foxes", colorHex: "#34C759")
       var state = NewGameFeature.State()
-      state.destination = .teamPicker(
-        NewGameTeamPicker.State(
-          picker: TeamPickerFeature.State(),
-          side: side
-        )
-      )
+      state.destination = .teamPicker(NewGameTeamPicker.State(
+        picker: TeamPickerFeature.State(),
+        side: side
+      ))
       let store = TestStore(initialState: state) {
         NewGameFeature()
       }
 
-      await store.send(
-        .destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(foxes))))))
-      ) {
+      await store.send(.destination(.presented(.teamPicker(.picker(.delegate(.teamSelected(foxes))))))) {
         if side == .teamA {
           $0.leftTeam.bibColor = foxes.color
           $0.leftTeam.team = foxes
@@ -178,19 +171,15 @@ extension SupershotTestSuite {
       }
 
       await store.send(.selectTeamButtonTapped(side)) {
-        $0.destination = .teamConfiguration(
-          NewGameTeamConfiguration.State(
-            configuration: SetupTeamFeature.State(team: foxes, excluding: [ravens.id]),
-            side: side
-          )
-        )
+        $0.destination = .teamConfiguration(NewGameTeamConfiguration.State(
+          configuration: SetupTeamFeature.State(team: foxes, excluding: [ravens.id]),
+          side: side
+        ))
       }
 
       var updatedFoxes = foxes
       updatedFoxes.colorHex = "#FF9500"
-      await store.send(
-        .destination(.presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(updatedFoxes))))))
-      ) {
+      await store.send(.destination(.presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(updatedFoxes))))))) {
         if side == .teamA {
           $0.leftTeam.team = updatedFoxes
           $0.leftTeam.bibColor = updatedFoxes.color
@@ -207,12 +196,10 @@ extension SupershotTestSuite {
     @Test
     func editingTimingUsesTheSinglePresentationDestination() async {
       var state = NewGameFeature.State()
-      state.destination = .teamPicker(
-        NewGameTeamPicker.State(
-          picker: TeamPickerFeature.State(),
-          side: .teamA
-        )
-      )
+      state.destination = .teamPicker(NewGameTeamPicker.State(
+        picker: TeamPickerFeature.State(),
+        side: .teamA
+      ))
       let store = TestStore(initialState: state) {
         NewGameFeature()
       }

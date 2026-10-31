@@ -39,8 +39,13 @@ nonisolated extension GameParser {
           }
           return response.content.fixtures.map {
             ExtractedFixture(
-              source: $0.source, firstTeam: $0.firstTeam, secondTeam: $0.secondTeam,
-              date: $0.date, time: $0.time, division: $0.division, court: $0.court
+              source: $0.source,
+              firstTeam: $0.firstTeam,
+              secondTeam: $0.secondTeam,
+              date: $0.date,
+              time: $0.time,
+              division: $0.division,
+              court: $0.court
             )
           }
         } catch let error as LanguageModelError {
@@ -73,18 +78,14 @@ private nonisolated struct GeneratedFixtures {
 
 @Generable
 private nonisolated struct GeneratedFixture {
-  @Guide(
-    description: "Exact contiguous excerpt for this row, including metadata. Never rewrite it."
-  )
+  @Guide(description: "Exact contiguous excerpt for this row, including metadata. Never rewrite it.")
   var source: String
   @Guide(description: "First team name copied exactly; nil if missing.")
   var firstTeam: String?
   @Guide(description: "Second team name copied exactly; nil if missing.")
   var secondTeam: String?
-  @Guide(
-    description:
-    "Calendar date text copied exactly; nil when absent. HH:mm is a clock time, NEVER a date. Never infer a date."
-  )
+  @Guide(description:
+    "Calendar date text copied exactly; nil when absent. HH:mm is a clock time, NEVER a date. Never infer a date.")
   var date: String?
   @Guide(description: "Time text copied exactly; nil when absent.")
   var time: String?

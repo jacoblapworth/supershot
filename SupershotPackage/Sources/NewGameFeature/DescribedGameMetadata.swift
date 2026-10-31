@@ -54,7 +54,8 @@ package nonisolated struct DescribedGameMetadata: Equatable, Sendable {
     guard let text else { return nil }
     let value = text.replacingOccurrences(
       of: "(?i)^\\s*\(label)\\b\\s*[:#-]?\\s*",
-      with: "", options: .regularExpression
+      with: "",
+      options: .regularExpression
     ).trimmingCharacters(in: .whitespacesAndNewlines)
     return value.isEmpty ? nil : value
   }

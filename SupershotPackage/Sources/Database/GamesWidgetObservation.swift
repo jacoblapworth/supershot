@@ -6,13 +6,22 @@ import SQLiteData
 import WidgetKit
 import WidgetSupport
 
-extension GameListItem {
-  package var widgetGame: WidgetGame {
+package extension GameListItem {
+  var widgetGame: WidgetGame {
     WidgetGame(
-      id: id, createdAt: createdAt, scheduledAt: scheduledAt, startedAt: startedAt,
-      endedAt: endedAt, court: court, period: currentQuarter,
-      teamAName: teamAName, teamAColorHex: teamABibColorHex, teamAScore: teamAScore,
-      teamBName: teamBName, teamBColorHex: teamBBibColorHex, teamBScore: teamBScore
+      id: id,
+      createdAt: createdAt,
+      scheduledAt: scheduledAt,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      court: court,
+      period: currentQuarter,
+      teamAName: teamAName,
+      teamAColorHex: teamABibColorHex,
+      teamAScore: teamAScore,
+      teamBName: teamBName,
+      teamBColorHex: teamBBibColorHex,
+      teamBScore: teamBScore
     )
   }
 }

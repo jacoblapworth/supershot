@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,11 +10,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package struct SetupTimingView: View {
   @Bindable package var store: StoreOf<SetupTimingFeature>
@@ -27,7 +27,7 @@ package struct SetupTimingView: View {
       } footer: {
         Text(store.timing.summary)
       }
-      
+
       Section {
         if store.timing.customizesBreaks {
           SetupDurationRow(title: "After quarter 1", duration: store.timing.firstBreakDuration) {
@@ -58,11 +58,9 @@ package struct SetupTimingView: View {
       } header: {
         Text("Breaks")
       } footer: {
-        Text(
-          store.timing.breakStartPolicy == .automatic
+        Text(store.timing.breakStartPolicy == .automatic
           ? "Breaks start when a quarter ends."
-          : "Breaks wait for you to tap Start break."
-        )
+          : "Breaks wait for you to tap Start break.")
       }
 
       if !store.timing.isValid {
@@ -115,33 +113,19 @@ private struct SetupDurationRow: View {
 }
 
 #Preview("Uniform breaks") {
-  SetupTimingEditorView(
-    store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Custom breaks") {
-  SetupTimingEditorView(
-    store: Store(
-      initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewCustomTiming.timing
-      )
-    ) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewCustomTiming.timing)) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Invalid duration") {
-  SetupTimingEditorView(
-    store: Store(
-      initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewInvalidTiming.timing
-      )
-    ) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewInvalidTiming.timing)) {
+    SetupTimingFeature()
+  })
 }

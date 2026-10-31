@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -10,11 +11,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 #if os(iOS)
   import UIKit
@@ -83,18 +83,14 @@ package struct SetupLocationView: View {
         #endif
 
       case .restricted:
-        Text(
-          "Location access is restricted on this device. You can start the game without a location."
-        )
-        .foregroundStyle(.secondary)
+        Text("Location access is restricted on this device. You can start the game without a location.")
+          .foregroundStyle(.secondary)
 
       case .requesting, .loading:
         HStack(spacing: 12) {
           ProgressView()
-          Text(
-            store.location == .requesting ? "Requesting access…" : "Finding your current location…"
-          )
-          .foregroundStyle(.secondary)
+          Text(store.location == .requesting ? "Requesting access…" : "Finding your current location…")
+            .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
 

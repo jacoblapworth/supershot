@@ -1,3 +1,4 @@
+import AppUI
 import Database
 import Dependencies
 import Foundation
@@ -6,9 +7,8 @@ import GRDB
 import LocationClient
 import SharedModels
 import SQLiteData
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 public extension DatabaseWriter {
   func seedDebugExamplesIfNeeded() throws {
@@ -99,16 +99,12 @@ private func insertMockGoals(
       Goal(
         id: UUID(idOffset + index),
         gameID: gameID,
-        gamePeriodID: UUID(
-          (gameID == UUID(10) ? 1000 : 1010) + event.period - 1
-        ),
+        gamePeriodID: UUID((gameID == UUID(10) ? 1000 : 1010) + event.period - 1),
         centrePassTeamID: event.centrePassTeamA ? teamAID : teamBID,
         teamID: event.teamAScored ? teamAID : teamBID,
         elapsedSeconds: event.elapsedSeconds,
         points: 1,
-        createdAt: startedAt.addingTimeInterval(
-          TimeInterval(secondsBeforePeriod + event.elapsedSeconds)
-        )
+        createdAt: startedAt.addingTimeInterval(TimeInterval(secondsBeforePeriod + event.elapsedSeconds))
       )
     }
     .execute(db)

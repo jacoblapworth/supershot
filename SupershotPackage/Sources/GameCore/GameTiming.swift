@@ -64,9 +64,7 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
       transitions += complete(in: timeline, boundary: boundary)
     }
     countdown.elapsedSeconds =
-      countdown.projection(
-        durationSeconds: timeline.phases[phaseIndex].durationSeconds, now: now
-      ).elapsedSeconds
+      countdown.projection(durationSeconds: timeline.phases[phaseIndex].durationSeconds, now: now).elapsedSeconds
     return transitions
   }
 
@@ -93,8 +91,10 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
   }
 
   public mutating func apply(
-    _ command: GameTimingCommand, in timeline: GameTimeline,
-    expectedPhaseIndex: Int?, now: Date
+    _ command: GameTimingCommand,
+    in timeline: GameTimeline,
+    expectedPhaseIndex: Int?,
+    now: Date
   ) -> GameTimingResult {
     guard let phase = timeline.phase(at: phaseIndex),
           expectedPhaseIndex == nil || expectedPhaseIndex == phaseIndex
@@ -108,7 +108,8 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
       return GameTimingResult(
         status: .applied,
         transitions: phase.isPlayingPeriod
-          ? [.periodStarted(phase.associatedPeriod)] : []
+          ? [.periodStarted(phase.associatedPeriod)]
+          : []
       )
     case .pause:
       guard countdown.isRunning else { return GameTimingResult(status: .unchanged) }
@@ -131,7 +132,8 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
   }
 
   public init(
-    phaseIndex: Int, countdown: GameCountdown,
+    phaseIndex: Int,
+    countdown: GameCountdown,
     breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic
   ) {
     self.phaseIndex = phaseIndex
@@ -143,9 +145,7 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
 public extension Game {
   nonisolated var timing: GameTimingState {
     get {
-      GameTimingState(
-        phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy
-      )
+      GameTimingState(phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
     }
     set {
       currentPhaseIndex = newValue.phaseIndex

@@ -65,16 +65,22 @@ struct GameParserTests {
 
   @Test func samplePreservesOrderPunctuationAndMissingDates() async throws {
     let pairs = [
-      ("Coles Hot Chooks", "IMG & Friends"), ("Mixed Bag", "Buzz Ballers"),
-      ("Buzz Ballers", "Clapham Ballers"), ("Pole vaulters", "Silence of the Lambeths"),
-      ("The lodgers", "Netball & Chill"), ("Netball & Chill", "One Team, One Dream"),
+      ("Coles Hot Chooks", "IMG & Friends"),
+      ("Mixed Bag", "Buzz Ballers"),
+      ("Buzz Ballers", "Clapham Ballers"),
+      ("Pole vaulters", "Silence of the Lambeths"),
+      ("The lodgers", "Netball & Chill"),
+      ("Netball & Chill", "One Team, One Dream"),
     ]
     let times = ["18:30", "19:10", "19:50", "18:30", "19:10", "19:50"]
     let sources = GameParserDevelopmentHarness.sample.components(separatedBy: "\n\n")
     let rows = sources.enumerated().map { index, source in
       ExtractedFixture(
-        source: source, firstTeam: pairs[index].0, secondTeam: pairs[index].1,
-        time: times[index], division: "Division \(index < 3 ? 1 : 2)",
+        source: source,
+        firstTeam: pairs[index].0,
+        secondTeam: pairs[index].1,
+        time: times[index],
+        division: "Division \(index < 3 ? 1 : 2)",
         court: "Court \(index < 3 ? 1 : 2)"
       )
     }
@@ -130,11 +136,9 @@ struct GameParserTests {
 
   @Test func clockTimeInDateSlotDoesNotInventADate() async throws {
     let source = "18:30 A vs B"
-    let draft = try #require(
-      try await parser([
-        .init(source: source, firstTeam: "A", secondTeam: "B", date: "18:30", time: "18:30"),
-      ]).parse(source).first
-    )
+    let draft = try #require(try await parser([
+      .init(source: source, firstTeam: "A", secondTeam: "B", date: "18:30", time: "18:30"),
+    ]).parse(source).first)
     #expect(draft.date == nil && draft.dateText == nil)
     expectNoDifference(draft.time, DateComponents(hour: 18, minute: 30))
     expectNoDifference(draft.issues, [])
@@ -155,16 +159,23 @@ struct GameParserTests {
   @Test func validatesNamesAndRejectsInventedMetadata() async throws {
     let rows = [
       ExtractedFixture(
-        source: "Chooks vs chooks", firstTeam: "Chooks", secondTeam: "chooks",
-        date: "2026-10-19", time: "18:30", division: "Division 1", court: "Court 1"
+        source: "Chooks vs chooks",
+        firstTeam: "Chooks",
+        secondTeam: "chooks",
+        date: "2026-10-19",
+        time: "18:30",
+        division: "Division 1",
+        court: "Court 1"
       ),
     ]
     let draft = try #require(try await parser(rows).parse(rows[0].source).first)
     expectNoDifference(
       draft.issues,
       [
-        .identicalTeams, .valueNotInSource(field: "date"),
-        .valueNotInSource(field: "time"), .valueNotInSource(field: "division"),
+        .identicalTeams,
+        .valueNotInSource(field: "date"),
+        .valueNotInSource(field: "time"),
+        .valueNotInSource(field: "division"),
         .valueNotInSource(field: "court"),
       ]
     )
@@ -191,7 +202,8 @@ struct GameParserTests {
   func resolvesWeekdayInExplicitContext() async throws {
     let reference = try #require(ISO8601DateFormatter().date(from: "2026-10-27T12:00:00Z"))
     let context = try FixtureParsingContext(
-      calendar: Calendar(identifier: .gregorian), referenceDate: reference,
+      calendar: Calendar(identifier: .gregorian),
+      referenceDate: reference,
       timeZone: #require(TimeZone(secondsFromGMT: 0))
     )
     let source = "A vs B Friday"
@@ -204,11 +216,7 @@ struct GameParserTests {
   @Test(arguments: ["24:00", "19:60", "-1:30", "7:5", "noon"])
   func malformedTimesRemainCorrectable(time: String) async throws {
     let source = "\(time) A vs B"
-    let draft = try #require(
-      try await parser([.init(source: source, firstTeam: "A", secondTeam: "B", time: time)]).parse(
-        source
-      ).first
-    )
+    let draft = try #require(try await parser([.init(source: source, firstTeam: "A", secondTeam: "B", time: time)]).parse(source).first)
     expectNoDifference(draft.timeText, time)
     expectNoDifference(draft.issues, [.invalidTime])
     #expect(draft.time == nil)
@@ -217,11 +225,9 @@ struct GameParserTests {
   @Test(arguments: ["2026-02-29", "2026-13-01", "2026-00-10", "2026-04-31", "10/11/26"])
   func malformedDatesRemainCorrectable(date: String) async throws {
     let source = "\(date) 18:30 A vs B"
-    let draft = try #require(
-      try await parser([
-        .init(source: source, firstTeam: "A", secondTeam: "B", date: date, time: "18:30"),
-      ]).parse(source).first
-    )
+    let draft = try #require(try await parser([
+      .init(source: source, firstTeam: "A", secondTeam: "B", date: date, time: "18:30"),
+    ]).parse(source).first)
     expectNoDifference(draft.dateText, date)
     expectNoDifference(draft.issues, [.invalidDate])
     expectNoDifference(draft.time, DateComponents(hour: 18, minute: 30))
@@ -234,9 +240,7 @@ struct GameParserTests {
     calendar.timeZone = zone
     // UTC date is still 18 October; local date is 19 October.
     let reference = try #require(ISO8601DateFormatter().date(from: "2026-10-18T12:30:00Z"))
-    let context = FixtureParsingContext(
-      calendar: calendar, referenceDate: reference, timeZone: zone
-    )
+    let context = FixtureParsingContext(calendar: calendar, referenceDate: reference, timeZone: zone)
     for (date, expected) in [
       ("2028-02-29", DateComponents(year: 2028, month: 2, day: 29)),
       ("tomorrow", DateComponents(year: 2026, month: 10, day: 20)),
@@ -277,7 +281,9 @@ struct GameParserTests {
       try await parser([]).parse("Shopping list")
     }
     for status in [
-      GameParserAvailability.deviceNotEligible, .intelligenceNotEnabled, .modelNotReady,
+      GameParserAvailability.deviceNotEligible,
+      .intelligenceNotEnabled,
+      .modelNotReady,
       .unavailable,
     ] {
       let unavailable = GameParser(availability: { status }, generate: neverGenerateGeneration)
@@ -294,13 +300,9 @@ struct GameParserTests {
     await #expect(throws: GameParserError.generationFailed) {
       try await parser([.init(source: "invented")]).parse("A vs B")
     }
-    let failure = GameParser(
-      availability: { .available }, generate: { _ in throw CocoaError(.coderInvalidValue) }
-    )
+    let failure = GameParser(availability: { .available }, generate: { _ in throw CocoaError(.coderInvalidValue) })
     await #expect(throws: GameParserError.generationFailed) { try await failure.parse("A vs B") }
-    let cancelled = GameParser(
-      availability: { .available }, generate: { _ in throw CancellationError() }
-    )
+    let cancelled = GameParser(availability: { .available }, generate: { _ in throw CancellationError() })
     await #expect(throws: GameParserError.cancelled) { try await cancelled.parse("A vs B") }
   }
 

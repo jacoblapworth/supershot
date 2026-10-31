@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import GameCore
 import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameDetailContentView: View {
   @State private var selectedAnalysis = GameAnalysisTab.playByPlay
@@ -63,9 +63,7 @@ package struct GameDetailContentView: View {
     }
   }
 
-  package init(
-    detail: CompletedGameDetail, showsProPromotion: Bool, proPromotionTapped: @escaping () -> Void
-  ) {
+  package init(detail: CompletedGameDetail, showsProPromotion: Bool, proPromotionTapped: @escaping () -> Void) {
     self.detail = detail
     self.showsProPromotion = showsProPromotion
     self.proPromotionTapped = proPromotionTapped

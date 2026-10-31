@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import GameCore
 import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameOverviewView: View {
   package var detail: CompletedGameDetail
@@ -110,10 +110,8 @@ private struct QuarterScoreBreakdown: View {
           .font(.system(.body, design: .rounded, weight: .semibold))
           .monospacedDigit()
           .accessibilityElement(children: .ignore)
-          .accessibilityLabel(
-            "Quarter \(quarter.period), \(teamAName) \(quarter.teamAQuarterScore), "
-              + "\(teamBName) \(quarter.teamBQuarterScore)"
-          )
+          .accessibilityLabel("Quarter \(quarter.period), \(teamAName) \(quarter.teamAQuarterScore), "
+            + "\(teamBName) \(quarter.teamBQuarterScore)")
         }
       }
     }

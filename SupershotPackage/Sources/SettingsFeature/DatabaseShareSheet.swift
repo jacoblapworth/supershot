@@ -1,10 +1,11 @@
 import AppSettings
+import AppUI
 import Database
 import GameCore
 import PaywallFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
+import UI
 
 #if DEBUG
   import SwiftUI
@@ -17,9 +18,7 @@ import SubscriptionClient
       package var completion: (Result<Void, any Error>) -> Void
 
       package func makeUIViewController(context _: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(
-          activityItems: [url], applicationActivities: nil
-        )
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         controller.completionWithItemsHandler = { _, _, _, error in
           if let error {
             completion(.failure(error))
@@ -73,9 +72,7 @@ import SubscriptionClient
           self.completion = completion
         }
 
-        package func sharingServicePicker(
-          _: NSSharingServicePicker, didChoose service: NSSharingService?
-        ) {
+        package func sharingServicePicker(_: NSSharingServicePicker, didChoose service: NSSharingService?) {
           if service == nil {
             completion(.success(()))
           }
@@ -92,9 +89,7 @@ import SubscriptionClient
           completion(.success(()))
         }
 
-        package func sharingService(
-          _: NSSharingService, didFailToShareItems _: [Any], error: any Error
-        ) {
+        package func sharingService(_: NSSharingService, didFailToShareItems _: [Any], error: any Error) {
           completion(.failure(error))
         }
       }

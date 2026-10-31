@@ -1,5 +1,6 @@
 @testable import AlarmClient
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 @testable import Database
 import Foundation
@@ -14,12 +15,12 @@ import Foundation
 @testable import SharedModels
 @testable import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 @testable import TeamEditingFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -30,24 +31,20 @@ extension SupershotTestSuite {
       state.firstCentrePass = .teamB
       let store = TestStore(initialState: state) { NewGameFeature() }
       await store.send(.selectTeamButtonTapped(.teamA)) {
-        $0.destination = .teamConfiguration(
-          NewGameTeamConfiguration.State(
-            configuration: SetupTeamFeature.State(
-              team: state.leftTeam.team!,
-              excluding: [state.rightTeam.team!.id]
-            ),
-            side: .teamA
-          )
-        )
+        $0.destination = .teamConfiguration(NewGameTeamConfiguration.State(
+          configuration: SetupTeamFeature.State(
+            team: state.leftTeam.team!,
+            excluding: [state.rightTeam.team!.id]
+          ),
+          side: .teamA
+        ))
       }
       #expect(store.state.firstCentrePass == .teamB)
     }
 
     @Test func dismissingPickerReturnsToSetupWithoutSelectingTeam() async {
       var state = NewGameFeature.State()
-      state.destination = .teamPicker(
-        NewGameTeamPicker.State(picker: TeamPickerFeature.State(), side: .teamA)
-      )
+      state.destination = .teamPicker(NewGameTeamPicker.State(picker: TeamPickerFeature.State(), side: .teamA))
       let store = TestStore(initialState: state) { NewGameFeature() }
       await store.send(.destination(.dismiss)) {
         $0.destination = nil
@@ -63,14 +60,10 @@ extension SupershotTestSuite {
       await store.send(.destination(.presented(.timingEditor(.editDurationButtonTapped(.quarter))))) {
         var editor = SetupTimingFeature.State(timing: $0.timing)
         editor.editedDuration = .quarter
-        editor.timeInput = .init(
-          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999
-        )
+        editor.timeInput = .init(title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999)
         $0.destination = .timingEditor(editor)
       }
-      await store.send(
-        .destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(900)))))))
-      ) {
+      await store.send(.destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(900)))))))) {
         var timing = $0.timing
         timing.periodDuration = .init(totalSeconds: 900)
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))

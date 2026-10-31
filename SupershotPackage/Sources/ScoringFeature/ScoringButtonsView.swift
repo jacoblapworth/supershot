@@ -31,9 +31,15 @@ package struct ScoringButtonsView: View {
 
 #Preview("Goal buttons") {
   VStack(spacing: 24) {
-    ScoringButtonsView(courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
-                       isEnabled: true, onAction: { _ in })
-    ScoringButtonsView(courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
-                       isEnabled: false, onAction: { _ in })
+    ScoringButtonsView(
+      courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
+      isEnabled: true,
+      onAction: { _ in }
+    )
+    ScoringButtonsView(
+      courtLayout: ScoringFeature.State.previewQuarter.courtLayout,
+      isEnabled: false,
+      onAction: { _ in }
+    )
   }.padding()
 }

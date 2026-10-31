@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Dependencies
@@ -11,9 +12,9 @@ import PreviewSupport
 import ScoringFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct GamesHomeView: View {
   @Fetch(GamesRequest(), animation: .default)
@@ -34,11 +35,9 @@ package struct GamesHomeView: View {
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
       case let .scoring(scoringStore):
-        ScoringView(
-          store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall
-        )
+        ScoringView(store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall)
         #if os(iOS)
-        .toolbarVisibility(.hidden, for: .tabBar)
+          .toolbarVisibility(.hidden, for: .tabBar)
         #endif
       }
     }
@@ -67,14 +66,12 @@ package struct GamesHomeView: View {
 //      #endif
       if proAccess == .free {
         Section {
-          ProPromotionCard(
-            exploreProTapped: { store.send(.proPromotionTapped) }
-          )
+          ProPromotionCard(exploreProTapped: { store.send(.proPromotionTapped) })
           #if os(macOS)
-          .fixedSize(horizontal: false, vertical: true)
+            .fixedSize(horizontal: false, vertical: true)
           #endif
-          .listRowBackground(Color.clear)
-          .listRowInsets(.all, 0)
+            .listRowBackground(Color.clear)
+            .listRowInsets(.all, 0)
         }
       }
 
@@ -132,7 +129,7 @@ package struct GamesHomeView: View {
           store.send(.filterButtonTapped(filter))
         }
       }
-      
+
       ToolbarItem(id: "filters", placement: .subtitle) {
         GamesFilterControl(selection: store.filter) { filter in
           store.send(.filterButtonTapped(filter))
@@ -196,7 +193,8 @@ package struct GamesHomeView: View {
   }
 
   package init(
-    proAccess: SubscriptionEntitlement, store: StoreOf<GamesFeature>,
+    proAccess: SubscriptionEntitlement,
+    store: StoreOf<GamesFeature>,
     isPresentingPaywall: Bool = false
   ) {
     self.proAccess = proAccess

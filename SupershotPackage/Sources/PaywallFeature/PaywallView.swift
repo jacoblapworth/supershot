@@ -1,7 +1,7 @@
 import ComposableArchitecture
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct PaywallView: View {
   @Bindable package var store: StoreOf<PaywallFeature>
@@ -32,7 +32,8 @@ package struct PaywallView: View {
     .background {
       LinearGradient(
         colors: [Color.accentColor.opacity(0.09), Color.accentColor.opacity(0.02), .clear],
-        startPoint: .top, endPoint: .bottom
+        startPoint: .top,
+        endPoint: .bottom
       )
       .ignoresSafeArea()
     }
@@ -372,18 +373,14 @@ private enum ProPaywallLinks {
 }
 
 #Preview("Loaded") {
-  PaywallView(
-    store: Store(
-      initialState: PaywallFeature.State(
-        catalog: .loaded([
-          .Preview.monthly,
-          .Preview.yearly,
-          .Preview.lifetime,
-        ]),
-        selectedProductID: PaywallProduct.Preview.monthly.id
-      )
-    ) {
-      PaywallFeature()
-    }
-  )
+  PaywallView(store: Store(initialState: PaywallFeature.State(
+    catalog: .loaded([
+      .Preview.monthly,
+      .Preview.yearly,
+      .Preview.lifetime,
+    ]),
+    selectedProductID: PaywallProduct.Preview.monthly.id
+  )) {
+    PaywallFeature()
+  })
 }

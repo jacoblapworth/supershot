@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import GameCore
 import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package enum GameAnalysisTab: String, CaseIterable, Identifiable {
   case playByPlay = "Play-by-play"
@@ -80,9 +80,7 @@ package struct GameAnalysisControl: View {
     #endif
   }
 
-  package init(
-    selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}
-  ) {
+  package init(selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}) {
     _selection = selection
     self.pinnedSelectionChanged = pinnedSelectionChanged
   }

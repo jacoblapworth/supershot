@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,10 +13,9 @@ import PreviewSupport
 import ScoringFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 @Reducer
 package enum TeamsPath {
@@ -79,7 +79,8 @@ package struct TeamsFeature {
     package init(
       destination: TeamsDestination.State? = nil,
       path: StackState<TeamsPath.State> = StackState<TeamsPath.State>(),
-      pendingGameResume: PendingGameResume? = nil, searchText: String = ""
+      pendingGameResume: PendingGameResume? = nil,
+      searchText: String = ""
     ) {
       self.destination = destination
       self.path = path
@@ -142,9 +143,7 @@ package struct TeamsFeature {
         state.destination = .teamEditor(TeamsEditorFeature.State())
         return .none
 
-      case .path(
-        .element(id: let id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))
-      ):
+      case .path(.element(id: let id, action: .gameDetail(.delegate(.deleteGameButtonTapped)))):
         guard case let .gameDetail(gameDetail) = state.path[id: id] else {
           return .none
         }
@@ -152,9 +151,7 @@ package struct TeamsFeature {
         state.path.pop(from: id)
         return .send(.deleteGameButtonTapped(gameID))
 
-      case .path(
-        .element(id: let id, action: .teamDetail(.delegate(.deleteTeamButtonTapped)))
-      ):
+      case .path(.element(id: let id, action: .teamDetail(.delegate(.deleteTeamButtonTapped)))):
         guard case let .teamDetail(teamDetail) = state.path[id: id] else {
           return .none
         }
@@ -162,23 +159,15 @@ package struct TeamsFeature {
         state.path.pop(from: id)
         return .send(.deleteTeamButtonTapped(teamID))
 
-      case let .path(
-        .element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))
-      ):
+      case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):
         state.path.pop(from: id)
-        state.path.append(
-          .gameDetail(GameDetailFeature.State(gameID: gameID))
-        )
+        state.path.append(.gameDetail(GameDetailFeature.State(gameID: gameID)))
         return .none
 
-      case .path(
-        .element(id: _, action: .teamDetail(.delegate(.gameRowTapped(let game))))
-      ):
+      case .path(.element(id: _, action: .teamDetail(.delegate(.gameRowTapped(let game))))):
         return .send(.teamGameRowTapped(game))
 
-      case .path(
-        .element(id: _, action: .teamDetail(.delegate(.newGameButtonTapped(let team))))
-      ):
+      case .path(.element(id: _, action: .teamDetail(.delegate(.newGameButtonTapped(let team))))):
         var setup = NewGameFeature.State()
         setup.leftTeam.team = team
         setup.leftTeam.bibColor = team.color
@@ -241,7 +230,9 @@ package struct TeamsFeature {
 
         // Resolve the persisted status before reusing a route left open in a warm app.
         if state.newGame?.gameID == request.gameID {
-          if snapshot.game.isPlanned { return .none }
+          if snapshot.game.isPlanned {
+            return .none
+          }
           state.newGame = nil
         }
         for (id, destination) in zip(state.path.ids, state.path) {
@@ -253,7 +244,7 @@ package struct TeamsFeature {
             }
             state.path.pop(from: id)
           case let .gameDetail(detail) where detail.gameID == request.gameID:
-            if (snapshot.game.endedAt != nil) {
+            if snapshot.game.endedAt != nil {
               state.path.pop(to: id)
               return .none
             }
@@ -269,22 +260,21 @@ package struct TeamsFeature {
         } else if snapshot.game.isInProgress {
           state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
         } else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: request.gameID))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: request.gameID)))
         }
         return .none
 
       case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
-        if state.newGame?.gameID == request.gameID { state.newGame = nil }
+        if state.newGame?.gameID == request.gameID {
+          state.newGame = nil
+        }
         for (id, destination) in zip(state.path.ids, state.path) {
-          let matches: Bool
-          switch destination {
-          case let .scoring(scoring): matches = scoring.gameID == request.gameID
-          case let .gameDetail(detail): matches = detail.gameID == request.gameID
-          default: matches = false
+          let matches: Bool = switch destination {
+          case let .scoring(scoring): scoring.gameID == request.gameID
+          case let .gameDetail(detail): detail.gameID == request.gameID
+          default: false
           }
           if matches {
             state.path.pop(from: id)
@@ -309,9 +299,7 @@ package struct TeamsFeature {
 
       case let .teamGameRowTapped(game):
         guard !game.isCompleted else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: game.id))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: game.id)))
           return .none
         }
 
@@ -319,9 +307,7 @@ package struct TeamsFeature {
         return resumeGame(gameID: game.id, state: &state)
 
       case let .teamRowTapped(team):
-        state.path.append(
-          .teamDetail(TeamDetailFeature.State(teamID: team.id))
-        )
+        state.path.append(.teamDetail(TeamDetailFeature.State(teamID: team.id)))
         return .none
       }
     }

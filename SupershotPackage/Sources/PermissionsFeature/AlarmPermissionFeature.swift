@@ -1,8 +1,8 @@
 import AlarmClient
 import ComposableArchitecture
 import FeatureFlagsClient
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct AlarmPermissionFeature {
@@ -16,7 +16,8 @@ package struct AlarmPermissionFeature {
     package init(
       access: SubscriptionEntitlement = SubscriptionEntitlement.unknown,
       authorization: AlarmAuthorizationStatus = AlarmAuthorizationStatus.notDetermined,
-      isRequesting: Bool = false, errorMessage: String? = nil
+      isRequesting: Bool = false,
+      errorMessage: String? = nil
     ) {
       self.access = access
       self.authorization = authorization

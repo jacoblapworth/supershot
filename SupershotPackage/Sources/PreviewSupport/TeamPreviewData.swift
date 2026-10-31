@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 import SwiftUI
-import WidgetSupport
+import UI
 
 package extension Team {
   static let previewRavens = Self(

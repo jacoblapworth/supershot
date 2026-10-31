@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import Clocks
 import ConcurrencyExtras
 import CustomDump
@@ -10,20 +11,18 @@ import Foundation
 @testable import GameCore
 @testable import GameServices
 @testable import SharedModels
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 /// Test adapters independently of persistence and system services.
 @MainActor
-@Suite(
-  .dependencies {
-    $0.date.now = Date(timeIntervalSince1970: 1000)
-    $0.proSubscription = .pro
-  }
-)
+@Suite(.dependencies {
+  $0.date.now = Date(timeIntervalSince1970: 1000)
+  $0.proSubscription = .pro
+})
 struct GameAdapterTests {
   @Test func timerPresentsOnlyAfterCommandReturnsAuthoritativeState() async throws {
     let committed = LockIsolated(false)
@@ -60,9 +59,7 @@ struct GameAdapterTests {
 
   @Test func rejectedStartRefreshesActivityWithoutSchedulingOrCancelling() async {
     let calls = LockIsolated<[String]>([])
-    let rejected = GameSessionUpdate(
-      outcome: .rejected(.confirmationRequired), snapshot: snapshot()
-    )
+    let rejected = GameSessionUpdate(outcome: .rejected(.confirmationRequired), snapshot: snapshot())
     let failed = await withDependencies {
       $0.alarmClient = AlarmClient(
         scheduleAlarm: { _ in
@@ -74,9 +71,7 @@ struct GameAdapterTests {
         endActivity: { _ in calls.withValue { $0.append("end") } }
       )
     } operation: {
-      await GamePresentationClient.live.update(
-        rejected, .timing(.startOrResume, expectedPhaseIndex: 0)
-      )
+      await GamePresentationClient.live.update(rejected, .timing(.startOrResume, expectedPhaseIndex: 0))
     }
     expectNoDifference(failed, false)
     expectNoDifference(calls.value, ["refresh"])
@@ -99,12 +94,11 @@ struct GameAdapterTests {
             activityStarted.continuation.yield(())
             try? await clock.sleep(for: .seconds(1))
           },
-          cancelAlarm: { _, _ in }, endActivity: { _ in }
+          cancelAlarm: { _, _ in },
+          endActivity: { _ in }
         )
       } operation: {
-        await GamePresentationClient.live.update(
-          update, .timing(.startOrResume, expectedPhaseIndex: 0)
-        )
+        await GamePresentationClient.live.update(update, .timing(.startOrResume, expectedPhaseIndex: 0))
       }
     }
     for await _ in activityStarted.stream {
@@ -165,9 +159,7 @@ struct GameAdapterTests {
         endActivity: { _ in calls.withValue { $0.append("end") } }
       )
     } operation: {
-      _ = await GamePresentationClient.live.update(
-        GameSessionUpdate(outcome: .unchanged, snapshot: snapshot(running: true)), .reconcile
-      )
+      _ = await GamePresentationClient.live.update(GameSessionUpdate(outcome: .unchanged, snapshot: snapshot(running: true)), .reconcile)
     }
     expectNoDifference(Set(calls.value), ["cancel", "end"])
   }
@@ -184,9 +176,7 @@ struct GameAdapterTests {
         endActivity: { _ in calls.withValue { $0.append("end") } }
       )
     } operation: {
-      _ = await GamePresentationClient.live.update(
-        GameSessionUpdate(outcome: .applied, snapshot: snapshot()), .finish
-      )
+      _ = await GamePresentationClient.live.update(GameSessionUpdate(outcome: .applied, snapshot: snapshot()), .finish)
     }
     expectNoDifference(calls.value, ["cancel", "end"])
   }
@@ -194,12 +184,17 @@ struct GameAdapterTests {
   private func snapshot(running: Bool = false) -> GameSnapshot {
     GameSnapshot(
       game: Game(
-        id: UUID(3), startedAt: .distantPast,
-        teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
+        id: UUID(3),
+        startedAt: .distantPast,
+        teamAID: UUID(1),
+        teamBID: UUID(2),
+        centrePassTeamID: UUID(1),
         timerEndsAt: running ? Date(timeIntervalSince1970: 1900) : nil
       ),
-      goals: [], periods: testGamePeriods(gameID: UUID(3)),
-      teamA: Team(id: UUID(1), name: "A"), teamB: Team(id: UUID(2), name: "B")
+      goals: [],
+      periods: testGamePeriods(gameID: UUID(3)),
+      teamA: Team(id: UUID(1), name: "A"),
+      teamB: Team(id: UUID(2), name: "B")
     )
   }
 }

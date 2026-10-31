@@ -1,3 +1,4 @@
+import AppUI
 import CustomDump
 @testable import Database
 import Dependencies
@@ -7,10 +8,10 @@ import Foundation
 import GRDB
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 import SwiftUI
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {
@@ -131,8 +132,11 @@ extension SupershotTestSuite {
           Team(id: UUID(-1), name: "Ravens", colorHex: ColorPalette.blue.hex())
           Team(id: UUID(-2), name: "Swifts", colorHex: ColorPalette.red.hex())
           Game(
-            id: UUID(-1), startedAt: Date(timeIntervalSince1970: 1000),
-            teamAID: UUID(-1), teamABibColorHex: "#AF52DE", teamBID: UUID(-2)
+            id: UUID(-1),
+            startedAt: Date(timeIntervalSince1970: 1000),
+            teamAID: UUID(-1),
+            teamABibColorHex: "#AF52DE",
+            teamBID: UUID(-2)
           )
         }
         try GamePeriod.insert { periods }.execute(db)
@@ -150,9 +154,14 @@ extension SupershotTestSuite {
       try await database.write { db in
         try Goal.insert {
           Goal(
-            id: UUID(-1), gameID: UUID(-1), gamePeriodID: periods[0].id,
-            centrePassTeamID: UUID(-1), teamID: UUID(-1), elapsedSeconds: 30,
-            points: 2, createdAt: Date(timeIntervalSince1970: 1030)
+            id: UUID(-1),
+            gameID: UUID(-1),
+            gamePeriodID: periods[0].id,
+            centrePassTeamID: UUID(-1),
+            teamID: UUID(-1),
+            elapsedSeconds: 30,
+            points: 2,
+            createdAt: Date(timeIntervalSince1970: 1030)
           )
         }.execute(db)
       }

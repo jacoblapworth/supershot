@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import FixtureTeamResolution
@@ -5,8 +6,7 @@ import Foundation
 import GameCore
 import GameParser
 import SQLiteData
-import Styleguide
-import WidgetSupport
+import UI
 
 /// Extraction is automatic; proposals remain transient until normal game persistence.
 @Reducer
@@ -105,16 +105,15 @@ package struct DescribeGameFeature {
         state.isParsing = true
         let source = state.source
         let revision = state.revision
-        let context = FixtureParsingContext(
-          calendar: Calendar(identifier: .gregorian), referenceDate: now, timeZone: timeZone
-        )
+        let context = FixtureParsingContext(calendar: Calendar(identifier: .gregorian), referenceDate: now, timeZone: timeZone)
         return .run { send in
           let result = await Result {
             let fixtures = try await parser.parse(source, context: context)
             guard fixtures.count == 1 else { throw ParsingError.multipleFixtures }
             let teams = try await database.read { try Team.fetchAll($0) }
             return ParsedMatchup(
-              fixtures: fixtures, teams: teams,
+              fixtures: fixtures,
+              teams: teams,
               metadata: DescribedGameMetadata(fixture: fixtures[0], context: context)
             )
           }
@@ -140,9 +139,7 @@ package struct DescribeGameFeature {
         state.review = review
         updateProposals(state: &state)
         state.metadataNotices = parsed.metadata.notices
-        return .send(.delegate(.populated(
-          state.revision, state.team(for: .first), state.team(for: .second), parsed.metadata
-        )))
+        return .send(.delegate(.populated(state.revision, state.team(for: .first), state.team(for: .second), parsed.metadata)))
 
       case let .parseResponse(revision, source, .failure(error)):
         guard revision == state.revision, source == state.source, !source.isEmpty else { return .none }

@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -6,8 +7,8 @@ import GameCore
 import PaywallFeature
 import SharedModels
 import Sharing
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct SettingsFeature {
@@ -35,7 +36,8 @@ package struct SettingsFeature {
     #endif
 
     package init(
-      timeInput: TimeInputFeature.State? = nil, editedDefault: DurationDefault? = nil,
+      timeInput: TimeInputFeature.State? = nil,
+      editedDefault: DurationDefault? = nil,
       isCustomerCenterPresented: Bool = false
     ) {
       self.timeInput = timeInput
@@ -90,7 +92,8 @@ package struct SettingsFeature {
         state.timeInput = .init(
           title: field == .quarter ? "Quarter length" : "Break length",
           totalSeconds: field == .quarter
-            ? state.defaultPeriodDurationSeconds : state.defaultBreakDurationSeconds,
+            ? state.defaultPeriodDurationSeconds
+            : state.defaultBreakDurationSeconds,
           allowedSeconds: (field == .quarter ? 1 : 0) ... 5999
         )
         return .none
@@ -121,13 +124,9 @@ package struct SettingsFeature {
           guard state.timeInput == nil, state.databaseExport == nil else { return .none }
           state.databaseExport = .preparing
           return .run { send in
-            await send(
-              .databaseExportResponse(
-                Result {
-                  try await databaseExportClient.snapshot()
-                }
-              )
-            )
+            await send(.databaseExportResponse(Result {
+              try await databaseExportClient.snapshot()
+            }))
           }
 
         case let .databaseExportResponse(.success(url)):

@@ -18,12 +18,10 @@ struct ChartSelectionOverlay: View {
     #if os(iOS)
       .gesture(HorizontalChartPan(selectionChanged: selectionChanged))
     #else
-      .simultaneousGesture(
-        DragGesture(minimumDistance: 10)
-          .updating($interaction) { value, interaction, _ in
-            interaction.update(value)
-          }
-      )
+      .simultaneousGesture(DragGesture(minimumDistance: 10)
+        .updating($interaction) { value, interaction, _ in
+          interaction.update(value)
+        })
       .onChange(of: interaction) { selectionChanged(interaction.location) }
     #endif
   }
@@ -44,7 +42,8 @@ struct ChartSelectionOverlay: View {
         case .idle:
           self =
             abs(value.translation.width) > abs(value.translation.height)
-              ? .horizontal(value.location) : .vertical
+              ? .horizontal(value.location)
+              : .vertical
         case .horizontal:
           self = .horizontal(value.location)
         case .vertical:

@@ -28,9 +28,7 @@ import SharedModels
           let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent(uuid().uuidString, isDirectory: true)
           return try await Task.detached {
-            try FileManager.default.createDirectory(
-              at: directory, withIntermediateDirectories: true
-            )
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("Supershot.sqlite")
             do {
               let destination = try DatabaseQueue(path: url.path)

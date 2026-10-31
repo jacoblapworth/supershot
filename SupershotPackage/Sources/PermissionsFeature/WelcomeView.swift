@@ -1,8 +1,8 @@
 import AlarmClient
 import ComposableArchitecture
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct WelcomeView: View {
   package let store: StoreOf<WelcomeFeature>
@@ -38,7 +38,8 @@ package struct WelcomeView: View {
     .background {
       LinearGradient(
         colors: [Color.accentColor.opacity(0.16), .clear],
-        startPoint: .top, endPoint: .center
+        startPoint: .top,
+        endPoint: .center
       )
       .ignoresSafeArea()
     }

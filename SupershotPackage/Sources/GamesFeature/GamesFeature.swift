@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,8 +13,8 @@ import PreviewSupport
 import ScoringFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package enum GamesPath {
@@ -115,9 +116,7 @@ package struct GamesFeature {
 
       case let .gameRowTapped(game):
         guard !game.isCompleted else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: game.id))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: game.id)))
           return .none
         }
 
@@ -130,9 +129,7 @@ package struct GamesFeature {
 
       case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):
         state.path.pop(from: id)
-        state.path.append(
-          .gameDetail(GameDetailFeature.State(gameID: gameID))
-        )
+        state.path.append(.gameDetail(GameDetailFeature.State(gameID: gameID)))
         return .none
 
       case let .newGame(.presented(.delegate(.scoringPrepared(scoring)))):
@@ -199,7 +196,9 @@ package struct GamesFeature {
 
         // Resolve the persisted status before reusing a route left open in a warm app.
         if state.newGame?.gameID == request.gameID {
-          if snapshot.game.isPlanned { return .none }
+          if snapshot.game.isPlanned {
+            return .none
+          }
           state.newGame = nil
         }
         for (id, destination) in zip(state.path.ids, state.path) {
@@ -211,7 +210,7 @@ package struct GamesFeature {
             }
             state.path.pop(from: id)
           case let .gameDetail(detail) where detail.gameID == request.gameID:
-            if (snapshot.game.endedAt != nil) {
+            if snapshot.game.endedAt != nil {
               state.path.pop(to: id)
               return .none
             }
@@ -227,21 +226,20 @@ package struct GamesFeature {
         } else if snapshot.game.isInProgress {
           state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
         } else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: request.gameID))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: request.gameID)))
         }
         return .none
 
       case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
-        if state.newGame?.gameID == request.gameID { state.newGame = nil }
+        if state.newGame?.gameID == request.gameID {
+          state.newGame = nil
+        }
         for (id, destination) in zip(state.path.ids, state.path) {
-          let matches: Bool
-          switch destination {
-          case let .scoring(scoring): matches = scoring.gameID == request.gameID
-          case let .gameDetail(detail): matches = detail.gameID == request.gameID
+          let matches: Bool = switch destination {
+          case let .scoring(scoring): scoring.gameID == request.gameID
+          case let .gameDetail(detail): detail.gameID == request.gameID
           }
           if matches {
             state.path.pop(from: id)

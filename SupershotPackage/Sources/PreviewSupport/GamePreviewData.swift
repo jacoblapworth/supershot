@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import Dependencies
 import Foundation
 import GameCore
 import LocationClient
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package extension GameListItem {
   static let previewInProgress = Self(
@@ -126,36 +126,32 @@ private let realisticPreviewTimeline: GoalTimeline = {
     } else {
       teamBScore += 1
     }
-    goalsByPeriod[event.period, default: []].append(
-      GoalTimelineItem(
-        clockSecondsRemaining: MockGameData.periodDurationSeconds - event.elapsedSeconds,
-        id: UUID(300 + index),
-        period: event.period,
-        points: 1,
-        scoringTeamBibColor: event.teamAScored
-          ? ColorPalette.blue
-          : ColorPalette.red,
-        scoringTeamName: event.teamAScored
-          ? "North London Ravens"
-          : "Westminster Swifts",
-        scoringTeamSide: event.teamAScored ? .teamA : .teamB,
-        teamAScore: teamAScore,
-        teamBScore: teamBScore
-      )
-    )
+    goalsByPeriod[event.period, default: []].append(GoalTimelineItem(
+      clockSecondsRemaining: MockGameData.periodDurationSeconds - event.elapsedSeconds,
+      id: UUID(300 + index),
+      period: event.period,
+      points: 1,
+      scoringTeamBibColor: event.teamAScored
+        ? ColorPalette.blue
+        : ColorPalette.red,
+      scoringTeamName: event.teamAScored
+        ? "North London Ravens"
+        : "Westminster Swifts",
+      scoringTeamSide: event.teamAScored ? .teamA : .teamB,
+      teamAScore: teamAScore,
+      teamBScore: teamBScore
+    ))
   }
 
-  return GoalTimeline(
-    quarters: (1 ... 4).reversed().map { period in
-      let goals = goalsByPeriod[period, default: []]
-      return GoalTimelineQuarter(
-        goals: Array(goals.reversed()),
-        period: period,
-        teamAQuarterScore: goals.filter { $0.scoringTeamSide == .teamA }.count,
-        teamBQuarterScore: goals.filter { $0.scoringTeamSide == .teamB }.count
-      )
-    }
-  )
+  return GoalTimeline(quarters: (1 ... 4).reversed().map { period in
+    let goals = goalsByPeriod[period, default: []]
+    return GoalTimelineQuarter(
+      goals: Array(goals.reversed()),
+      period: period,
+      teamAQuarterScore: goals.filter { $0.scoringTeamSide == .teamA }.count,
+      teamBQuarterScore: goals.filter { $0.scoringTeamSide == .teamB }.count
+    )
+  })
 }()
 
 package extension GoalTimeline {

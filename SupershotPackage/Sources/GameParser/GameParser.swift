@@ -92,8 +92,13 @@ package nonisolated struct ExtractedFixture: Sendable {
   package var court: String?
 
   package init(
-    source: String, firstTeam: String? = nil, secondTeam: String? = nil,
-    date: String? = nil, time: String? = nil, division: String? = nil, court: String? = nil
+    source: String,
+    firstTeam: String? = nil,
+    secondTeam: String? = nil,
+    date: String? = nil,
+    time: String? = nil,
+    division: String? = nil,
+    court: String? = nil
   ) {
     self.source = source
     self.firstTeam = firstTeam

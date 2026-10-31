@@ -41,8 +41,6 @@ package nonisolated enum GameParserDevelopmentHarness {
     do { result = try await .success(parser.parse(text, context: context)) } catch let error
       as GameParserError
     { result = .failure(error) } catch { result = .failure(.generationFailed) }
-    return Report(
-      availability: availability, elapsed: start.duration(to: clock.now), result: result
-    )
+    return Report(availability: availability, elapsed: start.duration(to: clock.now), result: result)
   }
 }

@@ -69,9 +69,12 @@ package nonisolated struct ScoreDifferenceSeries: Equatable, Sendable {
             }
           }
           return Point(
-            id: .goal(goal.id), elapsedSeconds: offset + elapsed,
-            period: goal.period, periodElapsedSeconds: elapsed,
-            teamAScore: teamAScore, teamBScore: teamBScore
+            id: .goal(goal.id),
+            elapsedSeconds: offset + elapsed,
+            period: goal.period,
+            periodElapsedSeconds: elapsed,
+            teamAScore: teamAScore,
+            teamBScore: teamBScore
           )
         }
       }
@@ -81,8 +84,12 @@ package nonisolated struct ScoreDifferenceSeries: Equatable, Sendable {
     var points =
       [
         Point(
-          id: .start, elapsedSeconds: 0, period: periods.first?.number ?? 1,
-          periodElapsedSeconds: 0, teamAScore: 0, teamBScore: 0
+          id: .start,
+          elapsedSeconds: 0,
+          period: periods.first?.number ?? 1,
+          periodElapsedSeconds: 0,
+          teamAScore: 0,
+          teamBScore: 0
         ),
       ] + moments
 
@@ -91,13 +98,14 @@ package nonisolated struct ScoreDifferenceSeries: Equatable, Sendable {
     if analysis.isComplete, let last = moments.last, let period = periods.last,
        last.elapsedSeconds < duration
     {
-      points.append(
-        Point(
-          id: .end, elapsedSeconds: duration, period: period.number,
-          periodElapsedSeconds: period.durationSeconds,
-          teamAScore: last.teamAScore, teamBScore: last.teamBScore
-        )
-      )
+      points.append(Point(
+        id: .end,
+        elapsedSeconds: duration,
+        period: period.number,
+        periodElapsedSeconds: period.durationSeconds,
+        teamAScore: last.teamAScore,
+        teamBScore: last.teamBScore
+      ))
     }
     self.points = points
     extent = max(moments.map { abs($0.difference) }.max() ?? 0, 1)

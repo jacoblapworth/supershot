@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,11 +10,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package nonisolated struct SetupTiming: Equatable, Sendable {
   package var breakStartPolicy = BreakStartPolicy.automatic
@@ -40,15 +40,12 @@ package nonisolated struct SetupTiming: Equatable, Sendable {
   }
 
   package init(
-    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic, customizesBreaks: Bool = false,
-    firstBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(
-      totalSeconds: 60
-    ),
+    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
+    customizesBreaks: Bool = false,
+    firstBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60),
     halfTimeDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60),
     periodDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 480),
-    secondBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(
-      totalSeconds: 60
-    )
+    secondBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60)
   ) {
     self.breakStartPolicy = breakStartPolicy
     self.customizesBreaks = customizesBreaks
@@ -68,7 +65,8 @@ package struct SetupTimingFeature {
     package var timing: SetupTiming
 
     package init(
-      timeInput: TimeInputFeature.State? = nil, editedDuration: DurationField? = nil,
+      timeInput: TimeInputFeature.State? = nil,
+      editedDuration: DurationField? = nil,
       timing: SetupTiming
     ) {
       self.timeInput = timeInput
@@ -124,7 +122,8 @@ package struct SetupTimingFeature {
           title = "After quarter 3"
         }
         state.timeInput = .init(
-          title: title, totalSeconds: duration.totalSeconds ?? 0,
+          title: title,
+          totalSeconds: duration.totalSeconds ?? 0,
           allowedSeconds: (field == .quarter ? 1 : 0) ... 5999
         )
       case let .timeInput(.presented(.delegate(.committed(seconds)))):

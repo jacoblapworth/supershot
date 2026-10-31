@@ -1,10 +1,10 @@
+import AppUI
 import Charts
 import Database
 import GameCore
 import PreviewSupport
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct ScoreDifferenceChartView: View {
   package var detail: GameAnalysis
@@ -14,8 +14,10 @@ package struct ScoreDifferenceChartView: View {
     ScoreDifferenceChart(
       series: ScoreDifferenceSeries(analysis: detail, breakdown: breakdown),
       breakdown: breakdown,
-      teamAName: detail.teamAName, teamAColor: detail.teamABibColor,
-      teamBName: detail.teamBName, teamBColor: detail.teamBBibColor
+      teamAName: detail.teamAName,
+      teamAColor: detail.teamABibColor,
+      teamBName: detail.teamBName,
+      teamBColor: detail.teamBBibColor
     )
   }
 }
@@ -58,7 +60,8 @@ private struct ScoreDifferenceChart: View {
 
       if series.moments.isEmpty {
         ContentUnavailableView(
-          "No goals recorded in \(breakdown.title)", systemImage: "chart.xyaxis.line",
+          "No goals recorded in \(breakdown.title)",
+          systemImage: "chart.xyaxis.line",
           description: Text("Score difference will appear here once goals are recorded.")
         )
         .frame(maxWidth: .infinity)
@@ -70,16 +73,15 @@ private struct ScoreDifferenceChart: View {
               yStart: .value("Scores level", 0),
               yEnd: .value("Difference", series.plottedDifference(for: point))
             )
-            .foregroundStyle(
-              LinearGradient(
-                stops: [
-                  .init(color: positiveTeamColor.opacity(0.5), location: 0),
-                  .init(color: .clear, location: 0.5),
-                  .init(color: negativeTeamColor.opacity(0.5), location: 1),
-                ],
-                startPoint: .top, endPoint: .bottom
-              )
-            )
+            .foregroundStyle(LinearGradient(
+              stops: [
+                .init(color: positiveTeamColor.opacity(0.5), location: 0),
+                .init(color: .clear, location: 0.5),
+                .init(color: negativeTeamColor.opacity(0.5), location: 1),
+              ],
+              startPoint: .top,
+              endPoint: .bottom
+            ))
             .alignsMarkStylesWithPlotArea()
             .interpolationMethod(.monotone)
           }
@@ -108,9 +110,7 @@ private struct ScoreDifferenceChart: View {
               x: .value("Playing time", moment.elapsedSeconds),
               y: .value("Difference", series.plottedDifference(for: moment))
             )
-            .foregroundStyle(
-              moment.difference > 0 ? teamAColor : moment.difference < 0 ? teamBColor : .primary
-            )
+            .foregroundStyle(moment.difference > 0 ? teamAColor : moment.difference < 0 ? teamBColor : .primary)
             .symbolSize(20)
           }
 
@@ -156,17 +156,11 @@ private struct ScoreDifferenceChart: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(breakdown.title) score difference chart")
-        .accessibilityValue(
-          Text(
-            "\(teamAName) \(series.moments.last?.teamAScore ?? 0), \(teamBName) \(series.moments.last?.teamBScore ?? 0). \(scoreDifferenceLeadDescription(series.moments.last?.difference ?? 0, teamAName: teamAName, teamBName: teamBName))"
-          )
-        )
+        .accessibilityValue(Text("\(teamAName) \(series.moments.last?.teamAScore ?? 0), \(teamBName) \(series.moments.last?.teamBScore ?? 0). \(scoreDifferenceLeadDescription(series.moments.last?.difference ?? 0, teamAName: teamAName, teamBName: teamBName))"))
         .accessibilityIdentifier("gameAnalysis.scoreDifference")
 
         if let selectedMoment {
-          ScoreDifferenceInspection(
-            moment: selectedMoment, teamAName: teamAName, teamBName: teamBName
-          )
+          ScoreDifferenceInspection(moment: selectedMoment, teamAName: teamAName, teamBName: teamBName)
         } else {
           Text("Drag horizontally across the chart to inspect the score.")
             .font(.caption)
@@ -227,9 +221,7 @@ private struct ScoreDifferenceInspection: View {
         .foregroundStyle(.secondary)
       Text("\(teamAName) \(moment.teamAScore) – \(moment.teamBScore) \(teamBName)")
         .monospacedDigit()
-      Text(scoreDifferenceLeadDescription(
-        moment.difference, teamAName: teamAName, teamBName: teamBName
-      ))
+      Text(scoreDifferenceLeadDescription(moment.difference, teamAName: teamAName, teamBName: teamBName))
     }
     .font(.caption.weight(.medium))
     .fixedSize(horizontal: false, vertical: true)
@@ -243,9 +235,7 @@ private func elapsedTime(_ seconds: Int) -> String {
   Duration.seconds(max(seconds, 0)).formatted(.time(pattern: .minuteSecond))
 }
 
-private func scoreDifferenceLeadDescription(
-  _ difference: Int, teamAName: String, teamBName: String
-) -> LocalizedStringResource {
+private func scoreDifferenceLeadDescription(_ difference: Int, teamAName: String, teamBName: String) -> LocalizedStringResource {
   if difference == 0 {
     return "Scores level"
   }
@@ -267,17 +257,13 @@ private func scoreDifferenceLeadDescription(
 }
 
 #Preview("Quarter score difference") {
-  ScoreDifferenceChartView(
-    detail: CompletedGameDetail.previewCompleted.analysis, breakdown: .period(2)
-  )
-  .padding()
+  ScoreDifferenceChartView(detail: CompletedGameDetail.previewCompleted.analysis, breakdown: .period(2))
+    .padding()
 }
 
 #Preview("Weighted goals, lead changes and a tie") {
-  ScoreDifferenceChartView(
-    detail: scoreDifferencePreview(scores: [(2, 0), (2, 1), (2, 3), (3, 3)])
-  )
-  .padding()
+  ScoreDifferenceChartView(detail: scoreDifferencePreview(scores: [(2, 0), (2, 1), (2, 3), (3, 3)]))
+    .padding()
 }
 
 #Preview("One-sided live game") {
@@ -295,15 +281,21 @@ private func scoreDifferencePreview(scores: [(Int, Int)]) -> GameAnalysis {
   let moments = zip(goals, scores).enumerated().map { index, pair in
     GoalTimelineItem(
       clockSecondsRemaining: max(period.durationSeconds - (index + 1) * 60, 0),
-      id: pair.0.id, period: period.number, points: pair.0.points,
-      scoringTeamName: pair.0.scoringTeamName, scoringTeamSide: pair.0.scoringTeamSide,
-      teamAScore: pair.1.0, teamBScore: pair.1.1
+      id: pair.0.id,
+      period: period.number,
+      points: pair.0.points,
+      scoringTeamName: pair.0.scoringTeamName,
+      scoringTeamSide: pair.0.scoringTeamSide,
+      teamAScore: pair.1.0,
+      teamBScore: pair.1.1
     )
   }
   analysis.goalTimeline = GoalTimeline(quarters: [
     GoalTimelineQuarter(
-      goals: moments.reversed(), period: period.number,
-      teamAQuarterScore: scores.last?.0 ?? 0, teamBQuarterScore: scores.last?.1 ?? 0
+      goals: moments.reversed(),
+      period: period.number,
+      teamAQuarterScore: scores.last?.0 ?? 0,
+      teamBQuarterScore: scores.last?.1 ?? 0
     ),
   ])
   return analysis

@@ -21,9 +21,13 @@ extension SupershotTestSuite {
       }
       return GameSetupDraft(
         game: Game(
-          id: UUID(3), startedAt: nil, teamAID: UUID(1), teamBID: UUID(2),
+          id: UUID(3),
+          startedAt: nil,
+          teamAID: UUID(1),
+          teamBID: UUID(2),
           createdAt: Date(timeIntervalSince1970: 1000),
-          scheduledAt: Date(timeIntervalSince1970: 2000), court: "3"
+          scheduledAt: Date(timeIntervalSince1970: 2000),
+          court: "3"
         ),
         periods: testGamePeriods(gameID: UUID(3))
       )

@@ -22,9 +22,7 @@ nonisolated extension ExtractedFixture {
       issues.append(.missingSecondTeam)
     }
     if let first, let second,
-       first.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(
-         second.trimmingCharacters(in: .whitespacesAndNewlines)
-       ) == .orderedSame
+       first.trimmingCharacters(in: .whitespacesAndNewlines).localizedCaseInsensitiveCompare(second.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
     {
       issues.append(.identicalTeams)
     }
@@ -67,7 +65,8 @@ nonisolated extension ExtractedFixture {
           let start = calendar.startOfDay(for: context.referenceDate)
           let after = relative.hasPrefix("next ") ? start : start.addingTimeInterval(-1)
           if let date = calendar.nextDate(
-            after: after, matching: DateComponents(weekday: weekday),
+            after: after,
+            matching: DateComponents(weekday: weekday),
             matchingPolicy: .nextTime
           ) {
             parsedDate = calendar.dateComponents([.year, .month, .day], from: date)
@@ -101,9 +100,17 @@ nonisolated extension ExtractedFixture {
       }
     }
     return FixtureDraft(
-      source: source, sourceLine: sourceLine, firstTeam: first, secondTeam: second,
-      date: parsedDate, time: parsedTime, dateText: rawDate, timeText: rawTime,
-      division: division, court: court, issues: issues
+      source: source,
+      sourceLine: sourceLine,
+      firstTeam: first,
+      secondTeam: second,
+      date: parsedDate,
+      time: parsedTime,
+      dateText: rawDate,
+      timeText: rawTime,
+      division: division,
+      court: court,
+      issues: issues
     )
   }
 }
@@ -140,8 +147,13 @@ private nonisolated func parseFixtureTime(_ text: String) -> DateComponents? {
 private nonisolated func fixtureWeekday(_ text: String) -> Int? {
   let value = text.hasPrefix("next ") ? String(text.dropFirst(5)) : text
   let days = [
-    ["sunday", "sun"], ["monday", "mon"], ["tuesday", "tue"],
-    ["wednesday", "wed"], ["thursday", "thu"], ["friday", "fri"], ["saturday", "sat"],
+    ["sunday", "sun"],
+    ["monday", "mon"],
+    ["tuesday", "tue"],
+    ["wednesday", "wed"],
+    ["thursday", "thu"],
+    ["friday", "fri"],
+    ["saturday", "sat"],
   ]
   return days.firstIndex { $0.contains(value) }.map { $0 + 1 }
 }

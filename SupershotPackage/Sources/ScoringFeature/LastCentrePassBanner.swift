@@ -4,7 +4,7 @@ package struct LastCentrePassBanner: View {
   package var state: CentrePassConfirmationState
   package var onAction: (ScoringControlAction) -> Void
   @State package var taken = true
-  
+
   package var body: some View {
     HStack(spacing: 12) {
       Text("Centre pass taken?")
@@ -52,7 +52,8 @@ package struct LastCentrePassBanner: View {
   VStack(spacing: 24) {
     ForEach([ScoringControl.Availability.enabled, .pending, .disabled].indices, id: \.self) { index in
       LastCentrePassBanner(state: .init(
-        team: .previewSwifts, period: 2,
+        team: .previewSwifts,
+        period: 2,
         availability: [.enabled, .pending, .disabled][index]
       ), onAction: { _ in })
     }

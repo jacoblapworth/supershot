@@ -32,8 +32,13 @@ extension SupershotTestSuite {
         }.execute(db)
         try Game.insert {
           Game(
-            id: UUID(3), startedAt: nil, teamAID: UUID(1), teamBID: UUID(2),
-            createdAt: Date(timeIntervalSince1970: 1000), scheduledAt: scheduledAt, court: "A"
+            id: UUID(3),
+            startedAt: nil,
+            teamAID: UUID(1),
+            teamBID: UUID(2),
+            createdAt: Date(timeIntervalSince1970: 1000),
+            scheduledAt: scheduledAt,
+            court: "A"
           )
         }.execute(db)
       }

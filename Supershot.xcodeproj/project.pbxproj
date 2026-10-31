@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B35E602CBF324D7C8057C201 /* UI in Frameworks */ = {isa = PBXBuildFile; productRef = B35E602CBF324D7C8057C202 /* UI */; };
 		121C0490302213DA00ED9B54 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 121C048F302213DA00ED9B54 /* RevenueCat */; };
 		12715897300D144600B14CCB /* Sharing in Frameworks */ = {isa = PBXBuildFile; productRef = 12715896300D144600B14CCB /* Sharing */; };
 		12A4C609301E25CB00094D7C /* Dependencies in Frameworks */ = {isa = PBXBuildFile; productRef = 12A4C608301E25CB00094D7C /* Dependencies */; };
@@ -155,6 +156,7 @@
 			files = (
 				A629A319BF3253EC1B424ED1 /* SharedModels in Frameworks */,
 				5CFB796D395E156131C53E34 /* WidgetSupport in Frameworks */,
+				B35E602CBF324D7C8057C201 /* UI in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -282,6 +284,7 @@
 			packageProductDependencies = (
 				248BC6B3295197D260AEAB4B /* SharedModels */,
 				1A87D79D3CD2D5DA8A3389AD /* WidgetSupport */,
+				B35E602CBF324D7C8057C202 /* UI */,
 			);
 			productName = SupershotWidgets;
 			productReference = 12C000033020000000000001 /* SupershotWidgets.appex */;
@@ -842,6 +845,10 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		B35E602CBF324D7C8057C202 /* UI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = UI;
+		};
 		121C048F302213DA00ED9B54 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 121C048E302213DA00ED9B54 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;

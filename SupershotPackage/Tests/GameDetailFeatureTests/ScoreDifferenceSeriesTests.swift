@@ -8,22 +8,24 @@ import Testing
 
 struct ScoreDifferenceSeriesTests {
   @Test func weightedGoalsAndLeadChanges() {
-    let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [
-        (1, 10, 2, 0), (1, 20, 2, 1), (1, 30, 2, 3), (1, 40, 3, 3),
-      ])
-    )
+    let series = ScoreDifferenceSeries(analysis: analysis(events: [
+      (1, 10, 2, 0),
+      (1, 20, 2, 1),
+      (1, 30, 2, 3),
+      (1, 40, 3, 3),
+    ]))
     expectNoDifference(series.points.map(\.difference), [0, 2, 1, -1, 0])
     expectNoDifference(series.points.map(\.elapsedSeconds), [0, 10, 20, 30, 40])
     expectNoDifference(series.extent, 2)
   }
 
   @Test func sameSecondGoalsKeepCanonicalOrderAndInspectFinalScore() {
-    let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [
-        (1, 10, 2, 0), (1, 10, 2, 1), (1, 10, 2, 3), (1, 10, 3, 3),
-      ])
-    )
+    let series = ScoreDifferenceSeries(analysis: analysis(events: [
+      (1, 10, 2, 0),
+      (1, 10, 2, 1),
+      (1, 10, 2, 3),
+      (1, 10, 3, 3),
+    ]))
     expectNoDifference(series.moments.map(\.difference), [2, 1, -1, 0])
     expectNoDifference(Set(series.moments.map(\.id)).count, 4)
     expectNoDifference(series.nearestMoment(to: 10)?.difference, 0)
@@ -31,8 +33,11 @@ struct ScoreDifferenceSeriesTests {
 
   @Test func quarterUsesOnlyItsPointsAndLocalPlayingTime() {
     let value = analysis(events: [
-      (1, 10, 2, 0), (1, 20, 2, 1),
-      (2, 10, 2, 3), (2, 20, 3, 3), (2, 30, 3, 4),
+      (1, 10, 2, 0),
+      (1, 20, 2, 1),
+      (2, 10, 2, 3),
+      (2, 20, 3, 3),
+      (2, 30, 3, 4),
     ])
     let quarter = ScoreDifferenceSeries(analysis: value, breakdown: .period(2))
     expectNoDifference(quarter.points.map(\.difference), [0, -2, -1, -2])
@@ -48,9 +53,7 @@ struct ScoreDifferenceSeriesTests {
   }
 
   @Test func emptyQuarterDoesNotShowGoalsFromOtherQuarters() {
-    let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [(1, 10, 2, 0)]), breakdown: .period(2)
-    )
+    let series = ScoreDifferenceSeries(analysis: analysis(events: [(1, 10, 2, 0)]), breakdown: .period(2))
     #expect(series.moments.isEmpty)
     expectNoDifference(series.points.map(\.difference), [0])
     expectNoDifference(series.duration, 90)
@@ -58,9 +61,7 @@ struct ScoreDifferenceSeriesTests {
   }
 
   @Test func winnerIsPositiveEvenWhenTheOtherTeamLedEarlier() {
-    let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [(1, 10, 2, 0), (1, 20, 2, 3)])
-    )
+    let series = ScoreDifferenceSeries(analysis: analysis(events: [(1, 10, 2, 0), (1, 20, 2, 3)]))
     #expect(!series.positiveTeamIsTeamA)
     expectNoDifference(series.points.map { series.plottedDifference(for: $0) }, [0, -2, 1])
     // Keep actual scores and team-relative margins available for inspection.
@@ -130,11 +131,9 @@ struct ScoreDifferenceSeriesTests {
   }
 
   @Test(arguments: [true, false]) func oneSidedScaleIncludesBothSigns(teamA: Bool) {
-    let series = ScoreDifferenceSeries(
-      analysis: analysis(events: [
-        (1, 10, teamA ? 4 : 0, teamA ? 0 : 4),
-      ])
-    )
+    let series = ScoreDifferenceSeries(analysis: analysis(events: [
+      (1, 10, teamA ? 4 : 0, teamA ? 0 : 4),
+    ]))
     expectNoDifference(series.extent, 4)
     expectNoDifference(series.moments.last?.difference, teamA ? 4 : -4)
   }
@@ -155,7 +154,10 @@ struct ScoreDifferenceSeriesTests {
     let gameID = UUID(0)
     let periods = [
       GamePeriod(
-        id: UUID(1), gameID: gameID, position: 0, durationSeconds: 60,
+        id: UUID(1),
+        gameID: gameID,
+        position: 0,
+        durationSeconds: 60,
         breakAfterDurationSeconds: 240
       ),
       GamePeriod(id: UUID(2), gameID: gameID, position: 1, durationSeconds: 90),
@@ -166,21 +168,24 @@ struct ScoreDifferenceSeriesTests {
       let teamA = event.a > previousA
       return GoalTimelineItem(
         clockSecondsRemaining: periods[event.period - 1].durationSeconds - event.elapsed,
-        id: UUID(index + 10), period: event.period,
+        id: UUID(index + 10),
+        period: event.period,
         points: teamA ? event.a - previousA : event.b - previousB,
-        scoringTeamName: "Team", scoringTeamSide: teamA ? .teamA : .teamB,
-        teamAScore: event.a, teamBScore: event.b
+        scoringTeamName: "Team",
+        scoringTeamSide: teamA ? .teamA : .teamB,
+        teamAScore: event.a,
+        teamBScore: event.b
       )
     }
     return GameAnalysis(
-      goalTimeline: GoalTimeline(
-        quarters: periods.reversed().map { period in
-          GoalTimelineQuarter(
-            goals: goals.filter { $0.period == period.number }.reversed(),
-            period: period.number, teamAQuarterScore: 0, teamBQuarterScore: 0
-          )
-        }
-      ),
+      goalTimeline: GoalTimeline(quarters: periods.reversed().map { period in
+        GoalTimelineQuarter(
+          goals: goals.filter { $0.period == period.number }.reversed(),
+          period: period.number,
+          teamAQuarterScore: 0,
+          teamBQuarterScore: 0
+        )
+      }),
       periods: periods
     )
   }

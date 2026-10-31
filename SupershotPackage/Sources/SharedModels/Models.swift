@@ -138,6 +138,7 @@ public nonisolated enum GameScoringContext: Equatable, Sendable {
       phase.isPlayingPeriod && phase.associatedPeriod.number == completed + 1
         && timer.status == .paused && timer.elapsedSeconds == 0
     return isCompletedPeriod || isFollowingBreak || isWaitingPeriod
-      ? .completedPeriod(number: completed) : nil
+      ? .completedPeriod(number: completed)
+      : nil
   }
 }

@@ -15,16 +15,20 @@ versions used before extraction; update them deliberately in a separate change.
 - `FixtureTeamResolution` matches parsed fixture names against saved-team snapshots
   and holds transient batch review choices. See [the matching contract](../docs/fixture-team-resolution.md).
 - `SharedModels` contains lightweight values shared by the app and widgets.
-- `WidgetSupport` contains the shared avatar, phase label and colour helpers. Widgets
-  depend only on these two targets, without persistence, RevenueCat or TCA.
+- `WidgetSupport` owns widget snapshots, selection rules, deep links and file storage.
+- `UI` owns reusable SwiftUI controls, cards, avatars, phase labels and colour helpers.
+  Its only package dependencies are `SharedModels` and `WidgetSupport`; widgets can
+  use it without persistence, RevenueCat or TCA.
 - `GameCore` owns persisted table models and pure timing/scoring rules.
 - `Database` owns bootstrap, the single schema migration, query projections and export.
-  Query results carry stored colour strings; `Styleguide` converts them to SwiftUI colours.
+  Query results carry stored colour strings; `AppUI` converts them to SwiftUI colours.
 - `GameServices` owns transactional commands and their post-commit presentation effects.
 - `AlarmClient`, `SubscriptionClient`, `LocationClient` and `SoundEffectsClient` own
   dependency clients. `AppSettings` owns the existing shared preference keys.
-- `Styleguide` owns reusable controls and model colour presentation. `GameAnalysis`
-  owns the analysis UI shared by live and completed games.
+- `AppUI` bridges database and game models to UI presentation and owns the TCA time
+  editor. It depends on `UI`, `GameCore` and `Database`. Keep these app-only adapters
+  outside `UI` so the widget dependency graph remains lightweight.
+- `GameAnalysis` owns the analysis UI shared by live and completed games.
 - `TeamEditingFeature` owns the reusable editor and picker, independently of Teams
   navigation. `NewGameFeature` can use it without importing `TeamsFeature`.
 - Feature targets own their reducer, views and feature-specific preview scenarios.

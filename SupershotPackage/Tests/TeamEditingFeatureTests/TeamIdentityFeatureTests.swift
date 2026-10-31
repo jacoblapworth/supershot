@@ -1,3 +1,4 @@
+import AppUI
 import CustomDump
 @testable import Database
 import Dependencies
@@ -7,10 +8,10 @@ import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import TeamEditingFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

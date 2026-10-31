@@ -18,12 +18,11 @@ public nonisolated struct ScheduledGameAlarm: Equatable, Sendable {
     if progress.breakStartPolicy == .automatic, phase.isPlayingPeriod,
        let next = timeline.phase(at: progress.phaseIndex + 1), next.isBreak, next.durationSeconds > 0
     {
-      result.append(
-        Self(
-          date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
-          phase: next, phaseIndex: progress.phaseIndex + 1
-        )
-      )
+      result.append(Self(
+        date: endsAt.addingTimeInterval(TimeInterval(next.durationSeconds)),
+        phase: next,
+        phaseIndex: progress.phaseIndex + 1
+      ))
     }
     return result
   }

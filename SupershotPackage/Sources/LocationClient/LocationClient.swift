@@ -112,8 +112,15 @@ package nonisolated extension LocationClient {
         let center = CLLocation(latitude: location.latitude, longitude: location.longitude)
         let request = MKLocalPointsOfInterestRequest(center: center.coordinate, radius: 5000)
         request.pointOfInterestFilter = .init(including: [
-          .school, .university, .fitnessCenter, .park, .basketball,
-          .soccer, .stadium, .tennis, .volleyball,
+          .school,
+          .university,
+          .fitnessCenter,
+          .park,
+          .basketball,
+          .soccer,
+          .stadium,
+          .tennis,
+          .volleyball,
         ])
         let response = try await MKLocalSearch(request: request).start()
         var seen: Set<NearbyPlace.ID> = []

@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Dependencies
@@ -11,10 +12,9 @@ import PreviewSupport
 import SharedModels
 import SoundEffectsClient
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
@@ -36,16 +36,14 @@ package struct ScoringView: View {
     self.proAccess = proAccess
     self.store = store
     _analysisResponse = Fetch(
-      wrappedValue: GameAnalysisRequest.Value(
-        analysis: GameAnalysis(
-          goalTimeline: .empty(through: store.period),
-          periods: store.periods,
-          teamABibColor: store.teamA.bibColor,
-          teamAName: store.teamA.name,
-          teamBBibColor: store.teamB.bibColor,
-          teamBName: store.teamB.name
-        )
-      ),
+      wrappedValue: GameAnalysisRequest.Value(analysis: GameAnalysis(
+        goalTimeline: .empty(through: store.period),
+        periods: store.periods,
+        teamABibColor: store.teamA.bibColor,
+        teamAName: store.teamA.name,
+        teamBBibColor: store.teamB.bibColor,
+        teamBName: store.teamB.name
+      )),
       GameAnalysisRequest(gameID: store.gameID),
       animation: .default
     )
@@ -58,14 +56,12 @@ package struct ScoringView: View {
           VStack {
             TimerView(state: store.timerViewState) { store.send(.controlTapped($0)) }
 
-            ScoreboardView(
-              courtLayout: store.courtLayout
-            )
-            .onGeometryChange(for: Bool.self) { geometry in
-              geometry.frame(in: .named("scoringViewport")).maxY <= 0
-            } action: { isAboveViewport in
-              isScoreboardAboveViewport = isAboveViewport
-            }
+            ScoreboardView(courtLayout: store.courtLayout)
+              .onGeometryChange(for: Bool.self) { geometry in
+                geometry.frame(in: .named("scoringViewport")).maxY <= 0
+              } action: { isAboveViewport in
+                isScoreboardAboveViewport = isAboveViewport
+              }
           }
           .padding(.top)
           if store.scheduledAt != nil || store.court != nil {
@@ -91,7 +87,8 @@ package struct ScoringView: View {
           #if os(macOS)
             AlarmPermissionCard(
               store: store.scope(state: \.alarms, action: \.alarms),
-              proAccess: proAccess, hidesWhenAuthorized: true
+              proAccess: proAccess,
+              hidesWhenAuthorized: true
             )
           #endif
           Section {

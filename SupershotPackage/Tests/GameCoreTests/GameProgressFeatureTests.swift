@@ -11,6 +11,7 @@ import SQLiteData
 import SwiftUI
 import Testing
 import TestSupport
+import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

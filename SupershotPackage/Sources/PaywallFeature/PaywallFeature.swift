@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct PaywallFeature {
@@ -31,7 +31,9 @@ package struct PaywallFeature {
     }
 
     package init(
-      catalog: Catalog = .idle, destination: Destination.State? = nil, operation: Operation? = nil,
+      catalog: Catalog = .idle,
+      destination: Destination.State? = nil,
+      operation: Operation? = nil,
       selectedProductID: UUID? = nil
     ) {
       self.catalog = catalog
@@ -107,29 +109,23 @@ package struct PaywallFeature {
         switch result {
         case let .success(.completed(access)):
           if access != .pro {
-            state.destination = .alert(
-              Self.alert(
-                "Purchase received",
-                "Pro access hasn’t been confirmed yet. Try Restore purchases in a moment."
-              )
-            )
+            state.destination = .alert(Self.alert(
+              "Purchase received",
+              "Pro access hasn’t been confirmed yet. Try Restore purchases in a moment."
+            ))
           }
           return .send(.customerInfoUpdated(access))
         case .success(.cancelled): return .none
         case .success(.pending):
-          state.destination = .alert(
-            Self.alert(
-              "Purchase pending",
-              "Your purchase is awaiting approval. Supershot Pro will unlock once it is approved."
-            )
-          )
+          state.destination = .alert(Self.alert(
+            "Purchase pending",
+            "Your purchase is awaiting approval. Supershot Pro will unlock once it is approved."
+          ))
         case .failure:
-          state.destination = .alert(
-            Self.alert(
-              "Unable to purchase",
-              "Your purchase couldn’t be completed. Check your connection and try again."
-            )
-          )
+          state.destination = .alert(Self.alert(
+            "Unable to purchase",
+            "Your purchase couldn’t be completed. Check your connection and try again."
+          ))
         }
         return .none
 
@@ -143,22 +139,16 @@ package struct PaywallFeature {
       case let .restoreResponse(.success(access)):
         state.operation = nil
         if access != .pro {
-          state.destination = .alert(
-            Self.alert(
-              "Restore purchases", "No Supershot Pro purchase was found."
-            )
-          )
+          state.destination = .alert(Self.alert("Restore purchases", "No Supershot Pro purchase was found."))
         }
         return .send(.customerInfoUpdated(access))
 
       case .restoreResponse(.failure):
         state.operation = nil
-        state.destination = .alert(
-          Self.alert(
-            "Unable to restore",
-            "Check your connection and try again. Use the Apple Account that made the purchase."
-          )
-        )
+        state.destination = .alert(Self.alert(
+          "Unable to restore",
+          "Check your connection and try again. Use the Apple Account that made the purchase."
+        ))
         return .none
 
       case .closeButtonTapped:

@@ -37,7 +37,8 @@ package nonisolated struct SubscriptionClient: Sendable {
     loadProducts: @escaping @Sendable () async throws -> [PaywallProduct] = { [] },
     purchase: @escaping @Sendable (UUID) async throws -> PaywallPurchaseOutcome = { _ in
       throw PaywallClientError.packageUnavailable
-    }, restore: @escaping @Sendable () async throws -> SubscriptionEntitlement = { .free }
+    },
+    restore: @escaping @Sendable () async throws -> SubscriptionEntitlement = { .free }
   ) {
     self.accessUpdates = accessUpdates
     self.currentAccess = currentAccess
@@ -122,9 +123,7 @@ private actor PaywallPackages {
       packages = [:]
       return []
     }
-    let eligibility = await Purchases.shared.checkTrialOrIntroDiscountEligibility(
-      productIdentifiers: offering.availablePackages.map(\.storeProduct.productIdentifier)
-    )
+    let eligibility = await Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: offering.availablePackages.map(\.storeProduct.productIdentifier))
     var loaded: [UUID: Package] = [:]
     let products = offering.availablePackages.map { package in
       let id = UUID()
@@ -136,9 +135,7 @@ private actor PaywallPackages {
       {
         switch discount.paymentMode {
         case .freeTrial:
-          intro = .freeTrial(
-            Self.period(discount.subscriptionPeriod, multiplier: discount.numberOfPeriods)
-          )
+          intro = .freeTrial(Self.period(discount.subscriptionPeriod, multiplier: discount.numberOfPeriods))
         case .payAsYouGo, .payUpFront:
           intro = .discounted(
             price: discount.localizedPriceString,
@@ -163,10 +160,15 @@ private actor PaywallPackages {
         product.localizedTitle
       }
       return PaywallProduct(
-        id: id, title: title, price: product.price,
-        localizedPrice: product.localizedPriceString, currencyCode: product.currencyCode,
-        period: period, isLifetime: package.packageType == .lifetime,
-        introductoryOffer: intro, localizedMonthlyEquivalent: product.localizedPricePerMonth
+        id: id,
+        title: title,
+        price: product.price,
+        localizedPrice: product.localizedPriceString,
+        currencyCode: product.currencyCode,
+        period: period,
+        isLifetime: package.packageType == .lifetime,
+        introductoryOffer: intro,
+        localizedMonthlyEquivalent: product.localizedPricePerMonth
       )
     }
     packages = loaded
@@ -178,7 +180,8 @@ private actor PaywallPackages {
     do {
       let result = try await Purchases.shared.purchase(package: package)
       return result.userCancelled
-        ? .cancelled : .completed(SubscriptionEntitlement(customerInfo: result.customerInfo))
+        ? .cancelled
+        : .completed(SubscriptionEntitlement(customerInfo: result.customerInfo))
     } catch {
       let error = error as NSError
       guard error.domain == ErrorCode.errorDomain else { throw error }

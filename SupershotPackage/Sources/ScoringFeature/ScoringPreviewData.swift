@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -10,10 +11,9 @@ import PermissionsFeature
 import PreviewSupport
 import SharedModels
 import SoundEffectsClient
-import Styleguide
 import SubscriptionClient
 import SwiftUI
-import WidgetSupport
+import UI
 
 package extension ScoringFeature.Team {
   static let previewRavens = Self(
@@ -65,9 +65,7 @@ package extension ScoringFeature.State {
 }
 
 @MainActor
-package func scoringPreviewStore(
-  _ state: ScoringFeature.State
-) -> StoreOf<ScoringFeature> {
+package func scoringPreviewStore(_ state: ScoringFeature.State) -> StoreOf<ScoringFeature> {
   Store(initialState: state) {
     ScoringFeature()
   } withDependencies: {

@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import FeatureFlagsClient
@@ -13,10 +14,10 @@ import SettingsFeature
 import SharedModels
 import Sharing
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamsFeature
+import UI
 
 @Reducer
 package struct AppFeature {
@@ -82,8 +83,7 @@ package struct AppFeature {
       Reduce { state, action in
         switch action {
         case let .deepLinkOpened(url):
-          guard isAppURL(url) else { return .none }
-          guard url.host == "new-game" || gameID(from: url) != nil else { return .none }
+          guard isAppURL(url), url.host == "new-game" || gameID(from: url) != nil else { return .none }
           guard state.hasCompletedWelcome else {
             state.pendingDeepLink = url
             return .none

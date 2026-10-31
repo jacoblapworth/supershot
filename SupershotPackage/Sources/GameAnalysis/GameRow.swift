@@ -1,6 +1,6 @@
 import Database
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameRow: View {
   package var game: GameListItem
@@ -11,5 +11,7 @@ package struct GameRow: View {
       .listRowInsets(.all, 0)
   }
 
-  package init(game: GameListItem) { self.game = game }
+  package init(game: GameListItem) {
+    self.game = game
+  }
 }

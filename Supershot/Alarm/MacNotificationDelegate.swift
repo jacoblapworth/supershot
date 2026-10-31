@@ -37,8 +37,10 @@
         // Going through the registered URL also reopens the single main window if it was closed.
         if let url = URL(string: "\(scheme)://game/\(gameID.uuidString)") {
           NSWorkspace.shared.open(
-            [url], withApplicationAt: Bundle.main.bundleURL,
-            configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil
+            [url],
+            withApplicationAt: Bundle.main.bundleURL,
+            configuration: NSWorkspace.OpenConfiguration(),
+            completionHandler: nil
           )
         }
         completionHandler()

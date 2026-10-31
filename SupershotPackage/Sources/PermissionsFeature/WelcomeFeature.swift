@@ -1,7 +1,7 @@
 import AlarmClient
 import ComposableArchitecture
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct WelcomeFeature {

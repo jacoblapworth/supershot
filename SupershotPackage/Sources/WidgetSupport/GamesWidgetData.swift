@@ -16,14 +16,28 @@ public nonisolated struct WidgetGame: Codable, Equatable, Identifiable, Sendable
   public var teamBColorHex: String
   public var teamBScore: Int
 
-  public var isPlanned: Bool { startedAt == nil && endedAt == nil }
-  public var isCompleted: Bool { endedAt != nil }
+  public var isPlanned: Bool {
+    startedAt == nil && endedAt == nil
+  }
+
+  public var isCompleted: Bool {
+    endedAt != nil
+  }
 
   public init(
-    id: UUID, createdAt: Date, scheduledAt: Date? = nil, startedAt: Date? = nil,
-    endedAt: Date? = nil, court: String? = nil, period: Int = 1,
-    teamAName: String, teamAColorHex: String, teamAScore: Int = 0,
-    teamBName: String, teamBColorHex: String, teamBScore: Int = 0
+    id: UUID,
+    createdAt: Date,
+    scheduledAt: Date? = nil,
+    startedAt: Date? = nil,
+    endedAt: Date? = nil,
+    court: String? = nil,
+    period: Int = 1,
+    teamAName: String,
+    teamAColorHex: String,
+    teamAScore: Int = 0,
+    teamBName: String,
+    teamBColorHex: String,
+    teamBScore: Int = 0
   ) {
     self.id = id
     self.createdAt = createdAt
@@ -58,12 +72,16 @@ public nonisolated enum GamesWidgetSelection {
       return now.timeIntervalSince(endedAt) <= recentHistory
     }.sorted { lhs, rhs in
       let group = priority(lhs)
-      if group != priority(rhs) { return group < priority(rhs) }
+      if group != priority(rhs) {
+        return group < priority(rhs)
+      }
       let left = lhs.scheduledAt ?? lhs.createdAt
       let right = rhs.scheduledAt ?? rhs.createdAt
       switch group {
       case 0, 3:
-        if left != right { return left < right }
+        if left != right {
+          return left < right
+        }
       case 1:
         if lhs.startedAt != rhs.startedAt {
           return (lhs.startedAt ?? .distantPast) < (rhs.startedAt ?? .distantPast)
@@ -73,7 +91,9 @@ public nonisolated enum GamesWidgetSelection {
           return (lhs.endedAt ?? .distantPast) > (rhs.endedAt ?? .distantPast)
         }
       default:
-        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        if lhs.createdAt != rhs.createdAt {
+          return lhs.createdAt < rhs.createdAt
+        }
       }
       return lhs.id.uuidString < rhs.id.uuidString
     }
@@ -102,13 +122,13 @@ public nonisolated enum GamesWidgetStore {
     URL(string: "\(scheme)://game/\(id.uuidString)")!
   }
 
-  public static var newGameURL: URL { URL(string: "\(scheme)://new-game")! }
+  public static var newGameURL: URL {
+    URL(string: "\(scheme)://new-game")!
+  }
 
   public static func fileURL() throws -> URL {
     let group = Bundle.main.object(forInfoDictionaryKey: "GamesWidgetAppGroup") as? String
-    guard let group, let container = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: group
-    ) else { throw CocoaError(.fileNoSuchFile) }
+    guard let group, let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { throw CocoaError(.fileNoSuchFile) }
     return container.appendingPathComponent("games-widget-v1.json")
   }
 

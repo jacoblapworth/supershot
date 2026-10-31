@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -6,7 +7,7 @@ import GameCore
 import GameServices
 import PreviewSupport
 import SharedModels
-import Styleguide
+import UI
 
 @Reducer
 package struct GameDetailFeature {

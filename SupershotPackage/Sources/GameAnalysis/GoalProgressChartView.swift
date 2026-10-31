@@ -1,3 +1,4 @@
+import AppUI
 import Charts
 import Database
 import GameCore
@@ -5,9 +6,8 @@ import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GoalProgressChartView: View {
   package var detail: GameAnalysis
@@ -74,37 +74,31 @@ package struct GoalProgressChartView: View {
       let elapsedSeconds =
         breakdown == .wholeGame
           ? orderedPeriods
-          .prefix { $0.position < period.position }
-          .reduce(periodElapsedSeconds) { $0 + $1.durationSeconds }
+            .prefix { $0.position < period.position }
+            .reduce(periodElapsedSeconds) { $0 + $1.durationSeconds }
           : periodElapsedSeconds
-      moments.append(
-        GoalProgressMoment(
-          id: goal.id,
-          elapsedSeconds: elapsedSeconds,
-          period: goal.period,
-          periodElapsedSeconds: periodElapsedSeconds,
-          teamAScore: teamAScore,
-          teamBScore: teamBScore
-        )
-      )
-      points.append(
-        GoalProgressPoint(
-          id: "\(goal.id)-teamA",
-          elapsedSeconds: elapsedSeconds,
-          score: teamAScore,
-          showsMarker: goal.scoringTeamSide == .teamA,
-          team: .teamA
-        )
-      )
-      points.append(
-        GoalProgressPoint(
-          id: "\(goal.id)-teamB",
-          elapsedSeconds: elapsedSeconds,
-          score: teamBScore,
-          showsMarker: goal.scoringTeamSide == .teamB,
-          team: .teamB
-        )
-      )
+      moments.append(GoalProgressMoment(
+        id: goal.id,
+        elapsedSeconds: elapsedSeconds,
+        period: goal.period,
+        periodElapsedSeconds: periodElapsedSeconds,
+        teamAScore: teamAScore,
+        teamBScore: teamBScore
+      ))
+      points.append(GoalProgressPoint(
+        id: "\(goal.id)-teamA",
+        elapsedSeconds: elapsedSeconds,
+        score: teamAScore,
+        showsMarker: goal.scoringTeamSide == .teamA,
+        team: .teamA
+      ))
+      points.append(GoalProgressPoint(
+        id: "\(goal.id)-teamB",
+        elapsedSeconds: elapsedSeconds,
+        score: teamBScore,
+        showsMarker: goal.scoringTeamSide == .teamB,
+        team: .teamB
+      ))
     }
 
     return GoalProgress(moments: moments, points: points)
@@ -158,16 +152,14 @@ package struct GoalProgressChartView: View {
 
           if breakdown == .wholeGame {
             ForEach(periodEndOffsets, id: \.self) { periodEndOffset in
-              RuleMark(
-                x: .value("Break", periodEndOffset)
-              )
-              .foregroundStyle(.secondary.opacity(0.7))
-              .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-              .annotation(position: .top) {
-                Text("Break")
-                  .font(.caption2)
-                  .foregroundStyle(.secondary)
-              }
+              RuleMark(x: .value("Break", periodEndOffset))
+                .foregroundStyle(.secondary.opacity(0.7))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                .annotation(position: .top) {
+                  Text("Break")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
             }
           }
 
@@ -213,11 +205,9 @@ package struct GoalProgressChartView: View {
           }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-          "\(breakdown.title) goal progression chart. \(detail.teamAName) has "
-            + "\(progress.finalTeamAScore) points. "
-            + "\(detail.teamBName) has \(progress.finalTeamBScore) points."
-        )
+        .accessibilityLabel("\(breakdown.title) goal progression chart. \(detail.teamAName) has "
+          + "\(progress.finalTeamAScore) points. "
+          + "\(detail.teamBName) has \(progress.finalTeamBScore) points.")
       }
 
       GoalProgressLegend(detail: detail)
@@ -280,10 +270,8 @@ private struct GoalProgressLegend: View {
     }
     .font(.caption.weight(.medium))
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "\(detail.teamAName) is shown in its team colour. "
-        + "\(detail.teamBName) is shown in its team colour."
-    )
+    .accessibilityLabel("\(detail.teamAName) is shown in its team colour. "
+      + "\(detail.teamBName) is shown in its team colour.")
   }
 
   private func label(_ name: String, color: Color) -> some View {

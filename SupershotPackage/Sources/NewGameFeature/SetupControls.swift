@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,11 +10,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package struct SetupStartBar: View {
   package var canPrepareScoring: Bool
@@ -76,10 +76,15 @@ package struct SetupStartBar: View {
   }
 
   package init(
-    canPrepareScoring: Bool, configurationSummary: String, errorMessage: String? = nil, isSaving: Bool,
+    canPrepareScoring: Bool,
+    configurationSummary: String,
+    errorMessage: String? = nil,
+    isSaving: Bool,
     prepareScoringTapped: @escaping () -> Void,
-    isScheduled: Bool = false, prepareScoringNowTapped: @escaping () -> Void = {},
-    retryTapped: @escaping () -> Void = {}, canRetry: Bool = false
+    isScheduled: Bool = false,
+    prepareScoringNowTapped: @escaping () -> Void = {},
+    retryTapped: @escaping () -> Void = {},
+    canRetry: Bool = false
   ) {
     self.canPrepareScoring = canPrepareScoring
     self.configurationSummary = configurationSummary
@@ -122,4 +127,3 @@ package struct SetupStartBar: View {
     prepareScoringTapped: {}
   )
 }
-

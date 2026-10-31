@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,11 +10,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package struct SetupTeamView: View {
   @Bindable package var store: StoreOf<SetupTeamFeature>
@@ -38,12 +38,10 @@ package struct SetupTeamView: View {
           .labelStyle(.iconOnly)
         }
         Section {
-          PaletteColorPicker(
-            color: Binding(
-              get: { store.previewTeam.color },
-              set: { store.send(.colorChanged($0)) }
-            )
-          )
+          PaletteColorPicker(color: Binding(
+            get: { store.previewTeam.color },
+            set: { store.send(.colorChanged($0)) }
+          ))
           if store.isSaving {
             ProgressView("Saving colour…")
           }
@@ -82,11 +80,9 @@ package struct SetupTeamView: View {
 }
 
 #Preview("Selected team") {
-  SetupTeamView(
-    store: Store(initialState: SetupTeamFeature.State(team: .previewRavens)) {
-      SetupTeamFeature()
-    }
-  )
+  SetupTeamView(store: Store(initialState: SetupTeamFeature.State(team: .previewRavens)) {
+    SetupTeamFeature()
+  })
 }
 
 #Preview("Save error") {

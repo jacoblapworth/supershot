@@ -1,11 +1,3 @@
-//
-//  CentrePassView.swift
-//  SupershotPackage
-//
-//  Created by J on 29/10/2026.
-//
-
-
 import AppSettings
 import ComposableArchitecture
 import Database

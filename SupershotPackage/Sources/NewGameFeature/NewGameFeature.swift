@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,11 +13,10 @@ import ScoringFeature
 import SharedModels
 import Sharing
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 @Reducer
 package struct NewGameFeature {
@@ -194,19 +194,27 @@ package struct NewGameFeature {
       let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration]
       return GameSetupDraft(
         game: Game(
-          id: gameID, startedAt: nil, teamAID: teamA.id,
-          teamABibColorHex: leftTeam.bibColor.hex(), teamBID: teamB.id,
+          id: gameID,
+          startedAt: nil,
+          teamAID: teamA.id,
+          teamABibColorHex: leftTeam.bibColor.hex(),
+          teamBID: teamB.id,
           teamBBibColorHex: rightTeam.bibColor.hex(),
           centrePassTeamID: firstCentrePass == .teamA ? teamA.id : teamB.id,
-          latitude: gameLocation?.latitude, longitude: gameLocation?.longitude,
+          latitude: gameLocation?.latitude,
+          longitude: gameLocation?.longitude,
           pointOfInterestName: gameLocation?.pointOfInterestName,
-          breakStartPolicy: timing.breakStartPolicy, createdAt: createdAt,
-          scheduledAt: scheduledAt, court: court.isEmpty ? nil : court,
+          breakStartPolicy: timing.breakStartPolicy,
+          createdAt: createdAt,
+          scheduledAt: scheduledAt,
+          court: court.isEmpty ? nil : court,
           division: division.isEmpty ? nil : division
         ),
         periods: periodIDs.enumerated().map { position, id in
           GamePeriod(
-            id: id, gameID: gameID, position: position,
+            id: id,
+            gameID: gameID,
+            position: position,
             durationSeconds: periodDuration.totalSeconds!,
             breakAfterDurationSeconds: position < breaks.count ? breaks[position].totalSeconds : nil
           )
@@ -516,9 +524,7 @@ package struct NewGameFeature {
         state.destination = nil
         return .none
 
-      case let .destination(
-        .presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(team)))))
-      ):
+      case let .destination(.presented(.teamConfiguration(.configuration(.delegate(.teamUpdated(team)))))):
         guard case let .teamConfiguration(configuration) = state.destination else { return .none }
         if configuration.side == .teamA {
           state.leftTeam.team = team
@@ -557,25 +563,19 @@ package struct NewGameFeature {
           state.describeGame.pendingTeams.first { $0.id == selected.id }
         }
         if let selectedTeam, proposal == nil {
-          state.destination = .teamConfiguration(
-            NewGameTeamConfiguration.State(
-              configuration: SetupTeamFeature.State(
-                team: selectedTeam,
-                excluding: excludedTeamIDs(for: side, state: state)
-              ),
-              side: side
-            )
-          )
-          return .none
-        }
-        state.destination = .teamPicker(
-          NewGameTeamPicker.State(
-            picker: TeamPickerFeature.State(
-              excluding: excludedTeamIDs(for: side, state: state), proposedTeam: proposal
+          state.destination = .teamConfiguration(NewGameTeamConfiguration.State(
+            configuration: SetupTeamFeature.State(
+              team: selectedTeam,
+              excluding: excludedTeamIDs(for: side, state: state)
             ),
             side: side
-          )
-        )
+          ))
+          return .none
+        }
+        state.destination = .teamPicker(NewGameTeamPicker.State(
+          picker: TeamPickerFeature.State(excluding: excludedTeamIDs(for: side, state: state), proposedTeam: proposal),
+          side: side
+        ))
         state.errorMessage = nil
         return .none
 

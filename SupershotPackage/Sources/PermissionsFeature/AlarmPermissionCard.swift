@@ -1,9 +1,9 @@
 import AlarmClient
 import ComposableArchitecture
 import FeatureFlagsClient
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 #if os(iOS)
   import UIKit
@@ -45,11 +45,9 @@ package struct AlarmPermissionCard: View {
               }
             }
             #if os(macOS)
-              Text(
-                "Get a notification when each quarter or break ends. Delivery follows your Mac’s notification and Focus settings."
-              )
-              .font(.subheadline)
-              .foregroundStyle(.secondary)
+              Text("Get a notification when each quarter or break ends. Delivery follows your Mac’s notification and Focus settings.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
             #else
               Text("Get an alarm when each quarter or break ends, even when your iPhone is locked.")
                 .font(.subheadline)
@@ -73,22 +71,17 @@ package struct AlarmPermissionCard: View {
               #endif
               Button("Open Settings") {
                 #if os(macOS)
-                  openURL(
-                    URL(
-                      string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension"
-                    )!
-                  )
+                  openURL(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
                 #else
                   openURL(URL(string: UIApplication.openSettingsURLString)!)
                 #endif
               }
               .buttonStyle(.bordered)
             } else {
-              Button(
-                !timerAlertsEnabled
-                  ? "Explore Supershot Pro"
-                  : store.errorMessage == nil ? enableTitle : "Try again"
-              ) {
+              Button(!timerAlertsEnabled
+                ? "Explore Supershot Pro"
+                : store.errorMessage == nil ? enableTitle : "Try again")
+              {
                 store.send(.enableButtonTapped)
               }
               .buttonStyle(.bordered)
@@ -120,8 +113,10 @@ package struct AlarmPermissionCard: View {
   }
 
   package init(
-    store: StoreOf<AlarmPermissionFeature>, proAccess: SubscriptionEntitlement,
-    hidesWhenAuthorized: Bool = false, showsHeading: Bool = true
+    store: StoreOf<AlarmPermissionFeature>,
+    proAccess: SubscriptionEntitlement,
+    hidesWhenAuthorized: Bool = false,
+    showsHeading: Bool = true
   ) {
     self.store = store
     self.proAccess = proAccess

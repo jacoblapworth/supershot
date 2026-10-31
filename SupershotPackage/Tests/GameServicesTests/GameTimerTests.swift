@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import Clocks
 import ComposableArchitecture
 import ConcurrencyExtras
@@ -16,12 +17,12 @@ import PermissionsFeature
 @testable import ScoringFeature
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 @testable import TeamsFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 #if os(iOS)
   internal import AlarmKit
@@ -47,12 +48,10 @@ extension SupershotTestSuite {
         $0.defaultDatabase = database
         $0.date = DateGenerator { now.value }
         $0.proSubscription = .pro
-        $0.alarmClient = AlarmClient(
-          scheduleAlarm: { snapshot in
-            plans.withValue { $0.append(ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)) }
-            return false
-          }, updateActivity: { _, _ in }, cancelAlarm: { _, _ in }, endActivity: { _ in }
-        )
+        $0.alarmClient = AlarmClient(scheduleAlarm: { snapshot in
+          plans.withValue { $0.append(ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)) }
+          return false
+        }, updateActivity: { _, _ in }, cancelAlarm: { _, _ in }, endActivity: { _ in })
       } operation: {
         let client = GameTimerClient.live
         _ = try await client.startOrResume(UUID(3), 0)
@@ -160,9 +159,11 @@ extension SupershotTestSuite {
     @Test(arguments: [1169.999, 1170, 1170.001])
     func breakBoundaryReconciliationStopsAtPausedPeriod(timestamp: Double) throws {
       let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)))
-      var progress = GameProgress(phaseIndex: 0,
-                                  countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1050)),
-                                  isAwaitingCentrePassConfirmation: false)
+      var progress = GameProgress(
+        phaseIndex: 0,
+        countdown: GameCountdown(endsAt: Date(timeIntervalSince1970: 1050)),
+        isAwaitingCentrePassConfirmation: false
+      )
       progress.reconcile(in: timeline, now: Date(timeIntervalSince1970: timestamp))
       #expect(progress.phaseIndex == (timestamp < 1170 ? 1 : 2))
       #expect(progress.countdown.elapsedSeconds == (timestamp < 1170 ? 119 : 0))
@@ -173,16 +174,23 @@ extension SupershotTestSuite {
     @Test
     func omittedBreakDoesNotAutomaticallyStartNextPeriod() throws {
       let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2)))
-      var progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(),
-                                  isAwaitingCentrePassConfirmation: false)
+      var progress = GameProgress(
+        phaseIndex: 0,
+        countdown: GameCountdown(),
+        isAwaitingCentrePassConfirmation: false
+      )
       progress.complete(in: timeline, boundary: Date(timeIntervalSince1970: 1000))
       #expect(progress.phaseIndex == 1)
       #expect(progress.countdown == GameCountdown())
       #expect(progress.isAwaitingCentrePassConfirmation)
       #if os(iOS)
         let state = GameActivityAttributes.ContentState(
-          centrePassTeamID: UUID(1), elapsedSeconds: 0,
-          phaseIndex: 1, phase: timeline.phases[1], teamAScore: 0, teamBScore: 0
+          centrePassTeamID: UUID(1),
+          elapsedSeconds: 0,
+          phaseIndex: 1,
+          phase: timeline.phases[1],
+          teamAScore: 0,
+          teamBScore: 0
         )
         #expect(!state.isInBreak)
         #expect(state.period == 2)
@@ -194,8 +202,11 @@ extension SupershotTestSuite {
       let end = Date(timeIntervalSince1970: 1050)
       for duration in [0, 120] {
         let timeline = try #require(GameTimeline(periods: testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: duration)))
-        let progress = GameProgress(phaseIndex: 0, countdown: GameCountdown(endsAt: end),
-                                    isAwaitingCentrePassConfirmation: false)
+        let progress = GameProgress(
+          phaseIndex: 0,
+          countdown: GameCountdown(endsAt: end),
+          isAwaitingCentrePassConfirmation: false
+        )
         let plan = ScheduledGameAlarm.plan(timeline: timeline, progress: progress.timing)
         #expect(plan.count == (duration > 0 ? 2 : 1))
         #expect(plan.first?.date == end)
@@ -204,8 +215,10 @@ extension SupershotTestSuite {
           #expect(plan.last?.date == end.addingTimeInterval(120))
           #expect(plan.last?.phase == .breakTime(after: testGamePeriodReference(number: 1), durationSeconds: 120))
         }
-        #expect(ScheduledGameAlarm.plan(timeline: timeline,
-                                        progress: GameTimingState(phaseIndex: 0, countdown: GameCountdown())).isEmpty)
+        #expect(ScheduledGameAlarm.plan(
+          timeline: timeline,
+          progress: GameTimingState(phaseIndex: 0, countdown: GameCountdown())
+        ).isEmpty)
       }
     }
 
@@ -220,8 +233,13 @@ extension SupershotTestSuite {
         try await responseClock.sleep(for: .seconds(1))
         var game = snapshot.game
         game.timerEndsAt = Date(timeIntervalSince1970: 1900)
-        return GameTimerUpdate(snapshot: GameSnapshot(game: game, goals: snapshot.goals,
-                                                      periods: snapshot.periods, teamA: snapshot.teamA, teamB: snapshot.teamB))
+        return GameTimerUpdate(snapshot: GameSnapshot(
+          game: game,
+          goals: snapshot.goals,
+          periods: snapshot.periods,
+          teamA: snapshot.teamA,
+          teamB: snapshot.teamB
+        ))
       }
       await store.send(.startTimerButtonTapped) { $0.operation = .starting(phaseIndex: 0) }
       await store.send(.startTimerButtonTapped)
@@ -701,8 +719,12 @@ extension SupershotTestSuite {
         await store.send(.editTimeButtonTapped) {
           $0.editedPhaseIndex = phaseIndex
           $0.controlsPresentation = .hiddenForTimeInput
-          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: remaining,
-                               allowedSeconds: 1 ... duration, selectedUnit: .seconds)
+          $0.timeInput = .init(
+            title: "Edit remaining time",
+            totalSeconds: remaining,
+            allowedSeconds: 1 ... duration,
+            selectedUnit: .seconds
+          )
         }
       #else
         await store.send(.editTimeButtonTapped) {
@@ -712,8 +734,12 @@ extension SupershotTestSuite {
         #expect(store.state.timeInput == nil)
         await store.send(.controlsSheetDidDismiss) {
           $0.controlsPresentation = .hiddenForTimeInput
-          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: remaining,
-                               allowedSeconds: 1 ... duration, selectedUnit: .seconds)
+          $0.timeInput = .init(
+            title: "Edit remaining time",
+            totalSeconds: remaining,
+            allowedSeconds: 1 ... duration,
+            selectedUnit: .seconds
+          )
         }
       #endif
     }
@@ -725,11 +751,7 @@ extension SupershotTestSuite {
       AlarmClient(
         scheduleAlarm: { snapshot in
           events.withValue {
-            $0.append(
-              .alarm(
-                snapshot.game.timerEndsAt
-              )
-            )
+            $0.append(.alarm(snapshot.game.timerEndsAt))
           }
           return alarmUnavailable
         },
