@@ -36,11 +36,9 @@ package struct TeamsListView: View {
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
       case let .scoring(scoringStore):
-        ScoringView(
-          store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall
-        )
+        ScoringView(store: scoringStore, proAccess: proAccess, isPresentingPaywall: isPresentingPaywall)
         #if os(iOS)
-        .toolbarVisibility(.hidden, for: .tabBar)
+          .toolbarVisibility(.hidden, for: .tabBar)
         #endif
       case let .teamDetail(teamDetailStore):
         TeamDetailView(
@@ -84,10 +82,8 @@ package struct TeamsListView: View {
         )
         .listRowBackground(Color.clear)
       } else if filteredTeams.isEmpty {
-        ContentUnavailableView.search(
-          text: store.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
-        .listRowBackground(Color.clear)
+        ContentUnavailableView.search(text: store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))
+          .listRowBackground(Color.clear)
       } else {
         ForEach(filteredTeams) { team in
           Button {
@@ -126,7 +122,8 @@ package struct TeamsListView: View {
   }
 
   package init(
-    proAccess: SubscriptionEntitlement, store: StoreOf<TeamsFeature>,
+    proAccess: SubscriptionEntitlement,
+    store: StoreOf<TeamsFeature>,
     isPresentingPaywall: Bool = false
   ) {
     self.proAccess = proAccess

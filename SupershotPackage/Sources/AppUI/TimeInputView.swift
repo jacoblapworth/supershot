@@ -16,10 +16,8 @@ package struct TimeInputView: View {
           Label(error, systemImage: "exclamationmark.triangle.fill")
             .foregroundStyle(.red)
         } else if !store.isValid {
-          Text(
-            "Enter a time between \(formatted(store.allowedSeconds.lowerBound)) and \(formatted(store.allowedSeconds.upperBound))."
-          )
-          .foregroundStyle(.red)
+          Text("Enter a time between \(formatted(store.allowedSeconds.lowerBound)) and \(formatted(store.allowedSeconds.upperBound)).")
+            .foregroundStyle(.red)
         }
         if store.isSaving {
           ProgressView("Saving time…")
@@ -172,9 +170,7 @@ private struct TimeInputKeypad: View {
     }
   }
 
-  private func key(
-    tint: Color = .primary, action: @escaping () -> Void, @ViewBuilder label: () -> some View
-  ) -> some View {
+  private func key(tint: Color = .primary, action: @escaping () -> Void, @ViewBuilder label: () -> some View) -> some View {
     Button(action: action) {
       label()
         .font(.title2.bold())
@@ -194,15 +190,11 @@ private struct TimeInputKeypad: View {
 #Preview {
   NavigationStack {}
     .sheet(isPresented: .constant(true)) {
-      TimeInputView(
-        store: Store(
-          initialState: TimeInputFeature.State(
-            title: "Quarter length",
-            totalSeconds: 480,
-            allowedSeconds: 1 ... 5999
-          )
-        ) { TimeInputFeature() }
-      )
+      TimeInputView(store: Store(initialState: TimeInputFeature.State(
+        title: "Quarter length",
+        totalSeconds: 480,
+        allowedSeconds: 1 ... 5999
+      )) { TimeInputFeature() })
     }
 }
 
@@ -219,10 +211,8 @@ private struct TimeInputKeypad: View {
 
   NavigationStack {}
     .sheet(isPresented: .constant(true)) {
-      TimeInputView(
-        store: Store(initialState: state) {
-          TimeInputFeature()
-        }
-      )
+      TimeInputView(store: Store(initialState: state) {
+        TimeInputFeature()
+      })
     }
 }

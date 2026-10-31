@@ -15,12 +15,10 @@ import TestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite(
-    .dependencies {
-      $0.uuid = .incrementing
-      $0.date.now = Date(timeIntervalSince1970: 10000)
-    }
-  )
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+    $0.date.now = Date(timeIntervalSince1970: 10000)
+  })
   struct PlannedGameTests {
     private func readySetup() async throws -> NewGameFeature.State {
       @Dependency(\.defaultDatabase) var database
@@ -47,7 +45,10 @@ extension SupershotTestSuite {
       state.scheduledAt = Date(timeIntervalSince1970: 20000)
       let store = Store(initialState: state) { NewGameFeature() }
       let actions: [NewGameFeature.Action] = [
-        .configurationChanged, .sceneBecameInactive, .closeButtonTapped, .saveGameButtonTapped,
+        .configurationChanged,
+        .sceneBecameInactive,
+        .closeButtonTapped,
+        .saveGameButtonTapped,
       ]
       await store.send(actions[actionIndex]).finish()
       let saved = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }

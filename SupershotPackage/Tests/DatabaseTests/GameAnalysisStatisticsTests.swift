@@ -33,9 +33,7 @@ extension SupershotTestSuite {
       expectNoDifference(empty.teamA.averageTimeToGoalSeconds, nil)
       expectNoDifference(
         empty.teamA.centrePass,
-        CentrePassStatistics(
-          conversions: 0, inferredTurnovers: 0, opportunities: 0
-        )
+        CentrePassStatistics(conversions: 0, inferredTurnovers: 0, opportunities: 0)
       )
       let oneSided = summarize(makeGoals([(true, 2), (true, 1)]))
       expectNoDifference(oneSided.teamA.biggestLead, 3)
@@ -97,8 +95,10 @@ extension SupershotTestSuite {
           Team(id: teamAID, name: "A")
           Team(id: teamBID, name: "B")
           Game(
-            id: UUID(-1), startedAt: Date(timeIntervalSince1970: 0),
-            teamAID: teamAID, teamBID: teamBID
+            id: UUID(-1),
+            startedAt: Date(timeIntervalSince1970: 0),
+            teamAID: teamAID,
+            teamBID: teamBID
           )
         }
         try GamePeriod.insert { periods }.execute(db)
@@ -122,9 +122,7 @@ extension SupershotTestSuite {
 
       try await database.write { db in
         try Game.find(UUID(-1)).update { $0.endedAt = #bind(Date(timeIntervalSince1970: 1000)) }
-          .execute(
-            db
-          )
+          .execute(db)
       }
       let completed = try await database.read {
         try GameDetailRequest(gameID: UUID(-1)).fetch($0).detail
@@ -150,9 +148,13 @@ extension SupershotTestSuite {
     private func makeGoals(_ events: [(Bool, Int)]) -> [Goal] {
       events.enumerated().map { index, event in
         Goal(
-          id: UUID(-100 - index), gameID: UUID(-1), gamePeriodID: UUID(-10),
-          centrePassTeamID: teamAID, teamID: event.0 ? teamAID : teamBID,
-          elapsedSeconds: (index + 1) * 10, points: event.1,
+          id: UUID(-100 - index),
+          gameID: UUID(-1),
+          gamePeriodID: UUID(-10),
+          centrePassTeamID: teamAID,
+          teamID: event.0 ? teamAID : teamBID,
+          elapsedSeconds: (index + 1) * 10,
+          points: event.1,
           createdAt: Date(timeIntervalSince1970: Double(index))
         )
       }

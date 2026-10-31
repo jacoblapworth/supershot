@@ -39,7 +39,12 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: [
-      ScoringPreviewScenario.running, .runningBreak, .pausedBreak, .manualBreak, .pausing, .skipping,
+      ScoringPreviewScenario.running,
+      .runningBreak,
+      .pausedBreak,
+      .manualBreak,
+      .pausing,
+      .skipping,
     ])
     func noQuarterStatusAppearsAboveGoals(_ scenario: ScoringPreviewScenario) {
       expectNoDifference(scenario.state.scoringToolbarState.content, .none)
@@ -57,8 +62,12 @@ extension SupershotTestSuite {
         #expect(store.state.timeInput == nil)
         await store.send(.controlsSheetDidDismiss) {
           $0.controlsPresentation = .hiddenForTimeInput
-          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: duration,
-                               allowedSeconds: 1 ... duration, selectedUnit: .seconds)
+          $0.timeInput = .init(
+            title: "Edit remaining time",
+            totalSeconds: duration,
+            allowedSeconds: 1 ... duration,
+            selectedUnit: .seconds
+          )
         }
         await store.send(.timeInput(.presented(.cancelButtonTapped)))
         await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }
@@ -171,9 +180,17 @@ extension SupershotTestSuite {
       let a = Team(id: ready.teamA.id, name: ready.teamA.name)
       let b = Team(id: ready.teamB.id, name: ready.teamB.name)
       let snapshot = GameSnapshot(
-        game: Game(id: ready.gameID, startedAt: nil, teamAID: a.id, teamBID: b.id,
-                   centrePassTeamID: ready.centrePassTeamID),
-        goals: [], periods: ready.periods, teamA: a, teamB: b
+        game: Game(
+          id: ready.gameID,
+          startedAt: nil,
+          teamAID: a.id,
+          teamBID: b.id,
+          centrePassTeamID: ready.centrePassTeamID
+        ),
+        goals: [],
+        periods: ready.periods,
+        teamA: a,
+        teamB: b
       )
       let store = TestStore(initialState: ready) { ScoringFeature() } withDependencies: {
         $0.gameTimer.startOrResume = { _, _ in throw CocoaError(.fileWriteNoPermission) }
@@ -199,8 +216,13 @@ extension SupershotTestSuite {
       let gameID = ready.gameID
       let a = Team(id: ready.teamA.id, name: ready.teamA.name)
       let b = Team(id: ready.teamB.id, name: ready.teamB.name)
-      let game = Game(id: gameID, startedAt: nil, teamAID: a.id,
-                      teamBID: b.id, centrePassTeamID: ready.centrePassTeamID)
+      let game = Game(
+        id: gameID,
+        startedAt: nil,
+        teamAID: a.id,
+        teamBID: b.id,
+        centrePassTeamID: ready.centrePassTeamID
+      )
       let periods = ready.periods
       try await database.write { db in
         try Team.insert { a; b }.execute(db)

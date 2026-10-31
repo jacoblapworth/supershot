@@ -88,10 +88,9 @@ public nonisolated struct GameSessionClient: Sendable {
     })
   }
 
-  public init(
-    execute:
-    @escaping @Sendable (Game.ID, GameSessionCommand, Date) async throws -> GameSessionUpdate
-  ) {
+  public init(execute:
+    @escaping @Sendable (Game.ID, GameSessionCommand, Date) async throws -> GameSessionUpdate)
+  {
     self.execute = execute
   }
 }
@@ -115,7 +114,9 @@ private nonisolated enum GameSessionClientKey: DependencyKey {
 
 package nonisolated enum GameSessionTransaction {
   package static func execute(
-    _ db: Database, gameID: Game.ID, command: GameSessionCommand,
+    _ db: Database,
+    gameID: Game.ID,
+    command: GameSessionCommand,
     now: Date
   ) throws -> GameSessionUpdate {
     let stored = try GameSnapshot.fetch(db, gameID: gameID)
@@ -168,8 +169,10 @@ package nonisolated enum GameSessionTransaction {
           outcome = .rejected(.invalidCorrection)
         } else {
           let result = game.timing.apply(
-            timingCommand, in: stored.timeline,
-            expectedPhaseIndex: expectedPhaseIndex, now: commandDate
+            timingCommand,
+            in: stored.timeline,
+            expectedPhaseIndex: expectedPhaseIndex,
+            now: commandDate
           )
           game.progress.apply(result.transitions)
           if result.status == .applied, timingCommand == .startOrResume,
@@ -192,14 +195,18 @@ package nonisolated enum GameSessionTransaction {
         } else if goalCommand.expectedPhaseIndex != game.currentPhaseIndex {
           outcome = .rejected(.stalePhase)
         } else if let opportunity = scoringOpportunity(
-          game: game, timeline: stored.timeline,
-          requestedContext: goalCommand.scoringContext, now: commandDate
+          game: game,
+          timeline: stored.timeline,
+          requestedContext: goalCommand.scoringContext,
+          now: commandDate
         ),
           goalCommand.source != .liveActivity || !opportunity.isLate
         {
           let goal = try game.scoring.recordGoal(
-            goalCommand, opportunity: opportunity,
-            teamAID: stored.teamA.id, teamBID: stored.teamB.id
+            goalCommand,
+            opportunity: opportunity,
+            teamAID: stored.teamA.id,
+            teamBID: stored.teamB.id
           )
           try Goal.insert { goal }.execute(db)
           outcome = .applied
@@ -231,7 +238,8 @@ package nonisolated enum GameSessionTransaction {
         if stored.timeline.precedingPeriod(at: game.currentPhaseIndex)?.number == completedPeriod {
           game.scoring.resolveCentrePass(
             taken: taken,
-            teamAID: stored.teamA.id, teamBID: stored.teamB.id
+            teamAID: stored.teamA.id,
+            teamBID: stored.teamB.id
           )
           outcome = game == stored.game ? .unchanged : .applied
         } else {
@@ -262,20 +270,25 @@ package nonisolated enum GameSessionTransaction {
   }
 
   private static func scoringOpportunity(
-    game: Game, timeline: GameTimeline,
-    requestedContext: GameScoringContext?, now: Date
+    game: Game,
+    timeline: GameTimeline,
+    requestedContext: GameScoringContext?,
+    now: Date
   ) -> ScoringOpportunity? {
     guard let phase = timeline.phase(at: game.currentPhaseIndex),
           let context = GameScoringContext.resolve(
-            phase: phase, countdown: game.countdown,
+            phase: phase,
+            countdown: game.countdown,
             isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
-            lateScoringPeriodNumber: game.lateScoringPeriodNumber, now: now
+            lateScoringPeriodNumber: game.lateScoringPeriodNumber,
+            now: now
           ),
           context == (requestedContext ?? .livePeriod(number: phase.associatedPeriod.number)),
           let period = timeline.scoringPeriod(for: context)
     else { return nil }
     return ScoringOpportunity(
-      period: period, context: context,
+      period: period,
+      context: context,
       elapsedSeconds: game.countdown.projection(durationSeconds: period.durationSeconds, now: now)
         .elapsedSeconds
     )

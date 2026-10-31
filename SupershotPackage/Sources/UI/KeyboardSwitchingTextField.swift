@@ -150,8 +150,10 @@ package struct KeyboardSwitchingTextField: View {
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiViewController: KeyboardTextFieldController, context _: Context) -> CGSize? {
-      CGSize(width: proposal.width ?? uiViewController.textField.intrinsicContentSize.width,
-             height: max(30, uiViewController.textField.intrinsicContentSize.height))
+      CGSize(
+        width: proposal.width ?? uiViewController.textField.intrinsicContentSize.width,
+        height: max(30, uiViewController.textField.intrinsicContentSize.height)
+      )
     }
 
     static func dismantleUIViewController(_ controller: KeyboardTextFieldController, coordinator: Coordinator) {
@@ -276,8 +278,10 @@ package struct KeyboardSwitchingTextField: View {
       // SwiftUI echoes each edit back. Reassigning it would disturb selection and IME composition.
       guard textField.text != text, textField.markedTextRange == nil else { return }
       let selection = textField.selectedTextRange.map {
-        (textField.offset(from: textField.beginningOfDocument, to: $0.start),
-         textField.offset(from: textField.beginningOfDocument, to: $0.end))
+        (
+          textField.offset(from: textField.beginningOfDocument, to: $0.start),
+          textField.offset(from: textField.beginningOfDocument, to: $0.end)
+        )
       }
       textField.text = text
       if let (start, end) = selection,
@@ -403,32 +407,32 @@ package struct KeyboardSwitchingTextField: View {
     }
   }
 
-private struct KeyboardAccessoryView: View {
-  let options: [KeyboardOption]
-  let selectedID: String
-  let select: (String) -> Void
-  
-  var body: some View {
-    HStack(spacing: 0) {
-      Picker("Keyboard", selection: Binding(get: { selectedID }, set: { id in
-        select(id)
-      })) {
-        ForEach(options) { option in
-          Label(option.title, systemImage: option.systemImage)
-            .tag(option.id)
+  private struct KeyboardAccessoryView: View {
+    let options: [KeyboardOption]
+    let selectedID: String
+    let select: (String) -> Void
+
+    var body: some View {
+      HStack(spacing: 0) {
+        Picker("Keyboard", selection: Binding(get: { selectedID }, set: { id in
+          select(id)
+        })) {
+          ForEach(options) { option in
+            Label(option.title, systemImage: option.systemImage)
+              .tag(option.id)
+          }
         }
+        .labelStyle(.iconOnly)
+        .pickerStyle(.segmented)
+        .fixedSize()
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
       }
-      .labelStyle(.iconOnly)
-      .pickerStyle(.segmented)
-      .fixedSize()
-      .padding(8)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .glassEffect(.regular, in: .rect(cornerRadius: 16))
-      .padding(.horizontal, 16)
-      .padding(.vertical, 6)
     }
   }
-}
 #endif
 
 #Preview {

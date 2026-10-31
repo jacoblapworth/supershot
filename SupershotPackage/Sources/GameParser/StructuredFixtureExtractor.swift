@@ -32,9 +32,7 @@ nonisolated enum StructuredFixtureExtractor {
         guard metadataRegex.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) == nil
         else { return nil }
       }
-      fixtures.append(ExtractedFixture(
-        source: row, firstTeam: first, secondTeam: second, time: String(row[timeRange])
-      ))
+      fixtures.append(ExtractedFixture(source: row, firstTeam: first, secondTeam: second, time: String(row[timeRange])))
     }
     return fixtures
   }

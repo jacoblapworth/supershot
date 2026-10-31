@@ -110,10 +110,8 @@ private struct QuarterScoreBreakdown: View {
           .font(.system(.body, design: .rounded, weight: .semibold))
           .monospacedDigit()
           .accessibilityElement(children: .ignore)
-          .accessibilityLabel(
-            "Quarter \(quarter.period), \(teamAName) \(quarter.teamAQuarterScore), "
-              + "\(teamBName) \(quarter.teamBQuarterScore)"
-          )
+          .accessibilityLabel("Quarter \(quarter.period), \(teamAName) \(quarter.teamAQuarterScore), "
+            + "\(teamBName) \(quarter.teamBQuarterScore)")
         }
       }
     }

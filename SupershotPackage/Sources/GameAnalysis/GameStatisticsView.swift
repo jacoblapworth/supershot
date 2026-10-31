@@ -65,13 +65,11 @@ package struct GameStatisticsView: View {
 
         ScoreDifferenceChartView(detail: detail, breakdown: breakdown)
 
-        Text(
-          "Conversion and turnovers are inferred from which team scored after each centre pass. "
-            + "Goal time starts at the previous goal or quarter start."
-        )
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text("Conversion and turnovers are inferred from which team scored after each centre pass. "
+          + "Goal time starts at the previous goal or quarter start.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
       .padding()
       .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -119,10 +117,8 @@ private struct StatisticComparisonRow: View {
       )
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "\(metric.rawValue), \(teamAName), \(metric.accessibleText(teamAStatistics)), "
-        + "\(teamBName), \(metric.accessibleText(teamBStatistics))"
-    )
+    .accessibilityLabel("\(metric.rawValue), \(teamAName), \(metric.accessibleText(teamAStatistics)), "
+      + "\(teamBName), \(metric.accessibleText(teamBStatistics))")
   }
 }
 
@@ -191,9 +187,7 @@ private struct TeamStatisticsHeader: View {
 #Preview("Quarter comparison with unavailable centre passes") {
   var analysis = CompletedGameDetail.previewCompleted.analysis
   analysis.statisticsByPeriod[1] = CompletedGameStatistics(
-    teamA: TeamGameStatistics(
-      averageTimeToGoalSeconds: 20.25, biggestLead: 4, longestScoringRun: 2
-    ),
+    teamA: TeamGameStatistics(averageTimeToGoalSeconds: 20.25, biggestLead: 4, longestScoringRun: 2),
     teamB: TeamGameStatistics(averageTimeToGoalSeconds: 45.75, biggestLead: 1, longestScoringRun: 3)
   )
   return ScrollView {

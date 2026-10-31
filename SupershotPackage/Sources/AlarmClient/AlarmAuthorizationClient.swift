@@ -48,9 +48,7 @@ public nonisolated extension AlarmAuthorizationClient {
     #if os(iOS)
       Self(
         request: {
-          try await AlarmAuthorizationStatus(
-            AlarmManager.shared.requestAuthorization()
-          )
+          try await AlarmAuthorizationStatus(AlarmManager.shared.requestAuthorization())
         },
         status: {
           AlarmAuthorizationStatus(AlarmManager.shared.authorizationState)

@@ -38,7 +38,8 @@ package struct WelcomeView: View {
     .background {
       LinearGradient(
         colors: [Color.accentColor.opacity(0.16), .clear],
-        startPoint: .top, endPoint: .center
+        startPoint: .top,
+        endPoint: .center
       )
       .ignoresSafeArea()
     }

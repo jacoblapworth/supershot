@@ -71,9 +71,7 @@ struct GameLiveActivity: Widget {
     .supplementalActivityFamilies([.small, .medium])
   }
 
-  private func phaseLabel(
-    _ state: GameActivityAttributes.ContentState
-  ) -> Text {
+  private func phaseLabel(_ state: GameActivityAttributes.ContentState) -> Text {
     state.isInBreak ? Text("Break") : Text("Quarter \(state.period)")
   }
 
@@ -257,12 +255,10 @@ private struct CentrePassIndicator: View {
   var direction: Edge
 
   var body: some View {
-    Image(
-      systemName: direction == .leading
-        ? "arrow.left.circle.fill"
-        : "arrow.right.circle.fill"
-    )
-    .accessibilityLabel("Current centre pass")
+    Image(systemName: direction == .leading
+      ? "arrow.left.circle.fill"
+      : "arrow.right.circle.fill")
+      .accessibilityLabel("Current centre pass")
   }
 }
 
@@ -276,9 +272,7 @@ private struct TimerText: View {
         .lineLimit(1)
     } else if let timerEndsAt = state.timerEndsAt {
       Text(
-        timerInterval: timerEndsAt.addingTimeInterval(
-          -TimeInterval(state.remainingSeconds)
-        ) ... timerEndsAt,
+        timerInterval: timerEndsAt.addingTimeInterval(-TimeInterval(state.remainingSeconds)) ... timerEndsAt,
         countsDown: true,
         showsHours: false
       )
@@ -311,10 +305,8 @@ private struct GoalButton: View {
     .buttonStyle(.glassProminent)
     .tint(isTeamA ? context.attributes.teamAColor : context.attributes.teamBColor)
     .accessibilityLabel("Goal for \(isTeamA ? context.attributes.teamAName : context.attributes.teamBName)")
-    .disabled(
-      context.isStale
-        || !context.state.canScoreGoal
-    )
+    .disabled(context.isStale
+      || !context.state.canScoreGoal)
   }
 }
 
@@ -387,13 +379,14 @@ private extension GameActivityAttributes.ContentState {
   static func breakPreview(elapsed: Int, running: Bool) -> Self {
     Self(
       centrePassTeamID: GameActivityAttributes.preview.teamAID,
-      elapsedSeconds: elapsed, phaseIndex: 3,
-      phase: .breakTime(
-        after: GamePeriodReference(id: UUID(), number: 2), durationSeconds: 120
-      ),
-      teamAScore: 18, teamBScore: 16,
+      elapsedSeconds: elapsed,
+      phaseIndex: 3,
+      phase: .breakTime(after: GamePeriodReference(id: UUID(), number: 2), durationSeconds: 120),
+      teamAScore: 18,
+      teamBScore: 16,
       timerEndsAt: running ? Date.now.addingTimeInterval(TimeInterval(120 - elapsed)) : nil,
-      isAwaitingCentrePassConfirmation: true, lateScoringPeriodNumber: 2
+      isAwaitingCentrePassConfirmation: true,
+      lateScoringPeriodNumber: 2
     )
   }
 

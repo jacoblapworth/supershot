@@ -19,10 +19,18 @@ public struct GameCardView: View {
         featuredTeams
       } else {
         HStack(spacing: 12) {
-          team(name: game.teamAName, score: game.teamAScore,
-               opponentScore: game.teamBScore, alignment: .leading)
-          team(name: game.teamBName, score: game.teamBScore,
-               opponentScore: game.teamAScore, alignment: .trailing)
+          team(
+            name: game.teamAName,
+            score: game.teamAScore,
+            opponentScore: game.teamBScore,
+            alignment: .leading
+          )
+          team(
+            name: game.teamBName,
+            score: game.teamBScore,
+            opponentScore: game.teamAScore,
+            alignment: .trailing
+          )
         }
         HStack(spacing: 6) {
           Text(dateText)
@@ -42,8 +50,10 @@ public struct GameCardView: View {
     .frame(maxWidth: .infinity, maxHeight: compact ? .infinity : nil)
     .background {
       LinearGradient(
-        stops: [.init(color: Color(hex: game.teamAColorHex), location: 0.2),
-                .init(color: Color(hex: game.teamBColorHex), location: 0.8)],
+        stops: [
+          .init(color: Color(hex: game.teamAColorHex), location: 0.2),
+          .init(color: Color(hex: game.teamBColorHex), location: 0.8),
+        ],
         startPoint: featured ? .top : .leading,
         endPoint: featured ? .bottom : .trailing
       )
@@ -86,9 +96,7 @@ public struct GameCardView: View {
     }
   }
 
-  private func team(
-    name: String, score: Int, opponentScore: Int, alignment: HorizontalAlignment
-  ) -> some View {
+  private func team(name: String, score: Int, opponentScore: Int, alignment: HorizontalAlignment) -> some View {
     VStack(alignment: alignment, spacing: 4) {
       if compact {
         HStack(spacing: 6) {
@@ -172,9 +180,13 @@ private enum GameCardPreviewData {
   static var planned: WidgetGame {
     WidgetGame(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-      createdAt: date, scheduledAt: date, court: "2",
-      teamAName: "Silver Ferns", teamAColorHex: "#007AFF",
-      teamBName: "Diamonds", teamBColorHex: "#FFCB00"
+      createdAt: date,
+      scheduledAt: date,
+      court: "2",
+      teamAName: "Silver Ferns",
+      teamAColorHex: "#007AFF",
+      teamBName: "Diamonds",
+      teamBColorHex: "#FFCB00"
     )
   }
 

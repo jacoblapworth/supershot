@@ -21,9 +21,7 @@ package nonisolated struct GameSetupDraft: Equatable, Sendable {
     case invalidSetup
   }
 
-  package func save(
-    _ db: Database, requiresExistingGame: Bool = false
-  ) throws -> GameSnapshot {
+  package func save(_ db: Database, requiresExistingGame: Bool = false) throws -> GameSnapshot {
     guard game.teamAID != game.teamBID, GameTimeline(periods: periods) != nil,
           periods.allSatisfy({ $0.gameID == game.id })
     else { throw SaveError.invalidSetup }

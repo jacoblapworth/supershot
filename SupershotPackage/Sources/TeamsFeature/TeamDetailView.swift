@@ -158,9 +158,7 @@ private struct TeamDetailLoadingView: View {
   }
   NavigationStack {
     TeamDetailView(
-      store: Store(
-        initialState: TeamDetailFeature.State(teamID: UUID(1))
-      ) {
+      store: Store(initialState: TeamDetailFeature.State(teamID: UUID(1))) {
         TeamDetailFeature()
       },
       isResumingGame: false
@@ -180,9 +178,7 @@ private struct TeamDetailLoadingView: View {
   }
   NavigationStack {
     TeamDetailView(
-      store: Store(
-        initialState: TeamDetailFeature.State(teamID: UUID(50))
-      ) {
+      store: Store(initialState: TeamDetailFeature.State(teamID: UUID(50))) {
         TeamDetailFeature()
       },
       isResumingGame: false
@@ -196,9 +192,7 @@ private struct TeamDetailLoadingView: View {
   }
   NavigationStack {
     TeamDetailView(
-      store: Store(
-        initialState: TeamDetailFeature.State(teamID: UUID(99))
-      ) {
+      store: Store(initialState: TeamDetailFeature.State(teamID: UUID(99))) {
         TeamDetailFeature()
       },
       isResumingGame: false

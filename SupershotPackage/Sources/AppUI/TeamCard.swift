@@ -81,9 +81,7 @@ private struct TeamCardBackground: View {
     backgroundColor
       .overlay {
         if let color {
-          TimelineView(
-            .animation(minimumInterval: 1 / 15, paused: reduceMotion || scenePhase != .active)
-          ) { context in
+          TimelineView(.animation(minimumInterval: 1 / 15, paused: reduceMotion || scenePhase != .active)) { context in
             let phase = reduceMotion ? 0 : context.date.timeIntervalSinceReferenceDate / 12
             GeometryReader { geometry in
               let size = geometry.size

@@ -37,15 +37,9 @@
   }
 
   #Preview {
-    MacTimeInputFields(
-      store: Store(
-        initialState: TimeInputFeature.State(
-          title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999
-        )
-      ) {
-        TimeInputFeature()
-      }
-    )
+    MacTimeInputFields(store: Store(initialState: TimeInputFeature.State(title: "Quarter length", totalSeconds: 480, allowedSeconds: 1 ... 5999)) {
+      TimeInputFeature()
+    })
     .padding()
   }
 #endif

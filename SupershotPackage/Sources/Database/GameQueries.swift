@@ -36,10 +36,20 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   }
 
   package init(
-    currentQuarter: Int = 1, endedAt: Date? = nil, id: Game.ID, periods: [GamePeriod] = [],
-    startedAt: Date?, teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
-    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int,
-    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil
+    currentQuarter: Int = 1,
+    endedAt: Date? = nil,
+    id: Game.ID,
+    periods: [GamePeriod] = [],
+    startedAt: Date?,
+    teamABibColorHex: String = "#007AFF",
+    teamAName: String,
+    teamAScore: Int,
+    teamBBibColorHex: String = "#FF3B30",
+    teamBName: String,
+    teamBScore: Int,
+    createdAt: Date? = nil,
+    scheduledAt: Date? = nil,
+    court: String? = nil
   ) {
     self.currentQuarter = currentQuarter
     self.endedAt = endedAt
@@ -77,16 +87,14 @@ package nonisolated struct GoalTimeline: Equatable, Sendable {
 
   package static func empty(through period: Int) -> Self {
     let finalPeriod = max(period, 1)
-    return Self(
-      quarters: (1 ... finalPeriod).reversed().map {
-        GoalTimelineQuarter(
-          goals: [],
-          period: $0,
-          teamAQuarterScore: 0,
-          teamBQuarterScore: 0
-        )
-      }
-    )
+    return Self(quarters: (1 ... finalPeriod).reversed().map {
+      GoalTimelineQuarter(
+        goals: [],
+        period: $0,
+        teamAQuarterScore: 0,
+        teamBQuarterScore: 0
+      )
+    })
   }
 
   package init(quarters: [GoalTimelineQuarter] = []) {
@@ -104,9 +112,7 @@ package nonisolated struct GoalTimelineQuarter: Equatable, Identifiable, Sendabl
   package let teamAQuarterScore: Int
   package let teamBQuarterScore: Int
 
-  package init(
-    goals: [GoalTimelineItem], period: Int, teamAQuarterScore: Int, teamBQuarterScore: Int
-  ) {
+  package init(goals: [GoalTimelineItem], period: Int, teamAQuarterScore: Int, teamBQuarterScore: Int) {
     self.goals = goals
     self.period = period
     self.teamAQuarterScore = teamAQuarterScore
@@ -132,9 +138,15 @@ package nonisolated struct GoalTimelineItem: Equatable, Identifiable, Sendable {
   package let teamBScore: Int
 
   package init(
-    clockSecondsRemaining: Int, id: Goal.ID, period: Int, points: Int,
-    scoringTeamBibColorHex: String = "#007AFF", scoringTeamName: String,
-    scoringTeamSide: GoalTimelineTeamSide, teamAScore: Int, teamBScore: Int
+    clockSecondsRemaining: Int,
+    id: Goal.ID,
+    period: Int,
+    points: Int,
+    scoringTeamBibColorHex: String = "#007AFF",
+    scoringTeamName: String,
+    scoringTeamSide: GoalTimelineTeamSide,
+    teamAScore: Int,
+    teamBScore: Int
   ) {
     self.clockSecondsRemaining = clockSecondsRemaining
     self.id = id
@@ -167,8 +179,10 @@ package nonisolated struct TeamGameStatistics: Equatable, Sendable {
   package var longestScoringRun = 0
 
   package init(
-    averageTimeToGoalSeconds: Double? = nil, centrePass: CentrePassStatistics? = nil,
-    biggestLead: Int = 0, longestScoringRun: Int = 0
+    averageTimeToGoalSeconds: Double? = nil,
+    centrePass: CentrePassStatistics? = nil,
+    biggestLead: Int = 0,
+    longestScoringRun: Int = 0
   ) {
     self.averageTimeToGoalSeconds = averageTimeToGoalSeconds
     self.centrePass = centrePass
@@ -203,12 +217,15 @@ package nonisolated struct GameAnalysis: Equatable, Sendable {
   package var teamBName = ""
 
   package init(
-    goalTimeline: GoalTimeline = GoalTimeline(), isComplete: Bool = false,
+    goalTimeline: GoalTimeline = GoalTimeline(),
+    isComplete: Bool = false,
     periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
-    teamABibColorHex: String = "#007AFF", teamAName: String = "",
-    teamBBibColorHex: String = "#FF3B30", teamBName: String = ""
+    teamABibColorHex: String = "#007AFF",
+    teamAName: String = "",
+    teamBBibColorHex: String = "#FF3B30",
+    teamBName: String = ""
   ) {
     self.goalTimeline = goalTimeline
     self.isComplete = isComplete
@@ -269,13 +286,22 @@ package nonisolated struct CompletedGameDetail: Equatable, Identifiable, Sendabl
   }
 
   package init(
-    endedAt: Date, goalTimeline: GoalTimeline, id: Game.ID, location: GameLocation? = nil,
-    periods: [GamePeriod] = [], startedAt: Date,
+    endedAt: Date,
+    goalTimeline: GoalTimeline,
+    id: Game.ID,
+    location: GameLocation? = nil,
+    periods: [GamePeriod] = [],
+    startedAt: Date,
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
-    teamABibColorHex: String = "#007AFF", teamAName: String, teamAScore: Int,
-    teamBBibColorHex: String = "#FF3B30", teamBName: String, teamBScore: Int,
-    scheduledAt: Date? = nil, court: String? = nil
+    teamABibColorHex: String = "#007AFF",
+    teamAName: String,
+    teamAScore: Int,
+    teamBBibColorHex: String = "#FF3B30",
+    teamBName: String,
+    teamBScore: Int,
+    scheduledAt: Date? = nil,
+    court: String? = nil
   ) {
     self.scheduledAt = scheduledAt
     self.court = court
@@ -336,7 +362,8 @@ public nonisolated struct GameSnapshot: Equatable, Sendable {
   public var scoringContext: GameScoringContext? {
     guard !game.isPlanned else { return nil }
     return GameScoringContext.resolve(
-      phase: currentPhase, countdown: game.countdown,
+      phase: currentPhase,
+      countdown: game.countdown,
       isAwaitingCentrePassConfirmation: game.isAwaitingCentrePassConfirmation,
       lateScoringPeriodNumber: game.lateScoringPeriodNumber
     )
@@ -351,9 +378,7 @@ public nonisolated struct GameSnapshot: Equatable, Sendable {
   }
 
   public var canUndoDuringConfirmation: Bool {
-    game.scoring.canUndoDuringConfirmation(
-      latestGoal: goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }), periods: periods
-    )
+    game.scoring.canUndoDuringConfirmation(latestGoal: goals.max(by: { ($0.createdAt, $0.id) < ($1.createdAt, $1.id) }), periods: periods)
   }
 
   public var teamAScore: Int {
@@ -395,9 +420,7 @@ public nonisolated struct GameSnapshot: Equatable, Sendable {
       try Goal
         .where { $0.gameID.eq(gameID) }
         .fetchAll(db)
-    let positionsByPeriodID = Dictionary(
-      uniqueKeysWithValues: periods.map { ($0.id, $0.position) }
-    )
+    let positionsByPeriodID = Dictionary(uniqueKeysWithValues: periods.map { ($0.id, $0.position) })
     let goals = unsortedGoals.sorted {
       (
         positionsByPeriodID[$0.gamePeriodID] ?? .max,
@@ -461,40 +484,40 @@ package nonisolated struct GamesRequest: FetchKeyRequest {
     let periodsByGame = Dictionary(grouping: periods, by: \.gameID)
     let teamsByID = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
 
-    return Value(
-      games: games.compactMap { game in
-        guard
-          let teamA = teamsByID[game.teamAID],
-          let teamB = teamsByID[game.teamBID]
-        else { return nil }
+    return Value(games: games.compactMap { game in
+      guard
+        let teamA = teamsByID[game.teamAID],
+        let teamB = teamsByID[game.teamBID]
+      else { return nil }
 
-        let gameGoals = goalsByGame[game.id, default: []]
-        let gamePeriods = periodsByGame[game.id, default: []]
-        guard let timeline = GameTimeline(periods: gamePeriods),
-              let currentPhase = timeline.phase(at: game.currentPhaseIndex)
-        else { return nil }
-        return GameListItem(
-          currentQuarter: currentPhase.associatedPeriod.number,
-          endedAt: game.endedAt,
-          id: game.id,
-          periods: gamePeriods,
-          startedAt: game.startedAt,
-          teamABibColorHex: game.teamABibColorHex,
-          teamAName: teamA.name,
-          teamAScore:
-          gameGoals
-            .filter { $0.teamID == teamA.id }
-            .reduce(0) { $0 + $1.points },
-          teamBBibColorHex: game.teamBBibColorHex,
-          teamBName: teamB.name,
-          teamBScore:
-          gameGoals
-            .filter { $0.teamID == teamB.id }
-            .reduce(0) { $0 + $1.points },
-          createdAt: game.createdAt, scheduledAt: game.scheduledAt, court: game.court
-        )
-      }
-    )
+      let gameGoals = goalsByGame[game.id, default: []]
+      let gamePeriods = periodsByGame[game.id, default: []]
+      guard let timeline = GameTimeline(periods: gamePeriods),
+            let currentPhase = timeline.phase(at: game.currentPhaseIndex)
+      else { return nil }
+      return GameListItem(
+        currentQuarter: currentPhase.associatedPeriod.number,
+        endedAt: game.endedAt,
+        id: game.id,
+        periods: gamePeriods,
+        startedAt: game.startedAt,
+        teamABibColorHex: game.teamABibColorHex,
+        teamAName: teamA.name,
+        teamAScore:
+        gameGoals
+          .filter { $0.teamID == teamA.id }
+          .reduce(0) { $0 + $1.points },
+        teamBBibColorHex: game.teamBBibColorHex,
+        teamBName: teamB.name,
+        teamBScore:
+        gameGoals
+          .filter { $0.teamID == teamB.id }
+          .reduce(0) { $0 + $1.points },
+        createdAt: game.createdAt,
+        scheduledAt: game.scheduledAt,
+        court: game.court
+      )
+    })
   }
 
   package init() {}
@@ -521,16 +544,14 @@ package nonisolated struct TeamsRequest: FetchKeyRequest {
       }
     }
 
-    return Value(
-      teams: teams.map { team in
-        TeamListItem(
-          colorHex: team.colorHex,
-          gameCount: gameCounts[team.id, default: 0],
-          id: team.id,
-          name: team.name
-        )
-      }
-    )
+    return Value(teams: teams.map { team in
+      TeamListItem(
+        colorHex: team.colorHex,
+        gameCount: gameCounts[team.id, default: 0],
+        id: team.id,
+        name: team.name
+      )
+    })
   }
 
   package init() {}
@@ -605,9 +626,7 @@ package nonisolated struct TeamDetailRequest: FetchKeyRequest {
     package var team: Team?
     package var statistics = TeamStatistics()
 
-    package init(
-      games: [GameListItem] = [], team: Team? = nil, statistics: TeamStatistics = TeamStatistics()
-    ) {
+    package init(games: [GameListItem] = [], team: Team? = nil, statistics: TeamStatistics = TeamStatistics()) {
       self.games = games
       self.team = team
       self.statistics = statistics
@@ -651,11 +670,7 @@ package nonisolated struct GoalTimelineRequest: FetchKeyRequest {
   package let gameID: Game.ID
 
   package func fetch(_ db: Database) throws -> Value {
-    try Value(
-      timeline: goalTimeline(
-        snapshot: GameSnapshot.fetch(db, gameID: gameID)
-      )
-    )
+    try Value(timeline: goalTimeline(snapshot: GameSnapshot.fetch(db, gameID: gameID)))
   }
 
   package init(gameID: Game.ID) {
@@ -676,23 +691,21 @@ package nonisolated struct GameAnalysisRequest: FetchKeyRequest {
 
   package func fetch(_ db: Database) throws -> Value {
     let snapshot = try GameSnapshot.fetch(db, gameID: gameID)
-    return Value(
-      analysis: GameAnalysis(
-        goalTimeline: goalTimeline(snapshot: snapshot),
-        isComplete: snapshot.game.endedAt != nil,
-        periods: snapshot.periods,
-        statistics: completedGameStatistics(
-          goals: snapshot.goals,
-          teamAID: snapshot.teamA.id,
-          teamBID: snapshot.teamB.id
-        ),
-        statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
-        teamABibColorHex: snapshot.game.teamABibColorHex,
-        teamAName: snapshot.teamA.name,
-        teamBBibColorHex: snapshot.game.teamBBibColorHex,
-        teamBName: snapshot.teamB.name
-      )
-    )
+    return Value(analysis: GameAnalysis(
+      goalTimeline: goalTimeline(snapshot: snapshot),
+      isComplete: snapshot.game.endedAt != nil,
+      periods: snapshot.periods,
+      statistics: completedGameStatistics(
+        goals: snapshot.goals,
+        teamAID: snapshot.teamA.id,
+        teamBID: snapshot.teamB.id
+      ),
+      statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
+      teamABibColorHex: snapshot.game.teamABibColorHex,
+      teamAName: snapshot.teamA.name,
+      teamBBibColorHex: snapshot.game.teamBBibColorHex,
+      teamBName: snapshot.teamB.name
+    ))
   }
 
   package init(gameID: Game.ID) {
@@ -717,29 +730,28 @@ package nonisolated struct GameDetailRequest: FetchKeyRequest {
     else { return Value() }
     let timeline = goalTimeline(snapshot: snapshot)
 
-    return Value(
-      detail: CompletedGameDetail(
-        endedAt: endedAt,
-        goalTimeline: timeline,
-        id: snapshot.game.id,
-        location: snapshot.game.location,
-        periods: snapshot.periods,
-        startedAt: startedAt,
-        statistics: completedGameStatistics(
-          goals: snapshot.goals,
-          teamAID: snapshot.teamA.id,
-          teamBID: snapshot.teamB.id
-        ),
-        statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
-        teamABibColorHex: snapshot.game.teamABibColorHex,
-        teamAName: snapshot.teamA.name,
-        teamAScore: snapshot.teamAScore,
-        teamBBibColorHex: snapshot.game.teamBBibColorHex,
-        teamBName: snapshot.teamB.name,
-        teamBScore: snapshot.teamBScore,
-        scheduledAt: snapshot.game.scheduledAt, court: snapshot.game.court
-      )
-    )
+    return Value(detail: CompletedGameDetail(
+      endedAt: endedAt,
+      goalTimeline: timeline,
+      id: snapshot.game.id,
+      location: snapshot.game.location,
+      periods: snapshot.periods,
+      startedAt: startedAt,
+      statistics: completedGameStatistics(
+        goals: snapshot.goals,
+        teamAID: snapshot.teamA.id,
+        teamBID: snapshot.teamB.id
+      ),
+      statisticsByPeriod: statisticsByPeriod(snapshot: snapshot),
+      teamABibColorHex: snapshot.game.teamABibColorHex,
+      teamAName: snapshot.teamA.name,
+      teamAScore: snapshot.teamAScore,
+      teamBBibColorHex: snapshot.game.teamBBibColorHex,
+      teamBName: snapshot.teamB.name,
+      teamBScore: snapshot.teamBScore,
+      scheduledAt: snapshot.game.scheduledAt,
+      court: snapshot.game.court
+    ))
   }
 
   package init(gameID: Game.ID) {
@@ -753,9 +765,7 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
   var teamAScore = 0
   var teamBScore = 0
 
-  let periodsByID = Dictionary(
-    uniqueKeysWithValues: snapshot.periods.map { ($0.id, $0) }
-  )
+  let periodsByID = Dictionary(uniqueKeysWithValues: snapshot.periods.map { ($0.id, $0) })
 
   for goal in snapshot.goals {
     guard let period = periodsByID[goal.gamePeriodID] else { continue }
@@ -782,22 +792,20 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
       scoringTeamSide = .unknown
     }
 
-    goalsByPeriod[periodNumber, default: []].append(
-      GoalTimelineItem(
-        clockSecondsRemaining: max(
-          period.durationSeconds - goal.elapsedSeconds,
-          0
-        ),
-        id: goal.id,
-        period: periodNumber,
-        points: goal.points,
-        scoringTeamBibColorHex: scoringTeamBibColorHex,
-        scoringTeamName: scoringTeamName,
-        scoringTeamSide: scoringTeamSide,
-        teamAScore: teamAScore,
-        teamBScore: teamBScore
-      )
-    )
+    goalsByPeriod[periodNumber, default: []].append(GoalTimelineItem(
+      clockSecondsRemaining: max(
+        period.durationSeconds - goal.elapsedSeconds,
+        0
+      ),
+      id: goal.id,
+      period: periodNumber,
+      points: goal.points,
+      scoringTeamBibColorHex: scoringTeamBibColorHex,
+      scoringTeamName: scoringTeamName,
+      scoringTeamSide: scoringTeamSide,
+      teamAScore: teamAScore,
+      teamBScore: teamBScore
+    ))
   }
 
   let maximumPeriod = snapshot.periods.count
@@ -812,34 +820,28 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
       )
       : maximumPeriod
 
-  return GoalTimeline(
-    quarters: (1 ... max(playedPeriod, 1)).reversed().map { period in
-      let quarterScore = quarterScoresByPeriod[period, default: (0, 0)]
-      return GoalTimelineQuarter(
-        goals: Array(goalsByPeriod[period, default: []].reversed()),
-        period: period,
-        teamAQuarterScore: quarterScore.teamA,
-        teamBQuarterScore: quarterScore.teamB
-      )
-    }
-  )
+  return GoalTimeline(quarters: (1 ... max(playedPeriod, 1)).reversed().map { period in
+    let quarterScore = quarterScoresByPeriod[period, default: (0, 0)]
+    return GoalTimelineQuarter(
+      goals: Array(goalsByPeriod[period, default: []].reversed()),
+      period: period,
+      teamAQuarterScore: quarterScore.teamA,
+      teamBQuarterScore: quarterScore.teamB
+    )
+  })
 }
 
-private nonisolated func statisticsByPeriod(
-  snapshot: GameSnapshot
-) -> [Int: CompletedGameStatistics] {
-  Dictionary(
-    uniqueKeysWithValues: snapshot.periods.map { period in
-      (
-        period.number,
-        completedGameStatistics(
-          goals: snapshot.goals.filter { $0.gamePeriodID == period.id },
-          teamAID: snapshot.teamA.id,
-          teamBID: snapshot.teamB.id
-        )
+private nonisolated func statisticsByPeriod(snapshot: GameSnapshot) -> [Int: CompletedGameStatistics] {
+  Dictionary(uniqueKeysWithValues: snapshot.periods.map { period in
+    (
+      period.number,
+      completedGameStatistics(
+        goals: snapshot.goals.filter { $0.gamePeriodID == period.id },
+        teamAID: snapshot.teamA.id,
+        teamBID: snapshot.teamB.id
       )
-    }
-  )
+    )
+  })
 }
 
 /// Goals must be supplied in GameSnapshot chronological order.
@@ -918,9 +920,7 @@ nonisolated func completedGameStatistics(
   )
 }
 
-private nonisolated func gameTimingSummary(
-  periods: [GamePeriod]
-) -> String {
+private nonisolated func gameTimingSummary(periods: [GamePeriod]) -> String {
   let orderedPeriods = periods.sorted { $0.position < $1.position }
   guard let firstPeriod = orderedPeriods.first else { return "No periods" }
   let periodDurations = orderedPeriods.map(\.durationSeconds)

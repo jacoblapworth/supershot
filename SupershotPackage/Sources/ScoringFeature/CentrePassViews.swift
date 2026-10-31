@@ -45,9 +45,7 @@ package struct CentrePassControl: View {
     )
   }
 
-  package init(
-    courtLayout: ScoringFeature.CourtLayout, centrePassTeamTapped: @escaping (UUID) -> Void
-  ) {
+  package init(courtLayout: ScoringFeature.CourtLayout, centrePassTeamTapped: @escaping (UUID) -> Void) {
     self.courtLayout = courtLayout
     self.centrePassTeamTapped = centrePassTeamTapped
   }

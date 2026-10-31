@@ -43,8 +43,12 @@ package struct GoalTimelineView: View {
   }
 
   package init(
-    teamABibColor: Color, teamAName: String, teamBBibColor: Color, teamBName: String,
-    timeline: GoalTimeline, teamAOnLeft: Bool = true
+    teamABibColor: Color,
+    teamAName: String,
+    teamBBibColor: Color,
+    teamBName: String,
+    timeline: GoalTimeline,
+    teamAOnLeft: Bool = true
   ) {
     self.teamABibColor = teamABibColor
     self.teamAName = teamAName
@@ -77,10 +81,8 @@ private struct GoalTimelineLegend: View {
     }
     .padding(.horizontal, 4)
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "\(teamAOnLeft ? teamAName : teamBName) is on the left. "
-        + "\(teamAOnLeft ? teamBName : teamAName) is on the right."
-    )
+    .accessibilityLabel("\(teamAOnLeft ? teamAName : teamBName) is on the left. "
+      + "\(teamAOnLeft ? teamBName : teamAName) is on the right.")
   }
 
   private func teamLabel(name: String, color: Color, isLeft: Bool) -> some View {
@@ -197,10 +199,8 @@ private struct GoalTimelineQuarterHeader: View {
     .padding(12)
     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "Quarter \(quarter.period) score, \(teamAName) \(quarter.teamAQuarterScore), "
-        + "\(teamBName) \(quarter.teamBQuarterScore)"
-    )
+    .accessibilityLabel("Quarter \(quarter.period) score, \(teamAName) \(quarter.teamAQuarterScore), "
+      + "\(teamBName) \(quarter.teamBQuarterScore)")
   }
 
   private func score(_ score: Int, color: Color) -> some View {
@@ -239,12 +239,10 @@ private struct GoalTimelineRow: View {
       }
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      "\(goal.scoringTeamName), \(goal.points) "
-        + "\(goal.points == 1 ? "point" : "points"), "
-        + "\(formattedTime(goal.clockSecondsRemaining)) remaining, "
-        + "match score \(teamAName) \(goal.teamAScore), \(teamBName) \(goal.teamBScore)"
-    )
+    .accessibilityLabel("\(goal.scoringTeamName), \(goal.points) "
+      + "\(goal.points == 1 ? "point" : "points"), "
+      + "\(formattedTime(goal.clockSecondsRemaining)) remaining, "
+      + "match score \(teamAName) \(goal.teamAScore), \(teamBName) \(goal.teamBScore)")
   }
 
   private var isOnLeft: Bool {
@@ -272,11 +270,9 @@ private struct GoalTimelineRow: View {
         .foregroundStyle(.secondary)
         .monospacedDigit()
 
-      Text(
-        "Match \(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)"
-      )
-      .font(.caption.weight(.semibold))
-      .monospacedDigit()
+      Text("Match \(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)")
+        .font(.caption.weight(.semibold))
+        .monospacedDigit()
     }
     .multilineTextAlignment(isOnLeft ? .trailing : .leading)
     .padding(10)

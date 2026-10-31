@@ -76,10 +76,15 @@ package struct SetupStartBar: View {
   }
 
   package init(
-    canPrepareScoring: Bool, configurationSummary: String, errorMessage: String? = nil, isSaving: Bool,
+    canPrepareScoring: Bool,
+    configurationSummary: String,
+    errorMessage: String? = nil,
+    isSaving: Bool,
     prepareScoringTapped: @escaping () -> Void,
-    isScheduled: Bool = false, prepareScoringNowTapped: @escaping () -> Void = {},
-    retryTapped: @escaping () -> Void = {}, canRetry: Bool = false
+    isScheduled: Bool = false,
+    prepareScoringNowTapped: @escaping () -> Void = {},
+    retryTapped: @escaping () -> Void = {},
+    canRetry: Bool = false
   ) {
     self.canPrepareScoring = canPrepareScoring
     self.configurationSummary = configurationSummary
@@ -122,4 +127,3 @@ package struct SetupStartBar: View {
     prepareScoringTapped: {}
   )
 }
-

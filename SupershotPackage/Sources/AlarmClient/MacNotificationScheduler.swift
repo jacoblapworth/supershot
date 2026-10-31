@@ -35,12 +35,8 @@
           content.body = request.body
           content.sound = .default
           content.userInfo = ["gameID": request.gameID.uuidString]
-          let trigger = UNTimeIntervalNotificationTrigger(
-            timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false
-          )
-          try await center.add(
-            UNNotificationRequest(identifier: request.id, content: content, trigger: trigger)
-          )
+          let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false)
+          try await center.add(UNNotificationRequest(identifier: request.id, content: content, trigger: trigger))
         },
         pendingIDs: { await center.pendingNotificationRequests().map(\.identifier) },
         deliveredIDs: { await center.deliveredNotifications().map(\.request.identifier) },
@@ -86,9 +82,7 @@
               await self.delivery.authorization() == .authorized,
               self.cancellations[id, default: 0] == cancellation
         else { return false }
-        let alarms = ScheduledGameAlarm.plan(
-          timeline: snapshot.timeline, progress: snapshot.game.timing
-        )
+        let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)
         do {
           for alarm in alarms where alarm.date > self.now() {
             guard self.cancellations[id, default: 0] == cancellation else { break }
@@ -96,12 +90,13 @@
             case let .period(period, _): "Quarter \(period.number) ended"
             case .breakTime: "Break ended"
             }
-            try await self.delivery.add(
-              GameNotificationRequest(
-                id: Self.prefix(id) + String(alarm.phaseIndex), date: alarm.date,
-                title: title, body: "\(snapshot.teamA.name) vs \(snapshot.teamB.name)", gameID: id
-              )
-            )
+            try await self.delivery.add(GameNotificationRequest(
+              id: Self.prefix(id) + String(alarm.phaseIndex),
+              date: alarm.date,
+              title: title,
+              body: "\(snapshot.teamA.name) vs \(snapshot.teamB.name)",
+              gameID: id
+            ))
             if self.cancellations[id, default: 0] != cancellation {
               await self.removeRequests(for: id)
               break
@@ -154,9 +149,7 @@
     private func removeRequests(for id: Game.ID) async {
       let pending = await delivery.pendingIDs()
       let delivered = await delivery.deliveredIDs()
-      await delivery.remove(
-        Array(Set(pending + delivered).filter { $0.hasPrefix(Self.prefix(id)) })
-      )
+      await delivery.remove(Array(Set(pending + delivered).filter { $0.hasPrefix(Self.prefix(id)) }))
     }
 
     package nonisolated static func prefix(_ id: Game.ID) -> String {
@@ -184,9 +177,7 @@
       @Dependency(\.date) var date
       let scheduler = MacNotificationScheduler(delivery: delivery, now: { date.now }) { snapshot in
         guard !Task.isCancelled,
-              await featureFlags.isEnabled(
-                .timerAlerts, (try? subscription.currentAccess()) ?? .unknown
-              )
+              await featureFlags.isEnabled(.timerAlerts, (try? subscription.currentAccess()) ?? .unknown)
         else {
           return false
         }

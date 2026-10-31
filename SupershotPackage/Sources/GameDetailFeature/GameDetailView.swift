@@ -71,9 +71,7 @@ package struct GameDetailView: View {
   }
   NavigationStack {
     GameDetailView(
-      store: Store(
-        initialState: GameDetailFeature.State(gameID: UUID(10))
-      ) {
+      store: Store(initialState: GameDetailFeature.State(gameID: UUID(10))) {
         GameDetailFeature()
       },
       showsProPromotion: true,

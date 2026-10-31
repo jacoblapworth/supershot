@@ -33,8 +33,10 @@ struct GamesProvider: TimelineProvider {
         GamesEntry(date: $0, games: GamesWidgetSelection.games(games, at: $0))
       }, policy: dates.count > 1 ? .atEnd : .after(now.addingTimeInterval(60 * 60))))
     } catch {
-      completion(Timeline(entries: [GamesEntry(date: now, games: [], unavailable: true)],
-                          policy: .after(now.addingTimeInterval(15 * 60))))
+      completion(Timeline(
+        entries: [GamesEntry(date: now, games: [], unavailable: true)],
+        policy: .after(now.addingTimeInterval(15 * 60))
+      ))
     }
   }
 
@@ -75,8 +77,10 @@ struct GamesWidgetView: View {
         GeometryReader { geometry in
           let columns = family == .systemExtraLarge ? 2 : 1
           let minimumHeight = minimumRowHeight
-          let rows = min(family == .systemMedium ? 2 : 4,
-                         max(1, Int((geometry.size.height - 16 + 6) / (minimumHeight + 6))))
+          let rows = min(
+            family == .systemMedium ? 2 : 4,
+            max(1, Int((geometry.size.height - 16 + 6) / (minimumHeight + 6)))
+          )
           let capacity = min(rows * columns, family == .systemMedium ? 2 : columns * 4)
           LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: columns), spacing: 6) {
             ForEach(entry.games.prefix(capacity)) { game in
@@ -115,10 +119,19 @@ extension GamesEntry {
     let now = Date.now
     let games: [WidgetGame] = (0 ..< 8).map { (index: Int) -> WidgetGame in
       let scheduled = now.addingTimeInterval(Double(index + 1) * 3600)
-      return WidgetGame(id: UUID(), createdAt: now, scheduledAt: scheduled,
-                        startedAt: (index == 1 || index == 2) ? now : nil, endedAt: index == 2 ? now : nil,
-                        teamAName: index == 0 ? "Thunder" : "Swifts", teamAColorHex: "#007AFF", teamAScore: 42,
-                        teamBName: "Lightning", teamBColorHex: "#FF3B30", teamBScore: 38)
+      return WidgetGame(
+        id: UUID(),
+        createdAt: now,
+        scheduledAt: scheduled,
+        startedAt: (index == 1 || index == 2) ? now : nil,
+        endedAt: index == 2 ? now : nil,
+        teamAName: index == 0 ? "Thunder" : "Swifts",
+        teamAColorHex: "#007AFF",
+        teamAScore: 42,
+        teamBName: "Lightning",
+        teamBColorHex: "#FF3B30",
+        teamBScore: 38
+      )
     }
     return Self(date: now, games: games)
   }

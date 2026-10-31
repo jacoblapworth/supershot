@@ -23,17 +23,15 @@ nonisolated extension AlarmClient {
           let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)
 
           for alarm in alarms {
-            let presentation = AlarmPresentation(
-              alert: AlarmPresentation.Alert(
-                title: alarm.title,
-                secondaryButton: AlarmButton(
-                  text: "Continue",
-                  textColor: .white,
-                  systemImageName: "arrow.forward"
-                ),
-                secondaryButtonBehavior: .custom
-              )
-            )
+            let presentation = AlarmPresentation(alert: AlarmPresentation.Alert(
+              title: alarm.title,
+              secondaryButton: AlarmButton(
+                text: "Continue",
+                textColor: .white,
+                systemImageName: "arrow.forward"
+              ),
+              secondaryButtonBehavior: .custom
+            ))
             let attributes = AlarmAttributes(
               presentation: presentation,
               metadata: SupershotAlarmMetadata(
@@ -138,15 +136,24 @@ nonisolated extension AlarmClient {
 
   private nonisolated func alarmID(gameID: Game.ID, phaseIndex: Int) -> UUID {
     let value = gameID.uuid
-    return UUID(
-      uuid: (
-        value.0, value.1, value.2, value.3,
-        value.4, value.5, value.6, value.7,
-        value.8, value.9, value.10, value.11,
-        value.12, value.13, value.14,
-        value.15 ^ UInt8(truncatingIfNeeded: phaseIndex + 1)
-      )
-    )
+    return UUID(uuid: (
+      value.0,
+      value.1,
+      value.2,
+      value.3,
+      value.4,
+      value.5,
+      value.6,
+      value.7,
+      value.8,
+      value.9,
+      value.10,
+      value.11,
+      value.12,
+      value.13,
+      value.14,
+      value.15 ^ UInt8(truncatingIfNeeded: phaseIndex + 1)
+    ))
   }
 
   private nonisolated extension GameActivityAttributes {

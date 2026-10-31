@@ -37,12 +37,9 @@
     @Bindable var store: StoreOf<AppFeature>
 
     var body: some View {
-      SettingsView(
-        proAccess: store.proAccess, store: store.scope(state: \.settings, action: \.settings)
-      )
-      .frame(width: 560, height: 540)
-      .sheet(
-        item: Binding(
+      SettingsView(proAccess: store.proAccess, store: store.scope(state: \.settings, action: \.settings))
+        .frame(width: 560, height: 540)
+        .sheet(item: Binding(
           get: {
             store.paywallFromSettings
               ? store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
@@ -53,14 +50,13 @@
               store.send(.destination(.dismiss))
             }
           }
-        )
-      ) { PaywallView(store: $0) }
-      .task { store.send(.task) }
-      .onChange(of: scenePhase) { _, phase in
-        if phase == .active {
-          store.send(.sceneBecameActive)
+        )) { PaywallView(store: $0) }
+        .task { store.send(.task) }
+        .onChange(of: scenePhase) { _, phase in
+          if phase == .active {
+            store.send(.sceneBecameActive)
+          }
         }
-      }
     }
   }
 
@@ -128,16 +124,14 @@
 
     var body: some View {
       NavigationSplitView {
-        List(
-          selection: Binding<AppFeature.Tab?>(
-            get: { store.selectedTab },
-            set: {
-              if let tab = $0 {
-                store.send(.selectedTabChanged(tab))
-              }
+        List(selection: Binding<AppFeature.Tab?>(
+          get: { store.selectedTab },
+          set: {
+            if let tab = $0 {
+              store.send(.selectedTabChanged(tab))
             }
-          )
-        ) {
+          }
+        )) {
           Label("Games", systemImage: "sportscourt").tag(AppFeature.Tab.games)
           Label("Teams", systemImage: "person.2").tag(AppFeature.Tab.teams)
         }

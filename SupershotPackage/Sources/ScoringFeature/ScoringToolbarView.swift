@@ -33,8 +33,11 @@ package struct ScoringToolbarView: View {
         }
       }
 
-      ScoringButtonsView(courtLayout: state.courtLayout, isEnabled: state.canScore,
-                         onAction: onAction)
+      ScoringButtonsView(
+        courtLayout: state.courtLayout,
+        isEnabled: state.canScore,
+        onAction: onAction
+      )
     }
     .padding()
     .frame(maxWidth: 420)
@@ -57,8 +60,10 @@ package struct ScoringToolbarView: View {
 #Preview("Toolbar • large text", traits: .fixedLayout(width: 390, height: 844)) {
   VStack {
     Spacer()
-    ScoringToolbarView(state: ScoringPreviewScenario.confirmation.state.scoringToolbarState,
-                       onAction: { _ in })
+    ScoringToolbarView(
+      state: ScoringPreviewScenario.confirmation.state.scoringToolbarState,
+      onAction: { _ in }
+    )
   }
   .environment(\.dynamicTypeSize, .accessibility3)
   .preferredColorScheme(.dark)
@@ -67,7 +72,9 @@ package struct ScoringToolbarView: View {
 #Preview("Toolbar • landscape", traits: .fixedLayout(width: 844, height: 390)) {
   VStack {
     Spacer()
-    ScoringToolbarView(state: ScoringPreviewScenario.confirmation.state.scoringToolbarState,
-                       onAction: { _ in })
+    ScoringToolbarView(
+      state: ScoringPreviewScenario.confirmation.state.scoringToolbarState,
+      onAction: { _ in }
+    )
   }.preferredColorScheme(.dark)
 }

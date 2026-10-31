@@ -19,9 +19,7 @@ package struct GameDetailsView: View {
   @Bindable var store: StoreOf<NewGameFeature>
   @Dependency(\.date.now) var now
 
-  package init(
-    store: StoreOf<NewGameFeature>
-  ) {
+  package init(store: StoreOf<NewGameFeature>) {
     self.store = store
   }
 

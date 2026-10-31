@@ -15,12 +15,10 @@ package struct GameLocationMap: View {
 
   package var body: some View {
     Map(
-      initialPosition: .camera(
-        MapCamera(
-          centerCoordinate: coordinate,
-          distance: 800
-        )
-      ),
+      initialPosition: .camera(MapCamera(
+        centerCoordinate: coordinate,
+        distance: 800
+      )),
       interactionModes: []
     ) {
       if let pointOfInterestName = location.pointOfInterestName {
@@ -56,12 +54,10 @@ package struct GameLocationMap: View {
 }
 
 #Preview("Unnamed location") {
-  GameLocationMap(
-    location: GameLocation(
-      latitude: 51.5560,
-      longitude: -0.2796,
-      pointOfInterestName: nil
-    )
-  )
+  GameLocationMap(location: GameLocation(
+    latitude: 51.5560,
+    longitude: -0.2796,
+    pointOfInterestName: nil
+  ))
   .padding()
 }

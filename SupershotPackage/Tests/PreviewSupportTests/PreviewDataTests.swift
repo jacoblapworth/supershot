@@ -47,11 +47,9 @@ extension SupershotTestSuite {
 
       #expect(periods.count == games.count * 4)
       #expect(periods.allSatisfy { $0.durationSeconds == 8 * 60 })
-      #expect(
-        periods.allSatisfy {
-          $0.position == 3 ? $0.breakAfterDurationSeconds == nil : $0.breakAfterDurationSeconds == 60
-        }
-      )
+      #expect(periods.allSatisfy {
+        $0.position == 3 ? $0.breakAfterDurationSeconds == nil : $0.breakAfterDurationSeconds == 60
+      })
 
       for game in games {
         let gameGoals = goals.filter { $0.gameID == game.id }

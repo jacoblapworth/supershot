@@ -157,7 +157,8 @@ extension SupershotTestSuite {
           let gameID = UUID(-index)
           try Game.insert {
             Game(
-              id: gameID, startedAt: date,
+              id: gameID,
+              startedAt: date,
               endedAt: index == 5 ? nil : date.addingTimeInterval(100),
               teamAID: index == 6 ? UUID(-3) : (index == 2 ? UUID(-2) : UUID(-1)),
               teamBID: index == 2 ? UUID(-1) : UUID(-2)
@@ -168,18 +169,27 @@ extension SupershotTestSuite {
           }.execute(db)
         }
         let scoring: [(Int, Int, Int)] = [
-          (1, -1, 2), (1, -1, 1), (1, -2, 1), (1, -3, 100),
-          (2, -1, 1), (2, -2, 2),
-          (3, -1, 2), (3, -2, 2),
-          (5, -1, 100), (6, -2, 100),
+          (1, -1, 2),
+          (1, -1, 1),
+          (1, -2, 1),
+          (1, -3, 100),
+          (2, -1, 1),
+          (2, -2, 2),
+          (3, -1, 2),
+          (3, -2, 2),
+          (5, -1, 100),
+          (6, -2, 100),
         ]
         for (index, event) in scoring.enumerated() {
           try Goal.insert {
             Goal(
-              id: UUID(-index - 1), gameID: UUID(-event.0),
+              id: UUID(-index - 1),
+              gameID: UUID(-event.0),
               gamePeriodID: testGamePeriodID(gameID: UUID(-event.0), position: 0),
-              teamID: UUID(event.1), elapsedSeconds: index,
-              points: event.2, createdAt: date
+              teamID: UUID(event.1),
+              elapsedSeconds: index,
+              points: event.2,
+              createdAt: date
             )
           }.execute(db)
         }
@@ -242,9 +252,13 @@ extension SupershotTestSuite {
       try await database.write { db in
         try Goal.insert {
           Goal(
-            id: UUID(-1), gameID: UUID(-1),
+            id: UUID(-1),
+            gameID: UUID(-1),
             gamePeriodID: testGamePeriodID(gameID: UUID(-1), position: 0),
-            teamID: UUID(-2), elapsedSeconds: 10, points: 2, createdAt: date
+            teamID: UUID(-2),
+            elapsedSeconds: 10,
+            points: 2,
+            createdAt: date
           )
         }.execute(db)
       }

@@ -88,12 +88,10 @@ private struct CentrePassIndicator: View {
   var direction: HorizontalEdge
 
   var body: some View {
-    Image(
-      systemName: direction == .trailing
-        ? "arrow.left.circle.fill"
-        : "arrow.right.circle.fill"
-    )
-    .accessibilityLabel("Current centre pass")
+    Image(systemName: direction == .trailing
+      ? "arrow.left.circle.fill"
+      : "arrow.right.circle.fill")
+      .accessibilityLabel("Current centre pass")
   }
 }
 

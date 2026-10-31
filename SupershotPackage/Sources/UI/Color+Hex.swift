@@ -11,8 +11,10 @@ public extension Color {
   nonisolated init(hex: String) {
     let rgb = Self.isValidHex(hex) ? Int(hex.dropFirst(), radix: 16)! : 0x007AFF
     self.init(
-      .sRGB, red: Double((rgb >> 16) & 255) / 255,
-      green: Double((rgb >> 8) & 255) / 255, blue: Double(rgb & 255) / 255
+      .sRGB,
+      red: Double((rgb >> 16) & 255) / 255,
+      green: Double((rgb >> 8) & 255) / 255,
+      blue: Double(rgb & 255) / 255
     )
   }
 
@@ -22,9 +24,7 @@ public extension Color {
     func byte(_ component: Float) -> Int {
       Int((min(max(component, 0), 1) * 255).rounded())
     }
-    return String(
-      format: "#%02X%02X%02X", byte(resolved.red), byte(resolved.green), byte(resolved.blue)
-    )
+    return String(format: "#%02X%02X%02X", byte(resolved.red), byte(resolved.green), byte(resolved.blue))
   }
 }
 

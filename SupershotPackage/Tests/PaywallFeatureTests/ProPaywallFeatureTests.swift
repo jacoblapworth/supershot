@@ -17,15 +17,25 @@ extension SupershotTestSuite {
 
     nonisolated static let monthly = PaywallProduct(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000002")!,
-      title: "Monthly", price: 5, localizedPrice: "$5.00", currencyCode: "NZD",
-      period: .init(value: 1, unit: .month), isLifetime: false,
-      introductoryOffer: nil, localizedMonthlyEquivalent: "$5.00"
+      title: "Monthly",
+      price: 5,
+      localizedPrice: "$5.00",
+      currencyCode: "NZD",
+      period: .init(value: 1, unit: .month),
+      isLifetime: false,
+      introductoryOffer: nil,
+      localizedMonthlyEquivalent: "$5.00"
     )
     nonisolated static let annual = PaywallProduct(
       id: UUID(uuidString: "00000000-0000-0000-0000-000000000003")!,
-      title: "Yearly", price: 30, localizedPrice: "$30.00", currencyCode: "NZD",
-      period: .init(value: 1, unit: .year), isLifetime: false,
-      introductoryOffer: .freeTrial(.init(value: 1, unit: .week)), localizedMonthlyEquivalent: "$2.50"
+      title: "Yearly",
+      price: 30,
+      localizedPrice: "$30.00",
+      currencyCode: "NZD",
+      period: .init(value: 1, unit: .year),
+      isLifetime: false,
+      introductoryOffer: .freeTrial(.init(value: 1, unit: .week)),
+      localizedMonthlyEquivalent: "$2.50"
     )
 
     @Test
@@ -71,7 +81,8 @@ extension SupershotTestSuite {
     @Test(arguments: [PaywallFeature.State.Operation.purchasing, .restoring])
     func transactionsBlockOtherActions(operation: PaywallFeature.State.Operation) async {
       let store = TestStore(initialState: PaywallFeature.State(
-        catalog: .loaded([Self.monthly, Self.annual]), operation: operation,
+        catalog: .loaded([Self.monthly, Self.annual]),
+        operation: operation,
         selectedProductID: Self.annual.id
       )) { PaywallFeature() }
       await store.send(.purchaseButtonTapped)
@@ -84,9 +95,7 @@ extension SupershotTestSuite {
     @Test
     func purchaseUsesSelectedTokenAndDelegatesAccess() async {
       let id = Self.monthly.id
-      let store = TestStore(initialState: PaywallFeature.State(
-        catalog: .loaded([Self.monthly]), selectedProductID: id
-      )) { PaywallFeature() }
+      let store = TestStore(initialState: PaywallFeature.State(catalog: .loaded([Self.monthly]), selectedProductID: id)) { PaywallFeature() }
         withDependencies: {
           $0.proSubscription.purchase = { token in
             #expect(token == id)

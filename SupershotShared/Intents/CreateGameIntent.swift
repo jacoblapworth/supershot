@@ -8,9 +8,7 @@ import SQLiteData
 
 struct CreateGameIntent: AppIntent {
   static let title: LocalizedStringResource = "Create Game"
-  static let description = IntentDescription(
-    "Create a game with four quarters. The timer stays paused until you start it in Supershot."
-  )
+  static let description = IntentDescription("Create a game with four quarters. The timer stays paused until you start it in Supershot.")
   static var supportedModes: IntentModes {
     .background
   }
@@ -57,7 +55,9 @@ struct CreateGameIntent: AppIntent {
     let centrePassID = firstCentrePass.id
     let periods = (0 ..< 4).map { position in
       GamePeriod(
-        id: uuid(), gameID: gameID, position: position,
+        id: uuid(),
+        gameID: gameID,
+        position: position,
         durationSeconds: quarterDurationSeconds,
         breakAfterDurationSeconds: position < 3 ? breakDurationSeconds : nil
       )
@@ -69,10 +69,15 @@ struct CreateGameIntent: AppIntent {
             let teamB = teams.first(where: { $0.id == teamBID })
       else { throw CreateGameError.teamUnavailable }
       let game = Game(
-        id: gameID, startedAt: nil, teamAID: teamAID,
-        teamABibColorHex: teamA.colorHex, teamBID: teamBID,
-        teamBBibColorHex: teamB.colorHex, centrePassTeamID: centrePassID,
-        breakStartPolicy: breakStartPolicy, createdAt: createdAt
+        id: gameID,
+        startedAt: nil,
+        teamAID: teamAID,
+        teamABibColorHex: teamA.colorHex,
+        teamBID: teamBID,
+        teamBBibColorHex: teamB.colorHex,
+        centrePassTeamID: centrePassID,
+        breakStartPolicy: breakStartPolicy,
+        createdAt: createdAt
       )
       try Game.insert { game }.execute(db)
       try GamePeriod.insert { periods }.execute(db)

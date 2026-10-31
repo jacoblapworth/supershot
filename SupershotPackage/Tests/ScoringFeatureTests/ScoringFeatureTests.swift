@@ -469,22 +469,14 @@ extension SupershotTestSuite {
         ScoringFeature()
       } withDependencies: {
         $0.gameTimer = gameTimer
-        $0.soundEffects = SoundEffectsClient(
-          playGoal: { soundPlayed.setValue(true) }
-        )
+        $0.soundEffects = SoundEffectsClient(playGoal: { soundPlayed.setValue(true) })
       }
 
-      await store.send(
-        .goalResponse(
-          .success(
-            GameScoreSnapshot(
-              canUndo: true,
-              centrePassTeamID: UUID(2),
-              teamAScore: 1
-            )
-          )
-        )
-      ) {
+      await store.send(.goalResponse(.success(GameScoreSnapshot(
+        canUndo: true,
+        centrePassTeamID: UUID(2),
+        teamAScore: 1
+      )))) {
         $0.canUndo = true
         $0.centrePassTeamID = UUID(2)
         $0.goalFeedbackTrigger = 1
@@ -628,8 +620,12 @@ extension SupershotTestSuite {
         await store.send(.editTimeButtonTapped) {
           $0.editedPhaseIndex = 0
           $0.controlsPresentation = .hiddenForTimeInput
-          $0.timeInput = .init(title: "Edit remaining time", totalSeconds: 900,
-                               allowedSeconds: 1 ... 900, selectedUnit: .seconds)
+          $0.timeInput = .init(
+            title: "Edit remaining time",
+            totalSeconds: 900,
+            allowedSeconds: 1 ... 900,
+            selectedUnit: .seconds
+          )
         }
         await store.send(.timeInput(.presented(.cancelButtonTapped)))
         await store.receive(\.timeInput.presented.delegate.cancelled) { $0.timeInput = nil }

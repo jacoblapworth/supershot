@@ -63,9 +63,7 @@ package struct GameDetailContentView: View {
     }
   }
 
-  package init(
-    detail: CompletedGameDetail, showsProPromotion: Bool, proPromotionTapped: @escaping () -> Void
-  ) {
+  package init(detail: CompletedGameDetail, showsProPromotion: Bool, proPromotionTapped: @escaping () -> Void) {
     self.detail = detail
     self.showsProPromotion = showsProPromotion
     self.proPromotionTapped = proPromotionTapped

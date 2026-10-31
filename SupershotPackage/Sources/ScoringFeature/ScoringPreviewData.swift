@@ -65,9 +65,7 @@ package extension ScoringFeature.State {
 }
 
 @MainActor
-package func scoringPreviewStore(
-  _ state: ScoringFeature.State
-) -> StoreOf<ScoringFeature> {
+package func scoringPreviewStore(_ state: ScoringFeature.State) -> StoreOf<ScoringFeature> {
   Store(initialState: state) {
     ScoringFeature()
   } withDependencies: {

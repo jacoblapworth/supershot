@@ -20,20 +20,14 @@ import SwiftUI
     guard case .live = context else { return }
 
     guard
-      let revenueCatAPIKey = Bundle.main.object(
-        forInfoDictionaryKey: "RevenueCatAPIKey"
-      ) as? String,
+      let revenueCatAPIKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
       !revenueCatAPIKey.isEmpty,
       !revenueCatAPIKey.hasPrefix("$(")
     else {
-      preconditionFailure(
-        "RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings."
-      )
+      preconditionFailure("RevenueCat is not configured. Set REVENUECAT_API_KEY in the archive or CI build settings.")
     }
 
-    Purchases.configure(
-      withAPIKey: revenueCatAPIKey
-    )
+    Purchases.configure(withAPIKey: revenueCatAPIKey)
     #if DEBUG
       Purchases.shared.logIn("dev") { _, _, _ in }
     #endif

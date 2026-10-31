@@ -49,9 +49,7 @@ package struct ScoringToolbarState: Equatable {
 
 package extension ScoringFeature.State {
   var phaseStatus: GameTimingState.PhaseStatus {
-    let timing = GameTimingState(
-      phaseIndex: currentPhaseIndex, countdown: countdown
-    )
+    let timing = GameTimingState(phaseIndex: currentPhaseIndex, countdown: countdown)
     guard let status = timing.status(in: timeline) else {
       preconditionFailure("Scoring phase must belong to its timeline")
     }
@@ -61,27 +59,33 @@ package extension ScoringFeature.State {
   var timerViewState: TimerViewState {
     var controls: [ScoringControl] = []
     if operation == .pausing(phaseIndex: currentPhaseIndex) {
-      controls.append(.init(
-        title: "Pause", systemImage: "pause.fill", action: .pause, availability: .pending
-      ))
+      controls.append(.init(title: "Pause", systemImage: "pause.fill", action: .pause, availability: .pending))
     } else {
       switch phaseStatus {
       case .running:
         controls.append(.init(
-          title: "Pause", systemImage: "pause.fill", action: .pause,
+          title: "Pause",
+          systemImage: "pause.fill",
+          action: .pause,
           availability: canPause ? .enabled : .disabled
         ))
       case .paused:
         controls.append(.init(
-          title: "Resume", systemImage: "play.fill", action: .startOrResume,
+          title: "Resume",
+          systemImage: "play.fill",
+          action: .startOrResume,
           availability: operation == .starting(phaseIndex: currentPhaseIndex)
-            ? .pending : canStartOrResume ? .enabled : .disabled
+            ? .pending
+            : canStartOrResume ? .enabled : .disabled
         ))
       case .ready where currentPhase.isBreak:
         controls.append(.init(
-          title: "Start break", systemImage: "play.fill", action: .startOrResume,
+          title: "Start break",
+          systemImage: "play.fill",
+          action: .startOrResume,
           availability: operation == .starting(phaseIndex: currentPhaseIndex)
-            ? .pending : canStartOrResume ? .enabled : .disabled
+            ? .pending
+            : canStartOrResume ? .enabled : .disabled
         ))
       case .ready, .complete:
         break
@@ -89,9 +93,12 @@ package extension ScoringFeature.State {
     }
     if currentPhase.isBreak {
       controls.append(.init(
-        title: "Skip break", systemImage: "forward.end.fill", action: .skipBreak,
+        title: "Skip break",
+        systemImage: "forward.end.fill",
+        action: .skipBreak,
         availability: operation == .skipping(phaseIndex: currentPhaseIndex)
-          ? .pending : canSkipBreak ? .enabled : .disabled
+          ? .pending
+          : canSkipBreak ? .enabled : .disabled
       ))
     }
     return TimerViewState(
@@ -100,8 +107,13 @@ package extension ScoringFeature.State {
       elapsedSeconds: timerProjection.elapsedSeconds,
       durationSeconds: currentDurationSeconds,
       editTime: canEditTime && controlsAreAvailable
-        ? .init(title: "Edit remaining time", systemImage: "pencil", action: .editTime,
-                availability: .enabled) : nil,
+        ? .init(
+          title: "Edit remaining time",
+          systemImage: "pencil",
+          action: .editTime,
+          availability: .enabled
+        )
+        : nil,
       controls: controls
     )
   }
@@ -110,27 +122,36 @@ package extension ScoringFeature.State {
     let content: ScoringToolbarState.Content
     if isShowingLastCentrePassBanner {
       content = .confirmation(.init(
-        team: centrePassTeam, period: lastCompletedQuarterNumber,
+        team: centrePassTeam,
+        period: lastCompletedQuarterNumber,
         availability: operation == .confirmingCentrePass(period: lastCompletedQuarterNumber)
-          ? .pending : canOperate ? .enabled : .disabled
+          ? .pending
+          : canOperate ? .enabled : .disabled
       ))
     } else if GameProgress(
-      phaseIndex: currentPhaseIndex, countdown: countdown,
+      phaseIndex: currentPhaseIndex,
+      countdown: countdown,
       isAwaitingCentrePassConfirmation: false
     ).isFinalPeriodComplete(in: timeline) {
       content = .primary(.init(
-        title: "End game", systemImage: "flag.checkered", action: .finishGame,
+        title: "End game",
+        systemImage: "flag.checkered",
+        action: .finishGame,
         availability: operation == .finishing ? .pending : canFinishGame ? .enabled : .disabled
       ))
     } else if operation == .pausing(phaseIndex: currentPhaseIndex) {
       content = .none
     } else if currentPhase.isPlayingPeriod, phaseStatus == .ready || phaseStatus == .paused {
-      let title = startedAt == nil || (period == 1 && phaseStatus == .ready) ? "Start game"
+      let title = startedAt == nil || (period == 1 && phaseStatus == .ready)
+        ? "Start game"
         : phaseStatus == .paused ? "Resume" : "Start Quarter \(period)"
       content = .primary(.init(
-        title: title, systemImage: "play.fill", action: .startOrResume,
+        title: title,
+        systemImage: "play.fill",
+        action: .startOrResume,
         availability: operation == .starting(phaseIndex: currentPhaseIndex)
-          ? .pending : canStartOrResume ? .enabled : .disabled
+          ? .pending
+          : canStartOrResume ? .enabled : .disabled
       ))
     } else {
       content = .none

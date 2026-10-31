@@ -18,9 +18,7 @@ import UI
       package var completion: (Result<Void, any Error>) -> Void
 
       package func makeUIViewController(context _: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(
-          activityItems: [url], applicationActivities: nil
-        )
+        let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         controller.completionWithItemsHandler = { _, _, _, error in
           if let error {
             completion(.failure(error))
@@ -74,9 +72,7 @@ import UI
           self.completion = completion
         }
 
-        package func sharingServicePicker(
-          _: NSSharingServicePicker, didChoose service: NSSharingService?
-        ) {
+        package func sharingServicePicker(_: NSSharingServicePicker, didChoose service: NSSharingService?) {
           if service == nil {
             completion(.success(()))
           }
@@ -93,9 +89,7 @@ import UI
           completion(.success(()))
         }
 
-        package func sharingService(
-          _: NSSharingService, didFailToShareItems _: [Any], error: any Error
-        ) {
+        package func sharingService(_: NSSharingService, didFailToShareItems _: [Any], error: any Error) {
           completion(.failure(error))
         }
       }

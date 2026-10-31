@@ -25,10 +25,19 @@ public nonisolated struct WidgetGame: Codable, Equatable, Identifiable, Sendable
   }
 
   public init(
-    id: UUID, createdAt: Date, scheduledAt: Date? = nil, startedAt: Date? = nil,
-    endedAt: Date? = nil, court: String? = nil, period: Int = 1,
-    teamAName: String, teamAColorHex: String, teamAScore: Int = 0,
-    teamBName: String, teamBColorHex: String, teamBScore: Int = 0
+    id: UUID,
+    createdAt: Date,
+    scheduledAt: Date? = nil,
+    startedAt: Date? = nil,
+    endedAt: Date? = nil,
+    court: String? = nil,
+    period: Int = 1,
+    teamAName: String,
+    teamAColorHex: String,
+    teamAScore: Int = 0,
+    teamBName: String,
+    teamBColorHex: String,
+    teamBScore: Int = 0
   ) {
     self.id = id
     self.createdAt = createdAt
@@ -119,9 +128,7 @@ public nonisolated enum GamesWidgetStore {
 
   public static func fileURL() throws -> URL {
     let group = Bundle.main.object(forInfoDictionaryKey: "GamesWidgetAppGroup") as? String
-    guard let group, let container = FileManager.default.containerURL(
-      forSecurityApplicationGroupIdentifier: group
-    ) else { throw CocoaError(.fileNoSuchFile) }
+    guard let group, let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) else { throw CocoaError(.fileNoSuchFile) }
     return container.appendingPathComponent("games-widget-v1.json")
   }
 

@@ -59,9 +59,7 @@ package struct TeamPickerView: View {
         ContentUnavailableView {
           Label("No matching teams", systemImage: "magnifyingglass")
         } description: {
-          Text(
-            "Create a team named “\(store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))”."
-          )
+          Text("Create a team named “\(store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))”.")
         } actions: {
           Button(
             "Create “\(store.searchText.trimmingCharacters(in: .whitespacesAndNewlines))”",
@@ -151,11 +149,9 @@ private struct TeamSelectionRow: View {
   Text("Background")
     .sheet(isPresented: .constant(true)) {
       NavigationStack {
-        TeamPickerView(
-          store: Store(initialState: TeamPickerFeature.State()) {
-            TeamPickerFeature()
-          }
-        )
+        TeamPickerView(store: Store(initialState: TeamPickerFeature.State()) {
+          TeamPickerFeature()
+        })
       }
     }
 }

@@ -47,9 +47,7 @@ extension SupershotTestSuite {
     }
 
     @Test func lateGoalPreservesClockAndConfirmationAndUsesRecordingDate() async throws {
-      let before = try seed(
-        phase: 1, elapsed: 20, endsAt: now.addingTimeInterval(100), pending: true, late: 1
-      )
+      let before = try seed(phase: 1, elapsed: 20, endsAt: now.addingTimeInterval(100), pending: true, late: 1)
       var goal = command(phase: 1, context: .completedPeriod(number: 1))
       goal.createdAt = now.addingTimeInterval(10)
       let update = try await execute(.recordGoal(goal), at: now.addingTimeInterval(500))
@@ -76,17 +74,13 @@ extension SupershotTestSuite {
       expectNoDifference(started.snapshot.game.lateScoringPeriodNumber, nil)
       let paused = try await execute(.timing(.pause, expectedPhaseIndex: 2))
       expectNoDifference(paused.snapshot.game.countdown, GameCountdown())
-      let late = try await execute(
-        .recordGoal(command(phase: 2, context: .completedPeriod(number: 1)))
-      )
+      let late = try await execute(.recordGoal(command(phase: 2, context: .completedPeriod(number: 1))))
       expectNoDifference(late.outcome, .rejected(.scoringUnavailable))
       expectNoDifference(late.snapshot.goals, [])
     }
 
     @Test(arguments: [BreakStartPolicy.automatic, .manual], [0, 120])
-    func recoveryPreservesBreakPolicyAndNeverStartsPlayingPeriod(
-      policy: BreakStartPolicy, breakSeconds: Int
-    ) async throws {
+    func recoveryPreservesBreakPolicyAndNeverStartsPlayingPeriod(policy: BreakStartPolicy, breakSeconds: Int) async throws {
       _ = try seed(endsAt: now, policy: policy, breakSeconds: breakSeconds)
       let recovered = try await execute(.reconcile, at: now.addingTimeInterval(50))
       let hasBreak = breakSeconds > 0
@@ -95,9 +89,7 @@ extension SupershotTestSuite {
         recovered.snapshot.game.timerEndsAt,
         hasBreak && policy == .automatic ? now.addingTimeInterval(120) : nil
       )
-      expectNoDifference(
-        recovered.snapshot.game.elapsedSeconds, hasBreak && policy == .automatic ? 50 : 0
-      )
+      expectNoDifference(recovered.snapshot.game.elapsedSeconds, hasBreak && policy == .automatic ? 50 : 0)
       expectNoDifference(recovered.snapshot.game.lateScoringPeriodNumber, 1)
       let again = try await execute(.reconcile, at: now.addingTimeInterval(50))
       expectNoDifference(again.outcome, .unchanged)
@@ -110,7 +102,9 @@ extension SupershotTestSuite {
       expectNoDifference(finished.snapshot.game.endedAt, now)
       let commands: [GameSessionCommand] = [
         .recordGoal(command(phase: 6, context: .completedPeriod(number: 4))),
-        .undoGoal, .selectCentrePass(UUID(2)), .resolveCentrePass(completedPeriod: 3, taken: true),
+        .undoGoal,
+        .selectCentrePass(UUID(2)),
+        .resolveCentrePass(completedPeriod: 3, taken: true),
         .swapSides,
       ]
       for command in commands {
@@ -126,8 +120,13 @@ extension SupershotTestSuite {
       try await database.write { db in
         try Goal.insert {
           Goal(
-            id: UUID(10), gameID: UUID(3), gamePeriodID: before.periods[0].id,
-            teamID: UUID(1), elapsedSeconds: 900, isLate: true, createdAt: .distantPast
+            id: UUID(10),
+            gameID: UUID(3),
+            gamePeriodID: before.periods[0].id,
+            teamID: UUID(1),
+            elapsedSeconds: 900,
+            isLate: true,
+            createdAt: .distantPast
           )
         }.execute(db)
       }
@@ -141,10 +140,8 @@ extension SupershotTestSuite {
       let before = try seed(phase: 6, endsAt: now)
       @Dependency(\.defaultDatabase) var database
       try await database.write { db in
-        try db.execute(
-          sql:
-          "CREATE TEMP TRIGGER reject_goal BEFORE INSERT ON goals BEGIN SELECT RAISE(ABORT, 'test failure'); END"
-        )
+        try db.execute(sql:
+          "CREATE TEMP TRIGGER reject_goal BEFORE INSERT ON goals BEGIN SELECT RAISE(ABORT, 'test failure'); END")
       }
       await #expect(throws: (any Error).self) {
         try await execute(.recordGoal(command(phase: 6, context: .completedPeriod(number: 4))))
@@ -163,8 +160,12 @@ extension SupershotTestSuite {
 
     private func command(phase: Int = 0, context: GameScoringContext) -> RecordGoalCommand {
       RecordGoalCommand(
-        gameID: UUID(3), teamID: UUID(2), expectedPhaseIndex: phase,
-        goalID: UUID(10), createdAt: now, scoringContext: context
+        gameID: UUID(3),
+        teamID: UUID(2),
+        expectedPhaseIndex: phase,
+        goalID: UUID(10),
+        createdAt: now,
+        scoringContext: context
       )
     }
 
@@ -176,9 +177,12 @@ extension SupershotTestSuite {
       }
       let before = try await read()
       let commands: [GameSessionCommand] = [
-        .timing(.pause, expectedPhaseIndex: nil), .timing(.skip, expectedPhaseIndex: nil),
-        .recordGoal(command(context: .livePeriod(number: 1))), .undoGoal,
-        .resolveCentrePass(completedPeriod: 1, taken: true), .finish,
+        .timing(.pause, expectedPhaseIndex: nil),
+        .timing(.skip, expectedPhaseIndex: nil),
+        .recordGoal(command(context: .livePeriod(number: 1))),
+        .undoGoal,
+        .resolveCentrePass(completedPeriod: 1, taken: true),
+        .finish,
       ]
       for command in commands {
         let update = try await execute(command)
@@ -211,8 +215,10 @@ extension SupershotTestSuite {
       expectNoDifference(started.outcome, .applied)
       expectNoDifference(started.snapshot.game.startedAt, now)
       expectNoDifference(started.snapshot.game.timerEndsAt, now.addingTimeInterval(900))
-      let duplicate = try await execute(.timing(.startOrResume, expectedPhaseIndex: 0),
-                                        at: now.addingTimeInterval(1))
+      let duplicate = try await execute(
+        .timing(.startOrResume, expectedPhaseIndex: 0),
+        at: now.addingTimeInterval(1)
+      )
       expectNoDifference(duplicate.outcome, .unchanged)
       expectNoDifference(duplicate.snapshot.game.startedAt, now)
       let paused = try await execute(.timing(.pause, expectedPhaseIndex: 0))
@@ -220,8 +226,10 @@ extension SupershotTestSuite {
       expectNoDifference(paused.snapshot.game.timing.status(in: paused.snapshot.timeline), .ready)
       let corrected = try await execute(.timing(.setRemainingTime(900), expectedPhaseIndex: 0))
       expectNoDifference(corrected.snapshot.game.timing.status(in: corrected.snapshot.timeline), .ready)
-      let resumed = try await execute(.timing(.startOrResume, expectedPhaseIndex: 0),
-                                      at: now.addingTimeInterval(10))
+      let resumed = try await execute(
+        .timing(.startOrResume, expectedPhaseIndex: 0),
+        at: now.addingTimeInterval(10)
+      )
       expectNoDifference(resumed.snapshot.game.startedAt, now)
       expectNoDifference(resumed.snapshot.game.timerEndsAt, now.addingTimeInterval(910))
       let persisted = try await read()
@@ -256,8 +264,12 @@ extension SupershotTestSuite {
     }
 
     private func seed(
-      phase: Int = 0, elapsed: Int = 0, endsAt: Date? = nil,
-      pending: Bool = false, late: Int? = nil, policy: BreakStartPolicy = .automatic,
+      phase: Int = 0,
+      elapsed: Int = 0,
+      endsAt: Date? = nil,
+      pending: Bool = false,
+      late: Int? = nil,
+      policy: BreakStartPolicy = .automatic,
       breakSeconds: Int = 120
     ) throws -> GameSnapshot {
       @Dependency(\.defaultDatabase) var database
@@ -269,10 +281,16 @@ extension SupershotTestSuite {
         }.execute(db)
         try Game.insert {
           Game(
-            id: UUID(3), startedAt: .distantPast,
-            teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
-            isAwaitingCentrePassConfirmation: pending, lateScoringPeriodNumber: late,
-            currentPhaseIndex: phase, elapsedSeconds: elapsed, timerEndsAt: endsAt,
+            id: UUID(3),
+            startedAt: .distantPast,
+            teamAID: UUID(1),
+            teamBID: UUID(2),
+            centrePassTeamID: UUID(1),
+            isAwaitingCentrePassConfirmation: pending,
+            lateScoringPeriodNumber: late,
+            currentPhaseIndex: phase,
+            elapsedSeconds: elapsed,
+            timerEndsAt: endsAt,
             breakStartPolicy: policy
           )
         }.execute(db)

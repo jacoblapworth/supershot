@@ -119,9 +119,7 @@ public nonisolated extension GameTimerClient {
         ).snapshot
       },
       startOrResume: { gameID, expectedPhaseIndex in
-        try await perform(
-          gameID, command: .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex)
-        )
+        try await perform(gameID, command: .timing(.startOrResume, expectedPhaseIndex: expectedPhaseIndex))
       }
     )
   }
@@ -198,8 +196,6 @@ public extension GameTimerClient {
     elapsedSeconds: Int,
     now: Date
   ) -> Date? {
-    GameCountdown(elapsedSeconds: elapsedSeconds).endDate(
-      durationSeconds: durationSeconds, now: now
-    )
+    GameCountdown(elapsedSeconds: elapsedSeconds).endDate(durationSeconds: durationSeconds, now: now)
   }
 }

@@ -15,8 +15,11 @@ public nonisolated struct GameScoreSnapshot: Equatable, Sendable {
   public var teamBScore = 0
 
   public init(
-    canUndo: Bool = false, canUndoDuringConfirmation: Bool = false, centrePassTeamID: Team.ID,
-    teamAScore: Int = 0, teamBScore: Int = 0
+    canUndo: Bool = false,
+    canUndoDuringConfirmation: Bool = false,
+    centrePassTeamID: Team.ID,
+    teamAScore: Int = 0,
+    teamBScore: Int = 0
   ) {
     self.canUndo = canUndo
     self.canUndoDuringConfirmation = canUndoDuringConfirmation
@@ -45,18 +48,12 @@ public nonisolated struct GameScoringClient: Sendable {
     Self(
       recordGoal: { command in
         @Dependency(\.gameSession) var session
-        return try await GameScoreSnapshot(
-          snapshot: session.execute(
-            command.gameID, .recordGoal(command), command.createdAt
-          ).acceptedSnapshot()
-        )
+        return try await GameScoreSnapshot(snapshot: session.execute(command.gameID, .recordGoal(command), command.createdAt).acceptedSnapshot())
       },
       undo: { gameID in
         @Dependency(\.gameSession) var session
         @Dependency(\.date.now) var now
-        return try await GameScoreSnapshot(
-          snapshot: session.execute(gameID, .undoGoal, now).acceptedSnapshot()
-        )
+        return try await GameScoreSnapshot(snapshot: session.execute(gameID, .undoGoal, now).acceptedSnapshot())
       },
       selectCentrePass: { gameID, teamID in
         @Dependency(\.gameSession) var session
@@ -69,12 +66,11 @@ public nonisolated struct GameScoringClient: Sendable {
         @Dependency(\.date.now) var now
         let snapshot = try await session.execute(
           gameID,
-          .resolveCentrePass(completedPeriod: period, taken: taken), now
+          .resolveCentrePass(completedPeriod: period, taken: taken),
+          now
         ).acceptedSnapshot()
-        return LastCentrePassSnapshot(
-          centrePassTeamID:
-          snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id)
-        )
+        return LastCentrePassSnapshot(centrePassTeamID:
+          snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id))
       }
     )
   }
@@ -136,10 +132,9 @@ public nonisolated extension GameScoreSnapshot {
     self.init(
       canUndo: !snapshot.goals.isEmpty,
       canUndoDuringConfirmation: snapshot.canUndoDuringConfirmation,
-      centrePassTeamID: snapshot.game.scoring.centrePass(
-        teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id
-      ),
-      teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore
+      centrePassTeamID: snapshot.game.scoring.centrePass(teamAID: snapshot.teamA.id, teamBID: snapshot.teamB.id),
+      teamAScore: snapshot.teamAScore,
+      teamBScore: snapshot.teamBScore
     )
   }
 }

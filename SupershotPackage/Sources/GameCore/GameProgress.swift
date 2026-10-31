@@ -12,12 +12,13 @@ public nonisolated struct GameProgress: Equatable, Sendable {
   }
 
   public init(
-    phaseIndex: Int, countdown: GameCountdown, isAwaitingCentrePassConfirmation: Bool,
-    lateScoringPeriodNumber: Int? = nil, breakStartPolicy: BreakStartPolicy = .automatic
+    phaseIndex: Int,
+    countdown: GameCountdown,
+    isAwaitingCentrePassConfirmation: Bool,
+    lateScoringPeriodNumber: Int? = nil,
+    breakStartPolicy: BreakStartPolicy = .automatic
   ) {
-    timing = GameTimingState(
-      phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy
-    )
+    timing = GameTimingState(phaseIndex: phaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
     scoring = GameScoringState(
       isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
       lateScoringPeriodNumber: lateScoringPeriodNumber

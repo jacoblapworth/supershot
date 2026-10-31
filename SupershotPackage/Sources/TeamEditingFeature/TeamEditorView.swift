@@ -26,9 +26,7 @@ package struct TeamEditorView: View {
       }
 
       Section {
-        PaletteColorPicker(
-          color: $store.color
-        )
+        PaletteColorPicker(color: $store.color)
       }
 
       if let errorMessage = store.errorMessage {
@@ -82,12 +80,8 @@ package struct TeamEditorView: View {
 
 #Preview {
   NavigationStack {
-    TeamEditorView(
-      store: Store(
-        initialState: TeamEditorFeature.State(team: .previewRavens)
-      ) {
-        TeamEditorFeature()
-      }
-    )
+    TeamEditorView(store: Store(initialState: TeamEditorFeature.State(team: .previewRavens)) {
+      TeamEditorFeature()
+    })
   }
 }

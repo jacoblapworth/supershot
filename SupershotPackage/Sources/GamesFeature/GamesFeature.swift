@@ -116,9 +116,7 @@ package struct GamesFeature {
 
       case let .gameRowTapped(game):
         guard !game.isCompleted else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: game.id))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: game.id)))
           return .none
         }
 
@@ -131,9 +129,7 @@ package struct GamesFeature {
 
       case let .path(.element(id: id, action: .scoring(.delegate(.gameFinished(gameID))))):
         state.path.pop(from: id)
-        state.path.append(
-          .gameDetail(GameDetailFeature.State(gameID: gameID))
-        )
+        state.path.append(.gameDetail(GameDetailFeature.State(gameID: gameID)))
         return .none
 
       case let .newGame(.presented(.delegate(.scoringPrepared(scoring)))):
@@ -230,9 +226,7 @@ package struct GamesFeature {
         } else if snapshot.game.isInProgress {
           state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
         } else {
-          state.path.append(
-            .gameDetail(GameDetailFeature.State(gameID: request.gameID))
-          )
+          state.path.append(.gameDetail(GameDetailFeature.State(gameID: request.gameID)))
         }
         return .none
 

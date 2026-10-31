@@ -16,9 +16,15 @@
       public var lateScoringPeriodNumber: Int?
 
       public init(
-        centrePassTeamID: UUID, elapsedSeconds: Int, phaseIndex: Int, phase: GamePhase,
-        teamAScore: Int, teamBScore: Int, timerEndsAt: Date? = nil,
-        isAwaitingCentrePassConfirmation: Bool = false, lateScoringPeriodNumber: Int? = nil
+        centrePassTeamID: UUID,
+        elapsedSeconds: Int,
+        phaseIndex: Int,
+        phase: GamePhase,
+        teamAScore: Int,
+        teamBScore: Int,
+        timerEndsAt: Date? = nil,
+        isAwaitingCentrePassConfirmation: Bool = false,
+        lateScoringPeriodNumber: Int? = nil
       ) {
         self.centrePassTeamID = centrePassTeamID
         self.elapsedSeconds = elapsedSeconds
@@ -41,8 +47,13 @@
     public var teamBName: String
 
     public init(
-      gameID: UUID, teamAID: UUID, teamAColorHex: String, teamAName: String, teamBID: UUID,
-      teamBColorHex: String, teamBName: String
+      gameID: UUID,
+      teamAID: UUID,
+      teamAColorHex: String,
+      teamAName: String,
+      teamBID: UUID,
+      teamBColorHex: String,
+      teamBName: String
     ) {
       self.gameID = gameID
       self.teamAID = teamAID
@@ -60,7 +71,8 @@
   public nonisolated extension GameActivityAttributes.ContentState {
     var scoringContext: GameScoringContext? {
       GameScoringContext.resolve(
-        phase: phase, countdown: countdown,
+        phase: phase,
+        countdown: countdown,
         isAwaitingCentrePassConfirmation: isAwaitingCentrePassConfirmation,
         lateScoringPeriodNumber: lateScoringPeriodNumber
       )

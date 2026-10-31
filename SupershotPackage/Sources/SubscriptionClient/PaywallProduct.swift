@@ -83,14 +83,10 @@ package nonisolated struct PaywallProduct: Equatable, Identifiable, Sendable {
 
   package var purchaseDetails: String {
     guard let period else { return String(localized: "One-time purchase. No subscription.") }
-    let renewal = String(
-      localized: "Renews at \(localizedPrice) / \(period.billingDescription). Cancel anytime."
-    )
+    let renewal = String(localized: "Renews at \(localizedPrice) / \(period.billingDescription). Cancel anytime.")
     if let introductoryOffer {
-      return String(
-        localized:
-        "\(introductoryOffer.description). Then \(localizedPrice) / \(period.billingDescription). Auto-renews. Cancel anytime."
-      )
+      return String(localized:
+        "\(introductoryOffer.description). Then \(localizedPrice) / \(period.billingDescription). Auto-renews. Cancel anytime.")
     }
     return renewal
   }
@@ -118,8 +114,14 @@ package nonisolated struct PaywallProduct: Equatable, Identifiable, Sendable {
   }
 
   package init(
-    id: UUID, title: String, price: Decimal, localizedPrice: String, currencyCode: String? = nil,
-    period: Period? = nil, isLifetime: Bool, introductoryOffer: IntroductoryOffer? = nil,
+    id: UUID,
+    title: String,
+    price: Decimal,
+    localizedPrice: String,
+    currencyCode: String? = nil,
+    period: Period? = nil,
+    isLifetime: Bool,
+    introductoryOffer: IntroductoryOffer? = nil,
     localizedMonthlyEquivalent: String? = nil
   ) {
     self.id = id

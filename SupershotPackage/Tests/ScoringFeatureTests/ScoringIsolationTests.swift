@@ -22,18 +22,19 @@ import TestSupport
 @testable import WidgetSupport
 
 @MainActor
-@Suite(
-  .dependencies {
-    $0.date.now = Date(timeIntervalSince1970: 1000)
-    $0.uuid = .incrementing
-  }
-)
+@Suite(.dependencies {
+  $0.date.now = Date(timeIntervalSince1970: 1000)
+  $0.uuid = .incrementing
+})
 struct ScoringIsolationTests {
   @Test func goalFeedbackUsesStubbedScoringWithoutDatabase() async {
     let state = ScoringFeature.State(
-      centrePassTeamID: UUID(1), gameID: UUID(3),
-      periods: testGamePeriods(gameID: UUID(3)), startedAt: .distantPast,
-      teamA: .init(id: UUID(1), name: "A"), teamB: .init(id: UUID(2), name: "B"),
+      centrePassTeamID: UUID(1),
+      gameID: UUID(3),
+      periods: testGamePeriods(gameID: UUID(3)),
+      startedAt: .distantPast,
+      teamA: .init(id: UUID(1), name: "A"),
+      teamB: .init(id: UUID(2), name: "B"),
       timerEndsAt: Date(timeIntervalSince1970: 1900)
     )
     let store = TestStore(initialState: state) {

@@ -27,7 +27,9 @@ extension SupershotTestSuite {
 
     private nonisolated static func row(_ source: String) -> [ExtractedFixture] {
       [ExtractedFixture(
-        source: source, firstTeam: "Ravens", secondTeam: "Swifts",
+        source: source,
+        firstTeam: "Ravens",
+        secondTeam: "Swifts",
         date: source.contains("tomorrow") ? "tomorrow" : nil,
         time: source.contains("7:30pm") ? "7:30pm" : nil,
         division: source.contains("Division A") ? "Division A" : nil,
@@ -36,7 +38,8 @@ extension SupershotTestSuite {
     }
 
     private func setup(
-      teams: [Team] = [], state: NewGameFeature.State = .init(),
+      teams: [Team] = [],
+      state: NewGameFeature.State = .init(),
       generate: @escaping @Sendable (String) async throws -> [ExtractedFixture] = { DescribeGameTests.row($0) }
     ) async throws -> StoreOf<NewGameFeature> {
       @Dependency(\.defaultDatabase) var database
@@ -254,15 +257,12 @@ extension SupershotTestSuite {
       let fixtures = try #require(store.describeGame.review?.fixtures)
       await store.send(.describeGame(.clearButtonTapped)).finish()
       await store.send(.describeGame(.pasted(Self.description))).finish()
-      await store.send(.describeGame(.parseResponse(revision, Self.description, .success(
-        DescribeGameFeature.ParsedMatchup(
-          fixtures: fixtures, teams: [],
-          metadata: DescribedGameMetadata(court: "Wrong court")
-        )
-      )))).finish()
-      await store.send(.describeGame(.delegate(.populated(
-        revision, nil, nil, DescribedGameMetadata(court: "Stale court")
-      )))).finish()
+      await store.send(.describeGame(.parseResponse(revision, Self.description, .success(DescribeGameFeature.ParsedMatchup(
+        fixtures: fixtures,
+        teams: [],
+        metadata: DescribedGameMetadata(court: "Wrong court")
+      ))))).finish()
+      await store.send(.describeGame(.delegate(.populated(revision, nil, nil, DescribedGameMetadata(court: "Stale court"))))).finish()
       await store.send(.describeGame(.delegate(.cleared(revision + 1)))).finish()
       #expect(store.court == "2")
       #expect(store.leftTeam.team?.name == "Ravens")
@@ -285,9 +285,7 @@ extension SupershotTestSuite {
       }
       expectNoDifference(configuration.configuration.savedTeam, a)
       store.send(.destination(.presented(.teamConfiguration(.configuration(.changeTeamButtonTapped)))))
-      await store.send(.destination(.presented(.teamConfiguration(.configuration(
-        .picker(.presented(.teamSelected(replacement)))
-      ))))).finish()
+      await store.send(.destination(.presented(.teamConfiguration(.configuration(.picker(.presented(.teamSelected(replacement)))))))).finish()
       expectNoDifference(store.leftTeam.team, replacement)
       #expect(store.canPrepareScoring)
       #expect(store.draft?.teamsToCreate.isEmpty == true)

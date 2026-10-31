@@ -47,10 +47,8 @@ public struct GamePhaseLabel: View {
 }
 
 #Preview {
-  GamePhaseLabel(
-    phase: .period(
-      GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, number: 1),
-      durationSeconds: 60
-    )
-  )
+  GamePhaseLabel(phase: .period(
+    GamePeriodReference(id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!, number: 1),
+    durationSeconds: 60
+  ))
 }

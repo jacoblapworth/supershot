@@ -58,11 +58,9 @@ package struct SetupTimingView: View {
       } header: {
         Text("Breaks")
       } footer: {
-        Text(
-          store.timing.breakStartPolicy == .automatic
-            ? "Breaks start when a quarter ends."
-            : "Breaks wait for you to tap Start break."
-        )
+        Text(store.timing.breakStartPolicy == .automatic
+          ? "Breaks start when a quarter ends."
+          : "Breaks wait for you to tap Start break.")
       }
 
       if !store.timing.isValid {
@@ -115,33 +113,19 @@ private struct SetupDurationRow: View {
 }
 
 #Preview("Uniform breaks") {
-  SetupTimingEditorView(
-    store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: SetupTiming())) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Custom breaks") {
-  SetupTimingEditorView(
-    store: Store(
-      initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewCustomTiming.timing
-      )
-    ) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewCustomTiming.timing)) {
+    SetupTimingFeature()
+  })
 }
 
 #Preview("Invalid duration") {
-  SetupTimingEditorView(
-    store: Store(
-      initialState: SetupTimingFeature.State(
-        timing: NewGameFeature.State.previewInvalidTiming.timing
-      )
-    ) {
-      SetupTimingFeature()
-    }
-  )
+  SetupTimingEditorView(store: Store(initialState: SetupTimingFeature.State(timing: NewGameFeature.State.previewInvalidTiming.timing)) {
+    SetupTimingFeature()
+  })
 }

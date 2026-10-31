@@ -81,9 +81,7 @@ public nonisolated struct GamePresentationClient: Sendable {
           let snapshot = try? await database.read({ try GameSnapshot.fetch($0, gameID: gameID) })
         else { return }
         @Dependency(\.gamePresentation) var presentation
-        _ = await presentation.update(
-          GameSessionUpdate(outcome: .unchanged, snapshot: snapshot), .reconcile
-        )
+        _ = await presentation.update(GameSessionUpdate(outcome: .unchanged, snapshot: snapshot), .reconcile)
       },
       scheduleAlarm: { gameID in
         @Dependency(\.defaultDatabase) var database

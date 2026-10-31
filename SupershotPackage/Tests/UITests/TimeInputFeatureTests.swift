@@ -13,9 +13,7 @@ extension SupershotTestSuite {
   @MainActor
   struct TimeInputFeatureTests {
     @Test func typedTimeFiltersInputAndCommitsOnlyWhenValid() async {
-      let store = TestStore(initialState: TimeInputFeature.State(
-        title: "Time", totalSeconds: 480, allowedSeconds: 1 ... 5999
-      )) { TimeInputFeature() }
+      let store = TestStore(initialState: TimeInputFeature.State(title: "Time", totalSeconds: 480, allowedSeconds: 1 ... 5999)) { TimeInputFeature() }
       await store.send(.textChanged(.minutes, "a12b3")) { $0.minutes = "12" }
       await store.send(.textChanged(.seconds, "90")) { $0.seconds = "90" }
       #expect(store.state.totalSeconds == 810)
@@ -39,11 +37,7 @@ extension SupershotTestSuite {
     }
 
     @Test func digitsReplaceThenAppendAndSecondsCarry() async {
-      let store = TestStore(
-        initialState: TimeInputFeature.State(
-          title: "Time", totalSeconds: 480, allowedSeconds: 0 ... 5999
-        )
-      ) { TimeInputFeature() }
+      let store = TestStore(initialState: TimeInputFeature.State(title: "Time", totalSeconds: 480, allowedSeconds: 0 ... 5999)) { TimeInputFeature() }
       await store.send(.digitButtonTapped(1)) {
         $0.minutes = "1"
         $0.replacesNextDigit = false
@@ -68,11 +62,7 @@ extension SupershotTestSuite {
     }
 
     @Test func quickAddUsesSelectedUnitAndCarries() async {
-      let store = TestStore(
-        initialState: TimeInputFeature.State(
-          title: "Time", totalSeconds: 3590, allowedSeconds: 0 ... 5999, selectedUnit: .seconds
-        )
-      ) { TimeInputFeature() }
+      let store = TestStore(initialState: TimeInputFeature.State(title: "Time", totalSeconds: 3590, allowedSeconds: 0 ... 5999, selectedUnit: .seconds)) { TimeInputFeature() }
       await store.send(.quickAddButtonTapped(30)) {
         $0.minutes = "60"
         $0.seconds = "20"
@@ -88,11 +78,7 @@ extension SupershotTestSuite {
     }
 
     @Test func maximumAndZeroValidation() async {
-      let store = TestStore(
-        initialState: TimeInputFeature.State(
-          title: "Time", totalSeconds: 5999, allowedSeconds: 1 ... 5999, selectedUnit: .seconds
-        )
-      ) { TimeInputFeature() }
+      let store = TestStore(initialState: TimeInputFeature.State(title: "Time", totalSeconds: 5999, allowedSeconds: 1 ... 5999, selectedUnit: .seconds)) { TimeInputFeature() }
       #expect(store.state.isValid)
       #expect(!store.state.canAdd(1))
       await store.send(.quickAddButtonTapped(1))
@@ -103,12 +89,8 @@ extension SupershotTestSuite {
       await store.send(.digitButtonTapped(9)) { $0.seconds = "99" }
       #expect(!store.state.isValid)
       await store.send(.doneButtonTapped)
-      #expect(
-        !TimeInputFeature.State(title: "Quarter", totalSeconds: 0, allowedSeconds: 1 ... 5999).isValid
-      )
-      #expect(
-        TimeInputFeature.State(title: "Break", totalSeconds: 0, allowedSeconds: 0 ... 5999).isValid
-      )
+      #expect(!TimeInputFeature.State(title: "Quarter", totalSeconds: 0, allowedSeconds: 1 ... 5999).isValid)
+      #expect(TimeInputFeature.State(title: "Break", totalSeconds: 0, allowedSeconds: 0 ... 5999).isValid)
     }
 
     @Test func setupSheetCommitsOnlyIntoParentDraft() async {

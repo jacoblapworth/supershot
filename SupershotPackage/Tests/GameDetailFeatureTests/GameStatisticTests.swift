@@ -6,16 +6,8 @@ import Testing
 struct GameStatisticTests {
   @Test
   func barsCompareRatesRatherThanConversionCounts() {
-    let a = TeamGameStatistics(
-      centrePass: CentrePassStatistics(
-        conversions: 1, inferredTurnovers: 1, opportunities: 2
-      )
-    )
-    let b = TeamGameStatistics(
-      centrePass: CentrePassStatistics(
-        conversions: 3, inferredTurnovers: 3, opportunities: 6
-      )
-    )
+    let a = TeamGameStatistics(centrePass: CentrePassStatistics(conversions: 1, inferredTurnovers: 1, opportunities: 2))
+    let b = TeamGameStatistics(centrePass: CentrePassStatistics(conversions: 3, inferredTurnovers: 3, opportunities: 6))
     expectNoDifference(GameStatistic.centrePassConversion.teamAFraction(teamA: a, teamB: b), 0.5)
     expectNoDifference(GameStatistic.centrePassConversion.text(a), "1/2 · 50%")
   }

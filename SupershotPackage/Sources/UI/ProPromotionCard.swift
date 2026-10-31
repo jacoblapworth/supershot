@@ -9,13 +9,11 @@ package struct ProPromotionCard: View {
         .font(.title3.bold())
         .foregroundStyle(Color.accentColor)
 
-      Text(
-        "Get quarter and break notifications on Mac, plus Live Activities and alarm alerts on iPhone and iPad, "
-          + "so every quarter stays on time."
-      )
-      .font(.subheadline)
-      .foregroundStyle(.secondary)
-      .fixedSize(horizontal: false, vertical: true)
+      Text("Get quarter and break notifications on Mac, plus Live Activities and alarm alerts on iPhone and iPad, "
+        + "so every quarter stays on time.")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       Button("Explore Pro", action: exploreProTapped)
         .buttonStyle(.borderedProminent)

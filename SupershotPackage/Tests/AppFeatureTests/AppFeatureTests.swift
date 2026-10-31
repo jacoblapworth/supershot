@@ -110,9 +110,7 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: [SubscriptionEntitlement.free, .unknown])
-    func nonProAccessRetainsPaywallWhenPermissionsAreResolved(
-      access: SubscriptionEntitlement
-    ) async {
+    func nonProAccessRetainsPaywallWhenPermissionsAreResolved(access: SubscriptionEntitlement) async {
       var state = AppFeature.State()
       state.destination = .proPaywall(PaywallFeature.State())
       state.proAccess = .pro
@@ -355,9 +353,7 @@ extension SupershotTestSuite {
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
-      try await store.send(
-        .deepLinkOpened(#require(URL(string: "\(scheme)://game/\(UUID(3).uuidString)")))
-      )
+      try await store.send(.deepLinkOpened(#require(URL(string: "\(scheme)://game/\(UUID(3).uuidString)"))))
       await store.receive {
         guard case let .games(.resumeGameResponse(request, .success)) = $0 else {
           return false
@@ -382,9 +378,7 @@ extension SupershotTestSuite {
     func tabsRetainIndependentNavigationHistories() async {
       var state = AppFeature.State()
       state.games.newGame = NewGameFeature.State()
-      state.teams.path.append(
-        .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
-      )
+      state.teams.path.append(.teamDetail(TeamDetailFeature.State(teamID: UUID(1))))
       let store = TestStore(initialState: state) {
         AppFeature()
       }
@@ -412,9 +406,7 @@ extension SupershotTestSuite {
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
-      try await store.send(
-        .deepLinkOpened(#require(URL(string: "supershot://game/\(UUID(3).uuidString)")))
-      ) {
+      try await store.send(.deepLinkOpened(#require(URL(string: "supershot://game/\(UUID(3).uuidString)")))) {
         $0.selectedTab = .teams
       }
 

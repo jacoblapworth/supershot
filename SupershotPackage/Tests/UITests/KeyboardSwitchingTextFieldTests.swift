@@ -186,8 +186,10 @@
 
     private func selectionOffsets(_ field: UITextField) -> [Int] {
       guard let range = field.selectedTextRange else { return [] }
-      return [field.offset(from: field.beginningOfDocument, to: range.start),
-              field.offset(from: field.beginningOfDocument, to: range.end)]
+      return [
+        field.offset(from: field.beginningOfDocument, to: range.start),
+        field.offset(from: field.beginningOfDocument, to: range.end),
+      ]
     }
 
     private func findTextField(in view: UIView) -> UITextField? {

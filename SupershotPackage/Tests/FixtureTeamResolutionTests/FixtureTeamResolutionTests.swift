@@ -76,9 +76,12 @@ struct FixtureTeamResolutionTests {
 
   @Test func sampleSharesRepeatedProposalsAndPreservesDisplayNames() throws {
     let pairs = [
-      ("Coles Hot Chooks", "IMG & Friends"), ("Mixed Bag", "Buzz Ballers"),
-      ("Buzz Ballers", "Clapham Ballers"), ("Pole vaulters", "Silence of the Lambeths"),
-      ("The lodgers", "Netball & Chill"), ("Netball & Chill", "One Team, One Dream"),
+      ("Coles Hot Chooks", "IMG & Friends"),
+      ("Mixed Bag", "Buzz Ballers"),
+      ("Buzz Ballers", "Clapham Ballers"),
+      ("Pole vaulters", "Silence of the Lambeths"),
+      ("The lodgers", "Netball & Chill"),
+      ("Netball & Chill", "One Team, One Dream"),
     ]
     let drafts = pairs.map { fixture($0.0, $0.1) }
     let review = FixtureTeamReview(fixtures: drafts, savedTeams: [])

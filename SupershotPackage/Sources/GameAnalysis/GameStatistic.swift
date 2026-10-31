@@ -58,9 +58,7 @@ package enum GameStatistic: String, CaseIterable, Identifiable {
   }
 
   /// Relative magnitude, without assigning a better/worse interpretation to the metric.
-  package func teamAFraction(
-    teamA: TeamGameStatistics, teamB: TeamGameStatistics
-  ) -> Double? {
+  package func teamAFraction(teamA: TeamGameStatistics, teamB: TeamGameStatistics) -> Double? {
     guard let a = value(teamA), let b = value(teamB),
           a.isFinite, b.isFinite, a >= 0, b >= 0, a + b > 0
     else { return nil }

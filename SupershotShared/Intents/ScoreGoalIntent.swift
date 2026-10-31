@@ -66,8 +66,13 @@ import SharedModels
         let scoringContext = completedPeriodNumber.map { GameScoringContext.completedPeriod(number: $0) }
         do {
           _ = try await gameScoring.recordGoal(RecordGoalCommand(
-            gameID: gameID, teamID: teamID, expectedPhaseIndex: phaseIndex,
-            goalID: goalID, createdAt: createdAt, scoringContext: scoringContext, source: .liveActivity
+            gameID: gameID,
+            teamID: teamID,
+            expectedPhaseIndex: phaseIndex,
+            goalID: goalID,
+            createdAt: createdAt,
+            scoringContext: scoringContext,
+            source: .liveActivity
           ))
         } catch {
           _ = try? await gameTimer.reconcile(gameID)

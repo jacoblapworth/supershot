@@ -30,13 +30,9 @@ package struct SettingsView: View {
           proPromotionTapped: { store.send(.proPromotionTapped) }
         )
         .presentCustomerCenter(
-          isPresented: $store.isCustomerCenterPresented.sending(
-            \.customerCenterPresentationChanged
-          ),
+          isPresented: $store.isCustomerCenterPresented.sending(\.customerCenterPresentationChanged),
           restoreCompleted: {
-            store.send(
-              .customerInfoUpdated(SubscriptionEntitlement(customerInfo: $0))
-            )
+            store.send(.customerInfoUpdated(SubscriptionEntitlement(customerInfo: $0)))
           },
           onDismiss: { store.send(.customerCenterPresentationChanged(false)) }
         )
@@ -157,11 +153,7 @@ private struct SubscriptionSettingsSection: View {
       } footer: {
         Text("Export a snapshot of all teams, games, and goals for inspection.")
       }
-      .sheet(
-        isPresented: $store.isDatabaseSharePresented.sending(
-          \.databaseSharePresentationChanged
-        )
-      ) {
+      .sheet(isPresented: $store.isDatabaseSharePresented.sending(\.databaseSharePresentationChanged)) {
         if case let .ready(url) = store.databaseExport {
           DatabaseShareSheet(url: url) {
             store.send(.databaseShareCompleted($0))
@@ -212,9 +204,7 @@ private struct GameDefaultsSettingsSection: View {
     } header: {
       Text("New game defaults")
     } footer: {
-      Text(
-        "These settings are used for new games and can be changed during setup. When Auto start breaks is on, breaks start when a quarter ends. When it is off, breaks wait for you to tap Start break."
-      )
+      Text("These settings are used for new games and can be changed during setup. When Auto start breaks is on, breaks start when a quarter ends. When it is off, breaks wait for you to tap Start break.")
     }
   }
 

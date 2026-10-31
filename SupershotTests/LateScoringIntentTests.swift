@@ -30,8 +30,12 @@
         let completed = try #require(game.lateScoringPeriodNumber)
         for team in [UUID(1), UUID(2)] {
           await #expect(throws: (any Error).self) {
-            try await ScoreGoalIntent(gameID: game.id, teamID: team,
-                                      expectedPhaseIndex: game.currentPhaseIndex, completedPeriodNumber: completed).perform()
+            try await ScoreGoalIntent(
+              gameID: game.id,
+              teamID: team,
+              expectedPhaseIndex: game.currentPhaseIndex,
+              completedPeriodNumber: completed
+            ).perform()
           }
         }
         let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: game.id) }
@@ -44,9 +48,13 @@
         #expect(snapshot.goals.isEmpty)
         let content = try GameActivityAttributes.ContentState(
           centrePassTeamID: #require(snapshot.game.centrePassTeamID),
-          elapsedSeconds: snapshot.game.elapsedSeconds, phaseIndex: snapshot.game.currentPhaseIndex,
-          phase: snapshot.currentPhase, teamAScore: snapshot.teamAScore, teamBScore: snapshot.teamBScore,
-          timerEndsAt: snapshot.game.timerEndsAt, isAwaitingCentrePassConfirmation: pending,
+          elapsedSeconds: snapshot.game.elapsedSeconds,
+          phaseIndex: snapshot.game.currentPhaseIndex,
+          phase: snapshot.currentPhase,
+          teamAScore: snapshot.teamAScore,
+          teamBScore: snapshot.teamBScore,
+          timerEndsAt: snapshot.game.timerEndsAt,
+          isAwaitingCentrePassConfirmation: pending,
           lateScoringPeriodNumber: completed
         )
         expectNoDifference(content.scoringContext, .completedPeriod(number: completed))
@@ -57,8 +65,11 @@
         @Dependency(\.defaultDatabase) var database
         try clearDatabase(database)
         let game = Game(
-          id: UUID(3), startedAt: Date(timeIntervalSince1970: 900),
-          teamAID: UUID(1), teamBID: UUID(2), centrePassTeamID: UUID(1),
+          id: UUID(3),
+          startedAt: Date(timeIntervalSince1970: 900),
+          teamAID: UUID(1),
+          teamBID: UUID(2),
+          centrePassTeamID: UUID(1),
           isAwaitingCentrePassConfirmation: pending,
           lateScoringPeriodNumber: window == .finalQuarter ? 4 : 1,
           currentPhaseIndex: window == .finalQuarter ? 6 : window == .waitingQuarter ? 2 : 1,

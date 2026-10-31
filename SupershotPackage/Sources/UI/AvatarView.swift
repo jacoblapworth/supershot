@@ -38,13 +38,9 @@ public struct AvatarView: View {
       .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
       .minimumScaleFactor(0.5)
       .frame(width: size, height: size)
-      .background(
-        Circle()
-          .fill(bg)
-      )
-      .overlay(
-        Circle().stroke(.white.opacity(0.15), lineWidth: max(1, size * 0.025))
-      )
+      .background(Circle()
+        .fill(bg))
+      .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: max(1, size * 0.025)))
       .contentShape(Circle())
       .accessibilityLabel(Text(AvatarView.accessibilityLabel(for: label, initials: initials)))
   }
@@ -99,7 +95,8 @@ public extension AvatarView {
     let saturation = 0.55 + Double((hash >> 8) % 30) / 100.0 // 0.55 - 0.85
     let brightness = 0.70 + Double((hash >> 16) % 20) / 100.0 // 0.70 - 0.90
     return Color(
-      hue: hue, saturation: min(max(saturation, 0.0), 1.0),
+      hue: hue,
+      saturation: min(max(saturation, 0.0), 1.0),
       brightness: min(max(brightness, 0.0), 1.0)
     )
   }

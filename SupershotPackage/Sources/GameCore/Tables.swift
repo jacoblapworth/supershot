@@ -54,14 +54,28 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   }
 
   public init(
-    id: UUID, startedAt: Date?, endedAt: Date? = nil, teamAID: Team.ID,
-    teamABibColorHex: String = "#007AFF", teamBID: Team.ID, teamBBibColorHex: String = "#FF3B30",
-    centrePassTeamID: Team.ID? = nil, swapSides: Bool = false, latitude: Double? = nil,
-    longitude: Double? = nil, pointOfInterestName: String? = nil,
-    isAwaitingCentrePassConfirmation: Bool = false, lateScoringPeriodNumber: Int? = nil,
-    currentPhaseIndex: Int = 0, elapsedSeconds: Int = 0, timerEndsAt: Date? = nil,
+    id: UUID,
+    startedAt: Date?,
+    endedAt: Date? = nil,
+    teamAID: Team.ID,
+    teamABibColorHex: String = "#007AFF",
+    teamBID: Team.ID,
+    teamBBibColorHex: String = "#FF3B30",
+    centrePassTeamID: Team.ID? = nil,
+    swapSides: Bool = false,
+    latitude: Double? = nil,
+    longitude: Double? = nil,
+    pointOfInterestName: String? = nil,
+    isAwaitingCentrePassConfirmation: Bool = false,
+    lateScoringPeriodNumber: Int? = nil,
+    currentPhaseIndex: Int = 0,
+    elapsedSeconds: Int = 0,
+    timerEndsAt: Date? = nil,
     breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
-    createdAt: Date? = nil, scheduledAt: Date? = nil, court: String? = nil, division: String? = nil
+    createdAt: Date? = nil,
+    scheduledAt: Date? = nil,
+    court: String? = nil,
+    division: String? = nil
   ) {
     self.id = id
     self.createdAt = createdAt ?? startedAt ?? Date()
@@ -186,8 +200,15 @@ public nonisolated struct Goal: Equatable, Hashable, Identifiable, Sendable {
   public var createdAt: Date
 
   public init(
-    id: UUID, gameID: Game.ID, gamePeriodID: GamePeriod.ID, centrePassTeamID: Team.ID? = nil,
-    teamID: Team.ID, elapsedSeconds: Int, isLate: Bool = false, points: Int = 1, createdAt: Date
+    id: UUID,
+    gameID: Game.ID,
+    gamePeriodID: GamePeriod.ID,
+    centrePassTeamID: Team.ID? = nil,
+    teamID: Team.ID,
+    elapsedSeconds: Int,
+    isLate: Bool = false,
+    points: Int = 1,
+    createdAt: Date
   ) {
     self.id = id
     self.gameID = gameID

@@ -9,10 +9,19 @@ import WidgetSupport
 package extension GameListItem {
   var widgetGame: WidgetGame {
     WidgetGame(
-      id: id, createdAt: createdAt, scheduledAt: scheduledAt, startedAt: startedAt,
-      endedAt: endedAt, court: court, period: currentQuarter,
-      teamAName: teamAName, teamAColorHex: teamABibColorHex, teamAScore: teamAScore,
-      teamBName: teamBName, teamBColorHex: teamBBibColorHex, teamBScore: teamBScore
+      id: id,
+      createdAt: createdAt,
+      scheduledAt: scheduledAt,
+      startedAt: startedAt,
+      endedAt: endedAt,
+      court: court,
+      period: currentQuarter,
+      teamAName: teamAName,
+      teamAColorHex: teamABibColorHex,
+      teamAScore: teamAScore,
+      teamBName: teamBName,
+      teamBColorHex: teamBBibColorHex,
+      teamBScore: teamBScore
     )
   }
 }

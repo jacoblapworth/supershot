@@ -20,7 +20,8 @@ package struct TimeInputFeature {
     package var errorMessage: String?
 
     package init(
-      title: String, totalSeconds: Int,
+      title: String,
+      totalSeconds: Int,
       allowedSeconds: ClosedRange<Int>,
       selectedUnit: Unit = .minutes
     ) {

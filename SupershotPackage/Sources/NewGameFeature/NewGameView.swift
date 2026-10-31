@@ -140,29 +140,23 @@ package struct NewGameView: View {
     .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }
     .task { store.send(.task) }
     .onChange(of: scenePhase) { _, phase in scenePhaseChanged(phase) }
-    .sheet(
-      item: $store.scope(state: \.destination, action: \.destination)
-    ) { destinationStore in
+    .sheet(item: $store.scope(state: \.destination, action: \.destination)) { destinationStore in
       switch destinationStore.case {
       case let .locationPicker(pickerStore):
         SetupLocationPickerView(store: pickerStore)
 
       case let .teamConfiguration(configurationStore):
-        SetupTeamView(
-          store: configurationStore.scope(
-            state: \.configuration,
-            action: \.configuration
-          )
-        )
+        SetupTeamView(store: configurationStore.scope(
+          state: \.configuration,
+          action: \.configuration
+        ))
 
       case let .teamPicker(pickerStore):
         NavigationStack {
-          TeamPickerView(
-            store: pickerStore.scope(
-              state: \.picker,
-              action: \.picker
-            )
-          )
+          TeamPickerView(store: pickerStore.scope(
+            state: \.picker,
+            action: \.picker
+          ))
           .navigationTitle("Select team")
           #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)

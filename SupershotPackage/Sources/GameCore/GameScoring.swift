@@ -43,24 +43,32 @@ public nonisolated struct GameScoringState: Equatable, Sendable {
   }
 
   public mutating func recordGoal(
-    _ command: RecordGoalCommand, opportunity: ScoringOpportunity,
-    teamAID: Team.ID, teamBID: Team.ID
+    _ command: RecordGoalCommand,
+    opportunity: ScoringOpportunity,
+    teamAID: Team.ID,
+    teamBID: Team.ID
   ) throws -> Goal {
     guard command.teamID == teamAID || command.teamID == teamBID else {
       throw GameScoringError.invalidTeam
     }
     let goal = Goal(
-      id: command.goalID, gameID: command.gameID, gamePeriodID: opportunity.periodID,
-      centrePassTeamID: centrePass(teamAID: teamAID, teamBID: teamBID), teamID: command.teamID,
-      elapsedSeconds: opportunity.elapsedSeconds, isLate: opportunity.isLate,
-      points: command.points, createdAt: command.createdAt
+      id: command.goalID,
+      gameID: command.gameID,
+      gamePeriodID: opportunity.periodID,
+      centrePassTeamID: centrePass(teamAID: teamAID, teamBID: teamBID),
+      teamID: command.teamID,
+      elapsedSeconds: opportunity.elapsedSeconds,
+      isLate: opportunity.isLate,
+      points: command.points,
+      createdAt: command.createdAt
     )
     alternateCentrePass(teamAID: teamAID, teamBID: teamBID)
     return goal
   }
 
   public init(
-    centrePassTeamID: Team.ID? = nil, isAwaitingCentrePassConfirmation: Bool = false,
+    centrePassTeamID: Team.ID? = nil,
+    isAwaitingCentrePassConfirmation: Bool = false,
     lateScoringPeriodNumber: Int? = nil
   ) {
     self.centrePassTeamID = centrePassTeamID

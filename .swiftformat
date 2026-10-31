@@ -1,5 +1,11 @@
 --indent 2
 --header strip
 
---wrap-enum-cases always
 --swift-version 6
+
+--wrap-enum-cases always
+--wrap-arguments before-first
+--wrap-parameters before-first
+--wrap-collections before-first
+--wrap-ternary before-operators
+--allow-partial-wrapping false

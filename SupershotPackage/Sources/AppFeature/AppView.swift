@@ -34,21 +34,19 @@ package struct AppView: View {
         tabs
       }
     }
-    .sheet(
-      item: Binding(
-        get: {
-          #if os(macOS)
-            guard !store.paywallFromSettings else { return nil as StoreOf<PaywallFeature>? }
-          #endif
-          return store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
-        },
-        set: {
-          if $0 == nil {
-            store.send(.destination(.dismiss))
-          }
+    .sheet(item: Binding(
+      get: {
+        #if os(macOS)
+          guard !store.paywallFromSettings else { return nil as StoreOf<PaywallFeature>? }
+        #endif
+        return store.scope(state: \.destination?.proPaywall, action: \.destination.proPaywall)
+      },
+      set: {
+        if $0 == nil {
+          store.send(.destination(.dismiss))
         }
-      )
-    ) { paywallStore in
+      }
+    )) { paywallStore in
       PaywallView(store: paywallStore)
     }
     .task { store.send(.task) }
@@ -105,9 +103,7 @@ package struct AppView: View {
     try! $0.bootstrapDatabase()
     try! $0.defaultDatabase.seedDebugExamplesIfNeeded()
   }
-  AppView(
-    store: Store(initialState: AppFeature.State()) {
-      AppFeature()
-    }
-  )
+  AppView(store: Store(initialState: AppFeature.State()) {
+    AppFeature()
+  })
 }

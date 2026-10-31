@@ -140,9 +140,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.gameRowTapped(game)) {
-        $0.path.append(
-          .gameDetail(GameDetailFeature.State(gameID: game.id))
-        )
+        $0.path.append(.gameDetail(GameDetailFeature.State(gameID: game.id)))
       }
     }
 
@@ -169,18 +167,14 @@ extension SupershotTestSuite {
         GamesFeature()
       }
 
-      await store.send(
-        .resumeGameResponse(
-          GamesFeature.PendingGameResume(
-            gameID: UUID(3),
-            requestID: UUID(0)
-          ),
-          .failure(TabFeatureTestError.unavailable)
-        )
-      )
-      await store.send(
-        .resumeGameResponse(request, .failure(TabFeatureTestError.unavailable))
-      ) {
+      await store.send(.resumeGameResponse(
+        GamesFeature.PendingGameResume(
+          gameID: UUID(3),
+          requestID: UUID(0)
+        ),
+        .failure(TabFeatureTestError.unavailable)
+      ))
+      await store.send(.resumeGameResponse(request, .failure(TabFeatureTestError.unavailable))) {
         $0.alert = .gameUnavailable
         $0.pendingGameResume = nil
       }
@@ -197,14 +191,10 @@ extension SupershotTestSuite {
       }
       store.exhaustivity = .off(showSkippedAssertions: false)
 
-      await store.send(
-        .path(
-          .element(
-            id: scoringID,
-            action: .scoring(.delegate(.gameFinished(UUID(3))))
-          )
-        )
-      )
+      await store.send(.path(.element(
+        id: scoringID,
+        action: .scoring(.delegate(.gameFinished(UUID(3))))
+      )))
 
       expectNoDifference(store.state.path.count, 1)
       guard case let .gameDetail(detail) = store.state.path[0] else {

@@ -80,9 +80,7 @@ package struct GameAnalysisControl: View {
     #endif
   }
 
-  package init(
-    selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}
-  ) {
+  package init(selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}) {
     _selection = selection
     self.pinnedSelectionChanged = pinnedSelectionChanged
   }

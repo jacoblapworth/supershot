@@ -38,12 +38,10 @@ package struct SetupTeamView: View {
           .labelStyle(.iconOnly)
         }
         Section {
-          PaletteColorPicker(
-            color: Binding(
-              get: { store.previewTeam.color },
-              set: { store.send(.colorChanged($0)) }
-            )
-          )
+          PaletteColorPicker(color: Binding(
+            get: { store.previewTeam.color },
+            set: { store.send(.colorChanged($0)) }
+          ))
           if store.isSaving {
             ProgressView("Saving colour…")
           }
@@ -82,11 +80,9 @@ package struct SetupTeamView: View {
 }
 
 #Preview("Selected team") {
-  SetupTeamView(
-    store: Store(initialState: SetupTeamFeature.State(team: .previewRavens)) {
-      SetupTeamFeature()
-    }
-  )
+  SetupTeamView(store: Store(initialState: SetupTeamFeature.State(team: .previewRavens)) {
+    SetupTeamFeature()
+  })
 }
 
 #Preview("Save error") {

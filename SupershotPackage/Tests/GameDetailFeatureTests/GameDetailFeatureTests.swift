@@ -23,11 +23,9 @@ import TestSupport
 
 extension SupershotTestSuite {
   @MainActor
-  @Suite(
-    .dependencies {
-      $0.uuid = .incrementing
-    }
-  ) struct GameDetailFeatureTests {
+  @Suite(.dependencies {
+    $0.uuid = .incrementing
+  }) struct GameDetailFeatureTests {
     @Test
     func completedGameDetailBuildsReverseChronologicalQuarterTimeline() async throws {
       @Dependency(\.defaultDatabase) var database
@@ -99,69 +97,67 @@ extension SupershotTestSuite {
         value.detail,
         CompletedGameDetail(
           endedAt: endedAt,
-          goalTimeline: GoalTimeline(
-            quarters: [
-              GoalTimelineQuarter(
-                goals: [],
-                period: 4,
-                teamAQuarterScore: 0,
-                teamBQuarterScore: 0
-              ),
-              GoalTimelineQuarter(
-                goals: [],
-                period: 3,
-                teamAQuarterScore: 0,
-                teamBQuarterScore: 0
-              ),
-              GoalTimelineQuarter(
-                goals: [
-                  GoalTimelineItem(
-                    clockSecondsRemaining: 870,
-                    id: UUID(-3),
-                    period: 2,
-                    points: 1,
-                    scoringTeamBibColor: ColorPalette.red,
-                    scoringTeamName: "Swifts",
-                    scoringTeamSide: .teamB,
-                    teamAScore: 2,
-                    teamBScore: 2
-                  ),
-                ],
-                period: 2,
-                teamAQuarterScore: 0,
-                teamBQuarterScore: 1
-              ),
-              GoalTimelineQuarter(
-                goals: [
-                  GoalTimelineItem(
-                    clockSecondsRemaining: 700,
-                    id: UUID(-2),
-                    period: 1,
-                    points: 1,
-                    scoringTeamBibColor: ColorPalette.red,
-                    scoringTeamName: "Swifts",
-                    scoringTeamSide: .teamB,
-                    teamAScore: 2,
-                    teamBScore: 1
-                  ),
-                  GoalTimelineItem(
-                    clockSecondsRemaining: 800,
-                    id: UUID(-1),
-                    period: 1,
-                    points: 2,
-                    scoringTeamBibColor: ColorPalette.blue,
-                    scoringTeamName: "Ravens",
-                    scoringTeamSide: .teamA,
-                    teamAScore: 2,
-                    teamBScore: 0
-                  ),
-                ],
-                period: 1,
-                teamAQuarterScore: 2,
-                teamBQuarterScore: 1
-              ),
-            ]
-          ),
+          goalTimeline: GoalTimeline(quarters: [
+            GoalTimelineQuarter(
+              goals: [],
+              period: 4,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 0
+            ),
+            GoalTimelineQuarter(
+              goals: [],
+              period: 3,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 0
+            ),
+            GoalTimelineQuarter(
+              goals: [
+                GoalTimelineItem(
+                  clockSecondsRemaining: 870,
+                  id: UUID(-3),
+                  period: 2,
+                  points: 1,
+                  scoringTeamBibColor: ColorPalette.red,
+                  scoringTeamName: "Swifts",
+                  scoringTeamSide: .teamB,
+                  teamAScore: 2,
+                  teamBScore: 2
+                ),
+              ],
+              period: 2,
+              teamAQuarterScore: 0,
+              teamBQuarterScore: 1
+            ),
+            GoalTimelineQuarter(
+              goals: [
+                GoalTimelineItem(
+                  clockSecondsRemaining: 700,
+                  id: UUID(-2),
+                  period: 1,
+                  points: 1,
+                  scoringTeamBibColor: ColorPalette.red,
+                  scoringTeamName: "Swifts",
+                  scoringTeamSide: .teamB,
+                  teamAScore: 2,
+                  teamBScore: 1
+                ),
+                GoalTimelineItem(
+                  clockSecondsRemaining: 800,
+                  id: UUID(-1),
+                  period: 1,
+                  points: 2,
+                  scoringTeamBibColor: ColorPalette.blue,
+                  scoringTeamName: "Ravens",
+                  scoringTeamSide: .teamA,
+                  teamAScore: 2,
+                  teamBScore: 0
+                ),
+              ],
+              period: 1,
+              teamAQuarterScore: 2,
+              teamBQuarterScore: 1
+            ),
+          ]),
           id: UUID(-1),
           location: GameLocation(
             latitude: 51.556,
@@ -195,48 +191,32 @@ extension SupershotTestSuite {
             1: CompletedGameStatistics(
               teamA: TeamGameStatistics(
                 averageTimeToGoalSeconds: 100,
-                centrePass: CentrePassStatistics(
-                  conversions: 1, inferredTurnovers: 1, opportunities: 2
-                ),
-                biggestLead: 2, longestScoringRun: 1
+                centrePass: CentrePassStatistics(conversions: 1, inferredTurnovers: 1, opportunities: 2),
+                biggestLead: 2,
+                longestScoringRun: 1
               ),
               teamB: TeamGameStatistics(
                 averageTimeToGoalSeconds: 100,
-                centrePass: CentrePassStatistics(
-                  conversions: 0, inferredTurnovers: 0, opportunities: 0
-                ),
+                centrePass: CentrePassStatistics(conversions: 0, inferredTurnovers: 0, opportunities: 0),
                 longestScoringRun: 1
               )
             ),
             2: CompletedGameStatistics(
-              teamA: TeamGameStatistics(
-                centrePass: CentrePassStatistics(
-                  conversions: 0, inferredTurnovers: 0, opportunities: 0
-                )
-              ),
+              teamA: TeamGameStatistics(centrePass: CentrePassStatistics(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
               teamB: TeamGameStatistics(
                 averageTimeToGoalSeconds: 30,
-                centrePass: CentrePassStatistics(
-                  conversions: 1, inferredTurnovers: 0, opportunities: 1
-                ),
-                biggestLead: 1, longestScoringRun: 1
+                centrePass: CentrePassStatistics(conversions: 1, inferredTurnovers: 0, opportunities: 1),
+                biggestLead: 1,
+                longestScoringRun: 1
               )
             ),
             3: CompletedGameStatistics(
-              teamA: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
-              ),
-              teamB: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
-              )
+              teamA: TeamGameStatistics(centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+              teamB: TeamGameStatistics(centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
             ),
             4: CompletedGameStatistics(
-              teamA: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
-              ),
-              teamB: TeamGameStatistics(
-                centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)
-              )
+              teamA: TeamGameStatistics(centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0)),
+              teamB: TeamGameStatistics(centrePass: .init(conversions: 0, inferredTurnovers: 0, opportunities: 0))
             ),
           ],
           teamABibColor: ColorPalette.blue,

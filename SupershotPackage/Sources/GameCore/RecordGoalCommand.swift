@@ -17,8 +17,14 @@ public nonisolated struct RecordGoalCommand: Equatable, Sendable {
   public var scoringContext: GameScoringContext?
 
   public init(
-    gameID: Game.ID, teamID: Team.ID, expectedPhaseIndex: Int, goalID: Goal.ID, createdAt: Date,
-    points: Int = 1, scoringContext: GameScoringContext? = nil, source: Source = .app
+    gameID: Game.ID,
+    teamID: Team.ID,
+    expectedPhaseIndex: Int,
+    goalID: Goal.ID,
+    createdAt: Date,
+    points: Int = 1,
+    scoringContext: GameScoringContext? = nil,
+    source: Source = .app
   ) {
     self.source = source
     self.gameID = gameID

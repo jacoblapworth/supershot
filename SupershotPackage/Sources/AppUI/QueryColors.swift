@@ -14,9 +14,17 @@ package nonisolated extension GameListItem {
   }
 
   init(
-    currentQuarter: Int = 1, endedAt: Date? = nil, id: Game.ID, periods: [GamePeriod] = [],
-    startedAt: Date, teamABibColor: Color, teamAName: String, teamAScore: Int,
-    teamBBibColor: Color = ColorPalette.red, teamBName: String, teamBScore: Int
+    currentQuarter: Int = 1,
+    endedAt: Date? = nil,
+    id: Game.ID,
+    periods: [GamePeriod] = [],
+    startedAt: Date,
+    teamABibColor: Color,
+    teamAName: String,
+    teamAScore: Int,
+    teamBBibColor: Color = ColorPalette.red,
+    teamBName: String,
+    teamBScore: Int
   ) {
     self.init(
       currentQuarter: currentQuarter,
@@ -55,9 +63,15 @@ package nonisolated extension GoalTimelineItem {
   }
 
   init(
-    clockSecondsRemaining: Int, id: Goal.ID, period: Int, points: Int,
-    scoringTeamBibColor: Color, scoringTeamName: String,
-    scoringTeamSide: GoalTimelineTeamSide, teamAScore: Int, teamBScore: Int
+    clockSecondsRemaining: Int,
+    id: Goal.ID,
+    period: Int,
+    points: Int,
+    scoringTeamBibColor: Color,
+    scoringTeamName: String,
+    scoringTeamSide: GoalTimelineTeamSide,
+    teamAScore: Int,
+    teamBScore: Int
   ) {
     self.init(
       clockSecondsRemaining: clockSecondsRemaining,
@@ -83,11 +97,14 @@ package nonisolated extension GameAnalysis {
   }
 
   init(
-    goalTimeline: GoalTimeline = GoalTimeline(), periods: [GamePeriod] = [],
+    goalTimeline: GoalTimeline = GoalTimeline(),
+    periods: [GamePeriod] = [],
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
-    teamABibColor: Color, teamAName: String = "",
-    teamBBibColor: Color = ColorPalette.red, teamBName: String = ""
+    teamABibColor: Color,
+    teamAName: String = "",
+    teamBBibColor: Color = ColorPalette.red,
+    teamBName: String = ""
   ) {
     self.init(
       goalTimeline: goalTimeline,
@@ -112,12 +129,20 @@ package nonisolated extension CompletedGameDetail {
   }
 
   init(
-    endedAt: Date, goalTimeline: GoalTimeline, id: Game.ID, location: GameLocation? = nil,
-    periods: [GamePeriod] = [], startedAt: Date,
+    endedAt: Date,
+    goalTimeline: GoalTimeline,
+    id: Game.ID,
+    location: GameLocation? = nil,
+    periods: [GamePeriod] = [],
+    startedAt: Date,
     statistics: CompletedGameStatistics = CompletedGameStatistics(),
     statisticsByPeriod: [Int: CompletedGameStatistics] = [:],
-    teamABibColor: Color, teamAName: String, teamAScore: Int,
-    teamBBibColor: Color = ColorPalette.red, teamBName: String, teamBScore: Int
+    teamABibColor: Color,
+    teamAName: String,
+    teamAScore: Int,
+    teamBBibColor: Color = ColorPalette.red,
+    teamBName: String,
+    teamBScore: Int
   ) {
     self.init(
       endedAt: endedAt,

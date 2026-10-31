@@ -52,10 +52,26 @@ package nonisolated enum MockGameData {
   ) -> [GoalEvent] {
     let intervals = [24, 27, 22, 29, 25, 21, 28, 23, 26, 20]
     let teamAScored = [
-      true, false, true, false, false,
-      true, true, false, true, false,
-      false, true, false, true, true,
-      false, false, true, false, true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true,
     ]
     var events: [GoalEvent] = []
     var goalIndex = 0
@@ -71,14 +87,12 @@ package nonisolated enum MockGameData {
       while true {
         elapsedSeconds += intervals[intervalIndex % intervals.count]
         guard elapsedSeconds <= periodLimit else { break }
-        events.append(
-          GoalEvent(
-            centrePassTeamA: goalIndex.isMultiple(of: 2),
-            elapsedSeconds: elapsedSeconds,
-            period: period,
-            teamAScored: teamAScored[goalIndex % teamAScored.count]
-          )
-        )
+        events.append(GoalEvent(
+          centrePassTeamA: goalIndex.isMultiple(of: 2),
+          elapsedSeconds: elapsedSeconds,
+          period: period,
+          teamAScored: teamAScored[goalIndex % teamAScored.count]
+        ))
         goalIndex += 1
         intervalIndex += 1
       }

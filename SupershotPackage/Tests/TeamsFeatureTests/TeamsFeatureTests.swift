@@ -48,9 +48,7 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       let detailID = store.state.path.ids[0]
 
-      await store.send(
-        .path(.element(id: detailID, action: .teamDetail(.newGameButtonTapped(team))))
-      )
+      await store.send(.path(.element(id: detailID, action: .teamDetail(.newGameButtonTapped(team)))))
       await store.receive {
         guard case .path(.element(id: detailID, action: .teamDetail(.delegate(.newGameButtonTapped(team))))) = $0 else {
           return false
@@ -74,9 +72,7 @@ extension SupershotTestSuite {
         teamA: ScoringFeature.Team(id: team.id, bibColor: team.color, name: team.name),
         teamB: ScoringFeature.Team(id: UUID(2), bibColor: ColorPalette.red, name: "Swifts")
       )
-      await store.send(
-        .newGame(.presented(.delegate(.scoringPrepared(scoring))))
-      )
+      await store.send(.newGame(.presented(.delegate(.scoringPrepared(scoring)))))
       #expect(store.state.newGame == nil)
       expectNoDifference(
         Array(store.state.path),
@@ -131,9 +127,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.teamGameRowTapped(game)) {
-        $0.path.append(
-          .gameDetail(GameDetailFeature.State(gameID: game.id))
-        )
+        $0.path.append(.gameDetail(GameDetailFeature.State(gameID: game.id)))
       }
     }
 
@@ -150,9 +144,7 @@ extension SupershotTestSuite {
       }
 
       await store.send(.teamRowTapped(team)) {
-        $0.path.append(
-          .teamDetail(TeamDetailFeature.State(teamID: team.id))
-        )
+        $0.path.append(.teamDetail(TeamDetailFeature.State(teamID: team.id)))
       }
       await store.send(.newTeamButtonTapped) {
         $0.destination = .teamEditor(TeamsEditorFeature.State())
@@ -171,9 +163,7 @@ extension SupershotTestSuite {
         teamBScore: 0
       )
       var state = TeamsFeature.State()
-      state.path.append(
-        .teamDetail(TeamDetailFeature.State(teamID: UUID(1)))
-      )
+      state.path.append(.teamDetail(TeamDetailFeature.State(teamID: UUID(1))))
       let store = Self.makeStore(state: state)
       store.exhaustivity = .off(showSkippedAssertions: false)
 
@@ -199,14 +189,10 @@ extension SupershotTestSuite {
       expectNoDifference(scoring.gameID, game.id)
 
       let scoringID = store.state.path.ids[1]
-      await store.send(
-        .path(
-          .element(
-            id: scoringID,
-            action: .scoring(.delegate(.gameFinished(game.id)))
-          )
-        )
-      )
+      await store.send(.path(.element(
+        id: scoringID,
+        action: .scoring(.delegate(.gameFinished(game.id)))
+      )))
 
       expectNoDifference(store.state.path.count, 2)
       guard case let .gameDetail(detail) = store.state.path[1] else {
@@ -236,12 +222,10 @@ extension SupershotTestSuite {
         requestID: UUID(1)
       )
 
-      await store.send(
-        .resumeGameResponse(
-          staleRequest,
-          .failure(TabFeatureTestError.unavailable)
-        )
-      )
+      await store.send(.resumeGameResponse(
+        staleRequest,
+        .failure(TabFeatureTestError.unavailable)
+      ))
     }
 
     @Test
