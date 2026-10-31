@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -5,9 +6,8 @@ import GameCore
 import PreviewSupport
 import SharedModels
 import SQLiteData
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 @Reducer
 package struct TeamPickerFeature {

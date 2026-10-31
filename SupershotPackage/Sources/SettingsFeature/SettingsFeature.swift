@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -6,8 +7,8 @@ import GameCore
 import PaywallFeature
 import SharedModels
 import Sharing
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct SettingsFeature {

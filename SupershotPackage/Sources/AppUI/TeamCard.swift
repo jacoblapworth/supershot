@@ -1,7 +1,6 @@
 import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
+import UI
 
 //
 //  TeamCard.swift
@@ -75,7 +74,7 @@ private struct TeamCardBackground: View {
 
   var body: some View {
     #if os(iOS)
-    let backgroundColor = Color(uiColor: .secondarySystemGroupedBackground)
+      let backgroundColor = Color(uiColor: .secondarySystemGroupedBackground)
     #else
       let backgroundColor = Color(nsColor: .controlBackgroundColor)
     #endif

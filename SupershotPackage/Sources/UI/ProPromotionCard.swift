@@ -1,5 +1,3 @@
-import Styleguide
-import SubscriptionClient
 import SwiftUI
 
 package struct ProPromotionCard: View {

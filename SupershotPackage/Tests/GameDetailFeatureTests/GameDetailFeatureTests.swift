@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -13,11 +14,11 @@ import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

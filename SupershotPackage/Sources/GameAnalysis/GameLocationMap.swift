@@ -1,3 +1,4 @@
+import AppUI
 import CoreLocation
 import Database
 import GameCore
@@ -6,9 +7,8 @@ import MapKit
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameLocationMap: View {
   package var location: GameLocation

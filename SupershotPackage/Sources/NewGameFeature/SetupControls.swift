@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,11 +10,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package struct SetupStartBar: View {
   package var canPrepareScoring: Bool

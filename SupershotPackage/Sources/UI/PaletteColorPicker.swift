@@ -1,7 +1,4 @@
-import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
 
 package struct PaletteColorPicker: View {
   @Binding package var color: Color
@@ -19,7 +16,7 @@ package struct PaletteColorPicker: View {
         ForEach(options) { option in
           PaletteColorItem(
             color: option.color,
-            isSelected: color == option.color,
+            isSelected: color == option.color
           ) {
             color = option.color
           }

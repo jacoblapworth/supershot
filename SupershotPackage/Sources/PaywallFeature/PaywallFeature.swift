@@ -1,7 +1,7 @@
 import ComposableArchitecture
 import Foundation
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct PaywallFeature {

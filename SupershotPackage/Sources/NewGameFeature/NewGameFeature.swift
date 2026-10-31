@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,11 +13,10 @@ import ScoringFeature
 import SharedModels
 import Sharing
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 @Reducer
 package struct NewGameFeature {

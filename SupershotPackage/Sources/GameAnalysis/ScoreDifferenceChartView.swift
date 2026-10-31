@@ -1,10 +1,10 @@
+import AppUI
 import Charts
 import Database
 import GameCore
 import PreviewSupport
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct ScoreDifferenceChartView: View {
   package var detail: GameAnalysis

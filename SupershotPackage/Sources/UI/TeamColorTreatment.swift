@@ -1,7 +1,4 @@
-import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
 
 /// Darkens arbitrary team colours for use behind light text while retaining their hue.
 package struct TeamColorTreatment {

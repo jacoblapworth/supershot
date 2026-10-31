@@ -1,6 +1,6 @@
 import Database
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameRow: View {
   package var game: GameListItem

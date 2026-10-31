@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -11,10 +12,10 @@ import Foundation
 @testable import SharedModels
 import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

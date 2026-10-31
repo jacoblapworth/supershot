@@ -1,12 +1,12 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import GameCore
 import PreviewSupport
 import SharedModels
 import SQLiteData
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 //
 //  TeamPickerView.swift

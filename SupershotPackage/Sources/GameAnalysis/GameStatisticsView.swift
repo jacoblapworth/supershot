@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import GameCore
 import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GameStatisticsView: View {
   package var detail: GameAnalysis

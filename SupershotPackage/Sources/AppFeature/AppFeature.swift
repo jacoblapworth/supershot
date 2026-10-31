@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import FeatureFlagsClient
@@ -13,10 +14,10 @@ import SettingsFeature
 import SharedModels
 import Sharing
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamsFeature
+import UI
 
 @Reducer
 package struct AppFeature {

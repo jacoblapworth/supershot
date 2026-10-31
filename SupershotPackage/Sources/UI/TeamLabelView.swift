@@ -1,7 +1,4 @@
-import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
 
 //
 //  TeamLabelView.swift

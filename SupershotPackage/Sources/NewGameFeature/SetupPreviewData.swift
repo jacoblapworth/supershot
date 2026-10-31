@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -10,11 +11,10 @@ import PermissionsFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package extension NewGameFeature.State {
   static var previewReady: Self {

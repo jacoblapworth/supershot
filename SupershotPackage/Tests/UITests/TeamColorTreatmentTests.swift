@@ -1,9 +1,10 @@
+import AppUI
 @testable import GameCore
 @testable import SharedModels
-@testable import Styleguide
 import SwiftUI
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

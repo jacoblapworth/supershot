@@ -1,8 +1,8 @@
 import AlarmClient
 import ComposableArchitecture
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct WelcomeView: View {
   package let store: StoreOf<WelcomeFeature>

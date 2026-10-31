@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import Database
 import GameAnalysis
 import GameCore
@@ -8,10 +9,9 @@ import PermissionsFeature
 import PreviewSupport
 import SharedModels
 import SoundEffectsClient
-import Styleguide
 import SubscriptionClient
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct ScoringHeaderView: View {
   package var courtLayout: ScoringFeature.CourtLayout

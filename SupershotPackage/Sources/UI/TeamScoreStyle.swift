@@ -1,7 +1,4 @@
-import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
 
 package extension View {
   /// Preserves the team's full colour, with a small shadow to separate it from the background.

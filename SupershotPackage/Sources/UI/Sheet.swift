@@ -1,7 +1,4 @@
-import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
 
 //
 //  Sheet.swift
@@ -19,7 +16,6 @@ package struct SizeToFitModifier: ViewModifier {
   @State private var contentHeight = 0.0
   @State private var presentationDetents: Set<PresentationDetent> = [.medium]
   @State private var selectedPresentationDetent: PresentationDetent = .medium
-
 
   package func body(content: Content) -> some View {
     ScrollView {

@@ -2,7 +2,7 @@ import Database
 import GameCore
 import SharedModels
 import SwiftUI
-import WidgetSupport
+import UI
 
 package nonisolated extension GameListItem {
   var teamABibColor: Color {

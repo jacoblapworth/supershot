@@ -1,7 +1,7 @@
 import ComposableArchitecture
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct PaywallView: View {
   @Bindable package var store: StoreOf<PaywallFeature>

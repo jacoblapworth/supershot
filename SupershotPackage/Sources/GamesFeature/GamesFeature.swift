@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,8 +13,8 @@ import PreviewSupport
 import ScoringFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package enum GamesPath {

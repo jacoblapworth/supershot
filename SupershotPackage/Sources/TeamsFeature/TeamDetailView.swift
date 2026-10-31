@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Dependencies
@@ -11,11 +12,10 @@ import PreviewSupport
 import ScoringFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 package struct TeamDetailView: View {
   @Fetch private var response: TeamDetailRequest.Value

@@ -1,8 +1,8 @@
 import AlarmClient
 import ComposableArchitecture
 import FeatureFlagsClient
-import Styleguide
 import SubscriptionClient
+import UI
 
 @Reducer
 package struct AlarmPermissionFeature {

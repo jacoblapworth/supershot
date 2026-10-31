@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import GameAnalysis
@@ -9,10 +10,9 @@ import PaywallFeature
 import PreviewSupport
 import ScoringFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
 import TeamEditingFeature
-import WidgetSupport
+import UI
 
 @Reducer
 package enum TeamsDestination {

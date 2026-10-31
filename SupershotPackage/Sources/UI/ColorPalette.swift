@@ -17,9 +17,9 @@ public nonisolated enum ColorPalette {
 
   public static let blue = Color(.sRGB, red: 0, green: 122.0 / 255, blue: 1)
   public static let red = Color(.sRGB, red: 1, green: 59.0 / 255, blue: 48.0 / 255)
-  public static let yellow = Color(.sRGB, red: 1, green: 0.7950418591, blue: 0)
-  public static let black = Color(.sRGB, red: 0.08949717134, green: 0.08949717134, blue: 0.08949717134)
-  public static let white = Color(.sRGB, red: 0.9190583825, green: 0.9535560012, blue: 0.851087153)
+  public static let yellow = Color(.sRGB, red: 1, green: 203.0 / 255, blue: 0)
+  public static let black = Color(.sRGB, red: 23.0 / 255, green: 23.0 / 255, blue: 23.0 / 255)
+  public static let white = Color(.sRGB, red: 234.0 / 255, green: 243.0 / 255, blue: 217.0 / 255)
   public static let green = Color(.sRGB, red: 52.0 / 255, green: 199.0 / 255, blue: 89.0 / 255)
   public static let orange = Color(.sRGB, red: 1, green: 149.0 / 255, blue: 0)
   public static let purple = Color(.sRGB, red: 175.0 / 255, green: 82.0 / 255, blue: 222.0 / 255)

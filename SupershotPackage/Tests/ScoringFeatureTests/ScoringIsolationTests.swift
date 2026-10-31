@@ -1,5 +1,6 @@
 @testable import AlarmClient
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -14,10 +15,10 @@ import Foundation
 @testable import ScoringFeature
 @testable import SharedModels
 @testable import SoundEffectsClient
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 @MainActor

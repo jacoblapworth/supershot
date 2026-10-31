@@ -1,7 +1,8 @@
 #if os(iOS)
-  @testable import Styleguide
+  import AppUI
   import SwiftUI
   import Testing
+  @testable import UI
   import UIKit
 
   @Suite(.serialized)

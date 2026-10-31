@@ -1,10 +1,11 @@
 import AppSettings
+import AppUI
 import Database
 import GameCore
 import PaywallFeature
 import SharedModels
-import Styleguide
 import SubscriptionClient
+import UI
 
 #if DEBUG
   import SwiftUI

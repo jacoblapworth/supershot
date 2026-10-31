@@ -1,6 +1,7 @@
 import AlarmClient
 import ApplicationDependency
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Foundation
@@ -12,10 +13,9 @@ import PreviewSupport
 import SharedModels
 import Sharing
 import SoundEffectsClient
-import Styleguide
 import SubscriptionClient
 import SwiftUI
-import WidgetSupport
+import UI
 
 @Reducer
 package struct ScoringFeature {

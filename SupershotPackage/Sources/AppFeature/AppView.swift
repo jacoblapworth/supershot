@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import Combine
 import ComposableArchitecture
 import Database
@@ -13,10 +14,10 @@ import PreviewSupport
 import SettingsFeature
 import SharedModels
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
 import TeamsFeature
+import UI
 
 package struct AppView: View {
   @Environment(\.scenePhase) private var scenePhase

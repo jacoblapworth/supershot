@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -8,11 +9,11 @@ import GRDB
 @testable import PreviewSupport
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 import SwiftUI
 @testable import TeamEditingFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

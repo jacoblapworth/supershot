@@ -1,3 +1,4 @@
+import AppUI
 import Charts
 import Database
 import GameCore
@@ -5,9 +6,8 @@ import LocationClient
 import PaywallFeature
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct GoalProgressChartView: View {
   package var detail: GameAnalysis

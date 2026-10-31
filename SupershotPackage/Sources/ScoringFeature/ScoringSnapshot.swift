@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import Database
 import GameAnalysis
 import GameCore
@@ -8,9 +9,8 @@ import PermissionsFeature
 import PreviewSupport
 import SharedModels
 import SoundEffectsClient
-import Styleguide
 import SubscriptionClient
-import WidgetSupport
+import UI
 
 package extension ScoringFeature.State {
   init(snapshot: GameSnapshot) {

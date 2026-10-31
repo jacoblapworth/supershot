@@ -1,6 +1,7 @@
 @testable import AlarmClient
 @testable import AppFeature
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 @testable import Database
 import Dependencies
@@ -24,12 +25,12 @@ import OrderedCollections
 import Sharing
 @testable import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 @testable import TeamEditingFeature
 @testable import TeamsFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

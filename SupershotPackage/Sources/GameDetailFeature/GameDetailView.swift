@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import Dependencies
@@ -7,8 +8,8 @@ import GameServices
 import PreviewSupport
 import SharedModels
 import SQLiteData
-import Styleguide
 import SwiftUI
+import UI
 
 package struct GameDetailView: View {
   @Fetch private var response: GameDetailRequest.Value

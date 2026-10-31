@@ -1,11 +1,11 @@
+import AppUI
 import Database
 import Dependencies
 import Foundation
 import GameCore
 import LocationClient
 import SharedModels
-import Styleguide
-import WidgetSupport
+import UI
 
 package nonisolated enum MockGameData {
   package static let breakDurationSeconds = 60

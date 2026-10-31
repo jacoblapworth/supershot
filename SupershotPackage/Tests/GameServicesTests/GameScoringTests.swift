@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import CustomDump
 @testable import Database
 import Dependencies
@@ -6,10 +7,10 @@ import Foundation
 @testable import GameCore
 @testable import GameServices
 @testable import SharedModels
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 /// Deliberately outside SupershotTestSuite: these rules need no database bootstrap.

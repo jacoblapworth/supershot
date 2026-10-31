@@ -2,6 +2,7 @@ import ActivityKit
 import AppIntents
 import SharedModels
 import SwiftUI
+import UI
 import WidgetKit
 import WidgetSupport
 

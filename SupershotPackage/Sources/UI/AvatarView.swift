@@ -1,4 +1,3 @@
-import SharedModels
 import SwiftUI
 
 /// An initials avatar with a generated background color by default.

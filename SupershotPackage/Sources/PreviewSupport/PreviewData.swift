@@ -1,3 +1,4 @@
+import AppUI
 import Database
 import Dependencies
 import Foundation
@@ -6,9 +7,8 @@ import GRDB
 import LocationClient
 import SharedModels
 import SQLiteData
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 public extension DatabaseWriter {
   func seedDebugExamplesIfNeeded() throws {

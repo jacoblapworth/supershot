@@ -1,7 +1,8 @@
+import AppUI
 import ComposableArchitecture
 import GameParser
-import Styleguide
 import SwiftUI
+import UI
 
 package struct DescribeGameView: View {
   @Bindable var store: StoreOf<DescribeGameFeature>

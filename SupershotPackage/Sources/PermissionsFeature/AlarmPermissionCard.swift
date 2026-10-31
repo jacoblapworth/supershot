@@ -1,9 +1,9 @@
 import AlarmClient
 import ComposableArchitecture
 import FeatureFlagsClient
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 #if os(iOS)
   import UIKit

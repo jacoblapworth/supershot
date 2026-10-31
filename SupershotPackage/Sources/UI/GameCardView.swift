@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetSupport
 
 /// The list and Home Screen share team colours, identities, score hierarchy and status text.
 public struct GameCardView: View {
@@ -27,7 +28,9 @@ public struct GameCardView: View {
           Text(dateText)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
-          if !compact, let court = game.court { Text("Court \(court)") }
+          if !compact, let court = game.court {
+            Text("Court \(court)")
+          }
           Spacer(minLength: 0)
           status
         }
@@ -59,7 +62,9 @@ public struct GameCardView: View {
         Text(dateText)
           .lineLimit(2)
           .minimumScaleFactor(0.8)
-        if let court = game.court { Text("Court \(court)").lineLimit(1) }
+        if let court = game.court {
+          Text("Court \(court)").lineLimit(1)
+        }
       }
       .font(.caption2.weight(.semibold))
       .foregroundStyle(.primary.opacity(0.8))
@@ -75,7 +80,9 @@ public struct GameCardView: View {
       avatar(name).controlSize(.mini)
       Text(name).font(.subheadline.bold()).lineLimit(2).minimumScaleFactor(0.8)
       Spacer(minLength: 0)
-      if !game.isPlanned { scoreText(score, opponent: opponent, size: 30) }
+      if !game.isPlanned {
+        scoreText(score, opponent: opponent, size: 30)
+      }
     }
   }
 
@@ -85,18 +92,30 @@ public struct GameCardView: View {
     VStack(alignment: alignment, spacing: 4) {
       if compact {
         HStack(spacing: 6) {
-          if alignment == .leading { avatar(name).controlSize(.mini) }
+          if alignment == .leading {
+            avatar(name).controlSize(.mini)
+          }
           Text(name).font(.caption.bold()).lineLimit(2).minimumScaleFactor(0.8)
-          if !game.isPlanned { scoreText(score, opponent: opponentScore, size: 32) }
-          if alignment == .trailing { avatar(name).controlSize(.mini) }
+          if !game.isPlanned {
+            scoreText(score, opponent: opponentScore, size: 32)
+          }
+          if alignment == .trailing {
+            avatar(name).controlSize(.mini)
+          }
         }
       } else {
         Text(name).font(.headline).lineLimit(1).truncationMode(.middle)
           .foregroundStyle(.thickMaterial)
         HStack(spacing: 16) {
-          if alignment == .leading { avatar(name) }
-          if !game.isPlanned { scoreText(score, opponent: opponentScore, size: 62) }
-          if alignment == .trailing { avatar(name) }
+          if alignment == .leading {
+            avatar(name)
+          }
+          if !game.isPlanned {
+            scoreText(score, opponent: opponentScore, size: 62)
+          }
+          if alignment == .trailing {
+            avatar(name)
+          }
         }
       }
     }
@@ -116,9 +135,13 @@ public struct GameCardView: View {
 
   private var status: some View {
     Label {
-      if game.isPlanned { Text("Planned") }
-      else if game.isCompleted { Text("Final") }
-      else { Text("Q\(game.period)") }
+      if game.isPlanned {
+        Text("Planned")
+      } else if game.isCompleted {
+        Text("Final")
+      } else {
+        Text("Q\(game.period)")
+      }
     } icon: {
       Image(systemName: game.isPlanned ? "calendar" : game.isCompleted ? "checkmark.circle.fill" : "clock.fill")
     }

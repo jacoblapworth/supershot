@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import Clocks
 import ComposableArchitecture
 import ConcurrencyExtras
@@ -16,12 +17,12 @@ import PermissionsFeature
 @testable import ScoringFeature
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 @testable import TeamsFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 #if os(iOS)
   internal import AlarmKit

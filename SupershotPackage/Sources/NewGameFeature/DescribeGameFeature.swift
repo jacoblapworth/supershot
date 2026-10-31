@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import FixtureTeamResolution
@@ -5,8 +6,7 @@ import Foundation
 import GameCore
 import GameParser
 import SQLiteData
-import Styleguide
-import WidgetSupport
+import UI
 
 /// Extraction is automatic; proposals remain transient until normal game persistence.
 @Reducer

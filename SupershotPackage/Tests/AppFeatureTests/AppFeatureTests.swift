@@ -1,6 +1,7 @@
 @testable import AlarmClient
 @testable import AppFeature
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -25,13 +26,13 @@ import OrderedCollections
 @testable import SharedModels
 @testable import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import SwiftUI
 @testable import TeamEditingFeature
 @testable import TeamsFeature
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 #if os(iOS)
   internal import AlarmKit

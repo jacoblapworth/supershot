@@ -1,11 +1,11 @@
+import AppUI
 import ComposableArchitecture
 import Database
 import GameCore
 import PreviewSupport
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct TeamEditorView: View {
   @Bindable package var store: StoreOf<TeamEditorFeature>

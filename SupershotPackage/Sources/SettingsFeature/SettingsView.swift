@@ -1,4 +1,5 @@
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import GameCore
@@ -7,9 +8,9 @@ import RevenueCat
 import RevenueCatUI
 import SharedModels
 import Sharing
-import Styleguide
 import SubscriptionClient
 import SwiftUI
+import UI
 
 package struct SettingsView: View {
   package let proAccess: SubscriptionEntitlement

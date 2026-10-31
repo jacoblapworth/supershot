@@ -1,4 +1,5 @@
 @testable import AppSettings
+import AppUI
 import ComposableArchitecture
 @testable import Database
 import Foundation
@@ -8,10 +9,10 @@ import Foundation
 @testable import SettingsFeature
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

@@ -24,7 +24,8 @@ let package = Package(
     .library(name: "SharedModels", targets: ["SharedModels"]),
     .library(name: "WidgetSupport", targets: ["WidgetSupport"]),
     .library(name: "GameCore", targets: ["GameCore"]),
-    .library(name: "Styleguide", targets: ["Styleguide"]),
+    .library(name: "UI", targets: ["UI"]),
+    .library(name: "AppUI", targets: ["AppUI"]),
     .library(name: "Database", targets: ["Database"]),
     .library(name: "AppSettings", targets: ["AppSettings"]),
     .library(name: "PreviewSupport", targets: ["PreviewSupport"]),
@@ -99,7 +100,7 @@ let package = Package(
     ),
     .target(
       name: "WidgetSupport",
-      dependencies: ["SharedModels"],
+      dependencies: [],
       swiftSettings: appSwiftSettings
     ),
     .target(
@@ -108,9 +109,14 @@ let package = Package(
       swiftSettings: appSwiftSettings
     ),
     .target(
-      name: "Styleguide",
+      name: "UI",
+      dependencies: ["SharedModels", "WidgetSupport"],
+      swiftSettings: appSwiftSettings
+    ),
+    .target(
+      name: "AppUI",
       dependencies: [
-        "SharedModels", "WidgetSupport", "GameCore", "Database",
+        "UI", "SharedModels", "GameCore", "Database",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ],
       swiftSettings: appSwiftSettings
@@ -133,7 +139,8 @@ let package = Package(
     .target(
       name: "PreviewSupport",
       dependencies: [
-        "LocationClient", "SharedModels", "GameCore", "Database", "Styleguide", "WidgetSupport",
+        "AppUI",
+        "LocationClient", "SharedModels", "GameCore", "Database", "UI",
         .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "Dependencies", package: "swift-dependencies"),
@@ -202,15 +209,17 @@ let package = Package(
     .target(
       name: "GameAnalysis",
       dependencies: [
-        "LocationClient", "PaywallFeature", "SharedModels", "GameCore", "Database", "Styleguide",
-        "WidgetSupport", "PreviewSupport",
+        "AppUI",
+        "LocationClient", "PaywallFeature", "SharedModels", "GameCore", "Database", "UI",
+        "PreviewSupport",
       ],
       swiftSettings: appSwiftSettings
     ),
     .target(
       name: "TeamEditingFeature",
       dependencies: [
-        "SharedModels", "GameCore", "Database", "Styleguide", "WidgetSupport", "PreviewSupport",
+        "AppUI",
+        "SharedModels", "GameCore", "Database", "UI", "PreviewSupport",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ],
@@ -220,7 +229,7 @@ let package = Package(
       name: "PermissionsFeature",
       dependencies: [
         "FeatureFlagsClient",
-        "SubscriptionClient", "AlarmClient", "Styleguide",
+        "SubscriptionClient", "AlarmClient", "UI",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ],
       swiftSettings: appSwiftSettings
@@ -228,7 +237,7 @@ let package = Package(
     .target(
       name: "PaywallFeature",
       dependencies: [
-        "SubscriptionClient", "Styleguide",
+        "SubscriptionClient", "UI",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
       ],
       swiftSettings: appSwiftSettings
@@ -236,8 +245,9 @@ let package = Package(
     .target(
       name: "ScoringFeature",
       dependencies: [
+        "AppUI",
         "SharedModels", "GameCore", "Database", "GameServices", "AlarmClient", "SubscriptionClient",
-        "AppSettings", "SoundEffectsClient", "Styleguide", "WidgetSupport", "GameAnalysis",
+        "AppSettings", "SoundEffectsClient", "UI", "GameAnalysis",
         "PermissionsFeature", "PreviewSupport",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -250,8 +260,9 @@ let package = Package(
     .target(
       name: "NewGameFeature",
       dependencies: [
+        "AppUI",
         "GameAnalysis", "PermissionsFeature", "SubscriptionClient", "SharedModels", "GameCore",
-        "Database", "GameServices", "AppSettings", "LocationClient", "Styleguide", "WidgetSupport",
+        "Database", "GameServices", "AppSettings", "LocationClient", "UI",
         "TeamEditingFeature", "ScoringFeature", "PreviewSupport", "GameParser", "FixtureTeamResolution",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -262,7 +273,8 @@ let package = Package(
     .target(
       name: "GameDetailFeature",
       dependencies: [
-        "SharedModels", "GameCore", "Database", "GameServices", "Styleguide", "GameAnalysis",
+        "AppUI",
+        "SharedModels", "GameCore", "Database", "GameServices", "UI", "GameAnalysis",
         "PreviewSupport", .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "Dependencies", package: "swift-dependencies"),
@@ -272,7 +284,8 @@ let package = Package(
     .target(
       name: "GamesFeature",
       dependencies: [
-        "SharedModels", "GameCore", "Database", "GameServices", "SubscriptionClient", "Styleguide",
+        "AppUI",
+        "SharedModels", "GameCore", "Database", "GameServices", "SubscriptionClient", "UI",
         "NewGameFeature", "ScoringFeature", "GameDetailFeature", "GameAnalysis", "PaywallFeature",
         "PreviewSupport", .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -284,8 +297,9 @@ let package = Package(
     .target(
       name: "TeamsFeature",
       dependencies: [
-        "SharedModels", "GameCore", "Database", "GameServices", "SubscriptionClient", "Styleguide",
-        "WidgetSupport", "TeamEditingFeature", "NewGameFeature", "ScoringFeature",
+        "AppUI",
+        "SharedModels", "GameCore", "Database", "GameServices", "SubscriptionClient", "UI",
+        "TeamEditingFeature", "NewGameFeature", "ScoringFeature",
         "GameDetailFeature", "GameAnalysis", "PaywallFeature", "PreviewSupport",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -297,7 +311,8 @@ let package = Package(
     .target(
       name: "SettingsFeature",
       dependencies: [
-        "SharedModels", "GameCore", "Database", "AppSettings", "SubscriptionClient", "Styleguide",
+        "AppUI",
+        "SharedModels", "GameCore", "Database", "AppSettings", "SubscriptionClient", "UI",
         "PaywallFeature", .product(name: "RevenueCat", package: "purchases-ios-spm"),
         .product(name: "RevenueCatUI", package: "purchases-ios-spm"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -308,10 +323,11 @@ let package = Package(
     .target(
       name: "AppFeature",
       dependencies: [
+        "AppUI",
         "FeatureFlagsClient",
         "PreviewSupport",
         "SharedModels", "GameCore", "Database", "GameServices", "AlarmClient", "AppSettings",
-        "SubscriptionClient", "Styleguide", "GamesFeature", "TeamsFeature", "SettingsFeature",
+        "SubscriptionClient", "UI", "GamesFeature", "TeamsFeature", "SettingsFeature",
         "PermissionsFeature", "PaywallFeature", "ScoringFeature",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -331,7 +347,8 @@ let package = Package(
     .testTarget(
       name: "TeamEditingFeatureTests",
       dependencies: [
-        "Database", "GameCore", "GameServices", "PreviewSupport", "SharedModels", "Styleguide",
+        "AppUI",
+        "Database", "GameCore", "GameServices", "PreviewSupport", "SharedModels", "UI",
         "TeamEditingFeature", "TestSupport", "WidgetSupport",
         .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
@@ -345,7 +362,8 @@ let package = Package(
     .testTarget(
       name: "DatabaseTests",
       dependencies: [
-        "Database", "GameCore", "GameServices", "SharedModels", "Styleguide", "TestSupport",
+        "AppUI",
+        "Database", "GameCore", "GameServices", "SharedModels", "UI", "TestSupport",
         "WidgetSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "CustomDump", package: "swift-custom-dump"),
@@ -357,8 +375,9 @@ let package = Package(
     .testTarget(
       name: "SettingsFeatureTests",
       dependencies: [
+        "AppUI",
         "NewGameFeature", "AppSettings", "Database", "GameCore", "GameServices", "PaywallFeature",
-        "SettingsFeature", "SharedModels", "Styleguide", "SubscriptionClient", "TestSupport",
+        "SettingsFeature", "SharedModels", "UI", "SubscriptionClient", "TestSupport",
         "WidgetSupport", .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
@@ -368,10 +387,11 @@ let package = Package(
     .testTarget(
       name: "AppFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "AppFeature", "AppSettings", "Database", "GameAnalysis", "GameCore",
         "GameDetailFeature", "GameServices", "GamesFeature", "LocationClient", "NewGameFeature",
         "PaywallFeature", "PermissionsFeature", "PreviewSupport", "ScoringFeature",
-        "SettingsFeature", "SharedModels", "SoundEffectsClient", "Styleguide", "SubscriptionClient",
+        "SettingsFeature", "SharedModels", "SoundEffectsClient", "UI", "SubscriptionClient",
         "TeamEditingFeature", "TeamsFeature", "TestSupport", "WidgetSupport",
         .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
@@ -385,10 +405,11 @@ let package = Package(
       swiftSettings: appSwiftSettings
     ),
     .testTarget(
-      name: "StyleguideTests",
+      name: "UITests",
       dependencies: [
+        "AppUI",
         "NewGameFeature", "SettingsFeature", "Database", "GameCore", "GameServices", "SharedModels",
-        "Styleguide", "TestSupport", "WidgetSupport",
+        "UI", "TestSupport", "WidgetSupport",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
       ],
@@ -397,10 +418,11 @@ let package = Package(
     .testTarget(
       name: "GameServicesTests",
       dependencies: [
+        "AppUI",
         "PermissionsFeature",
         "SoundEffectsClient",
         "GamesFeature", "ScoringFeature", "TeamsFeature", "AlarmClient", "Database", "GameCore",
-        "GameServices", "SharedModels", "Styleguide", "SubscriptionClient", "TestSupport",
+        "GameServices", "SharedModels", "UI", "SubscriptionClient", "TestSupport",
         "WidgetSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "OrderedCollections", package: "swift-collections"),
@@ -414,7 +436,8 @@ let package = Package(
     .testTarget(
       name: "PaywallFeatureTests",
       dependencies: [
-        "Database", "GameCore", "GameServices", "PaywallFeature", "SharedModels", "Styleguide",
+        "AppUI",
+        "Database", "GameCore", "GameServices", "PaywallFeature", "SharedModels", "UI",
         "SubscriptionClient", "TestSupport", "WidgetSupport",
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
         .product(name: "DependenciesTestSupport", package: "swift-dependencies"),
@@ -424,9 +447,10 @@ let package = Package(
     .testTarget(
       name: "TeamsFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "AppSettings", "Database", "GameAnalysis", "GameCore", "GameDetailFeature",
         "GameServices", "LocationClient", "NewGameFeature", "PaywallFeature", "PermissionsFeature",
-        "PreviewSupport", "ScoringFeature", "SharedModels", "SoundEffectsClient", "Styleguide",
+        "PreviewSupport", "ScoringFeature", "SharedModels", "SoundEffectsClient", "UI",
         "SubscriptionClient", "TeamEditingFeature", "TeamsFeature", "TestSupport", "WidgetSupport",
         .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
@@ -441,6 +465,7 @@ let package = Package(
     .testTarget(
       name: "GameCoreTests",
       dependencies: [
+        "UI",
         "AlarmClient", "ScoringFeature", "WidgetSupport", "Database", "GameCore", "GameServices",
         "SharedModels", "TestSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
@@ -453,10 +478,11 @@ let package = Package(
     .testTarget(
       name: "GamesFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "AppSettings", "Database", "GameAnalysis", "GameCore", "GameDetailFeature",
         "GameServices", "GamesFeature", "LocationClient", "NewGameFeature", "PaywallFeature",
         "PermissionsFeature", "PreviewSupport", "ScoringFeature", "SharedModels",
-        "SoundEffectsClient", "Styleguide", "SubscriptionClient", "TeamEditingFeature",
+        "SoundEffectsClient", "UI", "SubscriptionClient", "TeamEditingFeature",
         "TestSupport", "WidgetSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "OrderedCollections", package: "swift-collections"),
@@ -469,9 +495,10 @@ let package = Package(
     .testTarget(
       name: "NewGameFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "AppSettings", "Database", "GameAnalysis", "GameCore", "GameServices",
         "LocationClient", "NewGameFeature", "PermissionsFeature", "PreviewSupport", "GameParser", "FixtureTeamResolution",
-        "ScoringFeature", "SharedModels", "SoundEffectsClient", "Styleguide", "SubscriptionClient",
+        "ScoringFeature", "SharedModels", "SoundEffectsClient", "UI", "SubscriptionClient",
         "TeamEditingFeature", "TestSupport", "WidgetSupport",
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -484,9 +511,10 @@ let package = Package(
     .testTarget(
       name: "ScoringFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "AppSettings", "Database", "GameAnalysis", "GameCore", "GameServices",
         "PermissionsFeature", "PreviewSupport", "ScoringFeature", "SharedModels",
-        "SoundEffectsClient", "Styleguide", "SubscriptionClient", "TestSupport", "WidgetSupport",
+        "SoundEffectsClient", "UI", "SubscriptionClient", "TestSupport", "WidgetSupport",
         .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
@@ -500,7 +528,8 @@ let package = Package(
     .testTarget(
       name: "PreviewSupportTests",
       dependencies: [
-        "Database", "GameCore", "GameServices", "PreviewSupport", "SharedModels", "Styleguide",
+        "AppUI",
+        "Database", "GameCore", "GameServices", "PreviewSupport", "SharedModels", "UI",
         "TestSupport", "WidgetSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "Dependencies", package: "swift-dependencies"),
@@ -511,8 +540,9 @@ let package = Package(
     .testTarget(
       name: "GameDetailFeatureTests",
       dependencies: [
+        "AppUI",
         "AlarmClient", "Database", "GameAnalysis", "GameCore", "GameDetailFeature", "GameServices",
-        "PreviewSupport", "SharedModels", "Styleguide", "SubscriptionClient", "TestSupport",
+        "PreviewSupport", "SharedModels", "UI", "SubscriptionClient", "TestSupport",
         "WidgetSupport", .product(name: "GRDB", package: "grdb.swift"),
         .product(name: "SQLiteData", package: "sqlite-data"),
         .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),

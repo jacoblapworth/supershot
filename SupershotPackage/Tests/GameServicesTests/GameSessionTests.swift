@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import CustomDump
 @testable import Database
 import Dependencies
@@ -8,10 +9,10 @@ import Foundation
 @testable import GameServices
 @testable import SharedModels
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

@@ -21,7 +21,7 @@ WidgetKit controls actual delivery times; scores are snapshots, not continuously
 
 ## Layout
 
-`GameCardView` in WidgetSupport is shared with the app's games list. It preserves bib
+`GameCardView` in UI is shared with the app's games list. It preserves bib
 colour gradients, initials, team names, compressed score hierarchy, period/final/planned
 status and localised date/time. Planned games have no score. Completed losing scores
 use secondary emphasis. VoiceOver reads each card as one result or scheduled fixture.

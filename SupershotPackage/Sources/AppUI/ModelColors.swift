@@ -1,7 +1,6 @@
 import GameCore
-import SharedModels
 import SwiftUI
-import WidgetSupport
+import UI
 
 public nonisolated extension Team {
   var color: Color {

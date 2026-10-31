@@ -1,12 +1,12 @@
+import AppUI
 import Database
 import Dependencies
 import Foundation
 import GameCore
 import LocationClient
 import SharedModels
-import Styleguide
 import SwiftUI
-import WidgetSupport
+import UI
 
 package extension GameListItem {
   static let previewInProgress = Self(

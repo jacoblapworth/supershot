@@ -1,5 +1,6 @@
 @testable import AlarmClient
 @testable import AppSettings
+import AppUI
 import CustomDump
 @testable import Database
 import Dependencies
@@ -15,10 +16,10 @@ import GRDB
 @testable import SharedModels
 @testable import SoundEffectsClient
 import SQLiteData
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

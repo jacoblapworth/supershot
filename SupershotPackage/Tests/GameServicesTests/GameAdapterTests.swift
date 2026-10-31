@@ -1,4 +1,5 @@
 @testable import AlarmClient
+import AppUI
 import Clocks
 import ConcurrencyExtras
 import CustomDump
@@ -10,10 +11,10 @@ import Foundation
 @testable import GameCore
 @testable import GameServices
 @testable import SharedModels
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 /// Test adapters independently of persistence and system services.

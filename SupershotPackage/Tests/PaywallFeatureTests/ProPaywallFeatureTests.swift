@@ -1,12 +1,13 @@
+import AppUI
 import ComposableArchitecture
 import Foundation
 @testable import GameCore
 @testable import PaywallFeature
 @testable import SharedModels
-@testable import Styleguide
 @testable import SubscriptionClient
 import Testing
 import TestSupport
+@testable import UI
 @testable import WidgetSupport
 
 extension SupershotTestSuite {

@@ -1,5 +1,6 @@
 import AlarmClient
 import AppSettings
+import AppUI
 import ComposableArchitecture
 import Database
 import Dependencies
@@ -11,10 +12,9 @@ import PreviewSupport
 import SharedModels
 import SoundEffectsClient
 import SQLiteData
-import Styleguide
 import SubscriptionClient
 import SwiftUI
-import WidgetSupport
+import UI
 
 package struct ScoringView: View {
   @Environment(\.scenePhase) private var scenePhase
