@@ -28,6 +28,32 @@ extension SupershotTestSuite {
   @MainActor
   struct NewGameFeatureTests {
     @Test
+    func schedulingToggleInitializesAndClearsScheduledTime() async {
+      let now = Date(timeIntervalSince1970: 1234)
+      let store = TestStore(initialState: NewGameFeature.State()) {
+        NewGameFeature()
+      } withDependencies: {
+        $0.date.now = now
+      }
+
+      #expect(!store.state.scheduled)
+      await store.send(.binding(.set(\.scheduled, true))) {
+        $0.scheduledAt = now
+      }
+      #expect(store.state.scheduled)
+
+      let selectedTime = now.addingTimeInterval(3600)
+      await store.send(.binding(.set(\.scheduledAt, selectedTime))) {
+        $0.scheduledAt = selectedTime
+      }
+      await store.send(.binding(.set(\.scheduled, true)))
+      await store.send(.binding(.set(\.scheduled, false))) {
+        $0.scheduledAt = nil
+      }
+      #expect(!store.state.scheduled)
+    }
+
+    @Test
     func newGamesDefaultToEightMinuteQuartersAndOneMinuteBreaks() {
       let state = NewGameFeature.State()
 
@@ -215,15 +241,21 @@ extension SupershotTestSuite {
 
       await store.send(.task) {
         $0.location = .loading
+        $0.locationRequestID = 1
       }
       await store.receive {
-        guard case let .locationResponse(.success(receivedLocation)) = $0 else {
+        guard case let .locationResponse(_, .success(receivedLocation)) = $0 else {
           return false
         }
         return receivedLocation == location
       } assert: {
-        $0.location = .loaded(location)
+        $0.location = .loaded
+        $0.currentLocation = location
+        $0.selectedLocation = location
+        $0.nearbyPlacesStatus = .loading
+        $0.locationRequestID = 2
       }
+      await store.receive(\.nearbyPlacesResponse) { $0.nearbyPlacesStatus = .loaded }
     }
 
     @Test
@@ -240,9 +272,10 @@ extension SupershotTestSuite {
 
       await store.send(.task) {
         $0.location = .loading
+        $0.locationRequestID = 1
       }
       await store.receive {
-        guard case .locationResponse(.failure) = $0 else { return false }
+        guard case .locationResponse(_, .failure) = $0 else { return false }
         return true
       } assert: {
         $0.location = .failed
@@ -260,12 +293,12 @@ extension SupershotTestSuite {
       state.firstBreakDuration = .init(totalSeconds: breakSeconds)
       state.halfTimeDuration = .init(totalSeconds: breakSeconds)
       state.secondBreakDuration = .init(totalSeconds: breakSeconds)
-      state.location = .loaded(
-        GameLocation(
-          latitude: 51.556,
-          longitude: -0.2796,
-          pointOfInterestName: "Wembley Arena"
-        )
+      state.location = .loaded
+      state.currentLocation = GameLocation(latitude: 51.55, longitude: -0.28)
+      state.selectedLocation = GameLocation(
+        latitude: 51.556,
+        longitude: -0.2796,
+        pointOfInterestName: "Wembley Arena"
       )
       state.leftTeam = .init(bibColor: Color(hex: "#AF52DE"))
       state.leftTeam.team = ravens

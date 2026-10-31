@@ -14,16 +14,32 @@ package nonisolated enum LocationAuthorizationStatus: Equatable, Sendable {
 package nonisolated struct LocationClient: Sendable {
   package var authorizationStatus: @Sendable () -> LocationAuthorizationStatus
   package var currentLocation: @Sendable () async throws -> GameLocation
+  package var nearbyPlaces: @Sendable (GameLocation) async throws -> [NearbyPlace]
   package var requestAuthorization: @Sendable () async -> LocationAuthorizationStatus
 
   package init(
     authorizationStatus: @escaping @Sendable () -> LocationAuthorizationStatus,
     currentLocation: @escaping @Sendable () async throws -> GameLocation,
-    requestAuthorization: @escaping @Sendable () async -> LocationAuthorizationStatus
+    requestAuthorization: @escaping @Sendable () async -> LocationAuthorizationStatus,
+    nearbyPlaces: @escaping @Sendable (GameLocation) async throws -> [NearbyPlace] = { _ in [] }
   ) {
     self.authorizationStatus = authorizationStatus
     self.currentLocation = currentLocation
+    self.nearbyPlaces = nearbyPlaces
     self.requestAuthorization = requestAuthorization
+  }
+}
+
+package nonisolated struct NearbyPlace: Equatable, Identifiable, Sendable {
+  package var location: GameLocation
+  package var distance: Double
+
+  package let id: String
+
+  package init(id: String? = nil, location: GameLocation, distance: Double) {
+    self.id = id ?? "\(location.latitude),\(location.longitude):\(location.pointOfInterestName ?? "")"
+    self.location = location
+    self.distance = distance
   }
 }
 
@@ -55,9 +71,14 @@ package nonisolated extension LocationClient {
     pointOfInterestName: "Wembley Arena"
   )
 
+  static let previewCoordinates = GameLocation(
+    latitude: previewLocation.latitude,
+    longitude: previewLocation.longitude
+  )
+
   static let preview = Self(
     authorizationStatus: { .authorized },
-    currentLocation: { previewLocation },
+    currentLocation: { previewCoordinates },
     requestAuthorization: { .authorized }
   )
 
@@ -78,42 +99,40 @@ package nonisolated extension LocationClient {
           throw LocationClientError.authorizationDenied
         }
         let location = try await provider.requestLocation()
-        let request = MKLocalPointsOfInterestRequest(
-          center: location.coordinate,
-          radius: 5000
-        )
-
-        request.pointOfInterestFilter = .init(including: [
-          .school,
-          .university,
-          .fitnessCenter,
-          .park,
-          .basketball,
-          .soccer,
-          .stadium,
-          .tennis,
-          .volleyball,
-        ])
-
-        let response = try? await MKLocalSearch(request: request).start()
-        let nearestPointOfInterest = response?.mapItems
-          .filter { item in
-            guard let name = item.name else { return false }
-            return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-          }
-          .min { lhs, rhs in
-            location.distance(from: lhs.location) < location.distance(from: rhs.location)
-          }
-
         return GameLocation(
           latitude: location.coordinate.latitude,
-          longitude: location.coordinate.longitude,
-          pointOfInterestName: nearestPointOfInterest?.name
+          longitude: location.coordinate.longitude
         )
       },
       requestAuthorization: {
         let provider = await LocationProvider()
         return await provider.requestAuthorization()
+      },
+      nearbyPlaces: { location in
+        let center = CLLocation(latitude: location.latitude, longitude: location.longitude)
+        let request = MKLocalPointsOfInterestRequest(center: center.coordinate, radius: 5000)
+        request.pointOfInterestFilter = .init(including: [
+          .school, .university, .fitnessCenter, .park, .basketball,
+          .soccer, .stadium, .tennis, .volleyball,
+        ])
+        let response = try await MKLocalSearch(request: request).start()
+        var seen: Set<NearbyPlace.ID> = []
+        return response.mapItems.compactMap { item -> NearbyPlace? in
+          guard let name = item.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                !name.isEmpty else { return nil }
+          let place = NearbyPlace(
+            id: item.identifier?.rawValue,
+            location: GameLocation(
+              latitude: item.location.coordinate.latitude,
+              longitude: item.location.coordinate.longitude,
+              pointOfInterestName: name
+            ),
+            distance: center.distance(from: item.location)
+          )
+          return seen.insert(place.id).inserted ? place : nil
+        }.sorted {
+          $0.distance == $1.distance ? $0.id < $1.id : $0.distance < $1.distance
+        }
       }
     )
   }
@@ -156,9 +175,18 @@ private final class LocationProvider: NSObject, CLLocationManagerDelegate {
       throw LocationClientError.authorizationDenied
     }
 
-    return try await withCheckedThrowingContinuation { continuation in
-      locationContinuation = continuation
-      manager.requestLocation()
+    try Task.checkCancellation()
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        locationContinuation = continuation
+        manager.requestLocation()
+      }
+    } onCancel: {
+      Task { @MainActor [weak self] in
+        self?.manager.stopUpdatingLocation()
+        self?.locationContinuation?.resume(throwing: CancellationError())
+        self?.locationContinuation = nil
+      }
     }
   }
 

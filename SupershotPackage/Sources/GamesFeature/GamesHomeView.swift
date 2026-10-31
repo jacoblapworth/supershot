@@ -125,6 +125,7 @@ package struct GamesHomeView: View {
 //        store.send(.filterButtonTapped(filter))
 //      }
 //    })
+    #if os(iOS)
     .toolbar(content: {
       ToolbarItem(id: "filters", placement: .largeSubtitle) {
         GamesFilterControl(selection: store.filter) { filter in
@@ -138,6 +139,7 @@ package struct GamesHomeView: View {
         }
       }
     })
+    #endif
     .scrollEdgeEffectStyle(.soft, for: .top)
     .scrollContentBackground(.hidden)
     .background(.background)

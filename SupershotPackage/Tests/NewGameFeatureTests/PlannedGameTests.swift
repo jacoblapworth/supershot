@@ -173,16 +173,28 @@ extension SupershotTestSuite {
       #expect(store.draft?.game.court == nil)
     }
 
-    @Test
-    func restoredLocationIsNotReplacedOnAppearance() async throws {
+    @Test(arguments: [true, false])
+    func restoredLocationIsNotReplacedOnAppearance(hasLocation: Bool) async throws {
+      @Dependency(\.defaultDatabase) var database
       var state = try await readySetup()
-      let location = GameLocation(latitude: 1, longitude: 2, pointOfInterestName: "Arena")
-      state.location = .loaded(location)
-      state.requiresExistingGame = true
-      let store = Store(initialState: state) { NewGameFeature() }
+      let location = hasLocation ? GameLocation(latitude: 1, longitude: 2, pointOfInterestName: "Arena") : nil
+      state.selectedLocation = location
+      let original = Store(initialState: state) { NewGameFeature() }
+      await original.send(.saveGameButtonTapped).finish()
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }
+      let store = Store(initialState: NewGameFeature.State(snapshot: snapshot)) {
+        NewGameFeature()
+      } withDependencies: {
+        $0.locationClient = .preview
+        $0.locationClient.nearbyPlaces = { _ in
+          [NearbyPlace(location: LocationClient.previewLocation, distance: 100)]
+        }
+      }
       await store.send(.task).finish()
       await store.send(.sceneBecameActive).finish()
-      expectNoDifference(store.location, .loaded(location))
+      expectNoDifference(store.selectedLocation, location)
+      expectNoDifference(store.currentLocation, LocationClient.previewCoordinates)
+      expectNoDifference(store.draft, original.draft)
     }
   }
 }

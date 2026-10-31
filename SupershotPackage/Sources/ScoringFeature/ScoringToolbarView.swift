@@ -38,7 +38,6 @@ package struct ScoringToolbarView: View {
     }
     .padding()
     .frame(maxWidth: 420)
-    .border(.red)
   }
 }
 
