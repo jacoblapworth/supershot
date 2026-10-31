@@ -7,7 +7,7 @@ import WidgetKit
 import WidgetSupport
 
 package extension GameListItem {
-  var widgetGame: WidgetGame {
+  nonisolated var widgetGame: WidgetGame {
     WidgetGame(
       id: id,
       createdAt: createdAt,

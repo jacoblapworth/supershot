@@ -6,7 +6,7 @@ The workspace connects the executable targets to this local package. Use the exi
 
 The layout follows [isowords](https://github.com/pointfreeco/isowords): one package,
 explicit target dependencies, and independently buildable features. The package preserves
-the application's Swift 5 language mode, MainActor default isolation, approachable
+the application's Swift 6 language mode, MainActor default isolation, approachable
 concurrency settings, and iOS/macOS 27 deployment targets. Dependencies are pinned to the
 versions used before extraction; update them deliberately in a separate change.
 

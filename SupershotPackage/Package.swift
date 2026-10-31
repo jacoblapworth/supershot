@@ -1,16 +1,13 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-/// Match the executable's existing language and isolation settings during extraction.
+/// Use Swift 6 while preserving the application's default isolation and concurrency settings.
 let appSwiftSettings: [SwiftSetting] = [
-  .swiftLanguageMode(.v5),
+  .swiftLanguageMode(.v6),
   .defaultIsolation(MainActor.self),
   .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
   .enableUpcomingFeature("InferIsolatedConformances"),
   .enableUpcomingFeature("MemberImportVisibility"),
-  .enableUpcomingFeature("DisableOutwardActorInference"),
-  .enableUpcomingFeature("GlobalActorIsolatedTypesUsability"),
-  .enableUpcomingFeature("InferSendableFromCaptures"),
 ]
 
 let package = Package(

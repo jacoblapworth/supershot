@@ -21,17 +21,15 @@
 
     nonisolated func userNotificationCenter(
       _: UNUserNotificationCenter,
-      didReceive response: UNNotificationResponse,
-      withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
+      didReceive response: UNNotificationResponse
+    ) async {
       guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
             let value = response.notification.request.content.userInfo["gameID"] as? String,
             let gameID = UUID(uuidString: value)
       else {
-        completionHandler()
         return
       }
-      Task { @MainActor in
+      await MainActor.run {
         let scheme =
           Bundle.main.object(forInfoDictionaryKey: "AppURLScheme") as? String ?? "supershot"
         // Going through the registered URL also reopens the single main window if it was closed.
@@ -43,7 +41,6 @@
             completionHandler: nil
           )
         }
-        completionHandler()
       }
     }
   }

@@ -26,7 +26,7 @@ public extension SharedKey where Self == AppStorageKey<Int>.Default {
 }
 
 public extension SharedKey where Self == AppStorageKey<BreakStartPolicy>.Default {
-  static var defaultBreakStartPolicy: Self {
+  nonisolated static var defaultBreakStartPolicy: Self {
     Self[.appStorage("defaultBreakStartPolicy"), default: .automatic]
   }
 }

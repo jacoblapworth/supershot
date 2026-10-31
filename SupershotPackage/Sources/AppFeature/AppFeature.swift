@@ -265,6 +265,16 @@ package struct AppFeature {
 package enum AppDestination {
   case welcome(WelcomeFeature)
   case proPaywall(PaywallFeature)
+
+  /// The synthesized conformance does not infer the reducer's main-actor isolation.
+  @CasePathable
+  @dynamicMemberLookup
+  @ObservableState
+  package enum State: @MainActor CaseReducerState {
+    package typealias StateReducer = AppDestination
+    case welcome(WelcomeFeature.State)
+    case proPaywall(PaywallFeature.State)
+  }
 }
 
 extension AppDestination.State: Equatable {}

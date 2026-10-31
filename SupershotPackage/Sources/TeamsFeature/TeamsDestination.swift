@@ -18,6 +18,16 @@ import UI
 package enum TeamsDestination {
   case alert(AlertState<TeamsFeature.Alert>)
   case teamEditor(TeamsEditorFeature)
+
+  /// The synthesized conformance does not infer the reducer's main-actor isolation.
+  @CasePathable
+  @dynamicMemberLookup
+  @ObservableState
+  package enum State: @MainActor CaseReducerState {
+    package typealias StateReducer = TeamsDestination
+    case alert(AlertState<TeamsFeature.Alert>)
+    case teamEditor(TeamsEditorFeature.State)
+  }
 }
 
 extension TeamsDestination.State: Equatable {}

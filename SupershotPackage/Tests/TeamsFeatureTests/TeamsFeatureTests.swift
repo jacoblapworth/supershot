@@ -90,22 +90,22 @@ extension SupershotTestSuite {
         TeamsFeature()
       }
 
-      await store.send(.binding(.set(\.searchText, "  CAFE \n"))) {
+      await store.send(.binding(.allCasePaths.searchText.embed("  CAFE \n"))) {
         $0.searchText = "  CAFE \n"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [teams[1]])
 
-      await store.send(.binding(.set(\.searchText, "aven"))) {
+      await store.send(.binding(.allCasePaths.searchText.embed("aven"))) {
         $0.searchText = "aven"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [teams[0]])
 
-      await store.send(.binding(.set(\.searchText, "missing"))) {
+      await store.send(.binding(.allCasePaths.searchText.embed("missing"))) {
         $0.searchText = "missing"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), [])
 
-      await store.send(.binding(.set(\.searchText, " \n"))) {
+      await store.send(.binding(.allCasePaths.searchText.embed(" \n"))) {
         $0.searchText = " \n"
       }
       expectNoDifference(store.state.filteredTeams(in: teams), teams)
@@ -271,7 +271,7 @@ extension SupershotTestSuite {
       await store.send(.newTeamButtonTapped) {
         $0.destination = .teamEditor(TeamsEditorFeature.State())
       }
-      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.set(\.name, "Draft team"))))))) {
+      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.allCasePaths.name.embed("Draft team"))))))) {
         Self.updateEditor(in: &$0) { $0.editor.name = "Draft team" }
       }
       if !opensEditorDuringResume {
@@ -331,7 +331,7 @@ extension SupershotTestSuite {
       state.destination = .teamEditor(editor)
       let store = Self.makeStore(state: state)
       let database = store.dependencies.defaultDatabase
-      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.set(\.name, "New team"))))))) {
+      await store.send(.destination(.presented(.teamEditor(.editor(.binding(.allCasePaths.name.embed("New team"))))))) {
         Self.updateEditor(in: &$0) { $0.editor.name = "New team" }
       }
       await store.send(.destination(.presented(.teamEditor(.editor(.saveButtonTapped))))) {

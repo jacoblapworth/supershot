@@ -20,6 +20,16 @@ import UI
 package enum GamesPath {
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
+
+  /// The synthesized conformance does not infer the reducer's main-actor isolation.
+  @CasePathable
+  @dynamicMemberLookup
+  @ObservableState
+  package enum State: @MainActor CaseReducerState {
+    package typealias StateReducer = GamesPath
+    case gameDetail(GameDetailFeature.State)
+    case scoring(ScoringFeature.State)
+  }
 }
 
 extension GamesPath.State: Equatable {}

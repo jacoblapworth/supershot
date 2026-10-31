@@ -51,7 +51,7 @@ extension SupershotTestSuite {
         .saveGameButtonTapped,
       ]
       await store.send(actions[actionIndex]).finish()
-      let saved = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }
+      let saved = try await database.read { [gameID = state.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       #expect(saved.game.isPlanned)
       #expect(saved.game.timerEndsAt == nil)
       expectNoDifference(saved.game.scheduledAt, state.scheduledAt)
@@ -79,16 +79,16 @@ extension SupershotTestSuite {
       state.court = "3"
       let store = Store(initialState: state) { NewGameFeature() }
       await store.send(.saveGameButtonTapped).finish()
-      let saved = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }
+      let saved = try await database.read { [gameID = state.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       let restored = NewGameFeature.State(snapshot: saved)
       expectNoDifference(restored.draft, store.draft)
       let editor = Store(initialState: restored) { NewGameFeature() }
-      editor.send(.binding(.set(\.court, "  B ")))
+      editor.send(.binding(.allCasePaths.court.embed("  B ")))
       await editor.send(.configurationChanged).finish()
       await editor.send(.configurationChanged).finish()
       await editor.send(.prepareScoringButtonTapped).finish()
-      let (game, count) = try await database.read { db in
-        try (Game.find(state.gameID).fetchOne(db), Game.fetchCount(db))
+      let (game, count) = try await database.read { [gameID = state.gameID] db in
+        try (Game.find(gameID).fetchOne(db), Game.fetchCount(db))
       }
       expectNoDifference(count, 1)
       #expect(game?.startedAt == nil)
@@ -140,7 +140,7 @@ extension SupershotTestSuite {
       let state = try await readySetup()
       let store = Store(initialState: state) { NewGameFeature() }
       let saving = store.send(.configurationChanged)
-      store.send(.binding(.set(\.court, "4")))
+      store.send(.binding(.allCasePaths.court.embed("4")))
       store.send(.prepareScoringButtonTapped)
       await saving.finish()
       let games = try await database.read { try Game.fetchAll($0) }
@@ -159,7 +159,7 @@ extension SupershotTestSuite {
       invalid.periodDuration = .init(totalSeconds: 0)
       let editor = Store(initialState: invalid) { NewGameFeature() }
       await editor.send(.closeButtonTapped).finish()
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }
+      let snapshot = try await database.read { [gameID = state.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(snapshot.periods.first?.durationSeconds, 480)
     }
 
@@ -169,7 +169,7 @@ extension SupershotTestSuite {
       state.scheduledAt = Date(timeIntervalSince1970: 20000)
       state.court = " \n "
       let store = Store(initialState: state) { NewGameFeature() }
-      store.send(.binding(.set(\.scheduledAt, nil)))
+      store.send(.binding(.allCasePaths.scheduledAt.embed(nil)))
       #expect(store.scheduledAt == nil)
       #expect(store.draft?.game.court == nil)
     }
@@ -182,7 +182,7 @@ extension SupershotTestSuite {
       state.selectedLocation = location
       let original = Store(initialState: state) { NewGameFeature() }
       await original.send(.saveGameButtonTapped).finish()
-      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: state.gameID) }
+      let snapshot = try await database.read { [gameID = state.gameID] in try GameSnapshot.fetch($0, gameID: gameID) }
       let store = Store(initialState: NewGameFeature.State(snapshot: snapshot)) {
         NewGameFeature()
       } withDependencies: {

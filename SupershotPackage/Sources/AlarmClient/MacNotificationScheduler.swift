@@ -26,8 +26,7 @@
     package var remove: @Sendable ([String]) async -> Void
 
     package static var live: Self {
-      let center = UNUserNotificationCenter.current()
-      return Self(
+      Self(
         authorization: { await macNotificationAuthorization() },
         add: { request in
           let content = UNMutableNotificationContent()
@@ -36,11 +35,12 @@
           content.sound = .default
           content.userInfo = ["gameID": request.gameID.uuidString]
           let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false)
-          try await center.add(UNNotificationRequest(identifier: request.id, content: content, trigger: trigger))
+          try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: request.id, content: content, trigger: trigger))
         },
-        pendingIDs: { await center.pendingNotificationRequests().map(\.identifier) },
-        deliveredIDs: { await center.deliveredNotifications().map(\.request.identifier) },
+        pendingIDs: { await UNUserNotificationCenter.current().pendingNotificationRequests().map(\.identifier) },
+        deliveredIDs: { await UNUserNotificationCenter.current().deliveredNotifications().map(\.request.identifier) },
         remove: { ids in
+          let center = UNUserNotificationCenter.current()
           center.removePendingNotificationRequests(withIdentifiers: ids)
           center.removeDeliveredNotifications(withIdentifiers: ids)
         }

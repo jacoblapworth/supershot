@@ -63,6 +63,16 @@ package struct PaywallFeature {
   @Reducer
   package enum Destination {
     case alert(AlertState<Alert>)
+
+    /// The synthesized conformance does not infer the reducer's main-actor isolation.
+    @CasePathable
+    @dynamicMemberLookup
+    @ObservableState
+    package enum State: @MainActor CaseReducerState {
+      package typealias StateReducer = Destination
+      case alert(AlertState<Alert>)
+    }
+
     package enum Alert { case dismiss }
   }
 

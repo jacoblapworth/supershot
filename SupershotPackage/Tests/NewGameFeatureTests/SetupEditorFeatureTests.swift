@@ -68,7 +68,7 @@ extension SupershotTestSuite {
         timing.periodDuration = .init(totalSeconds: 900)
         $0.destination = .timingEditor(SetupTimingFeature.State(timing: timing))
       }
-      await store.send(.destination(.presented(.timingEditor(.binding(.set(\.timing.breakStartPolicy, .manual)))))) {
+      await store.send(.destination(.presented(.timingEditor(.binding(.allCasePaths[dynamicMember: \.timing.breakStartPolicy].embed(.manual)))))) {
         var timing = $0.timing
         timing.periodDuration = .init(totalSeconds: 900)
         timing.breakStartPolicy = .manual

@@ -32,10 +32,10 @@ extension SupershotTestSuite {
         }
       }
 
-      await store.send(.binding(.set(\.name, "  Falcons  "))) {
+      await store.send(.binding(.allCasePaths.name.embed("  Falcons  "))) {
         $0.name = "  Falcons  "
       }
-      await store.send(.binding(.set(\.color, Color(hex: "#34c759")))) {
+      await store.send(.binding(.allCasePaths.color.embed(Color(hex: "#34c759")))) {
         $0.color = Color(hex: "#34C759")
       }
       await store.send(.saveButtonTapped) {
@@ -73,10 +73,10 @@ extension SupershotTestSuite {
         try! clearDatabase($0.defaultDatabase)
       }
 
-      await store.send(.binding(.set(\.name, "  Falcons  "))) {
+      await store.send(.binding(.allCasePaths.name.embed("  Falcons  "))) {
         $0.name = "  Falcons  "
       }
-      await store.send(.binding(.set(\.color, Color(hex: "#34c759")))) {
+      await store.send(.binding(.allCasePaths.color.embed(Color(hex: "#34c759")))) {
         $0.color = Color(hex: "#34C759")
       }
       await store.send(.saveButtonTapped) {
@@ -121,7 +121,7 @@ extension SupershotTestSuite {
         }
       }
 
-      await store.send(.binding(.set(\.name, "  SWIFTS "))) {
+      await store.send(.binding(.allCasePaths.name.embed("  SWIFTS "))) {
         $0.name = "  SWIFTS "
       }
       await store.send(.saveButtonTapped) {
@@ -156,7 +156,7 @@ extension SupershotTestSuite {
         try! clearDatabase($0.defaultDatabase)
       }
 
-      await store.send(.binding(.set(\.name, "Falcons"))) {
+      await store.send(.binding(.allCasePaths.name.embed("Falcons"))) {
         $0.name = "Falcons"
       }
       await store.send(.saveButtonTapped) {
