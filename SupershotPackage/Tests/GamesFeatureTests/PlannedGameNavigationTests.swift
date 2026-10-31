@@ -86,7 +86,9 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(.gameDeepLinkOpened(draft.game.id))
       await store.receive {
-        if case .resumeGameResponse(_, .success) = $0 { return true }
+        if case .resumeGameResponse(_, .success) = $0 {
+          return true
+        }
         return false
       }
       #expect(store.state.newGame == nil)
@@ -105,7 +107,9 @@ extension SupershotTestSuite {
       store.exhaustivity = .off(showSkippedAssertions: false)
       await store.send(.gameDeepLinkOpened(setupState.gameID))
       await store.receive {
-        if case .resumeGameResponse(_, .failure) = $0 { return true }
+        if case .resumeGameResponse(_, .failure) = $0 {
+          return true
+        }
         return false
       }
       #expect(store.state.newGame == nil)

@@ -15,7 +15,7 @@ extension SupershotTestSuite {
       let store = TestStore(initialState: AppFeature.State()) { AppFeature() }
         withDependencies: { $0.defaultAppStorage.set(true, forKey: "hasCompletedWelcome") }
       store.exhaustivity = .off(showSkippedAssertions: false)
-      await store.send(.deepLinkOpened(try #require(URL(string: "\(scheme)://new-game"))))
+      try await store.send(.deepLinkOpened(#require(URL(string: "\(scheme)://new-game"))))
       await store.receive(\.games.newGameButtonTapped)
       #expect(store.state.selectedTab == .games)
       #expect(store.state.games.newGame != nil)

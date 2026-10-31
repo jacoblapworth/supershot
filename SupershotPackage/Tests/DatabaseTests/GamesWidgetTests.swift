@@ -6,7 +6,8 @@ struct GamesWidgetTests {
   private let now = Date(timeIntervalSince1970: 1_000_000)
 
   private func game(_ number: Int, scheduled: TimeInterval? = nil,
-                    started: TimeInterval? = nil, ended: TimeInterval? = nil) -> WidgetGame {
+                    started: TimeInterval? = nil, ended: TimeInterval? = nil) -> WidgetGame
+  {
     WidgetGame(
       id: UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", number))!,
       createdAt: now, scheduledAt: scheduled.map { now.addingTimeInterval($0) },
@@ -19,10 +20,10 @@ struct GamesWidgetTests {
 
   @Test func priorityAndDeterministicTies() {
     let games = [
-      game(8), game(7, scheduled: -90_000), game(6, started: -1000, ended: -100),
+      game(8), game(7, scheduled: -90000), game(6, started: -1000, ended: -100),
       game(5, started: -1000, ended: -10), game(4, started: -100),
-      game(3, scheduled: 60), game(2, scheduled: -86_400), game(1, scheduled: -86_400),
-      game(9, started: -900_000, ended: -GamesWidgetSelection.recentHistory - 1)
+      game(3, scheduled: 60), game(2, scheduled: -86400), game(1, scheduled: -86400),
+      game(9, started: -900_000, ended: -GamesWidgetSelection.recentHistory - 1),
     ]
     let expected = [1, 2, 3, 4, 5, 6, 7, 8].map { game($0).id }
     #expect(GamesWidgetSelection.games(games, at: now).map(\.id) == expected)
@@ -30,7 +31,7 @@ struct GamesWidgetTests {
   }
 
   @Test func rollingOverdueBoundaryAndTimelineWithoutEdits() throws {
-    let planned = game(1, scheduled: -86_400)
+    let planned = game(1, scheduled: -86400)
     let live = game(2, started: -60)
     let games = [live, planned]
     for offset in [-0.001, 0] {

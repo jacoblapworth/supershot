@@ -200,7 +200,9 @@ package struct GamesFeature {
 
         // Resolve the persisted status before reusing a route left open in a warm app.
         if state.newGame?.gameID == request.gameID {
-          if snapshot.game.isPlanned { return .none }
+          if snapshot.game.isPlanned {
+            return .none
+          }
           state.newGame = nil
         }
         for (id, destination) in zip(state.path.ids, state.path) {
@@ -212,7 +214,7 @@ package struct GamesFeature {
             }
             state.path.pop(from: id)
           case let .gameDetail(detail) where detail.gameID == request.gameID:
-            if (snapshot.game.endedAt != nil) {
+            if snapshot.game.endedAt != nil {
               state.path.pop(to: id)
               return .none
             }
@@ -237,12 +239,13 @@ package struct GamesFeature {
       case let .resumeGameResponse(request, .failure):
         guard state.pendingGameResume == request else { return .none }
         state.pendingGameResume = nil
-        if state.newGame?.gameID == request.gameID { state.newGame = nil }
+        if state.newGame?.gameID == request.gameID {
+          state.newGame = nil
+        }
         for (id, destination) in zip(state.path.ids, state.path) {
-          let matches: Bool
-          switch destination {
-          case let .scoring(scoring): matches = scoring.gameID == request.gameID
-          case let .gameDetail(detail): matches = detail.gameID == request.gameID
+          let matches: Bool = switch destination {
+          case let .scoring(scoring): scoring.gameID == request.gameID
+          case let .gameDetail(detail): detail.gameID == request.gameID
           }
           if matches {
             state.path.pop(from: id)

@@ -133,7 +133,7 @@ package struct GamesHomeView: View {
           store.send(.filterButtonTapped(filter))
         }
       }
-      
+
       ToolbarItem(id: "filters", placement: .subtitle) {
         GamesFilterControl(selection: store.filter) { filter in
           store.send(.filterButtonTapped(filter))

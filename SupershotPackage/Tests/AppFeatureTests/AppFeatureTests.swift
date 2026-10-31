@@ -308,7 +308,7 @@ extension SupershotTestSuite {
       expectNoDifference(events.value, 0)
     }
 
-    @Test func freeAccessReconcilesActivitiesEvenWithoutStoredGames() async throws {
+    @Test func freeAccessReconcilesActivitiesEvenWithoutStoredGames() async {
       let reconciliations = LockIsolated<[Set<UUID>]>([])
       let store = TestStore(initialState: AppFeature.State()) { AppFeature() } withDependencies: {
         try! clearDatabase($0.defaultDatabase)

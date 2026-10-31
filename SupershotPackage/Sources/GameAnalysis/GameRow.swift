@@ -11,5 +11,7 @@ package struct GameRow: View {
       .listRowInsets(.all, 0)
   }
 
-  package init(game: GameListItem) { self.game = game }
+  package init(game: GameListItem) {
+    self.game = game
+  }
 }

@@ -11,14 +11,19 @@ struct GamesEntry: TimelineEntry {
 }
 
 struct GamesProvider: TimelineProvider {
-  func placeholder(in context: Context) -> GamesEntry { .example }
-
-  func getSnapshot(in context: Context, completion: @escaping (GamesEntry) -> Void) {
-    if context.isPreview { completion(.example) }
-    else { completion(entry(at: .now)) }
+  func placeholder(in _: Context) -> GamesEntry {
+    .example
   }
 
-  func getTimeline(in context: Context, completion: @escaping (Timeline<GamesEntry>) -> Void) {
+  func getSnapshot(in context: Context, completion: @escaping (GamesEntry) -> Void) {
+    if context.isPreview {
+      completion(.example)
+    } else {
+      completion(entry(at: .now))
+    }
+  }
+
+  func getTimeline(in _: Context, completion: @escaping (Timeline<GamesEntry>) -> Void) {
     let now = Date.now
     do {
       let games = try GamesWidgetStore.read()
@@ -35,7 +40,7 @@ struct GamesProvider: TimelineProvider {
 
   private func entry(at date: Date) -> GamesEntry {
     do {
-      return GamesEntry(date: date, games: GamesWidgetSelection.games(try GamesWidgetStore.read(), at: date))
+      return try GamesEntry(date: date, games: GamesWidgetSelection.games(GamesWidgetStore.read(), at: date))
     } catch {
       return GamesEntry(date: date, games: [], unavailable: true)
     }
@@ -108,12 +113,12 @@ struct GamesWidgetView: View {
 extension GamesEntry {
   static var example: Self {
     let now = Date.now
-    let games: [WidgetGame] = (0..<8).map { (index: Int) -> WidgetGame in
+    let games: [WidgetGame] = (0 ..< 8).map { (index: Int) -> WidgetGame in
       let scheduled = now.addingTimeInterval(Double(index + 1) * 3600)
       return WidgetGame(id: UUID(), createdAt: now, scheduledAt: scheduled,
-                 startedAt: (index == 1 || index == 2) ? now : nil, endedAt: index == 2 ? now : nil,
-                 teamAName: index == 0 ? "Thunder" : "Swifts", teamAColorHex: "#007AFF", teamAScore: 42,
-                 teamBName: "Lightning", teamBColorHex: "#FF3B30", teamBScore: 38)
+                        startedAt: (index == 1 || index == 2) ? now : nil, endedAt: index == 2 ? now : nil,
+                        teamAName: index == 0 ? "Thunder" : "Swifts", teamAColorHex: "#007AFF", teamAScore: 42,
+                        teamBName: "Lightning", teamBColorHex: "#FF3B30", teamBScore: 38)
     }
     return Self(date: now, games: games)
   }

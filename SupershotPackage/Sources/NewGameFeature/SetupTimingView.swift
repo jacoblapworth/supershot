@@ -27,7 +27,7 @@ package struct SetupTimingView: View {
       } footer: {
         Text(store.timing.summary)
       }
-      
+
       Section {
         if store.timing.customizesBreaks {
           SetupDurationRow(title: "After quarter 1", duration: store.timing.firstBreakDuration) {
@@ -60,8 +60,8 @@ package struct SetupTimingView: View {
       } footer: {
         Text(
           store.timing.breakStartPolicy == .automatic
-          ? "Breaks start when a quarter ends."
-          : "Breaks wait for you to tap Start break."
+            ? "Breaks start when a quarter ends."
+            : "Breaks wait for you to tap Start break."
         )
       }
 
