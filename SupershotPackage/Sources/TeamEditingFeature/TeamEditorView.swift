@@ -92,33 +92,59 @@ package struct TeamEditorView: View {
 private struct TeamLogoEditorSection: View {
   let store: StoreOf<TeamEditorFeature>
   @State private var photo: PhotosPickerItem?
+  @State private var isChoosingPhoto = false
   @State private var isImportingFile = false
 
   var body: some View {
     let hasLogo = store.logoData != nil
-    Section("Logo") {
-      HStack(spacing: 16) {
-        AvatarView(store.name, logoData: store.logoData)
-          .backgroundStyle(store.color)
-          .controlSize(.extraLarge)
-        if store.isProcessingLogo {
+    let isProcessing = store.isProcessingLogo
+    let name = store.name
+    let color = store.color
+    let logoData = store.logoData
+    Section {
+      VStack(spacing: 10) {
+        Menu {
+          Button(hasLogo ? "Replace from Photos" : "Choose from Photos", systemImage: "photo") {
+            isChoosingPhoto = true
+          }
+          Button("Choose from Files", systemImage: "folder") { isImportingFile = true }
+          if hasLogo || isProcessing {
+            Button("Remove logo", systemImage: "trash", role: .destructive) {
+              photo = nil
+              store.send(.removeLogoButtonTapped)
+            }
+          }
+        } label: {
+          VStack(spacing: 8) {
+            AvatarView(name, logoData: logoData)
+              .backgroundStyle(color)
+              .controlSize(.extraLarge)
+              .accessibilityHidden(true)
+            Text(hasLogo ? "Change logo" : "Add logo")
+              .font(.subheadline)
+          }
+          .contentShape(.rect)
+        }
+        #if os(macOS)
+        .menuStyle(.button)
+        #endif
+        .menuIndicator(.hidden)
+        .buttonStyle(.plain)
+        .tint(.primary)
+        .accessibilityLabel(hasLogo ? "Change team logo" : "Add team logo")
+        .accessibilityHint("Opens logo options")
+
+        if isProcessing {
           ProgressView("Preparing logo…")
-        } else {
-          Text(store.logoData == nil ? "Add a team logo" : "Team logo")
-            .foregroundStyle(.secondary)
         }
       }
-      PhotosPicker(selection: $photo, matching: .images) {
-        Label(hasLogo ? "Replace from Photos" : "Choose from Photos", systemImage: "photo")
-      }
-      Button("Choose from Files", systemImage: "folder") { isImportingFile = true }
-      if store.logoData != nil || store.isProcessingLogo {
-        Button("Remove logo", systemImage: "trash", role: .destructive) {
-          photo = nil
-          store.send(.removeLogoButtonTapped)
-        }
-      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 8)
     }
+    .listRowInsets(.all, 0)
+    .listRowBackground(Color.clear)
+    .listRowSeparator(.hidden)
+    .photosPicker(isPresented: $isChoosingPhoto, selection: $photo, matching: .images)
     .onChange(of: photo) { _, item in
       guard let item else { return }
       store.send(.logoSelected(.photo(item)))
