@@ -21,7 +21,9 @@ package struct SetupTeamView: View {
     NavigationStack {
       List {
         HStack(spacing: 16) {
-          Circle().fill(store.previewTeam.color).frame(width: 56, height: 56)
+          AvatarView(store.previewTeam.name, logoData: store.previewTeam.logoData)
+            .backgroundStyle(store.previewTeam.color)
+            .controlSize(.large)
             .accessibilityHidden(true)
           Text(store.previewTeam.name).font(.title2.bold())
           Spacer()

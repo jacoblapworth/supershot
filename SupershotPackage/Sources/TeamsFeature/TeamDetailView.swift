@@ -79,6 +79,15 @@ package struct TeamDetailView: View {
 
   private func teamContent(_ team: Team) -> some View {
     List {
+      Section {
+        HStack(spacing: 16) {
+          AvatarView(team.name, logoData: team.logoData)
+            .backgroundStyle(team.color)
+            .controlSize(.large)
+            .accessibilityHidden(true)
+          Text(team.name).font(.title2.bold())
+        }
+      }
       TeamStatisticsSection(statistics: response.statistics)
       Section("Games") {
         Button("New game", systemImage: "plus") {

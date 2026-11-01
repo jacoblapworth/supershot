@@ -235,9 +235,15 @@ let package = Package(
       swiftSettings: appSwiftSettings
     ),
     .target(
+      name: "TeamLogoClient",
+      dependencies: [.product(name: "Dependencies", package: "swift-dependencies")],
+      swiftSettings: appSwiftSettings
+    ),
+    .target(
       name: "TeamEditingFeature",
       dependencies: [
         "AppUI",
+        "TeamLogoClient",
         "SharedModels",
         "GameCore",
         "Database",

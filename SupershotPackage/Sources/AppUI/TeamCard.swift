@@ -21,12 +21,9 @@ package struct TeamSlotView: View {
     Button(action: action) {
       VStack(alignment: .leading, spacing: 16) {
         if let team {
-          Circle()
-            .fill(team.color)
-            .frame(width: 28, height: 28)
-            .overlay {
-              Circle().stroke(team.color.opacity(0.12), lineWidth: 2)
-            }
+          AvatarView(team.name, logoData: team.logoData)
+            .backgroundStyle(team.color)
+            .controlSize(.small)
             .accessibilityHidden(true)
 
           Spacer(minLength: 16)

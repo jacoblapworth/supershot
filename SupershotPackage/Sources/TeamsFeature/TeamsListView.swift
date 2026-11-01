@@ -148,9 +148,9 @@ private struct TeamRow: View {
 
   var body: some View {
     HStack(spacing: 14) {
-      Circle()
-        .fill(team.color)
-        .frame(width: 22, height: 22)
+      AvatarView(team.name, logoData: team.logoData)
+        .backgroundStyle(team.color)
+        .controlSize(.mini)
         .accessibilityHidden(true)
 
       Text(team.name)

@@ -23,7 +23,8 @@ public extension DependencyValues {
       CREATE TABLE "teams"(
         "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
         "colorHex" TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '#007AFF',
-        "name" TEXT NOT NULL
+        "name" TEXT NOT NULL,
+        "logoData" BLOB
       ) STRICT
       """)
       .execute(db)

@@ -6,7 +6,7 @@ package struct GameRow: View {
   package var game: GameListItem
 
   package var body: some View {
-    GameCardView(game: game.widgetGame)
+    GameCardView(game: game.widgetGame, teamALogoData: game.teamALogoData, teamBLogoData: game.teamBLogoData)
       .accessibilityValue(game.timingSummary)
       .listRowInsets(.all, 0)
   }

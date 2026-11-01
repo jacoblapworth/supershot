@@ -9,11 +9,12 @@ import SwiftUI
 
 package struct TeamLabelView: View {
   package var name: String
+  package var logoData: Data?
   package var color: Color
   package var alignment: HorizontalAlignment = .leading
 
   private var avatar: some View {
-    AvatarView(name)
+    AvatarView(name, logoData: logoData)
       .backgroundStyle(color)
       .controlSize(.mini)
   }
@@ -35,7 +36,8 @@ package struct TeamLabelView: View {
     .controlSize(.small)
   }
 
-  package init(name: String, color: Color, alignment: HorizontalAlignment = .leading) {
+  package init(name: String, color: Color, alignment: HorizontalAlignment = .leading, logoData: Data? = nil) {
+    self.logoData = logoData
     self.name = name
     self.color = color
     self.alignment = alignment

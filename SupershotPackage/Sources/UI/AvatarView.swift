@@ -1,3 +1,4 @@
+import ImageIO
 import SwiftUI
 
 /// An initials avatar with a generated background color by default.
@@ -7,6 +8,9 @@ public struct AvatarView: View {
   // MARK: - Public API
 
   public let label: String
+  public var logoData: Data?
+
+  @State private var logo: CGImage?
 
   @Environment(\.backgroundStyle) private var backgroundStyle
   @Environment(\.controlSize) private var controlSize
@@ -24,8 +28,9 @@ public struct AvatarView: View {
 
   // MARK: - Init
 
-  public init(_ label: String) {
+  public init(_ label: String, logoData: Data? = nil) {
     self.label = label
+    self.logoData = logoData
   }
 
   // MARK: - Body
@@ -34,15 +39,45 @@ public struct AvatarView: View {
     let initials = AvatarView.makeInitials(from: label)
     let bg = backgroundStyle ?? AnyShapeStyle(AvatarView.color(for: label))
 
-    Text(initials)
-      .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
-      .minimumScaleFactor(0.5)
-      .frame(width: size, height: size)
-      .background(Circle()
-        .fill(bg))
-      .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: max(1, size * 0.025)))
-      .contentShape(Circle())
-      .accessibilityLabel(Text(AvatarView.accessibilityLabel(for: label, initials: initials)))
+    Group {
+      if let logo {
+        Image(decorative: logo, scale: 1)
+          .resizable()
+          .scaledToFit()
+          .frame(width: size * 0.68, height: size * 0.68)
+          .frame(width: size, height: size)
+          .background(Color(white: 0.94), in: Circle())
+          .accessibilityLabel(Text("Logo for \(label)"))
+      } else {
+        Text(initials)
+          .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
+          .minimumScaleFactor(0.5)
+          .frame(width: size, height: size)
+          .background(Circle()
+            .fill(bg))
+          .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: max(1, size * 0.025)))
+          .contentShape(Circle())
+          .accessibilityLabel(Text(AvatarView.accessibilityLabel(for: label, initials: initials)))
+      }
+    }
+    .task(id: logoData) {
+      guard logoData != nil else {
+        logo = nil
+        return
+      }
+      let decoded = await Self.decodeLogo(logoData)
+      guard !Task.isCancelled else { return }
+      logo = decoded
+    }
+  }
+
+  @concurrent private static func decodeLogo(_ data: Data?) async -> CGImage? {
+    guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+    return CGImageSourceCreateThumbnailAtIndex(source, 0, [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceThumbnailMaxPixelSize: 512,
+    ] as CFDictionary)
   }
 }
 
