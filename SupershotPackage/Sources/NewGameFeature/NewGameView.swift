@@ -20,6 +20,7 @@ package struct NewGameView: View {
   @Environment(\.scenePhase) private var scenePhase
   @Bindable package var store: StoreOf<NewGameFeature>
   package var proAccess: SubscriptionEntitlement = .unknown
+  package var isEditingExistingGame = false
 
   package var body: some View {
     List {
@@ -68,24 +69,36 @@ package struct NewGameView: View {
           SetupLocationView(store: store)
         }
 
-        Section {
-          SetupStartBar(
-            canPrepareScoring: store.canPrepareScoring,
-            configurationSummary: store.configurationSummary,
-            errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
-            isSaving: store.isSaving,
-            prepareScoringTapped: {
-              store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
-            },
-            isScheduled: store.scheduledAt != nil,
-            prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
-            retryTapped: { store.send(.retrySaveButtonTapped) },
-            canRetry: store.failedSaveIntent != nil
-          )
+        if isEditingExistingGame, let error = store.teamNameErrorMessage ?? store.errorMessage {
+          Section {
+            Text(error).foregroundStyle(.red)
+            if store.failedSaveIntent != nil {
+              Button("Try again") { store.send(.retrySaveButtonTapped) }
+                .disabled(store.isSaving)
+            }
+          }
         }
-        .listRowBackground(Color.clear)
-        .listRowInsets(.all, 0)
-        .listRowSeparator(.hidden)
+
+        if !isEditingExistingGame {
+          Section {
+            SetupStartBar(
+              canPrepareScoring: store.canPrepareScoring,
+              configurationSummary: store.configurationSummary,
+              errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
+              isSaving: store.isSaving,
+              prepareScoringTapped: {
+                store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
+              },
+              isScheduled: store.scheduledAt != nil,
+              prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
+              retryTapped: { store.send(.retrySaveButtonTapped) },
+              canRetry: store.failedSaveIntent != nil
+            )
+          }
+          .listRowBackground(Color.clear)
+          .listRowInsets(.all, 0)
+          .listRowSeparator(.hidden)
+        }
       }
       .environment(\.usesNativeSetupRows, true)
     }
@@ -101,29 +114,35 @@ package struct NewGameView: View {
     .scrollEdgeEffectStyle(.soft, for: .all)
     .scrollDismissesKeyboard(.interactively)
     .background(Color.setupBackground.ignoresSafeArea())
-    .navigationTitle("New game")
+    .navigationTitle(isEditingExistingGame ? "Edit game" : "New game")
     .navigationBarBackButtonHidden()
     .safeAreaBar(edge: .bottom, content: {
       HStack {
-        if store.scheduledAt != nil {
-          Button {
-            store.send(.saveGameButtonTapped)
-          } label: {
-            Label("Save", systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
-              .padding(8)
+        if isEditingExistingGame {
+          Button("Done") { store.send(.saveGameButtonTapped) }
+            .buttonStyle(.glassProminent)
+            .disabled(store.isSaving || store.draft == nil)
+        } else {
+          if store.scheduledAt != nil {
+            Button {
+              store.send(.saveGameButtonTapped)
+            } label: {
+              Label("Save", systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
+                .padding(8)
+            }
+            .buttonStyle(.glass)
           }
-          .buttonStyle(.glass)
-        }
 
-        if store.canPrepareScoring {
-          Button {
-            store.send(.prepareScoringButtonTapped)
-          } label: {
-            Text("Continue")
-              .padding(8)
+          if store.canPrepareScoring {
+            Button {
+              store.send(.prepareScoringButtonTapped)
+            } label: {
+              Text("Continue")
+                .padding(8)
+            }
+            .buttonStyle(.glassProminent)
+            .buttonSizing(.flexible)
           }
-          .buttonStyle(.glassProminent)
-          .buttonSizing(.flexible)
         }
       }
       .padding()
@@ -135,18 +154,20 @@ package struct NewGameView: View {
         }
         .disabled(store.isSaving)
       }
-      ToolbarItem(placement: .primaryAction) {
-        Button(
-          store.scheduledAt == nil ? "Ready to score" : "Ready to score now",
-          systemImage: "arrow.right"
-        ) {
-          store.send(.prepareScoringButtonTapped)
+      if !isEditingExistingGame {
+        ToolbarItem(placement: .primaryAction) {
+          Button(
+            store.scheduledAt == nil ? "Ready to score" : "Ready to score now",
+            systemImage: "arrow.right"
+          ) {
+            store.send(.prepareScoringButtonTapped)
+          }
+          .labelStyle(.iconOnly)
+          .buttonStyle(.glassProminent)
+          .buttonBorderShape(.circle)
+          .disabled(!store.canPrepareScoring)
+          .accessibilityIdentifier("gameSetup.prepareScoring")
         }
-        .labelStyle(.iconOnly)
-        .buttonStyle(.glassProminent)
-        .buttonBorderShape(.circle)
-        .disabled(!store.canPrepareScoring)
-        .accessibilityIdentifier("gameSetup.prepareScoring")
       }
     }
     .onChange(of: store.draft) { _, _ in store.send(.configurationChanged) }
@@ -201,10 +222,12 @@ package struct NewGameView: View {
 
   package init(
     store: StoreOf<NewGameFeature>,
-    proAccess: SubscriptionEntitlement = .unknown
+    proAccess: SubscriptionEntitlement = .unknown,
+    isEditingExistingGame: Bool = false
   ) {
     self.store = store
     self.proAccess = proAccess
+    self.isEditingExistingGame = isEditingExistingGame
   }
 }
 

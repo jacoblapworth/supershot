@@ -9,6 +9,7 @@ import GameServices
 @testable import GamesFeature
 @testable import NewGameFeature
 import OrderedCollections
+import ScoringFeature
 import SQLiteData
 import Testing
 import TestSupport
@@ -35,7 +36,7 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: [false, true])
-    func rowAndDeepLinkOpenPlannedSetupWithoutReconciliation(deepLink: Bool) async throws {
+    func rowAndDeepLinkOpenPlannedSummaryWithoutReconciliation(deepLink: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       let state = try setup()
       let draft = try #require(state.draft)
@@ -57,11 +58,13 @@ extension SupershotTestSuite {
         }
         return false
       }
-      guard let setup = store.state.newGame else {
-        Issue.record("Expected saved game in the new game sheet")
+      guard case let .plannedGame(summary) = store.state.path.last else {
+        Issue.record("Expected saved game summary")
         return
       }
-      expectNoDifference(setup.draft, state.draft)
+      #expect(store.state.newGame == nil)
+      #expect(summary.gameID == state.gameID)
+      #expect(summary.snapshot?.game.court == "3")
     }
 
     @Test func staleWidgetAndWarmSetupResolveLatestCompletedStatus() async throws {
@@ -155,6 +158,94 @@ extension SupershotTestSuite {
       }
       expectNoDifference(restored.draft, setup.draft)
       #expect(restored.errorMessage != nil)
+    }
+
+    @Test func startFromSummaryAndReopenBeforeClockStarts() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let setup = try setup()
+      let draft = try #require(setup.draft)
+      let snapshot = try await database.write { try draft.save($0) }
+      var state = GamesFeature.State()
+      state.path.append(.plannedGame(PlannedGameFeature.State(snapshot: snapshot)))
+      let store = TestStore(initialState: state) { GamesFeature() }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      let id = store.state.path.ids[0]
+      await store.send(.path(.element(id: id, action: .plannedGame(.startGameButtonTapped))))
+      await store.receive {
+        if case .path(.element(id: _, action: .plannedGame(.snapshotResponse(.score, .success)))) = $0 {
+          true
+        } else {
+          false
+        }
+      }
+      await store.receive {
+        if case .path(.element(id: _, action: .plannedGame(.delegate(.scoringPrepared)))) = $0 {
+          true
+        } else {
+          false
+        }
+      }
+      guard case let .scoring(scoring) = store.state.path.last else {
+        Issue.record("Expected scoring after Start game")
+        return
+      }
+      expectNoDifference(scoring.gameID, snapshot.game.id)
+      #expect(scoring.startedAt == nil)
+      await store.send(.gameDeepLinkOpened(snapshot.game.id))
+      await store.receive {
+        if case .resumeGameResponse(_, .success) = $0 {
+          true
+        } else {
+          false
+        }
+      }
+      #expect(store.state.path.count == 1)
+      guard case let .plannedGame(summary) = store.state.path.last else {
+        Issue.record("An unstarted game should reopen as a summary")
+        return
+      }
+      expectNoDifference(summary.snapshot, snapshot)
+    }
+
+    @Test func warmSummaryRefreshesAndResolvesChangedLifecycle() async throws {
+      @Dependency(\.defaultDatabase) var database
+      let setup = try setup()
+      let draft = try #require(setup.draft)
+      let snapshot = try await database.write { try draft.save($0) }
+      var state = GamesFeature.State()
+      state.path.append(.plannedGame(PlannedGameFeature.State(snapshot: snapshot)))
+      let store = TestStore(initialState: state) { GamesFeature() }
+      store.exhaustivity = .off(showSkippedAssertions: false)
+      await store.send(.gameDeepLinkOpened(snapshot.game.id))
+      await store.receive {
+        if case .resumeGameResponse(_, .success) = $0 {
+          true
+        } else {
+          false
+        }
+      }
+      await store.finish()
+      expectNoDifference(store.state.path.count, 1)
+      try await database.write { db in
+        try Game.find(snapshot.game.id).update {
+          $0.startedAt = #bind(Date(timeIntervalSince1970: 1000))
+          $0.endedAt = #bind(Date(timeIntervalSince1970: 2000))
+        }.execute(db)
+      }
+      await store.send(.gameDeepLinkOpened(snapshot.game.id))
+      await store.receive {
+        if case .resumeGameResponse(_, .success) = $0 {
+          true
+        } else {
+          false
+        }
+      }
+      guard case let .gameDetail(detail) = store.state.path.last else {
+        Issue.record("Expected completed-game detail")
+        return
+      }
+      expectNoDifference(detail.gameID, snapshot.game.id)
+      expectNoDifference(store.state.path.count, 1)
     }
 
     @Test func plansSortAboveHistoryAndAreExcludedFromInProgress() {
