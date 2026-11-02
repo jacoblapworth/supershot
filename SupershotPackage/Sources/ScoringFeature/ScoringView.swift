@@ -142,6 +142,11 @@ package struct ScoringView: View {
         }
         .preferredColorScheme(.dark)
         .toolbar {
+          ToolbarItem(placement: .keyboard) {
+            GlassEffectContainer {
+              Text("test")
+            }
+          }
           ToolbarItem(placement: .principal) {
             if isScoreboardAboveViewport {
               ScoringHeaderView(courtLayout: store.courtLayout)

@@ -258,10 +258,6 @@ private struct GoalTimelineRow: View {
       alignment: isOnLeft ? .trailing : .leading,
       spacing: 5
     ) {
-      Text(goal.scoringTeamName)
-        .font(.subheadline.weight(.semibold))
-        .fixedSize(horizontal: false, vertical: true)
-
       Text("+\(goal.points) \(goal.points == 1 ? "point" : "points")")
         .font(.headline)
 
@@ -270,7 +266,7 @@ private struct GoalTimelineRow: View {
         .foregroundStyle(.secondary)
         .monospacedDigit()
 
-      Text("Match \(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)")
+      Text("\(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)")
         .font(.caption.weight(.semibold))
         .monospacedDigit()
     }
