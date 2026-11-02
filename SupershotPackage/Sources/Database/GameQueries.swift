@@ -5,6 +5,7 @@ import SQLiteData
 
 package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   package var currentQuarter = 1
+  package var timing: GameTimingState
   package let endedAt: Date?
   package let id: Game.ID
   package var periods: [GamePeriod] = []
@@ -52,10 +53,17 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
     createdAt: Date? = nil,
     scheduledAt: Date? = nil,
     court: String? = nil,
+    timing: GameTimingState? = nil,
     teamALogoData: Data? = nil,
     teamBLogoData: Data? = nil
   ) {
     self.currentQuarter = currentQuarter
+    self.timing = timing ?? GameTimingState(
+      phaseIndex: GameTimeline(periods: periods)?.phases.firstIndex {
+        $0.isPlayingPeriod && $0.associatedPeriod.number == currentQuarter
+      } ?? 0,
+      countdown: .init()
+    )
     self.endedAt = endedAt
     self.id = id
     self.periods = periods
@@ -71,6 +79,31 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
     self.teamBName = teamBName
     self.teamBLogoData = teamBLogoData
     self.teamBScore = teamBScore
+  }
+}
+
+package extension GameListItem {
+  nonisolated struct ClockDisplay: Equatable, Sendable {
+    package var period: Int
+    package var isBreak: Bool
+    package var remainingSeconds: Int
+  }
+
+  nonisolated func clockDisplay(at date: Date) -> ClockDisplay? {
+    guard isInProgress, let timeline = GameTimeline(periods: periods),
+          timeline.phase(at: timing.phaseIndex) != nil
+    else { return nil }
+    var displayTiming = timing
+    displayTiming.reconcile(in: timeline, now: date)
+    guard let phase = timeline.phase(at: displayTiming.phaseIndex) else { return nil }
+    return ClockDisplay(
+      period: phase.associatedPeriod.number,
+      isBreak: phase.isBreak,
+      remainingSeconds: displayTiming.countdown.projection(
+        durationSeconds: phase.durationSeconds,
+        now: date
+      ).remainingSeconds
+    )
   }
 }
 
@@ -524,6 +557,7 @@ package nonisolated struct GamesRequest: FetchKeyRequest {
         createdAt: game.createdAt,
         scheduledAt: game.scheduledAt,
         court: game.court,
+        timing: game.timing,
         teamALogoData: teamA.logoData,
         teamBLogoData: teamB.logoData
       )

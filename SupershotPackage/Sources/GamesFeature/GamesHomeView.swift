@@ -53,17 +53,9 @@ package struct GamesHomeView: View {
   private var gamesList: some View {
     let visibleGames = store.filter.games(from: gamesResponse.games)
     let plannedGames = visibleGames.filter(\.isPlanned)
-    let historyGames = visibleGames.filter { !$0.isPlanned }
+    let inProgressGames = visibleGames.filter(\.isInProgress)
+    let completedSections = CompletedGameSection.sections(from: visibleGames)
     return List {
-//      #if os(iOS)
-//        Section {
-//          GamesFilterControl(selection: store.filter) { filter in
-//            store.send(.filterButtonTapped(filter))
-//          }
-//          .listRowBackground(Color.clear)
-//          .listRowInsets(.all, 0)
-//        }
-//      #endif
       if proAccess == .free {
         Section {
           ProPromotionCard(exploreProTapped: { store.send(.proPromotionTapped) })
@@ -108,8 +100,17 @@ package struct GamesHomeView: View {
             if !plannedGames.isEmpty {
               Section("Planned") { gameRows(plannedGames) }
             }
-            if !historyGames.isEmpty {
-              Section("Game history") { gameRows(historyGames) }
+            if !inProgressGames.isEmpty {
+              Section("In Progress") { gameRows(inProgressGames) }
+            }
+          }
+          if store.filter == .all || store.filter == .completed {
+            ForEach(completedSections) { section in
+              Section {
+                gameRows(section.games)
+              } header: {
+                Text(section.day, format: .dateTime.weekday(.wide).day().month(.wide).year())
+              }
             }
           } else {
             gameRows(visibleGames)
@@ -117,24 +118,12 @@ package struct GamesHomeView: View {
         }
       }
     }
-//    .safeAreaInset(edge: .top, content: {
-//      GamesFilterControl(selection: store.filter) { filter in
-//        store.send(.filterButtonTapped(filter))
-//      }
-//    })
     #if os(iOS)
-    .toolbar(content: {
-      ToolbarItem(id: "filters", placement: .largeSubtitle) {
-        GamesFilterControl(selection: store.filter) { filter in
-          store.send(.filterButtonTapped(filter))
-        }
+    .safeAreaBar(edge: .top, alignment: .leading, content: {
+      GamesFilterControl(selection: store.filter) { filter in
+        store.send(.filterButtonTapped(filter))
       }
-
-      ToolbarItem(id: "filters", placement: .subtitle) {
-        GamesFilterControl(selection: store.filter) { filter in
-          store.send(.filterButtonTapped(filter))
-        }
-      }
+      .safeAreaPadding(.horizontal)
     })
     #endif
     .scrollEdgeEffectStyle(.soft, for: .top)
@@ -174,6 +163,7 @@ package struct GamesHomeView: View {
 
       .buttonStyle(.plain)
       .listRowInsets(.all, 0)
+      .listRowSeparator(.hidden)
       .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
       .disabled(store.pendingGameResume != nil)
       .contextMenu {

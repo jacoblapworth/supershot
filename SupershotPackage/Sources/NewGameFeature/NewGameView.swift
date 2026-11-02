@@ -104,17 +104,29 @@ package struct NewGameView: View {
     .navigationTitle("New game")
     .navigationBarBackButtonHidden()
     .safeAreaBar(edge: .bottom, content: {
-      if store.canPrepareScoring {
-        Button {
-          store.send(.prepareScoringButtonTapped)
-        } label: {
-          Text("Continue")
-            .padding(8)
+      HStack {
+        if store.scheduledAt != nil {
+          Button {
+            store.send(.saveGameButtonTapped)
+          } label: {
+            Label("Save", systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
+              .padding(8)
+          }
+          .buttonStyle(.glass)
         }
-        .buttonStyle(.glassProminent)
-        .buttonSizing(.flexible)
-        .padding()
+
+        if store.canPrepareScoring {
+          Button {
+            store.send(.prepareScoringButtonTapped)
+          } label: {
+            Text("Continue")
+              .padding(8)
+          }
+          .buttonStyle(.glassProminent)
+          .buttonSizing(.flexible)
+        }
       }
+      .padding()
     })
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {

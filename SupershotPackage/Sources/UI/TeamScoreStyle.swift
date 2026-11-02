@@ -1,7 +1,7 @@
 import SwiftUI
 
 package extension View {
-  /// Preserves the team's full colour, with a small shadow to separate it from the background.
+  /// Uses the team's colour, falling back to white for very dark colours.
   func teamScoreStyle(color: Color) -> some View {
     modifier(TeamScoreStyle(color: color))
   }
@@ -18,10 +18,8 @@ private struct TeamScoreStyle: ViewModifier {
         + resolved.linearGreen * 0.7152 + resolved.linearBlue * 0.0722
 
     content
-      .foregroundStyle(color)
+      .foregroundStyle(luminance < 0.05 ? Color.white : color)
       .shadow(color: .black.opacity(0.2), radius: 5)
-      // A faint light edge also keeps black and navy teams visible on the dark surface.
-      .shadow(color: .white.opacity(luminance < 0.12 ? 0.4 : 0), radius: 1)
   }
 }
 
@@ -30,6 +28,7 @@ private struct TeamScoreStyle: ViewModifier {
     Text("24").teamScoreStyle(color: .blue)
     Text("18").teamScoreStyle(color: .yellow)
     Text("12").teamScoreStyle(color: .black)
+    Text("9").teamScoreStyle(color: Color(red: 0.05, green: 0.08, blue: 0.15))
   }
   .font(.system(size: 64, weight: .bold))
   .padding()
