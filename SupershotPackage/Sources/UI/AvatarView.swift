@@ -50,8 +50,10 @@ public struct AvatarView: View {
           .accessibilityLabel(Text("Logo for \(label)"))
       } else {
         Text(initials)
-          .font(.system(size: size * 0.45, weight: .semibold, design: .rounded))
+          .font(.system(size: size * (initials.count > 2 ? 0.34 : 0.45), weight: .semibold, design: .rounded))
+          .lineLimit(1)
           .minimumScaleFactor(0.5)
+          .frame(width: size * 0.8)
           .frame(width: size, height: size)
           .background(Circle()
             .fill(bg))
@@ -84,36 +86,24 @@ public struct AvatarView: View {
 // MARK: - Helpers
 
 public extension AvatarView {
-  /// Produces up to two-letter initials from a label, e.g., "Ada Lovelace" -> "AL".
-  /// Handles single words, multi-words, extra whitespace, emojis, and empty strings.
+  /// Produces up to three initials, skipping common function words unless no others remain.
+  /// Preserves single-word uppercase acronyms, truncated to three characters.
   static func makeInitials(from label: String) -> String {
-    let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.isEmpty {
-      return "?"
-    }
-
-    // Split by whitespace and punctuation commonly separating names/words
     let separators = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
-    let parts =
-      trimmed
-        .components(separatedBy: separators)
-        .filter { !$0.isEmpty }
+    let parts = label.components(separatedBy: separators).filter { !$0.isEmpty }
+    guard !parts.isEmpty else { return "?" }
 
-    if parts.isEmpty {
-      return "?"
+    let ignoredWords: Set = ["a", "an", "the", "of", "and", "for", "in", "on", "at", "to", "&"]
+    let meaningfulWords = parts.filter { !ignoredWords.contains($0.lowercased()) }
+    let words = meaningfulWords.isEmpty ? parts : meaningfulWords
+
+    if parts.count == 1, let word = meaningfulWords.first,
+       word.allSatisfy(\.isLetter), word == word.uppercased(), word != word.lowercased()
+    {
+      return String(word.prefix(3))
     }
 
-    // Take first character from first two parts when possible, else from first part only
-    var chars: [Character] = []
-    if let first = parts.first?.first {
-      chars.append(first)
-    }
-    if parts.count > 1, let second = parts[1].first {
-      chars.append(second)
-    }
-
-    // Uppercased string for letters; non-alphabetics will remain as-is when uppercased
-    return String(chars).uppercased()
+    return String(String(words.prefix(3).compactMap(\.first)).uppercased().prefix(3))
   }
 
   /// Deterministically maps a string to a pleasant, varied color.
