@@ -68,6 +68,12 @@ package struct TeamDetailView: View {
             Label("Team actions", systemImage: "ellipsis")
           }
         }
+        ToolbarItem(placement: newGameToolbarPlacement) {
+          Button("New game", systemImage: "plus") {
+            store.send(.newGameButtonTapped(team))
+          }
+          .disabled(isResumingGame)
+        }
       }
     }
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
@@ -89,12 +95,7 @@ package struct TeamDetailView: View {
         }
       }
       TeamStatisticsSection(statistics: response.statistics)
-      Section("Games") {
-        Button("New game", systemImage: "plus") {
-          store.send(.newGameButtonTapped(team))
-        }
-        .disabled(isResumingGame)
-
+      Section {
         if response.games.isEmpty {
           ContentUnavailableView(
             "No games yet",
@@ -109,7 +110,11 @@ package struct TeamDetailView: View {
             } label: {
               GameRow(game: game)
             }
+            #if os(iOS)
+            .listRowSpacing(8)
+            #endif
             .listRowInsets(.all, 0)
+            .listRowSeparator(.hidden)
             .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
             .buttonStyle(.plain)
             .disabled(isResumingGame)
@@ -117,6 +122,15 @@ package struct TeamDetailView: View {
         }
       }
     }
+    .scrollEdgeEffectStyle(.soft, for: .all)
+  }
+
+  private var newGameToolbarPlacement: ToolbarItemPlacement {
+    #if os(iOS)
+      .bottomBar
+    #else
+      .automatic
+    #endif
   }
 }
 
@@ -124,32 +138,45 @@ private struct TeamStatisticsSection: View {
   let statistics: TeamStatistics
 
   var body: some View {
-    Section {
-      LabeledContent("Played", value: statistics.gamesPlayed.formatted())
-      LabeledContent("Wins", value: statistics.wins.formatted())
-      LabeledContent("Losses", value: statistics.losses.formatted())
-      LabeledContent("Draws", value: statistics.draws.formatted())
-      LabeledContent("Points scored", value: statistics.pointsScored.formatted())
-      LabeledContent("Points against", value: statistics.pointsAgainst.formatted())
-      LabeledContent("Points difference", value: statistics.pointsDifference.formatted())
-      LabeledContent("Win percentage") {
-        if let winRate = statistics.winRate {
-          Text(winRate, format: .percent.precision(.fractionLength(0)))
-        } else {
-          Text("—")
-            .accessibilityLabel("Unavailable")
+    Group {
+      Section {
+        HStack {
+          GroupBox("Won") {
+            Text(statistics.wins.formatted())
+          }
+          GroupBox("Lost") {
+            Text(statistics.losses.formatted())
+          }
+          GroupBox("Draw") {
+            Text(statistics.draws.formatted())
+          }
         }
       }
-    } header: {
-      Text("Statistics")
-    } footer: {
-      VStack(alignment: .leading, spacing: 4) {
-        Text("Completed games · All time")
-        if statistics.gamesPlayed == 0 {
-          Text("No completed games yet")
+      .listRowInsets(.all, 0)
+      .listRowBackground(Color.clear)
+
+      Section {
+        HStack {
+          GroupBox("Scored") {
+            Text(statistics.pointsScored, format: .number)
+          }
+          GroupBox("Against") {
+            Text(statistics.pointsAgainst, format: .number)
+          }
+          GroupBox("Difference") {
+            Text(
+              statistics.pointsDifference,
+              format: .number.sign(strategy: .always(includingZero: false))
+            )
+          }
         }
+      } header: {
+        Text("Points")
       }
     }
+    .listRowInsets(.all, 0)
+    .listRowBackground(Color.clear)
+    .groupBoxStyle(.statGroupBoxStyle)
     .monospacedDigit()
   }
 }

@@ -8,6 +8,8 @@ public struct AvatarView: View {
   // MARK: - Public API
 
   public let label: String
+  public var initialsFont: Font?
+  public var borderOpacity: Double
   public var logoData: Data?
 
   @State private var logo: CGImage?
@@ -28,8 +30,10 @@ public struct AvatarView: View {
 
   // MARK: - Init
 
-  public init(_ label: String, logoData: Data? = nil) {
+  public init(_ label: String, initialsFont: Font? = nil, borderOpacity: Double = 0.15, logoData: Data? = nil) {
     self.label = label
+    self.initialsFont = initialsFont
+    self.borderOpacity = borderOpacity
     self.logoData = logoData
   }
 
@@ -50,14 +54,14 @@ public struct AvatarView: View {
           .accessibilityLabel(Text("Logo for \(label)"))
       } else {
         Text(initials)
-          .font(.system(size: size * (initials.count > 2 ? 0.34 : 0.45), weight: .semibold, design: .rounded))
+          .font(initialsFont ?? .system(size: size * (initials.count > 2 ? 0.34 : 0.45), weight: .semibold, design: .rounded))
           .lineLimit(1)
           .minimumScaleFactor(0.5)
           .frame(width: size * 0.8)
           .frame(width: size, height: size)
           .background(Circle()
             .fill(bg))
-          .overlay(Circle().stroke(.white.opacity(0.15), lineWidth: max(1, size * 0.025)))
+          .overlay(Circle().stroke(.white.opacity(borderOpacity), lineWidth: max(1, size * 0.025)))
           .contentShape(Circle())
           .accessibilityLabel(Text(AvatarView.accessibilityLabel(for: label, initials: initials)))
       }
