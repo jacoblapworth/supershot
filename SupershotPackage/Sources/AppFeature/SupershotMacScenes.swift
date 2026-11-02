@@ -174,6 +174,10 @@
           {
             return true
           }
+        case let .plannedGame(state):
+          if state.editor != nil || state.isLoading {
+            return true
+          }
         case .gameDetail: break
         }
       }
@@ -187,6 +191,10 @@
           }
         case let .teamDetail(state):
           if state.editor != nil {
+            return true
+          }
+        case let .plannedGame(state):
+          if state.editor != nil || state.isLoading {
             return true
           }
         case .gameDetail: break
