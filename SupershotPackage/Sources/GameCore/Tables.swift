@@ -163,12 +163,14 @@ public extension Game {
 public nonisolated struct Team: Equatable, Hashable, Identifiable, Sendable {
   public let id: UUID
   public var colorHex: String
+  public var logoData: Data?
   public var name: String
 
-  public init(id: UUID, colorHex: String, name: String) {
+  public init(id: UUID, colorHex: String, name: String, logoData: Data? = nil) {
     self.id = id
     self.colorHex = colorHex
     self.name = name
+    self.logoData = logoData
   }
 }
 
@@ -176,13 +178,15 @@ public extension Team {
   nonisolated init(
     id: UUID,
     name: String,
-    colorHex: String = "#007AFF"
+    colorHex: String = "#007AFF",
+    logoData: Data? = nil
   ) {
     self.id = id
     self.colorHex =
       HexColor.isValid(colorHex)
         ? colorHex.uppercased()
         : "#007AFF"
+    self.logoData = logoData
     self.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 }

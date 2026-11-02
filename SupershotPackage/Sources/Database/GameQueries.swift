@@ -14,9 +14,11 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
   package var court: String?
   package var teamABibColorHex: String = "#007AFF"
   package let teamAName: String
+  package var teamALogoData: Data?
   package let teamAScore: Int
   package var teamBBibColorHex: String = "#FF3B30"
   package let teamBName: String
+  package var teamBLogoData: Data?
   package let teamBScore: Int
 
   package var isPlanned: Bool {
@@ -49,7 +51,9 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
     teamBScore: Int,
     createdAt: Date? = nil,
     scheduledAt: Date? = nil,
-    court: String? = nil
+    court: String? = nil,
+    teamALogoData: Data? = nil,
+    teamBLogoData: Data? = nil
   ) {
     self.currentQuarter = currentQuarter
     self.endedAt = endedAt
@@ -61,9 +65,11 @@ package nonisolated struct GameListItem: Equatable, Identifiable, Sendable {
     self.startedAt = startedAt
     self.teamABibColorHex = teamABibColorHex
     self.teamAName = teamAName
+    self.teamALogoData = teamALogoData
     self.teamAScore = teamAScore
     self.teamBBibColorHex = teamBBibColorHex
     self.teamBName = teamBName
+    self.teamBLogoData = teamBLogoData
     self.teamBScore = teamBScore
   }
 }
@@ -72,12 +78,14 @@ package nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
   package let colorHex: String
   package let gameCount: Int
   package let id: Team.ID
+  package let logoData: Data?
   package let name: String
 
-  package init(colorHex: String, gameCount: Int, id: Team.ID, name: String) {
+  package init(colorHex: String, gameCount: Int, id: Team.ID, name: String, logoData: Data? = nil) {
     self.colorHex = colorHex
     self.gameCount = gameCount
     self.id = id
+    self.logoData = logoData
     self.name = name
   }
 }
@@ -515,7 +523,9 @@ package nonisolated struct GamesRequest: FetchKeyRequest {
           .reduce(0) { $0 + $1.points },
         createdAt: game.createdAt,
         scheduledAt: game.scheduledAt,
-        court: game.court
+        court: game.court,
+        teamALogoData: teamA.logoData,
+        teamBLogoData: teamB.logoData
       )
     })
   }
@@ -549,7 +559,8 @@ package nonisolated struct TeamsRequest: FetchKeyRequest {
         colorHex: team.colorHex,
         gameCount: gameCounts[team.id, default: 0],
         id: team.id,
-        name: team.name
+        name: team.name,
+        logoData: team.logoData
       )
     })
   }

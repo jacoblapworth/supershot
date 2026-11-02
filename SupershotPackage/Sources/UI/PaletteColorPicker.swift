@@ -53,7 +53,17 @@ package struct PaletteColorItem: View {
   package var isSelected: Bool = false
   package var onSelect: () -> Void
 
+  @Environment(\.self) private var environment
+
+  package init(color: Color, isSelected: Bool = false, onSelect: @escaping () -> Void) {
+    self.color = color
+    self.isSelected = isSelected
+    self.onSelect = onSelect
+  }
+
   package var body: some View {
+    let resolved = color.resolve(in: environment)
+    let luminance = 0.2126 * resolved.red + 0.7152 * resolved.green + 0.0722 * resolved.blue
     Button {
       withAnimation {
         onSelect()
@@ -67,7 +77,7 @@ package struct PaletteColorItem: View {
             Image(systemName: "checkmark")
               .transition(.symbolEffect(.drawOn))
               .font(.caption.bold())
-              .foregroundStyle(.white)
+              .foregroundStyle(luminance > 0.6 ? .black : .white)
             Circle()
               .inset(by: -2)
               .stroke(.tertiary, lineWidth: 2)

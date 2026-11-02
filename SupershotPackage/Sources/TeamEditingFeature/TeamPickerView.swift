@@ -126,9 +126,9 @@ private struct TeamSelectionRow: View {
   var body: some View {
     Button(action: selected) {
       HStack(spacing: 12) {
-        Circle()
-          .fill(team.color)
-          .frame(width: 18, height: 18)
+        AvatarView(team.name, logoData: team.logoData)
+          .backgroundStyle(team.color)
+          .controlSize(.mini)
           .accessibilityHidden(true)
         Text(team.name)
         Spacer()

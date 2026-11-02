@@ -6,11 +6,15 @@ public struct GameCardView: View {
   public var game: WidgetGame
   public var compact: Bool
   public var featured: Bool
+  public var teamALogoData: Data?
+  public var teamBLogoData: Data?
 
-  public init(game: WidgetGame, compact: Bool = false, featured: Bool = false) {
+  public init(game: WidgetGame, compact: Bool = false, featured: Bool = false, teamALogoData: Data? = nil, teamBLogoData: Data? = nil) {
     self.game = game
     self.compact = compact
     self.featured = featured
+    self.teamALogoData = teamALogoData
+    self.teamBLogoData = teamBLogoData
   }
 
   public var body: some View {
@@ -21,12 +25,14 @@ public struct GameCardView: View {
         HStack(spacing: 12) {
           team(
             name: game.teamAName,
+            logoData: teamALogoData,
             score: game.teamAScore,
             opponentScore: game.teamBScore,
             alignment: .leading
           )
           team(
             name: game.teamBName,
+            logoData: teamBLogoData,
             score: game.teamBScore,
             opponentScore: game.teamAScore,
             alignment: .trailing
@@ -65,7 +71,7 @@ public struct GameCardView: View {
 
   private var featuredTeams: some View {
     VStack(spacing: 4) {
-      featuredTeam(name: game.teamAName, score: game.teamAScore, opponent: game.teamBScore)
+      featuredTeam(name: game.teamAName, logoData: teamALogoData, score: game.teamAScore, opponent: game.teamBScore)
       Spacer(minLength: 0)
       VStack(spacing: 2) {
         status
@@ -81,13 +87,13 @@ public struct GameCardView: View {
       .multilineTextAlignment(.center)
       .frame(maxWidth: .infinity)
       Spacer(minLength: 0)
-      featuredTeam(name: game.teamBName, score: game.teamBScore, opponent: game.teamAScore)
+      featuredTeam(name: game.teamBName, logoData: teamBLogoData, score: game.teamBScore, opponent: game.teamAScore)
     }
   }
 
-  private func featuredTeam(name: String, score: Int, opponent: Int) -> some View {
+  private func featuredTeam(name: String, logoData: Data?, score: Int, opponent: Int) -> some View {
     HStack(spacing: 6) {
-      avatar(name).controlSize(.mini)
+      avatar(name, logoData: logoData).controlSize(.mini)
       Text(name).font(.subheadline.bold()).lineLimit(2).minimumScaleFactor(0.8)
       Spacer(minLength: 0)
       if !game.isPlanned {
@@ -96,19 +102,19 @@ public struct GameCardView: View {
     }
   }
 
-  private func team(name: String, score: Int, opponentScore: Int, alignment: HorizontalAlignment) -> some View {
+  private func team(name: String, logoData: Data?, score: Int, opponentScore: Int, alignment: HorizontalAlignment) -> some View {
     VStack(alignment: alignment, spacing: 4) {
       if compact {
         HStack(spacing: 6) {
           if alignment == .leading {
-            avatar(name).controlSize(.mini)
+            avatar(name, logoData: logoData).controlSize(.mini)
           }
           Text(name).font(.caption.bold()).lineLimit(2).minimumScaleFactor(0.8)
           if !game.isPlanned {
             scoreText(score, opponent: opponentScore, size: 32)
           }
           if alignment == .trailing {
-            avatar(name).controlSize(.mini)
+            avatar(name, logoData: logoData).controlSize(.mini)
           }
         }
       } else {
@@ -116,13 +122,13 @@ public struct GameCardView: View {
           .foregroundStyle(.thickMaterial)
         HStack(spacing: 16) {
           if alignment == .leading {
-            avatar(name)
+            avatar(name, logoData: logoData)
           }
           if !game.isPlanned {
             scoreText(score, opponent: opponentScore, size: 62)
           }
           if alignment == .trailing {
-            avatar(name)
+            avatar(name, logoData: logoData)
           }
         }
       }
@@ -130,8 +136,8 @@ public struct GameCardView: View {
     .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
   }
 
-  private func avatar(_ name: String) -> some View {
-    AvatarView(name).backgroundStyle(.ultraThinMaterial).foregroundStyle(.ultraThickMaterial)
+  private func avatar(_ name: String, logoData: Data?) -> some View {
+    AvatarView(name, logoData: logoData).backgroundStyle(.ultraThinMaterial).foregroundStyle(.ultraThickMaterial)
   }
 
   private func scoreText(_ score: Int, opponent: Int, size: CGFloat) -> some View {

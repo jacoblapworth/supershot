@@ -7,6 +7,7 @@ import PreviewSupport
 import SharedModels
 import SQLiteData
 import SwiftUI
+import TeamLogoClient
 import UI
 
 @Reducer
@@ -22,10 +23,15 @@ package struct TeamEditorFeature {
     package var color: Color
     package var errorMessage: String?
     package var isSaving = false
+    package var isProcessingLogo = false
+    package var logoData: Data?
+    package var logoColors: [String] = []
+    package var logoRequestID: UUID?
     package var name: String
     package var mode: Mode
     package let originalColor: Color
     package let originalName: String
+    package let originalLogoData: Data?
 
     package init(team: Team) {
       focus = .name
@@ -34,6 +40,8 @@ package struct TeamEditorFeature {
       mode = .editing(team.id)
       originalColor = team.color
       originalName = team.name
+      logoData = team.logoData
+      originalLogoData = team.logoData
     }
 
     package init() {
@@ -43,6 +51,7 @@ package struct TeamEditorFeature {
       mode = .creating
       originalColor = ColorPalette.blue
       originalName = ""
+      originalLogoData = nil
     }
 
     package var isCreating: Bool {
@@ -53,7 +62,8 @@ package struct TeamEditorFeature {
       let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
       return !trimmedName.isEmpty
         && !isSaving
-        && (isCreating || trimmedName != originalName || color != originalColor)
+        && !isProcessingLogo
+        && (isCreating || trimmedName != originalName || color != originalColor || logoData != originalLogoData)
     }
   }
 
@@ -61,8 +71,14 @@ package struct TeamEditorFeature {
     case binding(BindingAction<State>)
     case cancelButtonTapped
     case delegate(Delegate)
+    case disappeared
+    case logoImportFailed
+    case logoSelected(TeamLogoSource)
+    case logoResponse(UUID, Result<PreparedTeamLogo, any Error>)
+    case removeLogoButtonTapped
     case saveButtonTapped
     case saveResponse(Result<Team, any Error>)
+    case task
 
     package enum Delegate: Equatable {
       case cancelled
@@ -76,6 +92,9 @@ package struct TeamEditorFeature {
 
   @Dependency(\.defaultDatabase) package var database
   @Dependency(\.uuid) package var uuid
+  @Dependency(\.teamLogoClient) package var teamLogoClient
+
+  private nonisolated enum CancelID: Hashable, Sendable { case logo }
 
   package var body: some Reducer<State, Action> {
     BindingReducer()
@@ -87,19 +106,82 @@ package struct TeamEditorFeature {
 
       case .cancelButtonTapped:
         guard !state.isSaving else { return .none }
-        return .send(.delegate(.cancelled))
+        state.logoRequestID = nil
+        state.isProcessingLogo = false
+        return .merge(.cancel(id: CancelID.logo), .send(.delegate(.cancelled)))
+
+      case .disappeared:
+        state.logoRequestID = nil
+        state.isProcessingLogo = false
+        return .cancel(id: CancelID.logo)
+
+      case .task:
+        guard let data = state.logoData, state.logoRequestID == nil, state.logoColors.isEmpty else { return .none }
+        let requestID = uuid()
+        state.logoRequestID = requestID
+        return .run { send in
+          let result = await Result { try await teamLogoClient.colors(data) }
+          await send(.logoResponse(requestID, result.map { PreparedTeamLogo(data: data, colors: $0) }))
+        }
+        .cancellable(id: CancelID.logo, cancelInFlight: true)
+
+      case let .logoSelected(source):
+        guard !state.isSaving else { return .none }
+        let requestID = uuid()
+        state.logoRequestID = requestID
+        state.isProcessingLogo = true
+        state.errorMessage = nil
+        state.focus = nil
+        return .run { send in
+          let result = await Result { try await teamLogoClient.prepare(source) }
+          await send(.logoResponse(requestID, result))
+        }
+        .cancellable(id: CancelID.logo, cancelInFlight: true)
+
+      case let .logoResponse(requestID, result):
+        guard state.logoRequestID == requestID else { return .none }
+        let isImport = state.isProcessingLogo
+        state.logoRequestID = nil
+        state.isProcessingLogo = false
+        switch result {
+        case let .success(logo):
+          state.logoData = logo.data
+          state.logoColors = logo.colors
+          if isImport, let color = logo.colors.first {
+            state.color = Color(hex: color)
+          }
+        case .failure:
+          if isImport {
+            state.errorMessage = "Couldn’t open this logo. Choose a PNG, JPEG, or HEIC image and try again."
+          }
+        }
+        return .none
+
+      case .logoImportFailed:
+        state.errorMessage = "Couldn’t open this logo. Try choosing the image again."
+        return .none
+
+      case .removeLogoButtonTapped:
+        guard !state.isSaving else { return .none }
+        state.logoData = nil
+        state.logoColors = []
+        state.logoRequestID = nil
+        state.isProcessingLogo = false
+        state.errorMessage = nil
+        return .cancel(id: CancelID.logo)
 
       case .delegate:
         return .none
 
       case .saveButtonTapped:
-        guard !state.isSaving else { return .none }
+        guard !state.isSaving, !state.isProcessingLogo else { return .none }
         let name = state.name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
           state.errorMessage = "Enter a team name."
           return .none
         }
         guard state.isCreating || name != state.originalName || state.color != state.originalColor
+          || state.logoData != state.originalLogoData
         else {
           return .none
         }
@@ -112,7 +194,8 @@ package struct TeamEditorFeature {
             return uuid()
           }(),
           name: name,
-          colorHex: state.color.hex()
+          colorHex: state.color.hex(),
+          logoData: state.logoData
         )
         let isCreating = state.isCreating
         state.errorMessage = nil
@@ -130,6 +213,7 @@ package struct TeamEditorFeature {
                 try Team.find(savedTeam.id).update {
                   $0.colorHex = #bind(savedTeam.colorHex)
                   $0.name = #bind(savedTeam.name)
+                  $0.logoData = #bind(savedTeam.logoData)
                 }
                 .execute(db)
               }
