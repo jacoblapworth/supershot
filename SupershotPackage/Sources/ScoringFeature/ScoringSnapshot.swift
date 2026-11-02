@@ -46,7 +46,8 @@ package extension ScoringFeature.State {
         name: snapshot.teamB.name
       ),
       teamBScore: snapshot.teamBScore,
-      timerEndsAt: snapshot.game.timerEndsAt
+      timerEndsAt: snapshot.game.timerEndsAt,
+      waitingSince: snapshot.game.waitingSince
     )
     scheduledAt = snapshot.game.scheduledAt
     court = snapshot.game.court

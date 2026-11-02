@@ -33,6 +33,49 @@ extension SupershotTestSuite {
   @Suite(.dependencies {
     $0.uuid = .incrementing
   }) struct GameTimerTests {
+    @Test(arguments: [BreakStartPolicy.automatic, .manual])
+    func expiredBreakWaitingSurvivesStorageAndClearsOnExplicitStart(policy: BreakStartPolicy) async throws {
+      let seed = Self.makeScoringStore()
+      let database = seed.dependencies.defaultDatabase
+      let boundary = Date(timeIntervalSince1970: 1000)
+      try await database.write { db in
+        try GamePeriod.find(testGamePeriodID(gameID: UUID(3), position: 0))
+          .update { $0.breakAfterDurationSeconds = #bind(120) }.execute(db)
+        try Game.find(UUID(3)).update {
+          $0.currentPhaseIndex = 1
+          $0.timerEndsAt = #bind(boundary)
+          $0.breakStartPolicy = #bind(policy)
+          $0.isAwaitingCentrePassConfirmation = true
+          $0.lateScoringPeriodNumber = #bind(1)
+        }.execute(db)
+      }
+      try await withDependencies {
+        $0.defaultDatabase = database
+      } operation: {
+        let session = GameSessionClient.live
+        let expired = try await session.execute(UUID(3), .reconcile, boundary.addingTimeInterval(30))
+        #expect(expired.snapshot.game.waitingSince == boundary)
+        #expect(expired.snapshot.game.countdown == GameCountdown())
+        let recovered = try await session.execute(UUID(3), .reconcile, boundary.addingTimeInterval(300))
+        #expect(recovered.snapshot.game.waitingSince == boundary)
+        let state = ScoringFeature.State(snapshot: recovered.snapshot)
+        #expect(state.timerViewState.waitingSince == boundary)
+        #expect(state.timerViewState.title == "Waiting for Quarter 2")
+        #expect(state.isShowingLastCentrePassBanner)
+        #expect(state.scoringContext == .completedPeriod(number: 1))
+        #expect(!state.canStartOrResume)
+        let blocked = try await session.execute(UUID(3), .timing(.startOrResume, expectedPhaseIndex: 2), boundary.addingTimeInterval(300))
+        #expect(blocked.outcome == .rejected(.confirmationRequired))
+        #expect(blocked.snapshot.game.waitingSince == boundary)
+        _ = try await session.execute(UUID(3), .resolveCentrePass(completedPeriod: 1, taken: false), boundary.addingTimeInterval(300))
+        let started = try await session.execute(UUID(3), .timing(.startOrResume, expectedPhaseIndex: 2), boundary.addingTimeInterval(300))
+        #expect(started.snapshot.game.waitingSince == nil)
+        #expect(started.snapshot.game.elapsedSeconds == 0)
+        #expect(started.snapshot.game.timerEndsAt == boundary.addingTimeInterval(1200))
+        #expect(started.snapshot.game.lateScoringPeriodNumber == nil)
+      }
+    }
+
     @Test(arguments: [false, true])
     func manualBreakWaitsAcrossRecoveryThenStartsPausesResumesAndSkips(endsEarly: Bool) async throws {
       let seed = Self.makeScoringStore()
@@ -94,6 +137,7 @@ extension SupershotTestSuite {
         let next = try await client.skip(UUID(3), 1)
         #expect(next.game.currentPhaseIndex == 2)
         #expect(next.game.countdown == GameCountdown())
+        #expect(next.game.waitingSince == nil)
       }
     }
 
@@ -811,7 +855,8 @@ extension SupershotTestSuite {
               isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
               currentPhaseIndex: state.currentPhaseIndex,
               elapsedSeconds: state.elapsedSeconds,
-              timerEndsAt: state.timerEndsAt
+              timerEndsAt: state.timerEndsAt,
+              waitingSince: state.waitingSince
             )
           }
           .execute(db)

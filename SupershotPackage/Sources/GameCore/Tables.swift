@@ -35,6 +35,7 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
   public var currentPhaseIndex = 0
   public var elapsedSeconds = 0
   public var timerEndsAt: Date?
+  public var waitingSince: Date?
   public var breakStartPolicy = BreakStartPolicy.automatic
 
   public var isPlanned: Bool {
@@ -71,6 +72,7 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
     currentPhaseIndex: Int = 0,
     elapsedSeconds: Int = 0,
     timerEndsAt: Date? = nil,
+    waitingSince: Date? = nil,
     breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
     createdAt: Date? = nil,
     scheduledAt: Date? = nil,
@@ -98,6 +100,7 @@ public nonisolated struct Game: Equatable, Hashable, Identifiable, Sendable {
     self.currentPhaseIndex = currentPhaseIndex
     self.elapsedSeconds = elapsedSeconds
     self.timerEndsAt = timerEndsAt
+    self.waitingSince = waitingSince
     self.breakStartPolicy = breakStartPolicy
   }
 }

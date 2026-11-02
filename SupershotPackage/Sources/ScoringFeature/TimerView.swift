@@ -20,7 +20,7 @@ package struct TimerView: View {
         }
       }
       HStack {
-        Text(formattedTime)
+        clockText
           .font(.system(size: 56, weight: .bold, design: .rounded))
           .monospacedDigit()
           .contentTransition(.numericText())
@@ -51,17 +51,27 @@ package struct TimerView: View {
           }
         }
       }
-      ProgressView(
-        value: Double(state.elapsedSeconds),
-        total: Double(max(state.durationSeconds, 1))
-      )
-      .animation(.linear, value: state.elapsedSeconds)
-      .controlSize(.large)
-      .accessibilityLabel("Quarter time elapsed")
+      if state.waitingSince == nil {
+        ProgressView(
+          value: Double(state.elapsedSeconds),
+          total: Double(max(state.durationSeconds, 1))
+        )
+        .animation(.linear, value: state.elapsedSeconds)
+        .controlSize(.large)
+        .accessibilityLabel("Quarter time elapsed")
+      }
     }
     .foregroundStyle(.white)
     .padding()
     .background(.black, in: RoundedRectangle(cornerRadius: 24))
+  }
+
+  private var clockText: Text {
+    if let waitingSince = state.waitingSince {
+      Text(waitingSince, style: .timer)
+    } else {
+      Text(formattedTime)
+    }
   }
 
   private var formattedTime: String {

@@ -12,6 +12,7 @@
       public var teamAScore: Int
       public var teamBScore: Int
       public var timerEndsAt: Date?
+      public var waitingSince: Date?
       public var isAwaitingCentrePassConfirmation = false
       public var lateScoringPeriodNumber: Int?
 
@@ -23,6 +24,7 @@
         teamAScore: Int,
         teamBScore: Int,
         timerEndsAt: Date? = nil,
+        waitingSince: Date? = nil,
         isAwaitingCentrePassConfirmation: Bool = false,
         lateScoringPeriodNumber: Int? = nil
       ) {
@@ -33,6 +35,7 @@
         self.teamAScore = teamAScore
         self.teamBScore = teamBScore
         self.timerEndsAt = timerEndsAt
+        self.waitingSince = waitingSince
         self.isAwaitingCentrePassConfirmation = isAwaitingCentrePassConfirmation
         self.lateScoringPeriodNumber = lateScoringPeriodNumber
       }
@@ -93,6 +96,10 @@
 
     var period: Int {
       phase.associatedPeriod.number
+    }
+
+    var breakTimerBoundary: Date? {
+      GameClockPresentation.breakBoundary(phase: phase, countdown: countdown, waitingSince: waitingSince)
     }
 
     var countdown: GameCountdown {

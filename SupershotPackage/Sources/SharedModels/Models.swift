@@ -142,3 +142,38 @@ public nonisolated enum GameScoringContext: Equatable, Sendable {
       : nil
   }
 }
+
+/// Presentation only: waiting never contributes to the bounded playing clock.
+public nonisolated enum GameClockPresentation: Equatable, Sendable {
+  case countdown(GameCountdown.Projection)
+  case waiting(since: Date, elapsedSeconds: Int)
+
+  public static func resolve(
+    phase: GamePhase,
+    countdown: GameCountdown,
+    waitingSince: Date?,
+    now: Date
+  ) -> Self {
+    if let boundary = breakBoundary(phase: phase, countdown: countdown, waitingSince: waitingSince),
+       boundary <= now
+    {
+      return .waiting(since: boundary, elapsedSeconds: max(0, Int(now.timeIntervalSince(boundary))))
+    }
+    return .countdown(countdown.projection(durationSeconds: phase.durationSeconds, now: now))
+  }
+
+  /// A running break can cross this boundary without a new app or widget update.
+  public static func breakBoundary(
+    phase: GamePhase,
+    countdown: GameCountdown,
+    waitingSince: Date?
+  ) -> Date? {
+    if phase.isBreak, phase.durationSeconds > 0 {
+      return countdown.endsAt
+    }
+    if phase.isPlayingPeriod, !countdown.isRunning {
+      return waitingSince
+    }
+    return nil
+  }
+}
