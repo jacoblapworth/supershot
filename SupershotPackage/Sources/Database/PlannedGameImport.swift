@@ -29,6 +29,12 @@ package nonisolated struct PlannedGameImport: Sendable {
         guard let current = try Team.find(team.id).fetchOne(db), current.name == team.name
         else { throw ImportError.staleTeam }
       }
+      var fixtures: [GameFixtureIdentity: Game.ID] = [:]
+      for game in try Game.fetchAll(db) {
+        if let identity = GameFixtureIdentity(game: game) {
+          fixtures[identity] = game.id
+        }
+      }
       for draft in drafts {
         if let existing = try Game.find(draft.game.id).fetchOne(db) {
           // Never overwrite a changed or started game on a retry.
@@ -36,8 +42,16 @@ package nonisolated struct PlannedGameImport: Sendable {
                 try GamePeriod.where({ $0.gameID.eq(existing.id) }).order(by: \.position).fetchAll(db) == draft.periods
           else { throw ImportError.conflictingRetry }
           try snapshots.append(GameSnapshot.fetch(db, gameID: existing.id))
+        } else if let identity = GameFixtureIdentity(game: draft.game), let id = fixtures[identity] {
+          // Recheck inside the transaction: another import may have saved this
+          // fixture since preview, or an earlier row may repeat it in this batch.
+          try snapshots.append(GameSnapshot.fetch(db, gameID: id))
         } else {
-          try snapshots.append(draft.save(db))
+          let snapshot = try draft.save(db)
+          snapshots.append(snapshot)
+          if let identity = GameFixtureIdentity(game: snapshot.game) {
+            fixtures[identity] = snapshot.game.id
+          }
         }
       }
       return .commit

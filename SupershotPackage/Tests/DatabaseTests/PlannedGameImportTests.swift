@@ -30,6 +30,24 @@ extension SupershotTestSuite {
       }, matchedTeams: [])
     }
 
+    private func anotherImport(of draft: GameSetupDraft, id: Game.ID) -> GameSetupDraft {
+      GameSetupDraft(
+        game: Game(
+          id: id,
+          startedAt: nil,
+          teamAID: draft.game.teamAID,
+          teamBID: draft.game.teamBID,
+          centrePassTeamID: draft.game.centrePassTeamID,
+          createdAt: draft.game.createdAt,
+          scheduledAt: draft.game.scheduledAt,
+          court: draft.game.court,
+          division: draft.game.division
+        ),
+        periods: testGamePeriods(gameID: id),
+        teamsToCreate: draft.teamsToCreate
+      )
+    }
+
     @Test(arguments: [1, 6]) func atomicImportRetainsMetadataAndReusesTeams(count: Int) throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
@@ -75,6 +93,55 @@ extension SupershotTestSuite {
       try database.write { db in
         #expect(throws: PlannedGameImport.ImportError.self) { try command.save(db) }
         try expectNoDifference(Team.fetchCount(db), 0)
+      }
+    }
+
+    @Test(arguments: [false, true]) func savedFixtureIsReusedAcrossImportsAndTeamOrder(reversed: Bool) throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let first = command(count: 1)
+      try database.write { db in _ = try first.save(db) }
+      var second = first
+      second.drafts[0] = anotherImport(of: first.drafts[0], id: UUID(500))
+      // Visible fixture times have minute precision; ignore seconds and metadata differences.
+      second.drafts[0].game.scheduledAt = try #require(first.drafts[0].game.scheduledAt?.addingTimeInterval(10))
+      second.drafts[0].game.court = "Other"
+      if reversed {
+        let a = second.drafts[0].game.teamAID
+        second.drafts[0].game.teamAID = second.drafts[0].game.teamBID
+        second.drafts[0].game.teamBID = a
+      }
+      try database.write { db in
+        let result = try second.save(db)
+        #expect(result.count == 1)
+        #expect(result[0].game == first.drafts[0].game)
+        try expectNoDifference(Game.fetchCount(db), 1)
+        try expectNoDifference(GamePeriod.fetchCount(db), 4)
+        try expectNoDifference(Team.fetchCount(db), 2)
+      }
+    }
+
+    @Test func repeatedRowsAreDeduplicatedInsideTheSameTransaction() throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      var batch = command(count: 1)
+      let duplicate = anotherImport(of: batch.drafts[0], id: UUID(500))
+      batch.drafts.append(duplicate)
+      try database.write { db in
+        let result = try batch.save(db)
+        #expect(result.map(\.game.id) == [batch.drafts[0].game.id, batch.drafts[0].game.id])
+        try expectNoDifference(Game.fetchCount(db), 1)
+        try expectNoDifference(Team.fetchCount(db), 2)
+      }
+    }
+
+    @Test func sameTeamsAtAnotherTimeCreateAnotherGame() throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let batch = command(count: 2)
+      try database.write { db in
+        _ = try batch.save(db)
+        try expectNoDifference(Game.fetchCount(db), 2)
       }
     }
   }
