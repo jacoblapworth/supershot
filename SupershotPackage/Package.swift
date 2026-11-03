@@ -27,6 +27,7 @@ let package = Package(
     .library(name: "AppSettings", targets: ["AppSettings"]),
     .library(name: "PreviewSupport", targets: ["PreviewSupport"]),
     .library(name: "AlarmClient", targets: ["AlarmClient"]),
+    .library(name: "ClipboardClient", targets: ["ClipboardClient"]),
     .library(name: "SubscriptionClient", targets: ["SubscriptionClient"]),
     .library(name: "FeatureFlagsClient", targets: ["FeatureFlagsClient"]),
     .library(name: "LocationClient", targets: ["LocationClient"]),
@@ -167,6 +168,13 @@ let package = Package(
       swiftSettings: appSwiftSettings
     ),
     .target(
+      name: "ClipboardClient",
+      dependencies: [
+        .product(name: "Dependencies", package: "swift-dependencies"),
+      ],
+      swiftSettings: appSwiftSettings
+    ),
+    .target(
       name: "FeatureFlagsClient",
       dependencies: [
         "SubscriptionClient",
@@ -302,6 +310,7 @@ let package = Package(
       name: "NewGameFeature",
       dependencies: [
         "AppUI",
+        "ClipboardClient",
         "GameAnalysis",
         "PermissionsFeature",
         "SubscriptionClient",
@@ -701,6 +710,7 @@ let package = Package(
       name: "NewGameFeatureTests",
       dependencies: [
         "AppUI",
+        "ClipboardClient",
         "AlarmClient",
         "AppSettings",
         "Database",

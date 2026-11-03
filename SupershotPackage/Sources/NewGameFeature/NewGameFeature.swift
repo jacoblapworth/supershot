@@ -185,9 +185,26 @@ package struct NewGameFeature {
 
     /// Only committed setup values are included; temporary child-editor edits stay transient.
     package var draft: GameSetupDraft? {
-      guard !describeGame.isBusy,
-            let teamA = leftTeam.team, let teamB = rightTeam.team,
-            teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
+      guard let teamA = leftTeam.team, let teamB = rightTeam.team else { return nil }
+      return draft(
+        teamA: teamA,
+        teamB: teamB,
+        teamABibColorHex: leftTeam.bibColor.hex(),
+        teamBBibColorHex: rightTeam.bibColor.hex(),
+        teamsToCreate: describeGame.pendingTeams
+      )
+    }
+
+    /// Read-only construction also serves batch previews. Mutating a copy of an
+    /// observable setup would notify the original registrar during view rendering.
+    package func draft(
+      teamA: Team,
+      teamB: Team,
+      teamABibColorHex: String,
+      teamBBibColorHex: String,
+      teamsToCreate: [Team]
+    ) -> GameSetupDraft? {
+      guard !describeGame.isBusy, teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
       else { return nil }
       let court = court.trimmingCharacters(in: .whitespacesAndNewlines)
       let division = division.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -197,9 +214,9 @@ package struct NewGameFeature {
           id: gameID,
           startedAt: nil,
           teamAID: teamA.id,
-          teamABibColorHex: leftTeam.bibColor.hex(),
+          teamABibColorHex: teamABibColorHex,
           teamBID: teamB.id,
-          teamBBibColorHex: rightTeam.bibColor.hex(),
+          teamBBibColorHex: teamBBibColorHex,
           centrePassTeamID: firstCentrePass == .teamA ? teamA.id : teamB.id,
           latitude: gameLocation?.latitude,
           longitude: gameLocation?.longitude,
@@ -219,7 +236,7 @@ package struct NewGameFeature {
             breakAfterDurationSeconds: position < breaks.count ? breaks[position].totalSeconds : nil
           )
         },
-        teamsToCreate: describeGame.pendingTeams.filter { $0.id == teamA.id || $0.id == teamB.id }
+        teamsToCreate: teamsToCreate.filter { $0.id == teamA.id || $0.id == teamB.id }
       )
     }
 
