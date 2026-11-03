@@ -20,6 +20,41 @@ extension SupershotTestSuite {
     $0.uuid = .incrementing
   }) struct GameProgressFeatureTests {
     @Test
+    func waitingPresentationDoesNotChangeQuarterClockOrLateScoring() {
+      let periods = testGamePeriods(gameID: UUID(3), count: 2, breakDurationSeconds: 120)
+      let boundary = Date(timeIntervalSince1970: 1000)
+      let game = Game(
+        id: UUID(3),
+        startedAt: boundary.addingTimeInterval(-1020),
+        teamAID: UUID(1),
+        teamBID: UUID(2),
+        isAwaitingCentrePassConfirmation: true,
+        lateScoringPeriodNumber: 1,
+        currentPhaseIndex: 2,
+        waitingSince: boundary
+      )
+      let state = ScoringFeature.State(
+        centrePassTeamID: UUID(1),
+        currentPhaseIndex: 2,
+        gameID: game.id,
+        isShowingLastCentrePassBanner: true,
+        lateScoringPeriodNumber: 1,
+        periods: periods,
+        startedAt: game.startedAt,
+        teamA: .init(id: UUID(1), name: "Ravens"),
+        teamB: .init(id: UUID(2), name: "Swifts"),
+        waitingSince: boundary
+      )
+      #expect(state.timerViewState.waitingSince == boundary)
+      #expect(state.timeRemainingSeconds == 900)
+      #expect(state.elapsedSeconds == 0)
+      #expect(state.scoringContext == .completedPeriod(number: 1))
+      #expect(state.canScoreGoal)
+      #expect(!state.canStartOrResume)
+      #expect(state.scoringToolbarState.content != .none)
+    }
+
+    @Test
     func resumableProgressFieldsHaveSafeDefaults() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

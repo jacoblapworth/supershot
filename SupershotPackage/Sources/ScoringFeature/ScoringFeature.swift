@@ -104,6 +104,7 @@ package struct ScoringFeature {
     package var teamB: Team
     package var teamBScore = 0
     package var timerEndsAt: Date?
+    package var waitingSince: Date?
     private var validatedTimeline: GameTimeline
 
     package var periods: [GamePeriod] {
@@ -279,7 +280,8 @@ package struct ScoringFeature {
       teamAScore: Int = 0,
       teamB: Team,
       teamBScore: Int = 0,
-      timerEndsAt: Date? = nil
+      timerEndsAt: Date? = nil,
+      waitingSince: Date? = nil
     ) {
       self.timeInput = timeInput
       self.editedPhaseIndex = editedPhaseIndex
@@ -311,6 +313,7 @@ package struct ScoringFeature {
       self.teamB = teamB
       self.teamBScore = teamBScore
       self.timerEndsAt = timerEndsAt
+      self.waitingSince = waitingSince
     }
   }
 
@@ -772,6 +775,7 @@ package struct ScoringFeature {
     state.elapsedSeconds = game.elapsedSeconds
     state.isShowingLastCentrePassBanner = game.isAwaitingCentrePassConfirmation
     state.timerEndsAt = game.timerEndsAt
+    state.waitingSince = game.waitingSince
   }
 
   private func skipCurrentPhase(state: inout State) -> Effect<Action> {

@@ -30,6 +30,8 @@ public nonisolated struct GameTimingResult: Equatable, Sendable {
 public nonisolated struct GameTimingState: Equatable, Sendable {
   public var phaseIndex: Int
   public var countdown: GameCountdown
+  /// Original deadline of a naturally expired break, retained until explicit play starts.
+  public var waitingSince: Date?
   public var breakStartPolicy = BreakStartPolicy.automatic
 
   public enum PhaseStatus: Equatable, Sendable {
@@ -61,7 +63,7 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
     guard timeline.phase(at: phaseIndex) != nil else { return [] }
     var transitions: [GameTimingTransition] = []
     while let boundary = countdown.endsAt, boundary <= now {
-      transitions += complete(in: timeline, boundary: boundary)
+      transitions += complete(in: timeline, boundary: boundary, naturallyExpired: true)
     }
     countdown.elapsedSeconds =
       countdown.projection(durationSeconds: timeline.phases[phaseIndex].durationSeconds, now: now).elapsedSeconds
@@ -69,7 +71,11 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
   }
 
   @discardableResult
-  public mutating func complete(in timeline: GameTimeline, boundary: Date) -> [GameTimingTransition] {
+  public mutating func complete(
+    in timeline: GameTimeline,
+    boundary: Date,
+    naturallyExpired: Bool = false
+  ) -> [GameTimingTransition] {
     guard let phase = timeline.phase(at: phaseIndex), !isFinalPeriodComplete(in: timeline) else {
       return []
     }
@@ -78,6 +84,7 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
       phase.isPlayingPeriod
         ? .periodCompleted(phase.associatedPeriod, boundary: boundary, hasFollowingPeriod: hasNext)
         : .breakCompleted(phase.associatedPeriod, boundary: boundary)
+    waitingSince = phase.isBreak && naturallyExpired && phase.durationSeconds > 0 ? boundary : nil
     countdown = GameCountdown(elapsedSeconds: phase.durationSeconds)
     guard hasNext else { return [transition] }
     phaseIndex += 1
@@ -104,6 +111,7 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
       guard !countdown.isRunning,
             let endsAt = countdown.endDate(durationSeconds: phase.durationSeconds, now: now)
       else { return GameTimingResult(status: .unchanged) }
+      waitingSince = nil
       countdown.endsAt = endsAt
       return GameTimingResult(
         status: .applied,
@@ -134,22 +142,25 @@ public nonisolated struct GameTimingState: Equatable, Sendable {
   public init(
     phaseIndex: Int,
     countdown: GameCountdown,
-    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic
+    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
+    waitingSince: Date? = nil
   ) {
     self.phaseIndex = phaseIndex
     self.countdown = countdown
     self.breakStartPolicy = breakStartPolicy
+    self.waitingSince = waitingSince
   }
 }
 
 public extension Game {
   nonisolated var timing: GameTimingState {
     get {
-      GameTimingState(phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy)
+      GameTimingState(phaseIndex: currentPhaseIndex, countdown: countdown, breakStartPolicy: breakStartPolicy, waitingSince: waitingSince)
     }
     set {
       currentPhaseIndex = newValue.phaseIndex
       countdown = newValue.countdown
+      waitingSince = newValue.waitingSince
       breakStartPolicy = newValue.breakStartPolicy
     }
   }

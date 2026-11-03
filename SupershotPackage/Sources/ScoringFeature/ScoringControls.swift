@@ -25,6 +25,7 @@ package struct TimerViewState: Equatable {
   package var remainingSeconds: Int
   package var elapsedSeconds: Int
   package var durationSeconds: Int
+  package var waitingSince: Date?
   package var editTime: ScoringControl?
   package var controls: [ScoringControl]
 }
@@ -102,10 +103,13 @@ package extension ScoringFeature.State {
       ))
     }
     return TimerViewState(
-      title: currentPhase.isBreak ? "Quarter \(period) break" : "Quarter \(period)",
+      title: waitingSince != nil
+        ? "Waiting for Quarter \(period)"
+        : currentPhase.isBreak ? "Quarter \(period) break" : "Quarter \(period)",
       remainingSeconds: timeRemainingSeconds,
       elapsedSeconds: timerProjection.elapsedSeconds,
       durationSeconds: currentDurationSeconds,
+      waitingSince: waitingSince,
       editTime: canEditTime && controlsAreAvailable
         ? .init(
           title: "Edit remaining time",

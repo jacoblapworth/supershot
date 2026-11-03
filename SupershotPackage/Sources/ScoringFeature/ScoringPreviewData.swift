@@ -81,6 +81,7 @@ package enum ScoringPreviewScenario: String, CaseIterable, Identifiable {
   case running = "Quarter running"
   case paused = "Quarter paused"
   case nextQuarter = "Start next quarter"
+  case waiting = "Waiting after break"
   case manualBreak = "Break awaiting start"
   case runningBreak = "Break running"
   case pausedBreak = "Break paused"
@@ -119,9 +120,12 @@ package enum ScoringPreviewScenario: String, CaseIterable, Identifiable {
       if self == .pausing {
         state.operation = .pausing(phaseIndex: 0)
       }
-    case .nextQuarter:
+    case .nextQuarter, .waiting:
       state.currentPhaseIndex = 2
       state.lateScoringPeriodNumber = 1
+      if self == .waiting {
+        state.waitingSince = Date.now.addingTimeInterval(-30)
+      }
     case .manualBreak, .runningBreak, .pausedBreak, .skipping, .confirmation, .savingConfirmation:
       state.currentPhaseIndex = 1
       state.lateScoringPeriodNumber = 1

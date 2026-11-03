@@ -28,6 +28,43 @@ extension SupershotTestSuite {
     $0.uuid = .incrementing
   }) struct GameRecoveryFeatureTests {
     @Test
+    func overdueBoundaryRehydratesIndependentlyOfCountdown() async throws {
+      @Dependency(\.defaultDatabase) var database
+      try clearDatabase(database)
+      let boundary = Date(timeIntervalSince1970: 1000)
+      try await database.write { db in
+        try db.seed {
+          Team(id: UUID(-1), name: "Ravens")
+          Team(id: UUID(-2), name: "Swifts")
+          Game(
+            id: UUID(-3),
+            startedAt: boundary.addingTimeInterval(-1000),
+            teamAID: UUID(-1),
+            teamBID: UUID(-2),
+            currentPhaseIndex: 2,
+            waitingSince: boundary
+          )
+        }
+        try GamePeriod.insert {
+          testGamePeriods(gameID: UUID(-3), count: 2, breakDurationSeconds: 120)
+        }.execute(db)
+      }
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(-3)) }
+      let state = ScoringFeature.State(snapshot: snapshot)
+      #expect(state.waitingSince == boundary)
+      #expect(state.timerViewState.waitingSince == boundary)
+      #expect(state.countdown == GameCountdown())
+      #expect(state.canStartOrResume)
+      #expect(GameClockPresentation.resolve(
+        phase: state.currentPhase,
+        countdown: state.countdown,
+        waitingSince: state.waitingSince,
+        now: boundary.addingTimeInterval(300)
+      )
+        == .waiting(since: boundary, elapsedSeconds: 300))
+    }
+
+    @Test
     func multipleUnfinishedGamesRehydrateIndependentlyAndPaused() async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)

@@ -40,6 +40,7 @@ package nonisolated struct GameSetupDraft: Equatable, Sendable {
     saved.startedAt = nil
     saved.currentPhaseIndex = 0
     saved.countdown = GameCountdown()
+    saved.waitingSince = nil
     saved.isAwaitingCentrePassConfirmation = false
     saved.lateScoringPeriodNumber = nil
     if let existing = try Game.find(game.id).fetchOne(db) {
@@ -49,6 +50,7 @@ package nonisolated struct GameSetupDraft: Equatable, Sendable {
         $0.currentPhaseIndex = saved.currentPhaseIndex
         $0.elapsedSeconds = saved.elapsedSeconds
         $0.timerEndsAt = #bind(saved.timerEndsAt)
+        $0.waitingSince = #bind(saved.waitingSince)
         $0.isAwaitingCentrePassConfirmation = saved.isAwaitingCentrePassConfirmation
         $0.lateScoringPeriodNumber = #bind(saved.lateScoringPeriodNumber)
         $0.scheduledAt = #bind(saved.scheduledAt)

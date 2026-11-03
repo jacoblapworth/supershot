@@ -34,7 +34,7 @@ struct GameLiveActivity: Widget {
           )
         }
         DynamicIslandExpandedRegion(.center) {
-          phaseLabel(context.state)
+          ActivityPhaseLabel(state: context.state, isStale: context.isStale)
             .font(.caption.weight(.semibold))
             .foregroundStyle(.secondary)
         }
@@ -52,7 +52,7 @@ struct GameLiveActivity: Widget {
           }
         }
       } compactLeading: {
-        Text(context.state.isInBreak ? "B" : "Q\(context.state.period)")
+        ActivityPhaseLabel(state: context.state, isStale: context.isStale, compact: true)
           .font(.caption.bold())
           .foregroundStyle(.black)
           .padding(4)
@@ -69,10 +69,6 @@ struct GameLiveActivity: Widget {
       .keylineTint(.orange)
     }
     .supplementalActivityFamilies([.small, .medium])
-  }
-
-  private func phaseLabel(_ state: GameActivityAttributes.ContentState) -> Text {
-    state.isInBreak ? Text("Break") : Text("Quarter \(state.period)")
   }
 
   private func teamScore(
@@ -145,7 +141,7 @@ private struct SmallActivityGameView: View {
       }
 
       HStack(spacing: 6) {
-        Text(context.state.isInBreak ? "Break" : "Q\(context.state.period)")
+        ActivityPhaseLabel(state: context.state, isStale: context.isStale, compact: true)
           .foregroundStyle(.secondary)
         TimerText(state: context.state, isStale: context.isStale)
       }
@@ -262,12 +258,43 @@ private struct CentrePassIndicator: View {
   }
 }
 
+private struct ActivityPhaseLabel: View {
+  var state: GameActivityAttributes.ContentState
+  var isStale: Bool
+  var compact = false
+
+  var body: some View {
+    if case .waiting = GameClockPresentation.resolve(
+      phase: state.phase,
+      countdown: state.countdown,
+      waitingSince: state.waitingSince,
+      now: Date.now
+    ) {
+      if compact {
+        Text("Wait")
+      } else {
+        Text("Waiting for Quarter \(state.isInBreak ? state.period + 1 : state.period)")
+      }
+    } else if state.isInBreak {
+      Text("Break")
+    } else if compact {
+      Text("Q\(state.period)")
+    } else {
+      Text("Quarter \(state.period)")
+    }
+  }
+}
+
 private struct TimerText: View {
   var state: GameActivityAttributes.ContentState
   var isStale: Bool
 
   var body: some View {
-    if isStale || state.isComplete {
+    if let boundary = state.breakTimerBoundary {
+      // Unlike a bounded timerInterval, this crosses zero without an app refresh.
+      Text(boundary, style: .timer)
+        .monospacedDigit()
+    } else if isStale || state.isComplete {
       Text(state.isInBreak ? "Break ended" : "Quarter ended")
         .lineLimit(1)
     } else if let timerEndsAt = state.timerEndsAt {
@@ -319,7 +346,7 @@ private struct GoalControls: View {
       }
       Spacer()
       VStack(alignment: .center, spacing: 0) {
-        Text(context.state.isInBreak ? "Break" : "Quarter \(context.state.period)")
+        ActivityPhaseLabel(state: context.state, isStale: context.isStale)
           .font(.caption.weight(.semibold))
           .foregroundStyle(.secondary)
         TimerText(state: context.state, isStale: context.isStale)
@@ -388,6 +415,13 @@ private extension GameActivityAttributes.ContentState {
       isAwaitingCentrePassConfirmation: true,
       lateScoringPeriodNumber: 2
     )
+  }
+
+  static var waitingPreview: Self {
+    var state = pausedPreview
+    state.elapsedSeconds = 0
+    state.waitingSince = Date.now.addingTimeInterval(-30)
+    return state
   }
 
   static let endedPreview = Self(
@@ -467,6 +501,8 @@ private extension Int {
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 150, running: true)
+  GameActivityAttributes.ContentState.waitingPreview
   GameActivityAttributes.ContentState.breakPreview(elapsed: 120, running: false)
 }
 
@@ -476,5 +512,7 @@ private extension Int {
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: true)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 20, running: false)
   GameActivityAttributes.ContentState.breakPreview(elapsed: 0, running: false)
+  GameActivityAttributes.ContentState.breakPreview(elapsed: 150, running: true)
+  GameActivityAttributes.ContentState.waitingPreview
   GameActivityAttributes.ContentState.breakPreview(elapsed: 120, running: false)
 }

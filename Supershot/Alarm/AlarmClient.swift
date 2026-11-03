@@ -65,6 +65,8 @@ nonisolated extension AlarmClient {
           guard snapshot.game.isInProgress else { return }
           let content = ActivityContent(
             state: GameActivityAttributes.ContentState(snapshot: snapshot),
+            // Expiry still invalidates scoring. Eligible break timers keep rendering
+            // their original boundary even when this content becomes stale.
             staleDate: snapshot.game.timerEndsAt
           )
           await gameActivities.update(gameID: snapshot.game.id, content: content) {
@@ -186,6 +188,7 @@ nonisolated extension AlarmClient {
         teamAScore: snapshot.teamAScore,
         teamBScore: snapshot.teamBScore,
         timerEndsAt: snapshot.game.timerEndsAt,
+        waitingSince: snapshot.game.waitingSince,
         isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation,
         lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber
       )

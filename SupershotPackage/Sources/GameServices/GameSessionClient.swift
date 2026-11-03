@@ -252,6 +252,7 @@ package nonisolated enum GameSessionTransaction {
         {
           game.endedAt = commandDate
           game.timerEndsAt = nil
+          game.waitingSince = nil
           outcome = .applied
         } else {
           outcome = .rejected(.finishUnavailable)
@@ -303,6 +304,7 @@ package nonisolated enum GameSessionTransaction {
       $0.currentPhaseIndex = game.currentPhaseIndex
       $0.elapsedSeconds = game.elapsedSeconds
       $0.timerEndsAt = #bind(game.timerEndsAt)
+      $0.waitingSince = #bind(game.waitingSince)
       $0.endedAt = #bind(game.endedAt)
       $0.swapSides = game.swapSides
     }.execute(db)

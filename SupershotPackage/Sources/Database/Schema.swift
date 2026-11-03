@@ -53,6 +53,7 @@ public extension DependencyValues {
         "currentPhaseIndex" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
         "elapsedSeconds" INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
         "timerEndsAt" TEXT,
+        "waitingSince" TEXT,
         "breakStartPolicy" TEXT NOT NULL DEFAULT 'automatic'
           CHECK ("breakStartPolicy" IN ('automatic', 'manual')),
         CHECK ("teamAID" != "teamBID"),
