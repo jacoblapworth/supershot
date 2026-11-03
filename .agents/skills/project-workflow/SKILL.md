@@ -63,8 +63,9 @@ and rewriting published history require separate authorization.
 - Use the pull-requests skill for review preparation and the pr skill when writing the body.
   Inspect the full diff against the actual parent, describe the final behavior and validation,
   and link the Linear issue. Use the dependency branch as the base for stacked work.
-- For visible changes, capture the running implementation and read [SCREENSHOTS.md](SCREENSHOTS.md)
-  to attach evidence. Record capture and upload failures separately; finish other authorized work.
+- For visible changes, capture the running implementation and use GitHub CLI to attach
+  screenshots following [SCREENSHOTS.md](SCREENSHOTS.md). Record capture and upload failures
+  separately; finish other authorized work.
 - Push the task branch and create a draft PR, or update the task's existing PR without
   changing its draft/review state. Verify title, base, diff, draft state, and any image links.
   Attach the PR to the chat when the environment provides an artifact attachment tool.

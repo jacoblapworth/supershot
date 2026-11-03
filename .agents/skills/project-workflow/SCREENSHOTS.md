@@ -11,13 +11,16 @@ state it demonstrates. Include before/after evidence when useful and safe to obt
 Exclude private information. Save durable local artifacts and show them in the handoff.
 For a capture failure, name the exact environment or interaction blocker and the unverified behavior.
 
-## Choose a supported upload route
+## Upload with GitHub CLI
 
-1. Inspect the available GitHub connector tools. Use a native attachment action if exposed.
-   A PR body field alone accepts Markdown; it does not upload a local file. MCP itself can
-   carry upload tools, so a missing action is a connector capability gap, not a protocol ban.
-2. If the connector lacks uploading, check `gh pr create --help` and `gh pr edit --help`
-   for `--attach`. When supported, use GitHub's native CLI attachment path:
+Use `gh` to upload screenshots directly to GitHub and embed them in the PR description.
+The GitHub connector can handle other PR operations; screenshot uploads use the CLI.
+
+1. Check `gh --version`, `gh pr create --help`, and `gh pr edit --help` for `--attach`.
+   If the installed CLI lacks the flag, use a newer approved installation when available.
+   Otherwise report the installed version and missing flag as the upload blocker, retain
+   the images for attachment after the CLI is updated, and complete other authorized PR work.
+2. Attach screenshots when creating the draft PR:
 
    ```sh
    gh pr create --draft --base <parent> --head <branch> \
@@ -25,15 +28,22 @@ For a capture failure, name the exact environment or interaction blocker and the
      --attach '/absolute/path/after.png#Updated game screen'
    ```
 
-   For an existing PR, use `gh pr edit <pr-url> --attach '<path>#<caption>'`.
+   For an existing PR, preserve its description and append the screenshot:
+
+   ```sh
+   gh pr edit <pr-url> --attach '/absolute/path/after.png#Updated game screen'
+   ```
+
+   Repeat `--attach` for multiple images. For specific placement, reference the same local
+   image in the body file and pass it with `--attach`; the CLI replaces that reference with
+   the uploaded URL. Use captions that explain each state.
+3. Verify the upload result.
    Uploading requires push access and compatible authentication. On failure, report the
    exact error without exposing credentials. Check whether the PR or some uploads succeeded
    before retrying, because partial success can still produce a nonzero command result.
-3. If installed tools lack attachments, use an available authenticated browser upload when
-   it supports local files, or an existing repository-approved media host. Keep publication
-   scoped to this PR; obtain authorization before introducing a new host or committing images
-   solely for hosting. Otherwise hand off the local images for manual attachment and
-   explicitly mark the PR evidence as pending.
+   If upload remains blocked, show the local images in the handoff and explicitly mark
+   the PR screenshot evidence as pending. Keep publication scoped to this PR; obtain
+   authorization before introducing another host or committing images solely for hosting.
 
 After upload, read back the PR body and inspect the resulting rendered images when possible.
 Record any remaining inability to verify reviewer access. Local paths and chat attachment
