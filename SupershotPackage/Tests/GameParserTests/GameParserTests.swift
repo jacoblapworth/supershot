@@ -46,7 +46,7 @@ struct GameParserTests {
   @Test(arguments: [
     "19:10 The lodgers vs IMG & Friends Court 2",
     "19:10 The lodgers vs IMG & Friends tomorrow",
-    "19:10 The lodgers vs IMG & Friends\nDivision 1 • Court 2",
+    "19:10 The lodgers vs IMG & Friends\nDivision 1",
     "19:10 A vs B; 19:50 C vs D",
     "24:10 The lodgers vs IMG & Friends",
   ])

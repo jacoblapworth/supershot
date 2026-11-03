@@ -61,6 +61,7 @@ package nonisolated struct GameParser: Sendable {
       }
       return located.sorted { $0.0.lowerBound < $1.0.lowerBound }.map { range, row in
         row.validated(
+          dateSource: text,
           sourceLine: text[..<range.lowerBound].unicodeScalars.filter { $0 == "\n" }.count + 1,
           context: context
         )
