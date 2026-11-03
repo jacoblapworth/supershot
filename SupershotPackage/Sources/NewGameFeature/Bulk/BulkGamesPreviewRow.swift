@@ -10,6 +10,7 @@ import SwiftUI
 package struct BulkGamesPreviewRow: View {
   let store: StoreOf<BulkGamesFeature>
   let row: BulkGamesFeature.Row
+
   package var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
@@ -44,12 +45,22 @@ package struct BulkGamesPreviewRow: View {
     .listRowSeparator(.hidden)
     .listRowBackground(Color.clear)
     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+    .contextMenu { deleteButton }
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) { deleteButton }
+  }
+
+  package var deleteButton: some View {
+    Button("Delete", systemImage: "trash", role: .destructive) {
+      store.send(.deleteGame(row.id))
+    }
   }
 }
 
 #Preview {
-  BulkGamesPreviewRow(
-    store: Store(initialState: BulkGamesFeature.State()) { BulkGamesFeature() },
-    row: .preview
-  )
+  List {
+    BulkGamesPreviewRow(
+      store: Store(initialState: BulkGamesFeature.State()) { BulkGamesFeature() },
+      row: .preview
+    )
+  }
 }

@@ -14,16 +14,6 @@ package struct BulkGamesPreview: View {
       Section(store.rows.count == 1 ? "1 game" : "\(store.rows.count) games") {
         ForEach(store.rows) { row in
           BulkGamesPreviewRow(store: store, row: row)
-            .contextMenu {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                store.send(.deleteGame(row.id))
-              }
-            }
-            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-              Button("Delete", systemImage: "trash", role: .destructive) {
-                store.send(.deleteGame(row.id))
-              }
-            }
         }
       }
       if let error = store.errorMessage {
@@ -47,7 +37,7 @@ package struct BulkGamesPreview: View {
             if store.isSaving {
               ProgressView()
             }
-            Text(store.isSaving ? "Saving…" : "Save All (\(store.rowsToSave.count))")
+            Text(store.isSaving ? "Saving…" : "Save All (\(store.rowsToSave))")
               .frame(maxWidth: .infinity)
           }
         }

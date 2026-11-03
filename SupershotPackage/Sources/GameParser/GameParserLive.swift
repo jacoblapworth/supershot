@@ -6,13 +6,13 @@ nonisolated extension GameParser {
     Self(
       availability: {
         switch SystemLanguageModel.default.availability {
-        case .available: return .available
+        case .available: .available
         case let .unavailable(reason):
           switch reason {
-          case .deviceNotEligible: return .deviceNotEligible
-          case .appleIntelligenceNotEnabled: return .intelligenceNotEnabled
-          case .modelNotReady: return .modelNotReady
-          @unknown default: return .unavailable
+          case .deviceNotEligible: .deviceNotEligible
+          case .appleIntelligenceNotEnabled: .intelligenceNotEnabled
+          case .modelNotReady: .modelNotReady
+          @unknown default: .unavailable
           }
         }
       },

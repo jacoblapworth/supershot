@@ -18,7 +18,7 @@ public struct AvatarView: View {
   @Environment(\.controlSize) private var controlSize
 
   private var size: CGFloat {
-    return switch controlSize {
+    switch controlSize {
     case .mini: 24
     case .small: 32
     case .regular: 48
