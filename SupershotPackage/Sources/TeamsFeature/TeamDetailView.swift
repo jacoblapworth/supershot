@@ -52,6 +52,13 @@ package struct TeamDetailView: View {
     .toolbar {
       if let team = response.team {
         ToolbarItem(placement: .primaryAction) {
+          Button(response.isFavorite ? "Unfavorite" : "Favorite", systemImage: response.isFavorite ? "star.fill" : "star") {
+            store.send(.favorite(.favoriteButtonTapped(team.id, isFavorite: response.isFavorite)))
+          }
+          .accessibilityValue(response.isFavorite ? "Favorite" : "Not favorite")
+          .disabled(store.favorite.savingTeamIDs.contains(team.id))
+        }
+        ToolbarItem(placement: .primaryAction) {
           Button("Edit", systemImage: "pencil") {
             store.send(.editButtonTapped(team))
           }
@@ -76,6 +83,7 @@ package struct TeamDetailView: View {
         }
       }
     }
+    .alert($store.scope(state: \.favorite.alert, action: \.favorite.alert))
     .sheet(item: $store.scope(state: \.editor, action: \.editor)) { editorStore in
       NavigationStack {
         TeamEditorView(store: editorStore)

@@ -33,6 +33,7 @@ package struct TeamPickerView: View {
           ForEach(store.filteredTeams) { team in
             TeamSelectionRow(
               team: team,
+              isFavorite: store.favoriteIDs.contains(team.id),
               selected: { store.send(.teamSelected(team)) }
             )
           }
@@ -121,6 +122,7 @@ package struct TeamPickerView: View {
 
 private struct TeamSelectionRow: View {
   var team: Team
+  var isFavorite: Bool
   var selected: () -> Void
 
   var body: some View {
@@ -131,6 +133,11 @@ private struct TeamSelectionRow: View {
           .controlSize(.mini)
           .accessibilityHidden(true)
         Text(team.name)
+        if isFavorite {
+          Image(systemName: "star.fill")
+            .foregroundStyle(.yellow)
+            .accessibilityLabel("Favorite")
+        }
         Spacer()
         Image(systemName: "chevron.right")
           .foregroundStyle(.secondary)

@@ -55,6 +55,7 @@ package struct TeamsListView: View {
       }
       .interactiveDismissDisabled(setupStore.isSaving)
     }
+    .alert($store.scope(state: \.favorite.alert, action: \.favorite.alert))
     .alert($store.scope(state: \.destination?.alert, action: \.destination.alert))
     .sheet(item: $store.scope(state: \.destination?.teamEditor, action: \.destination.teamEditor)) {
       editorStore in
@@ -95,6 +96,10 @@ package struct TeamsListView: View {
           }
           .buttonStyle(.plain)
           .contextMenu {
+            Button(team.isFavorite ? "Unfavorite" : "Favorite", systemImage: team.isFavorite ? "star.slash" : "star") {
+              store.send(.favorite(.favoriteButtonTapped(team.id, isFavorite: team.isFavorite)))
+            }
+            .disabled(store.favorite.savingTeamIDs.contains(team.id))
             Button("Delete", systemImage: "trash", role: .destructive) {
               store.send(.deleteTeamButtonTapped(team.id))
             }
@@ -158,6 +163,12 @@ private struct TeamRow: View {
       Text(team.name)
         .font(.headline)
         .foregroundStyle(.primary)
+
+      if team.isFavorite {
+        Image(systemName: "star.fill")
+          .foregroundStyle(.yellow)
+          .accessibilityLabel("Favorite")
+      }
 
       Spacer(minLength: 12)
 

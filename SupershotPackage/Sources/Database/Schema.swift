@@ -30,6 +30,13 @@ public extension DependencyValues {
       .execute(db)
 
       try #sql("""
+      CREATE TABLE "teamFavorites"(
+        "id" TEXT PRIMARY KEY NOT NULL REFERENCES "teams"("id") ON DELETE CASCADE
+      ) STRICT
+      """)
+      .execute(db)
+
+      try #sql("""
       CREATE TABLE "games"(
         "id" TEXT PRIMARY KEY NOT NULL ON CONFLICT REPLACE DEFAULT (uuid()),
         "startedAt" TEXT,

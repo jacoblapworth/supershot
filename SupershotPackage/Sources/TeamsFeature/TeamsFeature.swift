@@ -57,6 +57,7 @@ package struct TeamsFeature {
     @Presents package var newGame: NewGameFeature.State?
     package var path = StackState<TeamsPath.State>()
     package var pendingGameResume: PendingGameResume?
+    package var favorite = TeamFavoriteFeature.State()
     package var searchText = ""
 
     package mutating func clearResumeAlert() {
@@ -109,6 +110,7 @@ package struct TeamsFeature {
     case destination(PresentationAction<TeamsDestination.Action>)
     case deleteGameButtonTapped(Game.ID)
     case deleteTeamButtonTapped(Team.ID)
+    case favorite(TeamFavoriteFeature.Action)
     case gameDeepLinkOpened(Game.ID)
     case newTeamButtonTapped
     case newGame(PresentationAction<NewGameFeature.Action>)
@@ -138,8 +140,12 @@ package struct TeamsFeature {
 
   package var body: some Reducer<State, Action> {
     BindingReducer()
+    Scope(state: \.favorite, action: \.favorite) { TeamFavoriteFeature() }
     Reduce { state, action in
       switch action {
+      case .favorite:
+        return .none
+
       case .binding, .delegate:
         return .none
 
