@@ -20,6 +20,7 @@ package struct BulkGamesPreviewRow: View {
           Text("Court \(row.setup.court)").font(.caption)
         }
       }
+      .padding(.horizontal, 16)
       NavigationLink {
         BulkGameEditor(store: store, rowID: row.id)
       } label: {

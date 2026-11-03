@@ -11,7 +11,7 @@ package struct BulkGamesPreview: View {
   @Bindable var store: StoreOf<BulkGamesFeature>
   package var body: some View {
     List {
-      Section("\(store.rows.count) games") {
+      Section(store.rows.count == 1 ? "1 game" : "\(store.rows.count) games") {
         ForEach(store.rows) { row in
           BulkGamesPreviewRow(store: store, row: row)
             .contextMenu {
