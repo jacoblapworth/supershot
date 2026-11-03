@@ -49,6 +49,9 @@ package struct GamesHomeView: View {
       }
       .interactiveDismissDisabled(setupStore.isSaving)
     }
+    .sheet(item: $store.scope(state: \.bulkGames, action: \.bulkGames)) { bulkStore in
+      BulkGamesView(store: bulkStore)
+    }
     .alert($store.scope(state: \.alert, action: \.alert))
   }
 
@@ -144,6 +147,13 @@ package struct GamesHomeView: View {
             }
           }
         #endif
+        ToolbarItem(placement: .primaryAction) {
+          Button { store.send(.bulkGamesButtonTapped) } label: {
+            Label("Create Games with AI", systemImage: "sparkles")
+          }
+          .accessibilityIdentifier("games.bulkCreate")
+          .disabled(store.pendingGameResume != nil)
+        }
         ToolbarItem(placement: .primaryAction) {
           Button {
             store.send(.newGameButtonTapped)

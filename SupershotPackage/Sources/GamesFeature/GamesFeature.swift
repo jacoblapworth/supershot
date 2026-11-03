@@ -52,6 +52,7 @@ package struct GamesFeature {
   package struct State: Equatable {
     @Presents package var alert: AlertState<Alert>?
     package var filter = GamesFilter.all
+    @Presents package var bulkGames: BulkGamesFeature.State?
     @Presents package var newGame: NewGameFeature.State?
     package var path = StackState<GamesPath.State>()
     package var pendingGameResume: PendingGameResume?
@@ -86,6 +87,8 @@ package struct GamesFeature {
     case filterButtonTapped(GamesFilter)
     case gameDeepLinkOpened(Game.ID)
     case gameRowTapped(GameListItem)
+    case bulkGamesButtonTapped
+    case bulkGames(PresentationAction<BulkGamesFeature.Action>)
     case newGameButtonTapped
     case newGame(PresentationAction<NewGameFeature.Action>)
     case path(StackActionOf<GamesPath>)
@@ -135,6 +138,18 @@ package struct GamesFeature {
 
         state.alert = nil
         return resumeGame(gameID: game.id, state: &state)
+
+      case .bulkGamesButtonTapped:
+        state.bulkGames = BulkGamesFeature.State()
+        return .none
+
+      case .bulkGames(.presented(.delegate(.saved))):
+        state.bulkGames = nil
+        state.filter = .planned
+        return .none
+
+      case .bulkGames:
+        return .none
 
       case .newGameButtonTapped:
         state.newGame = NewGameFeature.State()
@@ -281,6 +296,9 @@ package struct GamesFeature {
         state.alert = .gameUnavailable
         return .none
       }
+    }
+    .ifLet(\.$bulkGames, action: \.bulkGames) {
+      BulkGamesFeature()
     }
     .ifLet(\.$newGame, action: \.newGame) {
       NewGameFeature()
