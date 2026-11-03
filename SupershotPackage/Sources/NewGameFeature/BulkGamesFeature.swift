@@ -15,6 +15,7 @@ package struct BulkGamesFeature {
     package var parsedSource: String?
     package var showsPreview = false
     package var isParsing = false
+    package var parsingSource: String?
     package var isSaving = false
     package var didSave = false
     package var errorMessage: String?
@@ -162,7 +163,7 @@ package struct BulkGamesFeature {
       switch action {
       case .binding:
         state.errorMessage = nil
-        if state.isParsing {
+        if state.isParsing, state.source != state.parsingSource {
           state.isParsing = false
           state.revision += 1
           return .cancel(id: CancelID.parse)
@@ -172,6 +173,7 @@ package struct BulkGamesFeature {
         guard !state.isParsing, !state.isSaving else { return .none }
         state.revision += 1
         state.isParsing = true
+        state.parsingSource = state.source
         state.errorMessage = nil
         let source = state.source
         let revision = state.revision
@@ -192,6 +194,7 @@ package struct BulkGamesFeature {
       case let .parseResponse(revision, source, .success(batch)):
         guard revision == state.revision, source == state.source else { return .none }
         state.isParsing = false
+        state.parsingSource = nil
         state.parsedSource = source
         state.savedTeams = batch.teams
         let review = FixtureTeamReview(fixtures: batch.fixtures, savedTeams: batch.teams)
@@ -221,6 +224,7 @@ package struct BulkGamesFeature {
       case let .parseResponse(revision, source, .failure(error)):
         guard revision == state.revision, source == state.source else { return .none }
         state.isParsing = false
+        state.parsingSource = nil
         state.errorMessage = error.localizedDescription
         return .none
       case .backToInput:

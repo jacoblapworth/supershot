@@ -53,7 +53,7 @@ private struct BulkGamesInput: View {
     Form {
       Section {
         TextEditor(text: $store.source)
-          .frame(minHeight: 240)
+          .frame(height: 240)
           .accessibilityLabel("Game descriptions")
           .accessibilityIdentifier("bulkGames.source")
         PasteButton(payloadType: String.self) { strings in

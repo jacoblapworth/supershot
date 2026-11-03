@@ -154,5 +154,20 @@ extension SupershotTestSuite {
       #expect(store.state.team(store.rows[0].firstKey)?.name == "A")
       #expect(store.state.team(store.rows[0].secondKey)?.name == "B")
     }
+
+    @Test func repeatedEditorBindingDoesNotCancelParsing() async {
+      var state = BulkGamesFeature.State()
+      state.source = "A vs B"
+      state.parsingSource = state.source
+      state.isParsing = true
+      let store = TestStore(initialState: state) { BulkGamesFeature() }
+      await store.send(.binding(.allCasePaths.source.embed("A vs B")))
+      #expect(store.state.isParsing)
+      await store.send(.binding(.allCasePaths.source.embed("A vs C"))) {
+        $0.source = "A vs C"
+        $0.isParsing = false
+        $0.revision = 1
+      }
+    }
   }
 }
