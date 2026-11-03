@@ -212,7 +212,7 @@ package struct DescribeGameFeature {
   private func message(for error: any Error) -> String {
     switch error {
     case ParsingError.multipleFixtures, GameParserError.outputTooLong:
-      "Describe one matchup only. Batch import is not available yet."
+      "Describe one matchup here. Batch import is available from the sparkles button in Games."
     case let error as GameParserError:
       error.localizedDescription
     default:

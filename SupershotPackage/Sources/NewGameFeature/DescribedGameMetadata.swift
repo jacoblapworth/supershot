@@ -15,12 +15,12 @@ package nonisolated struct DescribedGameMetadata: Equatable, Sendable {
     self.division = division
   }
 
-  package init(fixture: FixtureDraft, context: FixtureParsingContext) {
+  package init(fixture: FixtureDraft, context: FixtureParsingContext, inferMissingDate: Bool = false) {
     self.init(
       court: Self.value(fixture.court, removing: "court"),
       division: Self.value(fixture.division, removing: "division")
     )
-    guard fixture.dateText != nil || fixture.timeText != nil else { return }
+    guard inferMissingDate || fixture.dateText != nil || fixture.timeText != nil else { return }
     if fixture.dateText != nil && fixture.date == nil
       || fixture.timeText != nil && fixture.time == nil
     {
@@ -39,7 +39,7 @@ package nonisolated struct DescribedGameMetadata: Equatable, Sendable {
        calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date) == components
     {
       scheduledAt = date
-      if fixture.date == nil {
+      if fixture.date == nil, !inferMissingDate {
         notices.append("Using today for the time in your description. Check the schedule below.")
       }
       if fixture.time == nil {

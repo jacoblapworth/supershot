@@ -1,13 +1,13 @@
 import Foundation
 
 nonisolated extension ExtractedFixture {
-  func validated(sourceLine: Int, context: FixtureParsingContext?) -> FixtureDraft {
+  func validated(dateSource: String? = nil, sourceLine: Int, context: FixtureParsingContext?) -> FixtureDraft {
     var issues: [FixtureValidationIssue] = []
     func grounded(_ value: String?, field: String) -> String? {
       guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
         return nil
       }
-      guard source.contains(value) else {
+      guard (field == "date" ? (dateSource ?? source) : source).contains(value) else {
         issues.append(.valueNotInSource(field: field))
         return nil
       }
@@ -77,12 +77,14 @@ nonisolated extension ExtractedFixture {
           issues.append(.dateContextRequired)
         }
       } else {
-        // Unambiguous ISO dates only; retain other date text for later correction.
-        let parts = rawDate.split(separator: "-", omittingEmptySubsequences: false)
+        // Support ISO and the UK day/month/year fixture format. Retain other text for correction.
+        let isBritishDate = rawDate.contains("/")
+        let pieces = rawDate.split(separator: isBritishDate ? "/" : "-", omittingEmptySubsequences: false)
+        let parts = isBritishDate ? Array(pieces.reversed()) : pieces
         if parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
            let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
            year > 0, (1 ... 12).contains(month), (1 ... 31).contains(day),
-           rawDate.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "-") })
+           rawDate.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == "-" || $0 == "/") })
         {
           let components = DateComponents(year: year, month: month, day: day)
           var calendar = Calendar(identifier: .gregorian)
