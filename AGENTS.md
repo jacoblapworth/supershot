@@ -1,5 +1,11 @@
 # Agent Instructions
 
+## Project workflow
+
+For project tasks, including refinement, implementation, and review handoffs, read
+[project-workflow](.agents/skills/project-workflow/SKILL.md) before starting.
+It owns Linear tracking, task ownership, and the authorization to publish task branches and draft PRs.
+
 ## Database schema
 
 Supershot has not shipped, so `SupershotPackage/Sources/Database/Schema.swift` must define the complete current
