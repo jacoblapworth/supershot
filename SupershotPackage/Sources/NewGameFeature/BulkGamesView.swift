@@ -53,6 +53,10 @@ private struct BulkGamesInput: View {
     Form {
       Section {
         TextEditor(text: $store.source)
+          .autocorrectionDisabled()
+        #if os(iOS)
+          .textInputAutocapitalization(.never)
+        #endif
           .frame(height: 240)
           .accessibilityLabel("Game descriptions")
           .accessibilityIdentifier("bulkGames.source")
