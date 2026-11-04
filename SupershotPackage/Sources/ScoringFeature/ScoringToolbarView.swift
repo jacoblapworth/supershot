@@ -29,7 +29,10 @@ package struct ScoringToolbarView: View {
           .accessibilityLabel(control.title)
           .accessibilityIdentifier("scoring.primaryAction")
         case let .confirmation(confirmation):
-          LastCentrePassBanner(state: confirmation, onAction: onAction)
+          LastCentrePassBanner(availability: confirmation.availability) {
+            onAction(.confirmCentrePass($0))
+          }
+          .id(confirmation.period)
         }
       }
 

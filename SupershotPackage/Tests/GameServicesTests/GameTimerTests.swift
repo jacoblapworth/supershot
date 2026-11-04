@@ -61,7 +61,7 @@ extension SupershotTestSuite {
         let state = ScoringFeature.State(snapshot: recovered.snapshot)
         #expect(state.timerViewState.waitingSince == boundary)
         #expect(state.timerViewState.title == "Waiting for Quarter 2")
-        #expect(state.isShowingLastCentrePassBanner)
+        #expect(state.isAwaitingCentrePassConfirmation)
         #expect(state.scoringContext == .completedPeriod(number: 1))
         #expect(!state.canStartOrResume)
         let blocked = try await session.execute(UUID(3), .timing(.startOrResume, expectedPhaseIndex: 2), boundary.addingTimeInterval(300))
@@ -368,7 +368,7 @@ extension SupershotTestSuite {
         case 0: state.timerEndsAt = Date(timeIntervalSince1970: 1900)
         case 1: state.elapsedSeconds = state.currentDurationSeconds
         case 2: state.operation = .pausing(phaseIndex: state.currentPhaseIndex)
-        default: state.isShowingLastCentrePassBanner = true
+        default: state.isAwaitingCentrePassConfirmation = true
         }
         let store = Self.makeScoringStore(state: state)
         await store.send(.editTimeButtonTapped)
@@ -582,7 +582,7 @@ extension SupershotTestSuite {
       var state = Self.scoringState()
       state.currentPhaseIndex = 1
       state.periods[0].breakAfterDurationSeconds = 120
-      state.isShowingLastCentrePassBanner = true
+      state.isAwaitingCentrePassConfirmation = true
       state.timerEndsAt = Date(timeIntervalSince1970: 1000)
       let seedStore = Self.makeScoringStore(state: state)
       let database = seedStore.dependencies.defaultDatabase
@@ -852,7 +852,7 @@ extension SupershotTestSuite {
               teamAID: UUID(1),
               teamBID: UUID(2),
               centrePassTeamID: state.centrePassTeamID,
-              isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
+              isAwaitingCentrePassConfirmation: state.isAwaitingCentrePassConfirmation,
               currentPhaseIndex: state.currentPhaseIndex,
               elapsedSeconds: state.elapsedSeconds,
               timerEndsAt: state.timerEndsAt,

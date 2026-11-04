@@ -46,7 +46,7 @@ package extension ScoringFeature.State {
     var state = previewQuarter
     state.canUndo = true
     state.elapsedSeconds = state.currentDurationSeconds
-    state.isShowingLastCentrePassBanner = true
+    state.isAwaitingCentrePassConfirmation = true
     state.teamAScore = 38
     state.teamBScore = 38
     return state
@@ -56,7 +56,7 @@ package extension ScoringFeature.State {
     var state = previewQuarter
     state.currentPhaseIndex = 3
     state.lateScoringPeriodNumber = 2
-    state.isShowingLastCentrePassBanner = true
+    state.isAwaitingCentrePassConfirmation = true
     state.elapsedSeconds = 0
     state.teamAScore = 19
     state.teamBScore = 19
@@ -137,7 +137,7 @@ package enum ScoringPreviewScenario: String, CaseIterable, Identifiable {
         state.elapsedSeconds = 15
       }
       if self == .confirmation || self == .savingConfirmation {
-        state.isShowingLastCentrePassBanner = true
+        state.isAwaitingCentrePassConfirmation = true
       }
       if self == .savingConfirmation {
         state.operation = .confirmingCentrePass(period: 1)

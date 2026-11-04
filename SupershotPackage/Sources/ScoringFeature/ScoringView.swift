@@ -54,7 +54,7 @@ package struct ScoringView: View {
       ScrollView {
         LazyVStack(spacing: 20, pinnedViews: [.sectionHeaders]) {
           VStack {
-            TimerView(state: store.timerViewState) { store.send(.controlTapped($0)) }
+            TimerView(state: store.timerViewState) { store.send(.init(control: $0)) }
 
             ScoreboardView(courtLayout: store.courtLayout)
               .onGeometryChange(for: Bool.self) { geometry in
@@ -127,7 +127,7 @@ package struct ScoringView: View {
         }
       #else
         .safeAreaInset(edge: .bottom, spacing: 0) {
-          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.controlTapped($0)) }
+          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.init(control: $0)) }
             .frame(maxWidth: .infinity)
             .background(.ultraThinMaterial)
             .disabled(isPresentingPaywall || store.controlsPresentation != .shown)
@@ -172,7 +172,7 @@ package struct ScoringView: View {
               .disabled(store.isSavingCourtOrientation || !store.canOperate)
 
               Button {
-                store.send(.swapCentrePass)
+                store.send(.changeCentrePassButtonTapped)
               } label: {
                 Label("Change centre pass", systemImage: "arrow.left.circle.fill")
               }
@@ -193,7 +193,7 @@ package struct ScoringView: View {
           isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
           onDismiss: { store.send(.controlsSheetDidDismiss) }
         ) {
-          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.controlTapped($0)) }
+          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.init(control: $0)) }
             .ignoresSafeArea(.container, edges: .bottom)
             .presentationSizing(.fitted)
 //            .presentationDetents([.height(110)])

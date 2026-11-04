@@ -491,7 +491,7 @@ extension SupershotTestSuite {
     func pendingCentrePassBlocksNextQuarterStart() async {
       var quarter = Self.state()
       quarter.currentPhaseIndex = 2
-      quarter.isShowingLastCentrePassBanner = true
+      quarter.isAwaitingCentrePassConfirmation = true
       let quarterStore = TestStore(initialState: quarter) {
         ScoringFeature()
       }
