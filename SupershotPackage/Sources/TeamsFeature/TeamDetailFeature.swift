@@ -20,6 +20,7 @@ package struct TeamDetailFeature {
   @ObservableState
   package struct State: Equatable {
     @Presents package var editor: TeamEditorFeature.State?
+    package var favorite = TeamFavoriteFeature.State()
     package let teamID: Team.ID
 
     package init(editor: TeamEditorFeature.State? = nil, teamID: Team.ID) {
@@ -33,6 +34,7 @@ package struct TeamDetailFeature {
     case delegate(Delegate)
     case editButtonTapped(Team)
     case editor(PresentationAction<TeamEditorFeature.Action>)
+    case favorite(TeamFavoriteFeature.Action)
     case gameRowTapped(GameListItem)
     case newGameButtonTapped(Team)
 
@@ -44,8 +46,12 @@ package struct TeamDetailFeature {
   }
 
   package var body: some Reducer<State, Action> {
+    Scope(state: \.favorite, action: \.favorite) { TeamFavoriteFeature() }
     Reduce { state, action in
       switch action {
+      case .favorite:
+        return .none
+
       case .deleteButtonTapped:
         return .send(.delegate(.deleteTeamButtonTapped))
 

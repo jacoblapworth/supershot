@@ -24,11 +24,14 @@ package struct DescribeGameView: View {
         }
 
         if store.source.isEmpty {
-          PasteButton(payloadType: String.self) { strings in
-            store.send(.pasted(strings.joined(separator: "\n")))
+          Button {
+            store.send(.pasteTapped)
+          } label: {
+            Label("Paste", systemImage: "document.on.clipboard")
           }
           .labelStyle(.iconOnly)
           .buttonStyle(.borderless)
+          .foregroundStyle(.secondary)
           .accessibilityLabel("Paste game description")
         } else {
           Button {

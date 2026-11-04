@@ -1,4 +1,5 @@
 import AppUI
+import ClipboardClient
 import ComposableArchitecture
 import Database
 import FixtureTeamResolution
@@ -58,6 +59,7 @@ package struct DescribeGameFeature {
     case binding(BindingAction<State>)
     case task
     case pasted(String)
+    case pasteTapped
     case parse
     case parseResponse(Int, String, Result<ParsedMatchup, any Error>)
     case clearButtonTapped
@@ -82,6 +84,7 @@ package struct DescribeGameFeature {
   @Dependency(\.defaultDatabase) var database
   @Dependency(\.uuid) var uuid
   @Dependency(\.withRandomNumberGenerator) var random
+  @Dependency(\.clipboard) var clipboard
 
   package var body: some Reducer<State, Action> {
     BindingReducer()
@@ -93,6 +96,10 @@ package struct DescribeGameFeature {
 
       case .binding:
         return sourceChanged(state: &state, immediately: false)
+
+      case .pasteTapped:
+        state.source = clipboard.paste() ?? state.source
+        return sourceChanged(state: &state, immediately: true)
 
       case let .pasted(text):
         state.source = text

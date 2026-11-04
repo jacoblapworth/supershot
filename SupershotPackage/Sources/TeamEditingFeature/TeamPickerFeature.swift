@@ -14,6 +14,7 @@ package struct TeamPickerFeature {
   @ObservableState
   package struct State: Equatable {
     package var availableTeams: [Team] = []
+    package var favoriteIDs: Set<Team.ID> = []
     package var didLoadTeams = false
     @Presents package var editor: TeamEditorFeature.State?
     package var errorMessage: String?
@@ -49,7 +50,7 @@ package struct TeamPickerFeature {
     case editor(PresentationAction<TeamEditorFeature.Action>)
     case task
     case teamSelected(Team)
-    case teamsResponse(Result<[Team], any Error>)
+    case teamsResponse(Result<SavedTeamsRequest.Value, any Error>)
 
     package enum Delegate: Equatable {
       case cancelled
@@ -100,7 +101,7 @@ package struct TeamPickerFeature {
         return .run { send in
           let result = await Result {
             try await database.read { db in
-              try Team.order { ($0.name, $0.id) }.fetchAll(db)
+              try SavedTeamsRequest().fetch(db)
             }
           }
           await send(.teamsResponse(result))
@@ -111,7 +112,8 @@ package struct TeamPickerFeature {
         return .send(.delegate(.teamSelected(team)))
 
       case let .teamsResponse(.success(teams)):
-        state.availableTeams = teams
+        state.availableTeams = teams.teams
+        state.favoriteIDs = teams.favoriteIDs
         state.isLoadingTeams = false
         return .none
 

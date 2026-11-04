@@ -94,7 +94,7 @@ extension SupershotTestSuite {
         TeamPickerFeature()
       }
 
-      await store.send(.teamsResponse(.success([ravens, swifts]))) {
+      await store.send(.teamsResponse(.success(SavedTeamsRequest.Value(teams: [ravens, swifts])))) {
         $0.availableTeams = [ravens, swifts]
       }
       expectNoDifference(store.state.filteredTeams, [swifts])

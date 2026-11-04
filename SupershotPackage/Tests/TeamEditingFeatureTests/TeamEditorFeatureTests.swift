@@ -29,6 +29,7 @@ extension SupershotTestSuite {
         try! clearDatabase($0.defaultDatabase)
         try! $0.defaultDatabase.write { db in
           try Team.insert { team }.execute(db)
+          try TeamFavorite.setFavorite(true, teamID: team.id, in: db)
         }
       }
 
@@ -54,6 +55,9 @@ extension SupershotTestSuite {
         return true
       }
 
+      #expect(try await store.dependencies.defaultDatabase.read { db in
+        try TeamFavorite.find(team.id).fetchOne(db) != nil
+      })
       let savedTeam = try await store.dependencies.defaultDatabase.read { db in
         try Team.find(team.id).fetchOne(db)
       }

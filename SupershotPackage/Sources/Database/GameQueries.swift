@@ -110,13 +110,15 @@ package extension GameListItem {
 package nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
   package let colorHex: String
   package let gameCount: Int
+  package var isFavorite = false
   package let id: Team.ID
   package let logoData: Data?
   package let name: String
 
-  package init(colorHex: String, gameCount: Int, id: Team.ID, name: String, logoData: Data? = nil) {
+  package init(colorHex: String, gameCount: Int, id: Team.ID, name: String, logoData: Data? = nil, isFavorite: Bool = false) {
     self.colorHex = colorHex
     self.gameCount = gameCount
+    self.isFavorite = isFavorite
     self.id = id
     self.logoData = logoData
     self.name = name
@@ -578,10 +580,8 @@ package nonisolated struct TeamsRequest: FetchKeyRequest {
 
   package func fetch(_ db: Database) throws -> Value {
     let games = try Game.fetchAll(db)
-    let teams =
-      try Team
-        .order { ($0.name, $0.id) }
-        .fetchAll(db)
+    let savedTeams = try SavedTeamsRequest().fetch(db)
+    let teams = savedTeams.teams
     let gameCounts = games.filter { !$0.isPlanned }.reduce(into: [Team.ID: Int]()) { counts, game in
       for teamID in Set([game.teamAID, game.teamBID]) {
         counts[teamID, default: 0] += 1
@@ -594,7 +594,8 @@ package nonisolated struct TeamsRequest: FetchKeyRequest {
         gameCount: gameCounts[team.id, default: 0],
         id: team.id,
         name: team.name,
-        logoData: team.logoData
+        logoData: team.logoData,
+        isFavorite: savedTeams.favoriteIDs.contains(team.id)
       )
     })
   }
@@ -669,12 +670,14 @@ package nonisolated struct TeamDetailRequest: FetchKeyRequest {
   package struct Value: Equatable, Sendable {
     package var games: [GameListItem] = []
     package var team: Team?
+    package var isFavorite = false
     package var statistics = TeamStatistics()
 
-    package init(games: [GameListItem] = [], team: Team? = nil, statistics: TeamStatistics = TeamStatistics()) {
+    package init(games: [GameListItem] = [], team: Team? = nil, statistics: TeamStatistics = TeamStatistics(), isFavorite: Bool = false) {
       self.games = games
       self.team = team
       self.statistics = statistics
+      self.isFavorite = isFavorite
     }
   }
 
@@ -694,7 +697,8 @@ package nonisolated struct TeamDetailRequest: FetchKeyRequest {
     return try Value(
       games: GamesRequest().fetch(db, games: games, goals: goals).games,
       team: team,
-      statistics: TeamStatistics(teamID: teamID, games: games, goals: goals)
+      statistics: TeamStatistics(teamID: teamID, games: games, goals: goals),
+      isFavorite: TeamFavorite.find(teamID).fetchOne(db) != nil
     )
   }
 
