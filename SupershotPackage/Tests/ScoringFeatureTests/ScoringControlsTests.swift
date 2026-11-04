@@ -157,6 +157,49 @@ extension SupershotTestSuite {
       #expect(waiting.canScoreGoal)
     }
 
+    @Test(arguments: [true, false])
+    func confirmationSendsSelectedAnswerAndAllowsRetryAfterFailure(wasTaken: Bool) async {
+      let state = ScoringPreviewScenario.confirmation.state
+      let gameID = state.gameID
+      let store = TestStore(initialState: state) { ScoringFeature() } withDependencies: {
+        $0.gameScoring.resolveCentrePass = { requestedGameID, period, answer in
+          expectNoDifference(requestedGameID, gameID)
+          expectNoDifference(period, 1)
+          expectNoDifference(answer, wasTaken)
+          throw CocoaError(.fileWriteNoPermission)
+        }
+      }
+      await store.send(.init(control: .confirmCentrePass(wasTaken))) {
+        $0.operation = .confirmingCentrePass(period: 1)
+      }
+      guard case let .confirmation(confirmation) = store.state.scoringToolbarState.content else {
+        Issue.record("Expected pending confirmation")
+        return
+      }
+      expectNoDifference(confirmation.availability, .pending)
+      await store.receive(\.lastCentrePassResponse) {
+        $0.operation = nil
+        $0.alert = .operationFailed("Couldn’t save centre pass")
+      }
+      #expect(store.state.isAwaitingCentrePassConfirmation)
+      await store.send(.alert(.dismiss)) { $0.alert = nil }
+      guard case let .confirmation(retry) = store.state.scoringToolbarState.content else {
+        Issue.record("Expected confirmation to remain available for retry")
+        return
+      }
+      expectNoDifference(retry.availability, .enabled)
+      await store.finish()
+    }
+
+    @Test func confirmationIsIgnoredWhileAnotherOperationIsPending() async {
+      let store = TestStore(initialState: ScoringPreviewScenario.savingConfirmation.state) {
+        ScoringFeature()
+      }
+      await store.send(.centrePassConfirmed(true))
+      await store.send(.centrePassConfirmed(false))
+      await store.finish()
+    }
+
     @Test func timerShowsSkipDuringRunningAndPausedBreaks() {
       for scenario in [ScoringPreviewScenario.runningBreak, .pausedBreak, .manualBreak] {
         let state = scenario.state
@@ -238,15 +281,13 @@ extension SupershotTestSuite {
         $0.gameSession = .live
         $0.gamePresentation.update = { _, _ in false }
       }
-      await store.send(.controlTapped(.startOrResume))
-      await store.receive(\.startTimerButtonTapped) { $0.operation = .starting(phaseIndex: 0) }
+      await store.send(.init(control: .startOrResume)) { $0.operation = .starting(phaseIndex: 0) }
       await store.receive(\.timerStartResponse) {
         $0.operation = nil
         $0.startedAt = start
         $0.timerEndsAt = start.addingTimeInterval(TimeInterval($0.currentDurationSeconds))
       }
-      await store.send(.controlTapped(.pause))
-      await store.receive(\.pauseTimerButtonTapped) {
+      await store.send(.init(control: .pause)) {
         $0.operation = .pausing(phaseIndex: 0)
         $0.timerEndsAt = nil
       }

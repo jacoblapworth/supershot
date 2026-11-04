@@ -37,7 +37,7 @@ extension SupershotTestSuite {
         centrePassTeamID: UUID(1),
         currentPhaseIndex: 2,
         gameID: game.id,
-        isShowingLastCentrePassBanner: true,
+        isAwaitingCentrePassConfirmation: true,
         lateScoringPeriodNumber: 1,
         periods: periods,
         startedAt: game.startedAt,
@@ -131,7 +131,7 @@ extension SupershotTestSuite {
       expectNoDifference(state.currentPhase.isBreak, true)
       expectNoDifference(state.currentDurationSeconds, 600)
       expectNoDifference(state.elapsedSeconds, 125)
-      expectNoDifference(state.isShowingLastCentrePassBanner, true)
+      expectNoDifference(state.isAwaitingCentrePassConfirmation, true)
       expectNoDifference(state.courtLayout.left.id, state.teamB.id)
       expectNoDifference(state.isTimerRunning, false)
     }

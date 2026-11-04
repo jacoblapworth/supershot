@@ -30,7 +30,7 @@ package extension ScoringFeature.State {
       ),
       swapSides: snapshot.game.swapSides,
       gameID: snapshot.game.id,
-      isShowingLastCentrePassBanner: snapshot.game.isAwaitingCentrePassConfirmation,
+      isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation,
       lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber,
       periods: snapshot.periods,
       startedAt: snapshot.game.startedAt,

@@ -31,7 +31,6 @@ package struct TimerViewState: Equatable {
 }
 
 package struct CentrePassConfirmationState: Equatable {
-  package var team: ScoringFeature.Team
   package var period: Int
   package var availability: ScoringControl.Availability
 }
@@ -124,9 +123,8 @@ package extension ScoringFeature.State {
 
   var scoringToolbarState: ScoringToolbarState {
     let content: ScoringToolbarState.Content
-    if isShowingLastCentrePassBanner {
+    if isAwaitingCentrePassConfirmation {
       content = .confirmation(.init(
-        team: centrePassTeam,
         period: lastCompletedQuarterNumber,
         availability: operation == .confirmingCentrePass(period: lastCompletedQuarterNumber)
           ? .pending
@@ -161,5 +159,20 @@ package extension ScoringFeature.State {
       content = .none
     }
     return ScoringToolbarState(content: content, courtLayout: courtLayout, canScore: canScoreGoal)
+  }
+}
+
+/// Translate shared view controls at the boundary without forwarding reducer actions.
+package extension ScoringFeature.Action {
+  init(control: ScoringControlAction) {
+    switch control {
+    case .startOrResume: self = .startTimerButtonTapped
+    case .pause: self = .pauseTimerButtonTapped
+    case .skipBreak: self = .skipBreakButtonTapped
+    case .finishGame: self = .finishGameButtonTapped
+    case .editTime: self = .editTimeButtonTapped
+    case let .goal(teamID): self = .goalButtonTapped(teamID)
+    case let .confirmCentrePass(wasTaken): self = .centrePassConfirmed(wasTaken)
+    }
   }
 }

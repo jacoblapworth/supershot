@@ -1,9 +1,9 @@
 import SwiftUI
 
 package struct LastCentrePassBanner: View {
-  package var state: CentrePassConfirmationState
-  package var onAction: (ScoringControlAction) -> Void
-  @State package var taken = true
+  package var availability: ScoringControl.Availability
+  package var onConfirm: (Bool) -> Void
+  @State private var taken = true
   @State private var confirmationDeadline: ContinuousClock.Instant?
   @State private var hasSubmitted = false
 
@@ -24,7 +24,7 @@ package struct LastCentrePassBanner: View {
       } label: {
         Text("Centre pass taken?")
       }
-      .disabled(state.availability != .enabled || hasSubmitted)
+      .disabled(availability != .enabled || hasSubmitted)
       .tint(.blue)
       .pickerStyle(.segmented)
 
@@ -32,15 +32,15 @@ package struct LastCentrePassBanner: View {
         confirm()
       } label: {
         ZStack {
-          if state.availability == .pending {
+          if availability == .pending {
             ProgressView()
               .controlSize(.regular)
           }
           Label("Confirm", systemImage: "checkmark")
-            .opacity(state.availability == .pending ? 0 : 1)
+            .opacity(availability == .pending ? 0 : 1)
         }
       }
-      .disabled(state.availability != .enabled || hasSubmitted)
+      .disabled(availability != .enabled || hasSubmitted)
       .buttonStyle(.borderedProminent)
       .buttonBorderShape(.circle)
       .labelStyle(.iconOnly)
@@ -66,9 +66,9 @@ package struct LastCentrePassBanner: View {
     .controlSize(.large)
     .accessibilityElement(children: .contain)
     .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 32))
-    .task(id: state) {
+    .task(id: availability) {
       confirmationDeadline = nil
-      guard state.availability == .enabled else { return }
+      guard availability == .enabled else { return }
 
       hasSubmitted = false
       let deadline = ContinuousClock.now.advanced(by: confirmationTimeout)
@@ -84,25 +84,23 @@ package struct LastCentrePassBanner: View {
         assertionFailure("Unexpected confirmation timer error: \(error)")
       }
     }
-//    .background(Material.thick, in: RoundedRectangle(cornerRadius: 32))
   }
 
   private func confirm() {
-    guard state.availability == .enabled, !hasSubmitted else { return }
+    guard availability == .enabled, !hasSubmitted else { return }
     hasSubmitted = true
     confirmationDeadline = nil
-    onAction(.confirmCentrePass(taken))
+    onConfirm(taken)
   }
 }
 
 #Preview("Centre-pass confirmation") {
   VStack(spacing: 24) {
     ForEach([ScoringControl.Availability.enabled, .pending, .disabled].indices, id: \.self) { index in
-      LastCentrePassBanner(state: .init(
-        team: .previewSwifts,
-        period: 2,
-        availability: [.enabled, .pending, .disabled][index]
-      ), onAction: { _ in })
+      LastCentrePassBanner(
+        availability: [.enabled, .pending, .disabled][index],
+        onConfirm: { _ in }
+      )
     }
   }.padding()
 }

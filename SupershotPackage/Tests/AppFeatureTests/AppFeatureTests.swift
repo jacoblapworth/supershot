@@ -454,7 +454,7 @@ extension SupershotTestSuite {
               teamAID: UUID(1),
               teamBID: UUID(2),
               centrePassTeamID: state.centrePassTeamID,
-              isAwaitingCentrePassConfirmation: state.isShowingLastCentrePassBanner,
+              isAwaitingCentrePassConfirmation: state.isAwaitingCentrePassConfirmation,
               currentPhaseIndex: state.currentPhaseIndex,
               elapsedSeconds: state.elapsedSeconds,
               timerEndsAt: state.timerEndsAt
