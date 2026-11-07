@@ -18,6 +18,108 @@ import UI
 extension SupershotTestSuite {
   @MainActor
   struct ScoringControlsTests {
+    @Test func onlyStartingTheSamePhaseRequestsCollapse() {
+      #expect(ScoringPreviewScenario.running.state.scoringToolbarState.shouldCollapse(
+        after: ScoringPreviewScenario.paused.state.scoringToolbarState
+      ))
+      #expect(ScoringPreviewScenario.runningBreak.state.scoringToolbarState.shouldCollapse(
+        after: ScoringPreviewScenario.pausedBreak.state.scoringToolbarState
+      ))
+      #expect(!ScoringPreviewScenario.runningBreak.state.scoringToolbarState.shouldCollapse(
+        after: ScoringPreviewScenario.paused.state.scoringToolbarState
+      ))
+      #expect(!ScoringPreviewScenario.failed.state.scoringToolbarState.shouldCollapse(
+        after: ScoringPreviewScenario.ready.state.scoringToolbarState
+      ))
+    }
+
+    @Test(arguments: [ScoringPreviewScenario.running, .runningBreak])
+    func skippingDoesNotTemporarilyRevealResume(_ scenario: ScoringPreviewScenario) {
+      var state = scenario.state
+      state.timerEndsAt = nil
+      state.operation = .skipping(phaseIndex: state.currentPhaseIndex)
+      #expect(state.scoringToolbarState.sheetPrimaryControl == nil)
+      #expect(state.scoringToolbarState.sheetReveal == nil)
+    }
+
+    @Test func sheetRevealChangesWithPhaseButNotTicksOrAvailability() {
+      var state = ScoringPreviewScenario.pausedBreak.state
+      let reveal = state.scoringToolbarState.sheetReveal
+      state.elapsedSeconds += 1
+      expectNoDifference(state.scoringToolbarState.sheetReveal, reveal)
+      state.operation = .starting(phaseIndex: state.currentPhaseIndex)
+      expectNoDifference(state.scoringToolbarState.sheetReveal, reveal)
+      state.operation = nil
+      state.alert = .operationFailed("Couldn’t start clock")
+      expectNoDifference(state.scoringToolbarState.sheetReveal, reveal)
+      #expect(ScoringPreviewScenario.nextQuarter.state.scoringToolbarState.sheetReveal != reveal)
+      #expect(ScoringPreviewScenario.runningBreak.state.scoringToolbarState.sheetReveal == nil)
+    }
+
+    @Test func sheetRevealsProgressionForQuartersAndBreaks() {
+      let scenarios: [(ScoringPreviewScenario, String?)] = [
+        (.ready, "Start game"),
+        (.running, nil),
+        (.paused, "Resume"),
+        (.nextQuarter, "Start Quarter 2"),
+        (.waiting, "Start Quarter 2"),
+        (.manualBreak, "Start break"),
+        (.runningBreak, nil),
+        (.pausedBreak, "Resume"),
+        (.confirmation, nil),
+        (.savingConfirmation, nil),
+        (.starting, "Start game"),
+        (.complete, "End game"),
+        (.finishing, "End game"),
+        (.failed, "Start game"),
+      ]
+      for (scenario, title) in scenarios {
+        expectNoDifference(scenario.state.scoringToolbarState.sheetPrimaryControl?.title, title)
+      }
+    }
+
+    @Test(arguments: ScoringPreviewScenario.allCases)
+    func sheetControlsAreUniqueAndMatchExistingAvailability(_ scenario: ScoringPreviewScenario) {
+      let state = scenario.state
+      let toolbar = state.scoringToolbarState
+      let controls = toolbar.additionalControls + [toolbar.sheetPrimaryControl].compactMap(\.self)
+      expectNoDifference(Set(controls.map(\.action)).count, controls.count)
+      for control in state.timerViewState.controls {
+        expectNoDifference(controls.first { $0.action == control.action }, control)
+      }
+      expectNoDifference(
+        controls.first { $0.action == .changeCentrePass }?.availability,
+        state.canOperate ? .enabled : .disabled
+      )
+      expectNoDifference(
+        controls.contains { $0.action == .editTime },
+        state.timerViewState.editTime != nil
+      )
+      expectNoDifference(
+        controls.first { $0.action == .endQuarter }?.availability,
+        state.currentPhase.isPlayingPeriod ? (state.canMoveToNextQuarter ? .enabled : .disabled) : nil
+      )
+    }
+
+    @Test func swapSidesShowsPendingUntilPersistenceCompletes() {
+      var state = ScoringPreviewScenario.running.state
+      state.isSavingCourtOrientation = true
+      expectNoDifference(
+        state.scoringToolbarState.additionalControls.first { $0.action == .swapSides }?.availability,
+        .pending
+      )
+    }
+
+    @Test func sheetActionsUseExistingReducerEntryPoints() {
+      guard case .endQuarterButtonTapped = ScoringFeature.Action(control: .endQuarter),
+            case .changeCentrePassButtonTapped = ScoringFeature.Action(control: .changeCentrePass),
+            case .swapSidesButtonTapped = ScoringFeature.Action(control: .swapSides)
+      else {
+        Issue.record("Sheet controls must use the existing reducer actions")
+        return
+      }
+    }
+
     @Test(arguments: ScoringPreviewScenario.allCases)
     func everyScenarioKeepsBothGoalsAndUsesDomainAvailability(_ scenario: ScoringPreviewScenario) {
       let state = scenario.state

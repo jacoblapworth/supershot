@@ -21,7 +21,8 @@ package struct ScoringView: View {
   @Fetch private var analysisResponse: GameAnalysisRequest.Value
   @State private var selectedAnalysis = GameAnalysisTab.playByPlay
   @State private var viewportHeight: CGFloat = 0
-  @State private var controlsHeight: CGFloat = 176
+  @State private var controlsFrame = CGRect.zero
+  @State private var scoringFrame = CGRect.zero
   @State private var isScoreboardAboveViewport = false
   @Bindable package var store: StoreOf<ScoringFeature>
   package let proAccess: SubscriptionEntitlement
@@ -122,9 +123,14 @@ package struct ScoringView: View {
       }
       .coordinateSpace(name: "scoringViewport")
       #if os(iOS)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-          Color.clear.frame(height: controlsHeight)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: {
+          scoringFrame = $0
         }
+        .contentMargins(
+          .bottom,
+          controlsFrame == .zero ? 0 : max(0, scoringFrame.maxY - controlsFrame.minY),
+          for: .scrollContent
+        )
       #else
         .safeAreaInset(edge: .bottom, spacing: 0) {
           ScoringToolbarView(state: store.scoringToolbarState) { store.send(.init(control: $0)) }
@@ -193,15 +199,29 @@ package struct ScoringView: View {
           isPresented: .constant(store.controlsPresentation == .shown && !isPresentingPaywall),
           onDismiss: { store.send(.controlsSheetDidDismiss) }
         ) {
-          ScoringToolbarView(state: store.scoringToolbarState) { store.send(.init(control: $0)) }
-            .ignoresSafeArea(.container, edges: .bottom)
-            .presentationSizing(.fitted)
-//            .presentationDetents([.height(110)])
-            .presentationDetents(.sizeToFit)
-            .presentationBackgroundInteraction(.enabled)
-            .interactiveDismissDisabled()
-            .presentationDragIndicator(.hidden)
-            .presentationPlacement(.leading)
+          ScoringToolbarView(
+            state: store.scoringToolbarState,
+            onAction: { store.send(.init(control: $0)) },
+            onFrameChange: { controlsFrame = $0 }
+          )
+        }
+        .overlay {
+          GeometryReader { geometry in
+            if case let .confirmation(confirmation) = store.scoringToolbarState.content,
+               store.controlsPresentation == .shown, !isPresentingPaywall, controlsFrame != .zero
+            {
+              LastCentrePassBanner(availability: confirmation.availability) {
+                store.send(.centrePassConfirmed($0))
+              }
+              .id(confirmation.period)
+              .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 32))
+              .frame(width: max(0, controlsFrame.width - 16))
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(maxHeight: .infinity, alignment: .bottom)
+              .frame(height: max(0, controlsFrame.minY - geometry.frame(in: .global).minY - 8))
+              .offset(x: controlsFrame.minX - geometry.frame(in: .global).minX + 8)
+            }
+          }
         }
       #endif
         .sheet(

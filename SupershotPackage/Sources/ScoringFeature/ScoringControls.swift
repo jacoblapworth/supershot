@@ -2,12 +2,15 @@ import Foundation
 import GameCore
 import SharedModels
 
-package enum ScoringControlAction: Equatable {
+package enum ScoringControlAction: Hashable {
   case startOrResume
   case pause
   case skipBreak
   case finishGame
   case editTime
+  case endQuarter
+  case changeCentrePass
+  case swapSides
   case goal(UUID)
   case confirmCentrePass(Bool)
 }
@@ -36,6 +39,11 @@ package struct CentrePassConfirmationState: Equatable {
 }
 
 package struct ScoringToolbarState: Equatable {
+  package struct SheetReveal: Equatable {
+    package var phaseIndex: Int
+    package var action: ScoringControlAction
+  }
+
   package enum Content: Equatable {
     case none
     case primary(ScoringControl)
@@ -45,6 +53,17 @@ package struct ScoringToolbarState: Equatable {
   package var content: Content
   package var courtLayout: ScoringFeature.CourtLayout
   package var canScore: Bool
+  package var sheetPrimaryControl: ScoringControl?
+  package var sheetReveal: SheetReveal?
+  package var additionalControls: [ScoringControl]
+  package var phaseIndex: Int
+  package var isTimerRunning: Bool
+
+  package func shouldCollapse(after previous: Self) -> Bool {
+    previous.sheetReveal?.action == .startOrResume
+      && previous.sheetReveal?.phaseIndex == phaseIndex
+      && sheetReveal == nil && isTimerRunning
+  }
 }
 
 package extension ScoringFeature.State {
@@ -141,7 +160,9 @@ package extension ScoringFeature.State {
         action: .finishGame,
         availability: operation == .finishing ? .pending : canFinishGame ? .enabled : .disabled
       ))
-    } else if operation == .pausing(phaseIndex: currentPhaseIndex) {
+    } else if operation == .pausing(phaseIndex: currentPhaseIndex)
+      || operation == .skipping(phaseIndex: currentPhaseIndex)
+    {
       content = .none
     } else if currentPhase.isPlayingPeriod, phaseStatus == .ready || phaseStatus == .paused {
       let title = startedAt == nil || (period == 1 && phaseStatus == .ready)
@@ -158,7 +179,47 @@ package extension ScoringFeature.State {
     } else {
       content = .none
     }
-    return ScoringToolbarState(content: content, courtLayout: courtLayout, canScore: canScoreGoal)
+    let primary: ScoringControl? = if case let .primary(control) = content {
+      control
+    } else if currentPhase.isBreak, operation != .skipping(phaseIndex: currentPhaseIndex) {
+      timerViewState.controls.first { $0.action == .startOrResume }
+    } else {
+      nil
+    }
+    var additional = timerViewState.controls.filter { $0.action != primary?.action }
+    if let editTime = timerViewState.editTime {
+      additional.append(editTime)
+    }
+    if currentPhase.isPlayingPeriod {
+      additional.append(.init(
+        title: "End Quarter",
+        systemImage: "forward.end.fill",
+        action: .endQuarter,
+        availability: canMoveToNextQuarter ? .enabled : .disabled
+      ))
+    }
+    additional.append(.init(
+      title: "Change centre pass",
+      systemImage: "arrow.left.circle.fill",
+      action: .changeCentrePass,
+      availability: canOperate ? .enabled : .disabled
+    ))
+    additional.append(.init(
+      title: "Swap sides",
+      systemImage: "arrow.left.arrow.right",
+      action: .swapSides,
+      availability: isSavingCourtOrientation ? .pending : canOperate ? .enabled : .disabled
+    ))
+    return ScoringToolbarState(
+      content: content,
+      courtLayout: courtLayout,
+      canScore: canScoreGoal,
+      sheetPrimaryControl: primary,
+      sheetReveal: primary.map { .init(phaseIndex: currentPhaseIndex, action: $0.action) },
+      additionalControls: additional,
+      phaseIndex: currentPhaseIndex,
+      isTimerRunning: isTimerRunning
+    )
   }
 }
 
@@ -171,6 +232,9 @@ package extension ScoringFeature.Action {
     case .skipBreak: self = .skipBreakButtonTapped
     case .finishGame: self = .finishGameButtonTapped
     case .editTime: self = .editTimeButtonTapped
+    case .endQuarter: self = .endQuarterButtonTapped
+    case .changeCentrePass: self = .changeCentrePassButtonTapped
+    case .swapSides: self = .swapSidesButtonTapped
     case let .goal(teamID): self = .goalButtonTapped(teamID)
     case let .confirmCentrePass(wasTaken): self = .centrePassConfirmed(wasTaken)
     }
