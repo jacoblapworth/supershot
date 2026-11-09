@@ -73,9 +73,9 @@ private struct TeamScore: View {
         }
       }
       Text("\(score)")
+        .contentTransition(.numericText(value: Double(score)))
         .font(.system(size: 80, weight: .bold))
         .fontWidth(.compressed)
-        .monospacedDigit()
         .teamScoreStyle(color: color)
     }
     .padding()

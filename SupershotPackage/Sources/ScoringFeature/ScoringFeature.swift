@@ -828,7 +828,7 @@ package struct ScoringFeature {
           scoringContext: scoringContext
         ))
       }
-      await send(.goalResponse(result))
+      await send(.goalResponse(result), animation: .default)
     }
   }
 

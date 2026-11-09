@@ -4,7 +4,8 @@ package struct ScoringButtonsView: View {
   package var courtLayout: ScoringFeature.CourtLayout
   package var onAction: (ScoringControlAction) -> Void
   @Namespace private var animation
-
+  @Environment(\.isEnabled) private var isEnabled
+  
   package var body: some View {
     Grid {
       GridRow {
@@ -21,13 +22,17 @@ package struct ScoringButtonsView: View {
     .buttonStyle(.glassProminent)
     .animation(.smooth(duration: 0.25), value: courtLayout.left.hasCentrePass)
   }
-
+  
   private func centrePassIndicator(for team: ScoringFeature.CourtTeam) -> some View {
     ZStack {
       Color.clear
       if team.hasCentrePass {
         RoundedRectangle(cornerRadius: 8)
-          .fill(team.team.bibColor)
+          .fill(isEnabled
+                ? AnyShapeStyle(team.team.bibColor)
+                : AnyShapeStyle(Material.thin)
+          )
+          .glassEffect()
           .matchedGeometryEffect(id: "centrePass", in: animation)
       }
     }
@@ -35,9 +40,13 @@ package struct ScoringButtonsView: View {
     .padding(.horizontal, 40)
     .accessibilityHidden(true)
   }
-
+  
   private func goalButton(for team: ScoringFeature.CourtTeam) -> some View {
-    Button { onAction(.goal(team.id)) } label: {
+    Button {
+      withAnimation {
+        onAction(.goal(team.id))
+      }
+    } label: {
       Label("Goal", systemImage: "plus")
         .font(.title2.bold())
         .frame(maxWidth: .infinity, minHeight: 80)
