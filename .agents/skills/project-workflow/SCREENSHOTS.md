@@ -6,6 +6,9 @@ GitHub needs an uploaded image URL accessible to reviewers to render it in a PR.
 ## Capture the implementation
 
 Use device-interaction for app verification and the available simulator or device tools.
+Prepare the starting state using [launch-scenarios](../launch-scenarios/SKILL.md),
+then exercise the changed interaction before capture. Record the scenario and launch
+recipe with the evidence so another agent can reproduce it.
 Capture the changed workflow with representative data, inspect each image, and label the
 state it demonstrates. Include before/after evidence when useful and safe to obtain.
 Exclude private information. Save durable local artifacts and show them in the handoff.
