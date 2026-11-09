@@ -5,8 +5,14 @@ import SwiftUI
 public struct SupershotRootView: View {
   public init() {}
 
-  @State private var store = Store(initialState: AppFeature.State()) {
-    AppFeature()
+  @State private var store = Store(initialState: Self.initialState()) { AppFeature() }
+
+  private static func initialState() -> AppFeature.State {
+    #if DEBUG
+      GoalDeletionLaunchScenario.initialState()
+    #else
+      AppFeature.State()
+    #endif
   }
 
   public var body: some View {

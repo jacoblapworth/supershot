@@ -18,6 +18,11 @@ import SwiftUI
     // Widget previews can launch the app entry point without the app bundle configuration.
     // Preview and test dependencies already provide their own service implementations.
     guard case .live = context else { return }
+    #if DEBUG
+      if try! GoalDeletionLaunchScenario.prepareIfRequested() {
+        return
+      }
+    #endif
 
     guard
       let revenueCatAPIKey = Bundle.main.object(forInfoDictionaryKey: "RevenueCatAPIKey") as? String,
