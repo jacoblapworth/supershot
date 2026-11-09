@@ -1,5 +1,6 @@
 #if os(macOS)
   @testable import AlarmClient
+  import AppSettings
   import ConcurrencyExtras
   import CustomDump
   @testable import Database
@@ -8,6 +9,7 @@
   import Foundation
   @testable import GameCore
   @testable import SharedModels
+  import Sharing
   import SQLiteData
   import SubscriptionClient
   import Testing
@@ -35,6 +37,29 @@
       )
     }
 
+    @Test func changingSoundPreservesBothDeadlinesAndRequestIDs() async {
+      await withDependencies { _ in } operation: {
+        let harness = NotificationHarness()
+        let scheduler = MacNotificationScheduler(
+          delivery: harness.client,
+          now: { Date(timeIntervalSince1970: 1000) },
+          isCurrent: { _ in true }
+        )
+        @Shared(.alarmSound) var sound
+        #expect(sound == .buzzer)
+        _ = await scheduler.schedule(snapshot())
+        let original = await harness.requests
+        #expect(original.values.allSatisfy { $0.sound == .buzzer })
+        $sound.withLock { $0 = .softChime }
+        _ = await scheduler.schedule(snapshot())
+        let updated = await harness.requests
+        #expect(updated.count == 2)
+        #expect(updated.keys.sorted() == original.keys.sorted())
+        #expect(updated.values.map(\.date).sorted() == original.values.map(\.date).sorted())
+        #expect(updated.values.allSatisfy { $0.sound == .softChime })
+      }
+    }
+
     @Test func delayedSchedulingRechecksFeatureAccess() async throws {
       let harness = NotificationHarness()
       let allowed = LockIsolated(true)
@@ -55,12 +80,16 @@
         }
       } operation: {
         let client = AlarmClient.macNotifications(delivery: harness.client)
-        await expectNoDifference(client.scheduleAlarm(current), false)
-        await expectNoDifference(harness.requests.count, 2)
+        let firstFailed = await client.scheduleAlarm(current)
+        let firstRequests = await harness.requests
+        expectNoDifference(firstFailed, false)
+        expectNoDifference(firstRequests.count, 2)
         await client.cancelAlarm(current.game.id, current.phases.count)
         allowed.setValue(false)
-        await expectNoDifference(client.scheduleAlarm(current), false)
-        await expectNoDifference(harness.requests.isEmpty, true)
+        let secondFailed = await client.scheduleAlarm(current)
+        let remainingRequests = await harness.requests
+        expectNoDifference(secondFailed, false)
+        expectNoDifference(remainingRequests.isEmpty, true)
       }
     }
 

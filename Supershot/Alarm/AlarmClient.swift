@@ -1,8 +1,10 @@
 import AlarmClient
+import AppSettings
 import Database
 import Foundation
 import GameCore
 import SharedModels
+import Sharing
 
 #if os(iOS)
   // ActivityKit's Activity is not Sendable, but its async update/end APIs cross executors.
@@ -16,50 +18,53 @@ nonisolated extension AlarmClient {
     #if os(iOS)
       Self(
         scheduleAlarm: { snapshot in
-          guard snapshot.game.timerEndsAt != nil else { return false }
-          let manager = AlarmManager.shared
-          guard manager.authorizationState == .authorized else { return false }
+          await alarmOperations.perform(for: snapshot.game.id) {
+            guard await AlarmClient.canSchedule(snapshot), snapshot.game.timerEndsAt != nil else { return false }
+            let manager = AlarmManager.shared
+            guard manager.authorizationState == .authorized else { return false }
 
-          cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
-          let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)
+            cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
+            let alarms = ScheduledGameAlarm.plan(timeline: snapshot.timeline, progress: snapshot.game.timing)
 
-          for alarm in alarms {
-            let presentation = AlarmPresentation(alert: AlarmPresentation.Alert(
-              title: alarm.title,
-              secondaryButton: AlarmButton(
-                text: "Continue",
-                textColor: .white,
-                systemImageName: "arrow.forward"
-              ),
-              secondaryButtonBehavior: .custom
-            ))
-            let attributes = AlarmAttributes(
-              presentation: presentation,
-              metadata: SupershotAlarmMetadata(
-                gameID: snapshot.game.id,
-                phaseIndex: alarm.phaseIndex
-              ),
-              tintColor: .green
-            )
-            let configuration = AlarmManager.AlarmConfiguration.alarm(
-              schedule: .fixed(alarm.date),
-              attributes: attributes,
-              secondaryIntent: OpenGameIntent(
-                gameID: snapshot.game.id,
-                alarmID: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex)
+            for alarm in alarms {
+              let presentation = AlarmPresentation(alert: AlarmPresentation.Alert(
+                title: alarm.title,
+                secondaryButton: AlarmButton(
+                  text: "Continue",
+                  textColor: .white,
+                  systemImageName: "arrow.forward"
+                ),
+                secondaryButtonBehavior: .custom
+              ))
+              let attributes = AlarmAttributes(
+                presentation: presentation,
+                metadata: SupershotAlarmMetadata(
+                  gameID: snapshot.game.id,
+                  phaseIndex: alarm.phaseIndex
+                ),
+                tintColor: .green
               )
-            )
-            do {
-              _ = try await manager.schedule(
-                id: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex),
-                configuration: configuration
+              let configuration = AlarmManager.AlarmConfiguration.alarm(
+                schedule: .fixed(alarm.date),
+                attributes: attributes,
+                secondaryIntent: OpenGameIntent(
+                  gameID: snapshot.game.id,
+                  alarmID: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex)
+                ),
+                sound: .named(SharedReader(.alarmSound).wrappedValue.filename)
               )
-            } catch {
-              cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
-              return true
+              do {
+                _ = try await manager.schedule(
+                  id: alarmID(gameID: snapshot.game.id, phaseIndex: alarm.phaseIndex),
+                  configuration: configuration
+                )
+              } catch {
+                cancelAlarms(for: snapshot.game.id, phaseCount: snapshot.phases.count)
+                return true
+              }
             }
+            return false
           }
-          return false
         },
         updateActivity: { snapshot, startsIfNeeded in
           guard snapshot.game.isInProgress else { return }
@@ -85,7 +90,10 @@ nonisolated extension AlarmClient {
           }
         },
         cancelAlarm: { gameID, phaseCount in
-          cancelAlarms(for: gameID, phaseCount: phaseCount)
+          _ = await alarmOperations.perform(for: gameID) {
+            cancelAlarms(for: gameID, phaseCount: phaseCount)
+            return false
+          }
         },
         reconcileActivities: { gameIDs in
           await gameActivities.reconcile(keeping: gameIDs)
@@ -103,6 +111,30 @@ nonisolated extension AlarmClient {
 }
 
 #if os(iOS)
+  private let alarmOperations = AlarmOperationQueue()
+
+  /// AlarmKit scheduling suspends; order replacements and cancellation for each game.
+  actor AlarmOperationQueue {
+    private var tasks: [UUID: Task<Bool, Never>] = [:]
+    private var revisions: [UUID: Int] = [:]
+
+    func perform(for gameID: UUID, operation: @escaping @Sendable () async -> Bool) async -> Bool {
+      let previous = tasks[gameID]
+      revisions[gameID, default: 0] += 1
+      let revision = revisions[gameID]!
+      let task = Task {
+        _ = await previous?.value
+        return await operation()
+      }
+      tasks[gameID] = task
+      let failed = await task.value
+      if revisions[gameID] == revision {
+        tasks[gameID] = nil
+      }
+      return failed
+    }
+  }
+
   @MainActor
   private let gameActivities = makeGameActivities()
 

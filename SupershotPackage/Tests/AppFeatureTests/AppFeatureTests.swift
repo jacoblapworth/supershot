@@ -219,6 +219,48 @@ extension SupershotTestSuite {
     }
 
     @Test
+    func changingAlarmSoundRefreshesAlarmsWithoutMutatingGameTiming() async throws {
+      let seedStore = Self.makeAppScoringStore()
+      let database = seedStore.dependencies.defaultDatabase
+      let before = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      let scheduled = LockIsolated<[UUID]>([])
+      var timer = GameTimerClient.live
+      timer.refreshActivity = { _ in }
+      timer.scheduleAlarm = { id in scheduled.withValue { $0.append(id) }; return false }
+      timer.endPresentation = { _ in }
+      var state = AppFeature.State()
+      state.proAccess = .pro
+      let store = TestStore(initialState: state) { AppFeature() } withDependencies: {
+        $0.defaultDatabase = database
+        $0.gameTimer = timer
+        $0.alarmAuthorization = .authorized
+      }
+      await store.send(.settings(.alarmSoundSelected(.whistle))) {
+        $0.settings.$alarmSound.withLock { $0 = .whistle }
+      }
+      await store.receive {
+        guard case .settings(.delegate(.alarmSoundChanged)) = $0 else { return false }
+        return true
+      }
+      await store.finish()
+      expectNoDifference(scheduled.value, [UUID(3)])
+      let after = try await database.read { try GameSnapshot.fetch($0, gameID: UUID(3)) }
+      expectNoDifference(after.game.timing, before.game.timing)
+      scheduled.setValue([])
+      await store.send(.proAccessUpdated(.free)) { $0.proAccess = .free }
+      await store.finish()
+      await store.send(.settings(.alarmSoundSelected(.airHorn))) {
+        $0.settings.$alarmSound.withLock { $0 = .airHorn }
+      }
+      await store.receive {
+        guard case .settings(.delegate(.alarmSoundChanged)) = $0 else { return false }
+        return true
+      }
+      await store.finish()
+      expectNoDifference(scheduled.value, [])
+    }
+
+    @Test
     func entitlementTransitionsSynchronizePremiumPresentations() async {
       let seedStore = Self.makeAppScoringStore()
       let database = seedStore.dependencies.defaultDatabase

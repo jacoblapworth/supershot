@@ -70,6 +70,7 @@ private struct SettingsContent: View {
         proPromotionTapped: proPromotionTapped
       )
       FeedbackSettingsSection()
+      AlarmSettingsSection(store: store)
       GameDefaultsSettingsSection(store: store)
       #if DEBUG
         DebugSettingsSection(store: store)
@@ -241,5 +242,60 @@ private struct GameDefaultsSettingsSection: View {
         SettingsFeature()
       }
     )
+  }
+}
+
+private struct AlarmSettingsSection: View {
+  let store: StoreOf<SettingsFeature>
+
+  var body: some View {
+    Section {
+      NavigationLink {
+        AlarmSoundsView(store: store)
+      } label: {
+        LabeledContent {
+          Text(store.alarmSound.title)
+        } label: {
+          Label("Alarm sound", systemImage: "bell.badge")
+        }
+      }
+    } header: {
+      Text("Alarms")
+    } footer: {
+      Text("One sound for quarter and break alarms. Alarm use requires Supershot Pro.")
+    }
+  }
+}
+
+private struct AlarmSoundsView: View {
+  let store: StoreOf<SettingsFeature>
+
+  var body: some View {
+    List {
+      Section {
+        ForEach(AlarmSound.allCases) { sound in
+          Button {
+            store.send(.alarmSoundSelected(sound))
+          } label: {
+            HStack {
+              Text(sound.title)
+                .foregroundStyle(.primary)
+              Spacer()
+              Image(systemName: "checkmark")
+                .accessibilityHidden(true)
+                .foregroundStyle(.tint)
+                .opacity(store.alarmSound == sound ? 1 : 0)
+            }
+            .contentShape(Rectangle())
+          }
+          .accessibilityAddTraits(store.alarmSound == sound ? .isSelected : [])
+          .accessibilityHint("Select and preview sound")
+        }
+      } footer: {
+        Text("Tap a sound to select it and hear a preview.")
+      }
+    }
+    .navigationTitle("Alarm sound")
+    .onDisappear { store.send(.alarmSoundsDismissed) }
   }
 }

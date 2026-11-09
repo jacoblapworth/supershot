@@ -1,6 +1,8 @@
+import AlarmClient
 @testable import AppSettings
 import AppUI
 import ComposableArchitecture
+import CustomDump
 @testable import Database
 import Foundation
 @testable import GameCore
@@ -30,6 +32,38 @@ extension SupershotTestSuite {
         $0.$defaultBreakStartPolicy.withLock { $0 = .automatic }
       }
       #expect(NewGameFeature.State().timing.breakStartPolicy == .automatic)
+    }
+
+    @Test
+    func alarmChoicePersistsAndEveryTapPreviewsIncludingReselection() async {
+      let previews = LockIsolated<[AlarmSound]>([])
+      let stops = LockIsolated(0)
+      let store = TestStore(initialState: SettingsFeature.State()) { SettingsFeature() } withDependencies: {
+        $0.alarmSoundPreview = AlarmSoundPreviewClient(
+          play: { sound in previews.withValue { $0.append(sound) } },
+          stop: { stops.withValue { $0 += 1 } }
+        )
+      }
+      expectNoDifference(store.state.alarmSound, .buzzer)
+      for sound in AlarmSound.allCases {
+        let changed = store.state.alarmSound != sound
+        if changed {
+          await store.send(.alarmSoundSelected(sound)) {
+            $0.$alarmSound.withLock { $0 = sound }
+          }
+          await store.receive {
+            guard case .delegate(.alarmSoundChanged) = $0 else { return false }
+            return true
+          }
+        } else {
+          await store.send(.alarmSoundSelected(sound))
+        }
+        expectNoDifference(SettingsFeature.State().alarmSound, sound)
+      }
+      await store.send(.alarmSoundSelected(.electronicPulse))
+      await store.send(.alarmSoundsDismissed)
+      expectNoDifference(previews.value, AlarmSound.allCases + [.electronicPulse])
+      expectNoDifference(stops.value, 1)
     }
 
     #if DEBUG
