@@ -10,12 +10,82 @@ package struct LastCentrePassBanner: View {
   private let confirmationTimeout: Duration = .seconds(15)
 
   package var body: some View {
+    ViewThatFits(in: .horizontal) {
+      HStack(spacing: 12) {
+        LastCentrePassPrompt()
+          .fixedSize()
+        LastCentrePassChoices(
+          taken: $taken,
+          availability: availability,
+          hasSubmitted: hasSubmitted,
+          confirmationDeadline: confirmationDeadline,
+          confirmationTimeout: confirmationTimeout,
+          onConfirm: confirm
+        )
+      }
+      VStack(alignment: .leading, spacing: 12) {
+        LastCentrePassPrompt()
+          .fixedSize(horizontal: false, vertical: true)
+        LastCentrePassChoices(
+          taken: $taken,
+          availability: availability,
+          hasSubmitted: hasSubmitted,
+          confirmationDeadline: confirmationDeadline,
+          confirmationTimeout: confirmationTimeout,
+          onConfirm: confirm
+        )
+      }
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity)
+    .controlSize(.large)
+    .accessibilityElement(children: .contain)
+    .task(id: availability) {
+      confirmationDeadline = nil
+      guard availability == .enabled else { return }
+
+      hasSubmitted = false
+      let deadline = ContinuousClock.now.advanced(by: confirmationTimeout)
+      confirmationDeadline = deadline
+
+      do {
+        try await ContinuousClock().sleep(until: deadline)
+        try Task.checkCancellation()
+        confirm()
+      } catch is CancellationError {
+        // Leaving the banner or changing availability cancels automatic confirmation.
+      } catch {
+        assertionFailure("Unexpected confirmation timer error: \(error)")
+      }
+    }
+  }
+
+  private func confirm() {
+    guard availability == .enabled, !hasSubmitted else { return }
+    hasSubmitted = true
+    confirmationDeadline = nil
+    onConfirm(taken)
+  }
+}
+
+private struct LastCentrePassPrompt: View {
+  var body: some View {
+    Text("Centre pass taken?")
+      .font(.headline)
+      .padding(.leading, 16)
+  }
+}
+
+private struct LastCentrePassChoices: View {
+  @Binding var taken: Bool
+  let availability: ScoringControl.Availability
+  let hasSubmitted: Bool
+  let confirmationDeadline: ContinuousClock.Instant?
+  let confirmationTimeout: Duration
+  var onConfirm: () -> Void
+
+  var body: some View {
     HStack(spacing: 12) {
-      Text("Centre pass taken?")
-        .font(.headline)
-        .padding(.leading, 16)
-        .fixedSize()
-      Spacer()
       Picker(selection: $taken) {
         Text("Yes")
           .tag(true)
@@ -29,7 +99,7 @@ package struct LastCentrePassBanner: View {
       .pickerStyle(.segmented)
 
       Button {
-        confirm()
+        onConfirm()
       } label: {
         ZStack {
           if availability == .pending {
@@ -61,36 +131,6 @@ package struct LastCentrePassBanner: View {
         }
       }
     }
-    .padding(8)
-    .frame(maxWidth: .infinity)
-    .controlSize(.large)
-    .accessibilityElement(children: .contain)
-    .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 32))
-    .task(id: availability) {
-      confirmationDeadline = nil
-      guard availability == .enabled else { return }
-
-      hasSubmitted = false
-      let deadline = ContinuousClock.now.advanced(by: confirmationTimeout)
-      confirmationDeadline = deadline
-
-      do {
-        try await ContinuousClock().sleep(until: deadline)
-        try Task.checkCancellation()
-        confirm()
-      } catch is CancellationError {
-        // Leaving the banner or changing availability cancels automatic confirmation.
-      } catch {
-        assertionFailure("Unexpected confirmation timer error: \(error)")
-      }
-    }
-  }
-
-  private func confirm() {
-    guard availability == .enabled, !hasSubmitted else { return }
-    hasSubmitted = true
-    confirmationDeadline = nil
-    onConfirm(taken)
   }
 }
 

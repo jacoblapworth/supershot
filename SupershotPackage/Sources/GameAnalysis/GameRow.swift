@@ -92,7 +92,6 @@ package struct GameRow: View {
   private func score(_ value: Int, opponent: Int, name: String) -> some View {
     Text(value, format: .number)
       .font(.title.bold())
-      .monospacedDigit()
       .foregroundStyle(.white.opacity(game.isCompleted && value < opponent ? 0.7 : 1))
       .fixedSize()
       .accessibilityLabel(Text("\(name), \(value)"))

@@ -10,14 +10,6 @@ package struct TimerView: View {
       HStack {
         Text(state.title)
           .font(.footnote)
-        if let editTime = state.editTime {
-          Button(editTime.title, systemImage: editTime.systemImage) {
-            onAction(editTime.action)
-          }
-          .labelStyle(.iconOnly)
-          .buttonStyle(.borderless)
-          .accessibilityIdentifier("scoring.editTime")
-        }
       }
       HStack {
         clockText
