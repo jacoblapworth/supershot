@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import OSLog
 
 nonisolated extension GameParser {
   static var live: Self {
@@ -49,6 +50,14 @@ nonisolated extension GameParser {
             )
           }
         } catch let error as LanguageModelError {
+          let category = switch error {
+          case .unsupportedLanguageOrLocale: "unsupported_language_or_locale"
+          case .guardrailViolation: "guardrail_violation"
+          case .refusal: "refusal"
+          case .contextSizeExceeded: "context_size_exceeded"
+          default: "generation_error"
+          }
+          GameParserDiagnostics.logger.error("[\(GameParserDiagnostics.requestID, privacy: .public)] Model failed: category=\(category, privacy: .public) detail=\(String(describing: error), privacy: .private)")
           switch error {
           case .unsupportedLanguageOrLocale, .guardrailViolation, .refusal:
             throw GameParserError.unsupportedInput
@@ -56,7 +65,8 @@ nonisolated extension GameParser {
             throw GameParserError.inputTooLong(maximumBytes: Self.maximumInputBytes)
           default: throw GameParserError.generationFailed
           }
-        } catch is SystemLanguageModel.Error {
+        } catch let error as SystemLanguageModel.Error {
+          GameParserDiagnostics.logger.error("[\(GameParserDiagnostics.requestID, privacy: .public)] System model failed: detail=\(String(describing: error), privacy: .private)")
           throw GameParserError.unavailable(.modelNotReady)
         }
       },
