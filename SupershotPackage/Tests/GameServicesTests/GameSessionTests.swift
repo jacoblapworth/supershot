@@ -103,6 +103,7 @@ extension SupershotTestSuite {
       let commands: [GameSessionCommand] = [
         .recordGoal(command(phase: 6, context: .completedPeriod(number: 4))),
         .undoGoal,
+        .deleteGoal(UUID(10)),
         .selectCentrePass(UUID(2)),
         .resolveCentrePass(completedPeriod: 3, taken: true),
         .swapSides,
@@ -158,6 +159,112 @@ extension SupershotTestSuite {
       expectNoDifference(update.snapshot, before)
     }
 
+    @Test(arguments: [0, 1, 2, 6], [false, true])
+    func deletingHistoricalGoalUpdatesScoresWithoutChangingPlay(phase: Int, running: Bool) async throws {
+      let before = try seed(
+        phase: phase,
+        elapsed: 30,
+        endsAt: running ? now.addingTimeInterval(100) : nil,
+        pending: phase == 1,
+        late: phase == 1 ? 1 : nil
+      )
+      @Dependency(\.defaultDatabase) var database
+      let deleted = Goal(
+        id: UUID(10),
+        gameID: UUID(3),
+        gamePeriodID: before.periods[0].id,
+        teamID: UUID(1),
+        elapsedSeconds: 10,
+        points: 2,
+        createdAt: .distantPast
+      )
+      let retained = Goal(
+        id: UUID(11),
+        gameID: UUID(3),
+        gamePeriodID: before.periods[0].id,
+        teamID: UUID(2),
+        elapsedSeconds: 20,
+        createdAt: now
+      )
+      try await database.write { db in
+        try Goal.insert { deleted; retained }.execute(db)
+      }
+      let update = try await execute(.deleteGoal(deleted.id))
+      expectNoDifference(update.outcome, .applied)
+      expectNoDifference(update.snapshot.game, before.game)
+      expectNoDifference(update.snapshot.goals, [retained])
+      expectNoDifference(update.snapshot.teamAScore, 0)
+      expectNoDifference(update.snapshot.teamBScore, 1)
+      let analysis = try await database.read { try GameAnalysisRequest(gameID: UUID(3)).fetch($0).analysis }
+      let quarter = try #require(analysis.goalTimeline.quarters.last)
+      expectNoDifference(quarter.teamAQuarterScore, 0)
+      expectNoDifference(quarter.teamBQuarterScore, 1)
+      expectNoDifference(quarter.goals.first?.teamAScore, 0)
+      expectNoDifference(quarter.goals.first?.teamBScore, 1)
+      let persisted = try await read()
+      expectNoDifference(persisted, update.snapshot)
+      let repeated = try await execute(.deleteGoal(deleted.id))
+      expectNoDifference(repeated.outcome, .unchanged)
+      expectNoDifference(repeated.snapshot, persisted)
+    }
+
+    @Test func completionPreventsDeletingAnExistingGoal() async throws {
+      let before = try seed(phase: 6, endsAt: now)
+      @Dependency(\.defaultDatabase) var database
+      try await database.write { db in
+        try Goal.insert {
+          Goal(
+            id: UUID(10),
+            gameID: UUID(3),
+            gamePeriodID: before.periods[0].id,
+            teamID: UUID(1),
+            elapsedSeconds: 10,
+            createdAt: .distantPast
+          )
+        }.execute(db)
+      }
+      let finished = try await execute(.finish)
+      let deletion = try await execute(.deleteGoal(UUID(10)))
+      expectNoDifference(deletion.outcome, .rejected(.gameFinished))
+      expectNoDifference(deletion.snapshot, finished.snapshot)
+      let persisted = try await read()
+      expectNoDifference(persisted, finished.snapshot)
+    }
+
+    @Test func failedDeletionPreservesGoalAndGame() async throws {
+      _ = try seed(endsAt: now.addingTimeInterval(100))
+      _ = try await execute(.recordGoal(command(context: .livePeriod(number: 1))))
+      let before = try await read()
+      @Dependency(\.defaultDatabase) var database
+      try await database.write { db in
+        try db.execute(sql: "CREATE TEMP TRIGGER reject_delete BEFORE DELETE ON goals BEGIN SELECT RAISE(ABORT, 'test failure'); END")
+      }
+      await #expect(throws: (any Error).self) {
+        try await execute(.deleteGoal(UUID(10)))
+      }
+      let persisted = try await read()
+      expectNoDifference(persisted, before)
+      try await database.write { try $0.execute(sql: "DROP TRIGGER reject_delete") }
+    }
+
+    @Test func deletingForeignGoalDoesNotAffectEitherGame() async throws {
+      let before = try seed()
+      @Dependency(\.defaultDatabase) var database
+      try await database.write { db in
+        try Game.insert { Game(id: UUID(4), startedAt: .distantPast, teamAID: UUID(1), teamBID: UUID(2)) }.execute(db)
+        let periods = testGamePeriods(gameID: UUID(4))
+        try GamePeriod.insert { periods }.execute(db)
+        try Goal.insert {
+          Goal(id: UUID(20), gameID: UUID(4), gamePeriodID: periods[0].id, teamID: UUID(1), elapsedSeconds: 10, createdAt: .distantPast)
+        }.execute(db)
+      }
+      let update = try await execute(.deleteGoal(UUID(20)))
+      expectNoDifference(update.outcome, .unchanged)
+      expectNoDifference(update.snapshot, before)
+      let count = try await database.read { try Goal.find(UUID(20)).fetchCount($0) }
+      expectNoDifference(count, 1)
+    }
+
     private func command(phase: Int = 0, context: GameScoringContext) -> RecordGoalCommand {
       RecordGoalCommand(
         gameID: UUID(3),
@@ -181,6 +288,7 @@ extension SupershotTestSuite {
         .timing(.skip, expectedPhaseIndex: nil),
         .recordGoal(command(context: .livePeriod(number: 1))),
         .undoGoal,
+        .deleteGoal(UUID(10)),
         .resolveCentrePass(completedPeriod: 1, taken: true),
         .finish,
       ]

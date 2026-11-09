@@ -680,6 +680,45 @@ extension SupershotTestSuite {
       }
     #endif
 
+    @Test(arguments: [0, 1, 2, 6])
+    func deletingTimelineGoalRefreshesScoreAndPreservesCentrePass(phase: Int) async throws {
+      var game = Self.game()
+      game.currentPhaseIndex = phase
+      let database = try await Self.seed(game)
+      let gameID = game.id
+      try await database.write { db in
+        try Goal.insert {
+          Goal(
+            id: UUID(10),
+            gameID: gameID,
+            gamePeriodID: Self.periods()[0].id,
+            teamID: UUID(1),
+            elapsedSeconds: 10,
+            points: 2,
+            createdAt: .distantPast
+          )
+        }.execute(db)
+      }
+      let snapshot = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
+      let store = TestStore(initialState: ScoringFeature.State(snapshot: snapshot)) {
+        ScoringFeature()
+      } withDependencies: {
+        $0.defaultDatabase = database
+      }
+      await store.send(.deleteGoalButtonTapped(UUID(10))) {
+        $0.operation = .deletingGoal
+      }
+      await store.receive(\.deleteGoalResponse) {
+        $0.operation = nil
+        $0.teamAScore = 0
+        $0.canUndo = false
+      }
+      expectNoDifference(store.state.centrePassTeamID, snapshot.game.centrePassTeamID)
+      let reopened = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
+      expectNoDifference(reopened.goals, [])
+      await store.finish()
+    }
+
     private nonisolated static func game() -> Game {
       Game(
         id: UUID(3),

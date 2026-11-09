@@ -13,6 +13,7 @@ public nonisolated enum GameSessionCommand: Equatable, Sendable {
   case timing(GameTimingCommand, expectedPhaseIndex: Int?)
   case recordGoal(RecordGoalCommand)
   case undoGoal
+  case deleteGoal(Goal.ID)
   case selectCentrePass(Team.ID)
   case resolveCentrePass(completedPeriod: Int, taken: Bool)
   case finish
@@ -23,7 +24,7 @@ public nonisolated enum GameSessionCommand: Equatable, Sendable {
   public var reconcilesTiming: Bool {
     switch self {
     case .reconcile, .recordGoal, .finish: true
-    case .timing(.setRemainingTime, _), .undoGoal, .selectCentrePass, .resolveCentrePass,
+    case .timing(.setRemainingTime, _), .undoGoal, .deleteGoal, .selectCentrePass, .resolveCentrePass,
          .swapSides:
       false
     case .timing: true
@@ -212,6 +213,12 @@ package nonisolated enum GameSessionTransaction {
           outcome = .applied
         } else {
           outcome = .rejected(.scoringUnavailable)
+        }
+
+      case let .deleteGoal(goalID):
+        if stored.goals.contains(where: { $0.id == goalID }) {
+          try Goal.find(goalID).delete().execute(db)
+          outcome = .applied
         }
 
       case .undoGoal:

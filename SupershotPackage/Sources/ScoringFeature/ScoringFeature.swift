@@ -34,6 +34,7 @@ package struct ScoringFeature {
     case skipping(phaseIndex: Int)
     case confirmingCentrePass(period: Int)
     case finishing
+    case deletingGoal
   }
 
   package nonisolated struct Team: Equatable, Identifiable, Sendable {
@@ -209,6 +210,10 @@ package struct ScoringFeature {
       startedAt != nil && scoringContext != nil && canOperate
     }
 
+    package var canDeleteGoal: Bool {
+      startedAt != nil && canOperate
+    }
+
     package var canUndoGoal: Bool {
       canOperate && canUndo && (!isAwaitingCentrePassConfirmation || canUndoDuringConfirmation)
     }
@@ -327,6 +332,8 @@ package struct ScoringFeature {
     case endQuarterButtonTapped
     case finishGameButtonTapped
     case finishGameResponse(Result<Game.ID, any Error>)
+    case deleteGoalButtonTapped(Goal.ID)
+    case deleteGoalResponse(Result<GameScoreSnapshot, any Error>)
     case goalButtonTapped(Team.ID)
     case goalResponse(Result<GameScoreSnapshot, any Error>)
     case keepScreenAwakeTask
@@ -564,6 +571,29 @@ package struct ScoringFeature {
         guard state.operation == .finishing else { return .none }
         state.operation = nil
         state.alert = .operationFailed("Couldn’t end game")
+        return reconcileTimerEffect(gameID: state.gameID)
+
+      case let .deleteGoalButtonTapped(goalID):
+        guard state.canDeleteGoal else { return .none }
+        state.operation = .deletingGoal
+        return .run { [gameID = state.gameID, now] send in
+          await send(.deleteGoalResponse(Result {
+            try await GameScoreSnapshot(
+              snapshot: gameSession.execute(gameID, .deleteGoal(goalID), now).acceptedSnapshot()
+            )
+          }), animation: .default)
+        }
+
+      case let .deleteGoalResponse(.success(snapshot)):
+        guard state.operation == .deletingGoal else { return .none }
+        state.operation = nil
+        apply(snapshot, to: &state)
+        return refreshActivityEffect(gameID: state.gameID)
+
+      case .deleteGoalResponse(.failure):
+        guard state.operation == .deletingGoal else { return .none }
+        state.operation = nil
+        state.alert = .operationFailed("Couldn’t delete goal")
         return reconcileTimerEffect(gameID: state.gameID)
 
       case let .goalButtonTapped(teamID):
