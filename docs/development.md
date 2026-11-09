@@ -33,6 +33,23 @@ unique `-resultBundlePath` when collecting test results.
 Formatting includes app, widget, shared, and test sources plus the package manifest,
 sources, and tests. It excludes dependency checkouts and generated build output.
 
+## Xcode Cloud dependency resolution
+
+Xcode Cloud's project-based workflow requires the committed lockfile at
+`Supershot.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
+The lockfile in `Supershot.xcworkspace` serves workspace builds; it does not
+replace the project lockfile. `SupershotPackage/Package.resolved` serves standalone
+package commands.
+
+After changing dependencies, resolve and commit the lockfiles for each entry point
+in use. Validate the Cloud project entry point without allowing dependency changes:
+
+```sh
+xcodebuild -resolvePackageDependencies -project Supershot.xcodeproj \
+  -scheme Supershot -disableAutomaticPackageResolution \
+  -onlyUsePackageVersionsFromResolvedFile
+```
+
 ## CI performance
 
 The iOS test and native macOS build jobs run independently. Both cache Swift
