@@ -1,10 +1,12 @@
 #if os(macOS)
+  import AppSettings
   import Database
   import Dependencies
   import FeatureFlagsClient
   import Foundation
   import GameCore
   import SharedModels
+  import Sharing
   import SQLiteData
   import SubscriptionClient
   import UserNotifications
@@ -15,6 +17,7 @@
     package var title: String
     package var body: String
     package var gameID: Game.ID
+    package var sound: AlarmSound = .buzzer
   }
 
   /// A small boundary lets scheduling and races be tested without system permission prompts.
@@ -32,7 +35,7 @@
           let content = UNMutableNotificationContent()
           content.title = request.title
           content.body = request.body
-          content.sound = .default
+          content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: request.sound.filename))
           content.userInfo = ["gameID": request.gameID.uuidString]
           let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(0.1, request.date.timeIntervalSinceNow), repeats: false)
           try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: request.id, content: content, trigger: trigger))
@@ -95,7 +98,8 @@
               date: alarm.date,
               title: title,
               body: "\(snapshot.teamA.name) vs \(snapshot.teamB.name)",
-              gameID: id
+              gameID: id,
+              sound: SharedReader(.alarmSound).wrappedValue
             ))
             if self.cancellations[id, default: 0] != cancellation {
               await self.removeRequests(for: id)
@@ -171,23 +175,9 @@
     }
 
     package static func macNotifications(delivery: NotificationDeliveryClient) -> Self {
-      @Dependency(\.defaultDatabase) var database
-      @Dependency(\.proSubscription) var subscription
-      @Dependency(\.featureFlags) var featureFlags
       @Dependency(\.date) var date
       let scheduler = MacNotificationScheduler(delivery: delivery, now: { date.now }) { snapshot in
-        guard !Task.isCancelled,
-              await featureFlags.isEnabled(.timerAlerts, (try? subscription.currentAccess()) ?? .unknown)
-        else {
-          return false
-        }
-        // A delayed start effect must not restore notifications after a newer game transaction.
-        guard
-          let current = try? await database.read({
-            try GameSnapshot.fetch($0, gameID: snapshot.game.id)
-          })
-        else { return false }
-        return current.game.isInProgress && current.game.timing == snapshot.game.timing
+        await AlarmClient.canSchedule(snapshot)
       }
       return Self(
         scheduleAlarm: { await scheduler.schedule($0) },

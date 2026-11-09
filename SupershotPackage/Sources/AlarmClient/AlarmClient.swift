@@ -1,9 +1,12 @@
 import Database
 import Dependencies
 import DependenciesMacros
+import FeatureFlagsClient
 import Foundation
 import GameCore
 import SharedModels
+import SQLiteData
+import SubscriptionClient
 
 #if os(iOS)
   import ActivityKit
@@ -45,6 +48,18 @@ public extension DependencyValues {
 }
 
 public nonisolated extension AlarmClient {
+  /// Revalidate queued work against current capability access and committed timer state.
+  static func canSchedule(_ snapshot: GameSnapshot) async -> Bool {
+    @Dependency(\.defaultDatabase) var database
+    @Dependency(\.proSubscription) var subscription
+    @Dependency(\.featureFlags) var featureFlags
+    guard !Task.isCancelled,
+          await featureFlags.isEnabled(.timerAlerts, (try? subscription.currentAccess()) ?? .unknown),
+          let current = try? await database.read({ try GameSnapshot.fetch($0, gameID: snapshot.game.id) })
+    else { return false }
+    return current.game.isInProgress && current.game.timing == snapshot.game.timing
+  }
+
   static let noop = Self(
     scheduleAlarm: { _ in false },
     updateActivity: { _, _ in },

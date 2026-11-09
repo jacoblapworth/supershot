@@ -157,6 +157,8 @@ let package = Package(
     .target(
       name: "AlarmClient",
       dependencies: [
+        "AppSettings",
+        .product(name: "IssueReporting", package: "xctest-dynamic-overlay"),
         "FeatureFlagsClient",
         "SharedModels",
         "GameCore",
@@ -399,6 +401,7 @@ let package = Package(
     .target(
       name: "SettingsFeature",
       dependencies: [
+        "AlarmClient",
         "AppUI",
         "SharedModels",
         "GameCore",
