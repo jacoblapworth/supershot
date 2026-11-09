@@ -16,7 +16,10 @@ Use the connected Linear tools and the Linear skill for service operations. Use
   Verify the connected workspace and team before creating or changing records.
 - Inspect the relevant code and instructions, then record the problem, intended behavior,
   scope boundaries, checkable acceptance criteria, technical approach, dependencies, and
-  validation plan. Preserve existing issue content when refining it.
+  validation plan. For visible features, use
+  [launch-scenarios](../launch-scenarios/SKILL.md) to choose the initial navigation,
+  fixture state, interaction to verify, and focused checks. Preserve existing issue
+  content when refining it.
 - Ask the user focused questions when unresolved scope or technical choices materially
   change the solution. Record answers in Linear. Proceed with independent investigation
   while waiting; record reasonable assumptions for routine implementation choices.
@@ -40,6 +43,10 @@ request ends with this handoff; implementation starts when requested or already 
 Implementation starts with an owned active issue and an isolated branch from the intended parent.
 
 ## 3. Implement and keep Linear current
+
+For visible features, follow [launch-scenarios](../launch-scenarios/SKILL.md) to reuse
+or add a repeatable state-driven starting point and validate from it. Record the
+working launch recipe and observed behavior with the validation results.
 
 - Make meaningful commits as validated review units become ready, following git-workflow.
 - Update the issue at milestones: approach or scope changes, completed acceptance criteria,
