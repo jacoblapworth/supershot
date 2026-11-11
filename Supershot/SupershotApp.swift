@@ -23,6 +23,9 @@ import SwiftUI
         try! SettingsLaunchScenario.prepare()
         return
       }
+      if try! GoalDeletionLaunchScenario.prepareIfRequested() {
+        return
+      }
     #endif
 
     guard

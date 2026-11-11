@@ -15,6 +15,7 @@ package struct GoalTimelineView: View {
   package var teamBName: String
   package var timeline: GoalTimeline
   package var teamAOnLeft = true
+  package var deleteGoal: ((Goal.ID) -> Void)?
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
@@ -34,7 +35,8 @@ package struct GoalTimelineView: View {
             teamAName: teamAName,
             teamBBibColor: teamBBibColor,
             teamBName: teamBName,
-            teamAOnLeft: teamAOnLeft
+            teamAOnLeft: teamAOnLeft,
+            deleteGoal: deleteGoal
           )
         }
       }
@@ -48,7 +50,8 @@ package struct GoalTimelineView: View {
     teamBBibColor: Color,
     teamBName: String,
     timeline: GoalTimeline,
-    teamAOnLeft: Bool = true
+    teamAOnLeft: Bool = true,
+    deleteGoal: ((Goal.ID) -> Void)? = nil
   ) {
     self.teamABibColor = teamABibColor
     self.teamAName = teamAName
@@ -56,6 +59,7 @@ package struct GoalTimelineView: View {
     self.teamBName = teamBName
     self.timeline = timeline
     self.teamAOnLeft = teamAOnLeft
+    self.deleteGoal = deleteGoal
   }
 }
 
@@ -123,6 +127,8 @@ private struct GoalTimelineQuarterView: View {
   var teamBName: String
   var teamAOnLeft: Bool
 
+  var deleteGoal: ((Goal.ID) -> Void)?
+
   var body: some View {
     VStack(spacing: 12) {
       GoalTimelineQuarterHeader(
@@ -148,7 +154,8 @@ private struct GoalTimelineQuarterView: View {
               goal: goal,
               teamAName: teamAName,
               teamBName: teamBName,
-              teamAOnLeft: teamAOnLeft
+              teamAOnLeft: teamAOnLeft,
+              deleteGoal: deleteGoal
             )
           }
         }
@@ -226,6 +233,8 @@ private struct GoalTimelineRow: View {
   var teamBName: String
   var teamAOnLeft: Bool
 
+  var deleteGoal: ((Goal.ID) -> Void)?
+
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
       if isOnLeft {
@@ -238,6 +247,14 @@ private struct GoalTimelineRow: View {
         eventCard
       }
     }
+    .contextMenu {
+      if let deleteGoal {
+        Button("Delete", systemImage: "trash", role: .destructive) {
+          deleteGoal(goal.id)
+        }
+      }
+    }
+    .accessibilityIdentifier("goalTimeline.\(goal.id)")
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("\(goal.scoringTeamName), \(goal.points) "
       + "\(goal.points == 1 ? "point" : "points"), "
@@ -276,6 +293,12 @@ private struct GoalTimelineRow: View {
       maxWidth: .infinity,
       alignment: isOnLeft ? .trailing : .leading
     )
+    #if os(iOS)
+    .contentShape(
+      .contextMenuPreview,
+      RoundedRectangle(cornerRadius: 10)
+    )
+    #endif
     .background(
       goal.scoringTeamBibColor.opacity(0.12),
       in: RoundedRectangle(cornerRadius: 12)

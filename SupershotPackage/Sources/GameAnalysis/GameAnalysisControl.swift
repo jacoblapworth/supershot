@@ -90,6 +90,7 @@ package struct GameAnalysisContentView: View {
   package var analysis: GameAnalysis
   package var selection: GameAnalysisTab
   package var teamAOnLeft = true
+  package var deleteGoal: ((Goal.ID) -> Void)?
 
   package var body: some View {
     switch selection {
@@ -100,17 +101,24 @@ package struct GameAnalysisContentView: View {
         teamBBibColor: analysis.teamBBibColor,
         teamBName: analysis.teamBName,
         timeline: analysis.goalTimeline,
-        teamAOnLeft: teamAOnLeft
+        teamAOnLeft: teamAOnLeft,
+        deleteGoal: deleteGoal
       )
     case .stats:
       GameStatisticsView(detail: analysis)
     }
   }
 
-  package init(analysis: GameAnalysis, selection: GameAnalysisTab, teamAOnLeft: Bool = true) {
+  package init(
+    analysis: GameAnalysis,
+    selection: GameAnalysisTab,
+    teamAOnLeft: Bool = true,
+    deleteGoal: ((Goal.ID) -> Void)? = nil
+  ) {
     self.analysis = analysis
     self.selection = selection
     self.teamAOnLeft = teamAOnLeft
+    self.deleteGoal = deleteGoal
   }
 }
 

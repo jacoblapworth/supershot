@@ -6,8 +6,8 @@ import SharedModels
 import SQLiteData
 
 public extension DependencyValues {
-  nonisolated mutating func bootstrapDatabase() throws {
-    let database = try SQLiteData.defaultDatabase()
+  nonisolated mutating func bootstrapDatabase(path: String? = nil) throws {
+    let database = try SQLiteData.defaultDatabase(path: path)
     logger.debug("""
     DEBUG: ℹ️ App database:
     open "\(database.path)"

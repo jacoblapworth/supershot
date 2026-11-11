@@ -14,8 +14,10 @@ public struct SupershotRootView: View {
       if SettingsLaunchScenario.isRequested {
         return SettingsLaunchScenario.initialState()
       }
+      return GoalDeletionLaunchScenario.initialState()
+    #else
+      return AppFeature.State()
     #endif
-    return AppFeature.State()
   }
 
   public var body: some View {

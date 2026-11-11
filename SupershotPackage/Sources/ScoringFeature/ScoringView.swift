@@ -96,7 +96,8 @@ package struct ScoringView: View {
             GameAnalysisContentView(
               analysis: analysisResponse.analysis,
               selection: selectedAnalysis,
-              teamAOnLeft: store.courtLayout.left.team.id == store.teamA.id
+              teamAOnLeft: store.courtLayout.left.team.id == store.teamA.id,
+              deleteGoal: store.canDeleteGoal ? { store.send(.deleteGoalButtonTapped($0)) } : nil
             )
             .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
           } header: {
