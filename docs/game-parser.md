@@ -10,9 +10,15 @@ The live implementation explicitly uses Apple's on-device
 output for natural-language descriptions. Explicit time-prefixed matchup rows
 (such as `19:10  The lodgers vs IMG & Friends`) use a deterministic extractor
 before model availability is checked. It preserves whitespace, punctuation and
-ampersands, and only handles an input when every nonempty line matches. Additional
-metadata or ambiguous separators fall back to the model. Tests inject `ExtractedFixture`
-responses at the generation boundary, so source grounding, ordering and validation
+ampersands, and only handles an input when every nonempty line matches.
+Unknown metadata or ambiguous separators fall back to the model. League/date headers,
+`Division 1 • Court 2` lines and inline columns such as
+`19:00  Division 1  Mangos vs Mixteama Aguilera  Court 2` are handled directly.
+Inline labels use a single letter/number/hyphen token for the value; a tab or at
+least two whitespace characters separates metadata from the matchup. Single spaces
+within team names remain intact. Tabs, non-breaking spaces and CRLF line endings
+are accepted, and any unrecognized line sends the whole input to the model.
+Tests inject `ExtractedFixture` responses at the generation boundary, so source grounding, ordering and validation
 still run. No test requires Apple Intelligence.
 
 ## Contract
@@ -25,7 +31,7 @@ still run. No test requires Apple Intelligence.
   line numbers, including repeated fixtures.
 - Missing team names and equal names (case/outer-whitespace insensitive) are flagged.
   Incomplete rows remain drafts with their source and validation issues for correction.
-- Supported date components are unambiguous Gregorian `YYYY-MM-DD` dates, plus
+- Supported date components are unambiguous Gregorian `YYYY-MM-DD` and UK `DD/MM/YYYY` dates, plus
   `today`, `tomorrow`, `yesterday` and weekday names (including `next Friday`)
   resolved using a caller-supplied calendar, reference date and time zone. Other date text stays available with an issue for
   later correction. No context is taken implicitly from the system clock or zone.
@@ -86,7 +92,44 @@ xcodebuild test -workspace Supershot.xcworkspace \
 
 `GameParserTests` is also registered with both existing app test schemes for CI.
 
+## Diagnostics
+
+Parser events use Apple's unified logging with subsystem `Supershot` and category
+`GameParser`. In Console, select the connected device (or this Mac for the harness),
+include Info messages, and filter by those values. Each parse has a request ID
+shared by structured extraction, model generation and validation events.
+
+For the local Mac harness, stream events before reproducing:
+
+```sh
+log stream --level info --predicate 'subsystem == "Supershot" AND category == "GameParser"'
+```
+
+Events record input byte/line counts, structured fallback reason and source line,
+model availability, extracted fixture counts, empty/missing/overlapping source
+excerpts, per-line validation issues, final error stage and elapsed duration.
+Known model errors distinguish refusal, guardrail, language/locale, context-size
+and other generation failures before mapping to the user-facing error. Unknown
+errors include their type; detailed error descriptions are marked private.
+Pasted text, source excerpts and team names are never logged directly.
+
+Info events require Info logging to be enabled while reproducing; this is local
+system logging, with no separate analytics upload or in-app log export.
+
 ## Evidence
+
+On 9 November 2026, the focused GameParser scheme on macOS 27.3 / arm64 passed
+25 tests (49 runs including parameters), with zero failures or skips. The Balham
+schedule regression verifies all three exact matchups, date, times, Division 1,
+Court 2, source lines and punctuation without model availability. Variants cover
+tabs, repeated spaces, non-breaking spaces and CRLF; adjacent checks cover changed
+date headers, limits and ambiguous/unknown/duplicate metadata fallback.
+
+The built live harness also parsed the supplied schedule, including trailing
+spaces, into three issue-free drafts through structured extraction. A live unified
+log stream confirmed the shared request ID, counts, success and elapsed time,
+with no fixture text in the events. No UI or physical iPhone inference was tested.
+
 
 On 19 October 2026, the final focused macOS Debug run passed all 21 test cases
 (including parameterized invalid dates/times). These use stubbed generation and

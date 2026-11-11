@@ -1,3 +1,4 @@
+import AlarmClient
 import AppSettings
 import AppUI
 import ComposableArchitecture
@@ -16,6 +17,7 @@ package struct SettingsFeature {
   package struct State: Equatable {
     @Presents package var timeInput: TimeInputFeature.State?
     package var editedDefault: DurationDefault?
+    @Shared(.alarmSound) package var alarmSound
     @Shared(.defaultBreakStartPolicy) package var defaultBreakStartPolicy
     @Shared(.defaultPeriodDurationSeconds) package var defaultPeriodDurationSeconds
     @Shared(.defaultBreakDurationSeconds) package var defaultBreakDurationSeconds
@@ -49,6 +51,8 @@ package struct SettingsFeature {
   package enum DurationDefault: Equatable { case quarter, breakTime }
 
   package enum Action {
+    case alarmSoundSelected(AlarmSound)
+    case alarmSoundsDismissed
     case breakStartPolicyChanged(BreakStartPolicy)
     case editDefaultButtonTapped(DurationDefault)
     case timeInput(PresentationAction<TimeInputFeature.Action>)
@@ -66,6 +70,7 @@ package struct SettingsFeature {
     #endif
 
     package enum Delegate {
+      case alarmSoundChanged
       case proAccessChanged(SubscriptionEntitlement)
       case proPromotionTapped
     }
@@ -76,9 +81,21 @@ package struct SettingsFeature {
     @Dependency(DatabaseExportClient.self) package var databaseExportClient
   #endif
 
+  @Dependency(\.alarmSoundPreview) var alarmSoundPreview
+
   package var body: some Reducer<State, Action> {
     Reduce { state, action in
       switch action {
+      case let .alarmSoundSelected(sound):
+        let changed = state.alarmSound != sound
+        state.$alarmSound.withLock { $0 = sound }
+        alarmSoundPreview.play(sound)
+        return changed ? .send(.delegate(.alarmSoundChanged)) : .none
+
+      case .alarmSoundsDismissed:
+        alarmSoundPreview.stop()
+        return .none
+
       case let .breakStartPolicyChanged(policy):
         state.$defaultBreakStartPolicy.withLock { $0 = policy }
         return .none

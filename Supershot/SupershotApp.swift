@@ -19,6 +19,10 @@ import SwiftUI
     // Preview and test dependencies already provide their own service implementations.
     guard case .live = context else { return }
     #if DEBUG
+      if SettingsLaunchScenario.isRequested {
+        try! SettingsLaunchScenario.prepare()
+        return
+      }
       if try! GoalDeletionLaunchScenario.prepareIfRequested() {
         return
       }

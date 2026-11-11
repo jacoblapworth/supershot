@@ -106,6 +106,11 @@ package struct AppFeature {
           state.selectedTab = .games
           return .send(.games(.gameDeepLinkOpened(gameID)))
 
+        case .settings(.delegate(.alarmSoundChanged)):
+          // Reuse the permission and Pro-gated path; snapshots retain their deadlines.
+          return synchronizePremiumPresentations(state.proAccess)
+            .cancellable(id: "alarmSoundRefresh", cancelInFlight: true)
+
         case .settings(.delegate(.proPromotionTapped)):
           #if os(macOS)
             state.paywallFromSettings = true
