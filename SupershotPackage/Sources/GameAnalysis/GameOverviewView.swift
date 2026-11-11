@@ -10,6 +10,14 @@ import UI
 
 package struct GameOverviewView: View {
   package var detail: CompletedGameDetail
+  var scoreboardVisibilityChanged: (Bool) -> Void
+
+  var scoreboard: ScoreboardView {
+    ScoreboardView(
+      left: .init(name: detail.teamAName, color: detail.teamABibColor, score: detail.teamAScore),
+      right: .init(name: detail.teamBName, color: detail.teamBBibColor, score: detail.teamBScore)
+    )
+  }
 
   package var body: some View {
     VStack(spacing: 20) {
@@ -23,10 +31,12 @@ package struct GameOverviewView: View {
           .multilineTextAlignment(.center)
       }
 
-      ScoreboardView(
-        left: .init(name: detail.teamAName, color: detail.teamABibColor, score: detail.teamAScore),
-        right: .init(name: detail.teamBName, color: detail.teamBBibColor, score: detail.teamBScore)
-      )
+      scoreboard
+        .onGeometryChange(for: Bool.self) { geometry in
+          geometry.frame(in: .named("gameAnalysisViewport")).maxY <= 0
+        } action: { isAboveViewport in
+          scoreboardVisibilityChanged(isAboveViewport)
+        }
 
       VStack(spacing: 20) {
         QuarterScoreBreakdown(
@@ -67,8 +77,12 @@ package struct GameOverviewView: View {
     .frame(maxWidth: .infinity)
   }
 
-  package init(detail: CompletedGameDetail) {
+  package init(
+    detail: CompletedGameDetail,
+    scoreboardVisibilityChanged: @escaping (Bool) -> Void = { _ in }
+  ) {
     self.detail = detail
+    self.scoreboardVisibilityChanged = scoreboardVisibilityChanged
   }
 }
 
