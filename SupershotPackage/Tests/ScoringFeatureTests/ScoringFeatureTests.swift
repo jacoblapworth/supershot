@@ -681,7 +681,7 @@ extension SupershotTestSuite {
     #endif
 
     @Test(arguments: [0, 1, 2, 6])
-    func deletingTimelineGoalRefreshesScoreAndPreservesCentrePass(phase: Int) async throws {
+    func deletingTimelineGoalRefreshesScoreAndCentrePass(phase: Int) async throws {
       var game = Self.game()
       game.currentPhaseIndex = phase
       let database = try await Self.seed(game)
@@ -712,8 +712,8 @@ extension SupershotTestSuite {
         $0.operation = nil
         $0.teamAScore = 0
         $0.canUndo = false
+        $0.centrePassTeamID = UUID(2)
       }
-      expectNoDifference(store.state.centrePassTeamID, snapshot.game.centrePassTeamID)
       let reopened = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
       expectNoDifference(reopened.goals, [])
       await store.finish()

@@ -218,6 +218,7 @@ package nonisolated enum GameSessionTransaction {
       case let .deleteGoal(goalID):
         if stored.goals.contains(where: { $0.id == goalID }) {
           try Goal.find(goalID).delete().execute(db)
+          game.scoring.alternateCentrePass(teamAID: stored.teamA.id, teamBID: stored.teamB.id)
           outcome = .applied
         }
 

@@ -160,7 +160,7 @@ extension SupershotTestSuite {
     }
 
     @Test(arguments: [0, 1, 2, 6], [false, true])
-    func deletingHistoricalGoalUpdatesScoresWithoutChangingPlay(phase: Int, running: Bool) async throws {
+    func deletingHistoricalGoalUpdatesScoreAndCentrePass(phase: Int, running: Bool) async throws {
       let before = try seed(
         phase: phase,
         elapsed: 30,
@@ -191,7 +191,9 @@ extension SupershotTestSuite {
       }
       let update = try await execute(.deleteGoal(deleted.id))
       expectNoDifference(update.outcome, .applied)
-      expectNoDifference(update.snapshot.game, before.game)
+      var expectedGame = before.game
+      expectedGame.centrePassTeamID = UUID(2)
+      expectNoDifference(update.snapshot.game, expectedGame)
       expectNoDifference(update.snapshot.goals, [retained])
       expectNoDifference(update.snapshot.teamAScore, 0)
       expectNoDifference(update.snapshot.teamBScore, 1)
