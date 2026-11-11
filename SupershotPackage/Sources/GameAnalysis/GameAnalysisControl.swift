@@ -9,8 +9,8 @@ import SwiftUI
 import UI
 
 package enum GameAnalysisTab: String, CaseIterable, Identifiable {
-  case playByPlay = "Play-by-play"
   case stats = "Stats"
+  case playByPlay = "Play-by-play"
 
   package var id: Self {
     self
@@ -22,7 +22,6 @@ package struct GameAnalysisControl: View {
   @State private var isPinned = false
   @Namespace private var selectionAnimation
   @Binding package var selection: GameAnalysisTab
-  package var pinnedSelectionChanged: () -> Void = {}
 
   package var body: some View {
     HStack(spacing: 4) {
@@ -71,18 +70,14 @@ package struct GameAnalysisControl: View {
     } action: {
       isPinned = $0
     }
-    .onChange(of: selection) {
-      DispatchQueue.main.async { pinnedSelectionChanged() }
-    }
     #if os(iOS)
     .toolbarBackground(.bar, for: .navigationBar)
     .toolbarBackground(isPinned ? .visible : .automatic, for: .navigationBar)
     #endif
   }
 
-  package init(selection: Binding<GameAnalysisTab>, pinnedSelectionChanged: @escaping () -> Void = {}) {
+  package init(selection: Binding<GameAnalysisTab>) {
     _selection = selection
-    self.pinnedSelectionChanged = pinnedSelectionChanged
   }
 }
 
