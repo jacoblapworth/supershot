@@ -179,7 +179,7 @@ struct ScoreDifferenceSeriesTests {
     }
     return GameAnalysis(
       goalTimeline: GoalTimeline(quarters: periods.reversed().map { period in
-        GoalTimelineQuarter(
+        GoalTimelinePeriod(
           goals: goals.filter { $0.period == period.number }.reversed(),
           period: period.number,
           teamAQuarterScore: 0,

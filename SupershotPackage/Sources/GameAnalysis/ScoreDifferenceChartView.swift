@@ -9,7 +9,7 @@ import UI
 package struct ScoreDifferenceChartView: View {
   package var detail: GameAnalysis
   package var breakdown = GameAnalysisBreakdown.wholeGame
-
+  
   package var body: some View {
     ScoreDifferenceChart(
       series: ScoreDifferenceSeries(analysis: detail, breakdown: breakdown),
@@ -30,34 +30,31 @@ private struct ScoreDifferenceChart: View {
   let teamBName: String
   let teamBColor: Color
   @State private var selectedMoment: ScoreDifferenceSeries.Point?
-
+  
   private var positiveTeamName: String {
     series.positiveTeamIsTeamA ? teamAName : teamBName
   }
-
+  
   private var negativeTeamName: String {
     series.positiveTeamIsTeamA ? teamBName : teamAName
   }
-
+  
   private var positiveTeamColor: Color {
     series.positiveTeamIsTeamA ? teamAColor : teamBColor
   }
-
+  
   private var negativeTeamColor: Color {
     series.positiveTeamIsTeamA ? teamBColor : teamAColor
   }
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      VStack(spacing: 4) {
-        Text("Score difference")
-          .font(.subheadline.weight(.semibold))
-        Text(breakdown.title)
-          .font(.caption)
-      }
-      .foregroundStyle(.secondary)
-      .frame(maxWidth: .infinity)
-
+      
+      Text("Score difference")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
+      
       if series.moments.isEmpty {
         ContentUnavailableView(
           "No goals recorded in \(breakdown.title)",
@@ -85,17 +82,17 @@ private struct ScoreDifferenceChart: View {
             .alignsMarkStylesWithPlotArea()
             .interpolationMethod(.monotone)
           }
-
+          
           RuleMark(y: .value("Scores level", 0))
             .foregroundStyle(Color.secondary)
             .lineStyle(StrokeStyle(lineWidth: 1.5))
-
+          
           ForEach(series.periodEndOffsets, id: \.self) { offset in
             RuleMark(x: .value("Quarter boundary", offset))
               .foregroundStyle(Color.secondary.opacity(0.5))
               .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
           }
-
+          
           ForEach(series.points) { point in
             LineMark(
               x: .value("Playing time", point.elapsedSeconds),
@@ -104,7 +101,7 @@ private struct ScoreDifferenceChart: View {
             .foregroundStyle(Color.primary)
             .interpolationMethod(.monotone)
           }
-
+          
           ForEach(series.moments) { moment in
             PointMark(
               x: .value("Playing time", moment.elapsedSeconds),
@@ -113,7 +110,7 @@ private struct ScoreDifferenceChart: View {
             .foregroundStyle(moment.difference > 0 ? teamAColor : moment.difference < 0 ? teamBColor : .primary)
             .symbolSize(20)
           }
-
+          
           if let selectedMoment {
             RuleMark(x: .value("Selected time", selectedMoment.elapsedSeconds))
               .foregroundStyle(Color.primary.opacity(0.5))
@@ -121,8 +118,6 @@ private struct ScoreDifferenceChart: View {
         }
         .chartXScale(domain: 0 ... series.duration)
         .chartYScale(domain: -series.extent ... series.extent)
-        .chartXAxisLabel("Playing time")
-        .chartYAxisLabel("Points")
         .chartXAxis {
           AxisMarks(values: .automatic(desiredCount: 5)) { value in
             AxisGridLine()
@@ -146,7 +141,6 @@ private struct ScoreDifferenceChart: View {
           }
         }
         .frame(height: 220)
-//        .chartXSelection(value: <#T##Binding<P?>#>)
         .chartOverlay { proxy in
           GeometryReader { geometry in
             ChartSelectionOverlay { location in
@@ -158,33 +152,22 @@ private struct ScoreDifferenceChart: View {
         .accessibilityLabel("\(breakdown.title) score difference chart")
         .accessibilityValue(Text("\(teamAName) \(series.moments.last?.teamAScore ?? 0), \(teamBName) \(series.moments.last?.teamBScore ?? 0). \(scoreDifferenceLeadDescription(series.moments.last?.difference ?? 0, teamAName: teamAName, teamBName: teamBName))"))
         .accessibilityIdentifier("gameAnalysis.scoreDifference")
-
+        
         if let selectedMoment {
           ScoreDifferenceInspection(moment: selectedMoment, teamAName: teamAName, teamBName: teamBName)
-        } else {
-          Text("Drag horizontally across the chart to inspect the score.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
       }
-
+      
       VStack(alignment: .leading, spacing: 6) {
         Label {
-          Text("Positive: \(positiveTeamName) leads")
+          Text("\(positiveTeamName) leads")
         } icon: {
           Image(systemName: "plus.circle.fill").foregroundStyle(positiveTeamColor)
         }
         Label {
-          Text("Negative: \(negativeTeamName) leads")
+          Text("\(negativeTeamName) leads")
         } icon: {
           Image(systemName: "minus.circle.fill").foregroundStyle(negativeTeamColor)
-        }
-        if breakdown == .wholeGame {
-          Text("0 means scores level. Dashed lines mark quarter boundaries.")
-            .foregroundStyle(.secondary)
-        } else {
-          Text("0 means scores level in this quarter.")
-            .foregroundStyle(.secondary)
         }
       }
       .font(.caption)
@@ -193,7 +176,7 @@ private struct ScoreDifferenceChart: View {
     .onChange(of: series) { selectedMoment = nil }
     .onChange(of: breakdown) { selectedMoment = nil }
   }
-
+  
   private func selectionChanged(at location: CGPoint?, proxy: ChartProxy, geometry: GeometryProxy) {
     guard let location, let plotFrame = proxy.plotFrame else {
       selectedMoment = nil
@@ -202,7 +185,7 @@ private struct ScoreDifferenceChart: View {
     let plotArea = geometry[plotFrame]
     guard plotArea.contains(location),
           let seconds = proxy.value(atX: location.x - plotArea.minX, as: Int.self)
-    else {
+            else {
       selectedMoment = nil
       return
     }
@@ -214,7 +197,7 @@ private struct ScoreDifferenceInspection: View {
   let moment: ScoreDifferenceSeries.Point
   let teamAName: String
   let teamBName: String
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
       Text("Q\(moment.period) · \(elapsedTime(moment.periodElapsedSeconds))")
@@ -291,7 +274,7 @@ private func scoreDifferencePreview(scores: [(Int, Int)]) -> GameAnalysis {
     )
   }
   analysis.goalTimeline = GoalTimeline(quarters: [
-    GoalTimelineQuarter(
+    GoalTimelinePeriod(
       goals: moments.reversed(),
       period: period.number,
       teamAQuarterScore: scores.last?.0 ?? 0,

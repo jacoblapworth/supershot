@@ -19,6 +19,7 @@ package struct GameRow: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .font(.subheadline)
+      .fontWeight(.semibold)
       .fixedSize(horizontal: false, vertical: true)
       .accessibilityHidden(!game.isPlanned)
 
@@ -91,7 +92,9 @@ package struct GameRow: View {
 
   private func score(_ value: Int, opponent: Int, name: String) -> some View {
     Text(value, format: .number)
-      .font(.title.bold())
+      .font(.largeTitle)
+      .fontWidth(.compressed)
+      .fontWeight(.semibold)
       .foregroundStyle(.white.opacity(game.isCompleted && value < opponent ? 0.7 : 1))
       .fixedSize()
       .accessibilityLabel(Text("\(name), \(value)"))

@@ -145,7 +145,7 @@ private let realisticPreviewTimeline: GoalTimeline = {
 
   return GoalTimeline(quarters: (1 ... 4).reversed().map { period in
     let goals = goalsByPeriod[period, default: []]
-    return GoalTimelineQuarter(
+    return GoalTimelinePeriod(
       goals: Array(goals.reversed()),
       period: period,
       teamAQuarterScore: goals.filter { $0.scoringTeamSide == .teamA }.count,

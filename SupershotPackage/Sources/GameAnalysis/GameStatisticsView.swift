@@ -21,58 +21,40 @@ package struct GameStatisticsView: View {
   }
 
   package var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Picker("Breakdown", selection: $breakdown) {
-        ForEach(breakdownOptions) { option in
-          Text(option.title).tag(option)
+    GlassEffectContainer {
+      VStack(alignment: .leading, spacing: 16) {
+        Picker("Breakdown", selection: $breakdown) {
+          ForEach(breakdownOptions) { option in
+            Text(option.title).tag(option)
+          }
         }
-      }
-      .pickerStyle(.segmented)
-      .accessibilityIdentifier("gameAnalysis.breakdown")
-
-      VStack(spacing: 16) {
-        HStack(alignment: .top, spacing: 16) {
-          TeamStatisticsHeader(
-            color: detail.teamABibColor,
-            name: detail.teamAName
-          )
-
-          TeamStatisticsHeader(
-            color: detail.teamBBibColor,
-            isTrailing: true,
-            name: detail.teamBName
-          )
-        }
-
-        Divider()
-
-        ForEach(GameStatistic.allCases) { metric in
-          StatisticComparisonRow(
-            teamAName: detail.teamAName,
-            teamAColor: detail.teamABibColor,
-            teamAStatistics: statistics.teamA,
-            teamBName: detail.teamBName,
-            teamBColor: detail.teamBBibColor,
-            teamBStatistics: statistics.teamB,
-            metric: metric
-          )
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("gameAnalysis.breakdown")
+        
+        VStack(spacing: 16) {
+          ForEach(GameStatistic.allCases) { metric in
+            StatisticComparisonRow(
+              teamAName: detail.teamAName,
+              teamAColor: detail.teamABibColor,
+              teamAStatistics: statistics.teamA,
+              teamBName: detail.teamBName,
+              teamBColor: detail.teamBBibColor,
+              teamBStatistics: statistics.teamB,
+              metric: metric
+            )
+            Divider()
+          }
+          
+          GoalProgressChartView(detail: detail, breakdown: breakdown)
+          
           Divider()
+          
+          ScoreDifferenceChartView(detail: detail, breakdown: breakdown)
         }
-
-        GoalProgressChartView(detail: detail, breakdown: breakdown)
-
-        Divider()
-
-        ScoreDifferenceChartView(detail: detail, breakdown: breakdown)
-
-        Text("Conversion and turnovers are inferred from which team scored after each centre pass. "
-          + "Goal time starts at the previous goal or quarter start.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
       }
-      .padding()
-      .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
+//      .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 16))
+//      .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
   }
 
@@ -92,23 +74,22 @@ private struct StatisticComparisonRow: View {
   var metric: GameStatistic
 
   var body: some View {
-    VStack(spacing: 8) {
-      Text(metric.rawValue)
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(.secondary)
-
-      HStack(spacing: 16) {
+    VStack(spacing: 4) {
+      HStack(alignment: .lastTextBaseline, spacing: 16) {
         Text(metric.text(teamAStatistics))
+          .font(.title2)
+          .fontWeight(.semibold)
+          .fontWidth(.compressed)
+        Text(metric.rawValue)
+          .font(.subheadline)
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
           .frame(maxWidth: .infinity)
-
-        Divider()
-          .frame(height: 24)
-
         Text(metric.text(teamBStatistics))
-          .frame(maxWidth: .infinity)
+          .font(.title2)
+          .fontWeight(.semibold)
+          .fontWidth(.compressed)
       }
-      .font(.system(.title3, design: .rounded, weight: .bold))
-      .monospacedDigit()
 
       StatisticComparisonBar(
         teamAFraction: metric.teamAFraction(teamA: teamAStatistics, teamB: teamBStatistics),
@@ -173,8 +154,10 @@ private struct TeamStatisticsHeader: View {
 }
 
 #Preview("Game statistics") {
-  GameStatisticsView(detail: CompletedGameDetail.previewCompleted.analysis)
-    .padding()
+  ScrollView {
+    GameStatisticsView(detail: CompletedGameDetail.previewCompleted.analysis)
+      .padding()
+  }
 }
 
 #Preview("Empty statistics") {

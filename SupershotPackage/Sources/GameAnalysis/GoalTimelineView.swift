@@ -16,17 +16,9 @@ package struct GoalTimelineView: View {
   package var timeline: GoalTimeline
   package var teamAOnLeft = true
   package var deleteGoal: ((Goal.ID) -> Void)?
-
+  
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      GoalTimelineLegend(
-        teamABibColor: teamABibColor,
-        teamAName: teamAName,
-        teamBBibColor: teamBBibColor,
-        teamBName: teamBName,
-        teamAOnLeft: teamAOnLeft
-      )
-
       LazyVStack(spacing: 20) {
         ForEach(timeline.quarters) { quarter in
           GoalTimelineQuarterView(
@@ -43,7 +35,7 @@ package struct GoalTimelineView: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
-
+  
   package init(
     teamABibColor: Color,
     teamAName: String,
@@ -69,7 +61,7 @@ private struct GoalTimelineLegend: View {
   var teamBBibColor: Color
   var teamBName: String
   var teamAOnLeft: Bool
-
+  
   var body: some View {
     HStack(alignment: .top, spacing: 16) {
       teamLabel(
@@ -86,9 +78,9 @@ private struct GoalTimelineLegend: View {
     .padding(.horizontal, 4)
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("\(teamAOnLeft ? teamAName : teamBName) is on the left. "
-      + "\(teamAOnLeft ? teamBName : teamAName) is on the right.")
+                        + "\(teamAOnLeft ? teamBName : teamAName) is on the right.")
   }
-
+  
   private func teamLabel(name: String, color: Color, isLeft: Bool) -> some View {
     HStack(alignment: .top, spacing: 8) {
       if isLeft {
@@ -109,7 +101,7 @@ private struct GoalTimelineLegend: View {
     }
     .frame(maxWidth: .infinity, alignment: isLeft ? .leading : .trailing)
   }
-
+  
   private func teamColor(_ color: Color) -> some View {
     Circle()
       .fill(color)
@@ -120,15 +112,15 @@ private struct GoalTimelineLegend: View {
 }
 
 private struct GoalTimelineQuarterView: View {
-  var quarter: GoalTimelineQuarter
+  var quarter: GoalTimelinePeriod
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
   var teamAOnLeft: Bool
-
+  
   var deleteGoal: ((Goal.ID) -> Void)?
-
+  
   var body: some View {
     VStack(spacing: 12) {
       GoalTimelineQuarterHeader(
@@ -139,7 +131,7 @@ private struct GoalTimelineQuarterView: View {
         teamBName: teamBName,
         teamAOnLeft: teamAOnLeft
       )
-
+      
       if quarter.goals.isEmpty {
         Text("No goals this quarter")
           .font(.subheadline)
@@ -172,32 +164,29 @@ private struct GoalTimelineQuarterView: View {
 }
 
 private struct GoalTimelineQuarterHeader: View {
-  var quarter: GoalTimelineQuarter
+  var quarter: GoalTimelinePeriod
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
   var teamAOnLeft: Bool
-
+  
   var body: some View {
     HStack(spacing: 12) {
       score(
         teamAOnLeft ? quarter.teamAQuarterScore : quarter.teamBQuarterScore,
         color: teamAOnLeft ? teamABibColor : teamBBibColor
       )
-
+      
       Spacer(minLength: 0)
-
+      
       VStack(spacing: 2) {
         Text("Quarter \(quarter.period)")
           .font(.headline)
-        Text("Quarter score")
-          .font(.caption)
-          .foregroundStyle(.secondary)
       }
-
+      
       Spacer(minLength: 0)
-
+      
       score(
         teamAOnLeft ? quarter.teamBQuarterScore : quarter.teamAQuarterScore,
         color: teamAOnLeft ? teamBBibColor : teamABibColor
@@ -207,9 +196,9 @@ private struct GoalTimelineQuarterHeader: View {
     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("Quarter \(quarter.period) score, \(teamAName) \(quarter.teamAQuarterScore), "
-      + "\(teamBName) \(quarter.teamBQuarterScore)")
+                        + "\(teamBName) \(quarter.teamBQuarterScore)")
   }
-
+  
   private func score(_ score: Int, color: Color) -> some View {
     Text("\(score)")
       .font(.title3.bold())
@@ -232,9 +221,9 @@ private struct GoalTimelineRow: View {
   var teamAName: String
   var teamBName: String
   var teamAOnLeft: Bool
-
+  
   var deleteGoal: ((Goal.ID) -> Void)?
-
+  
   var body: some View {
     HStack(alignment: .top, spacing: 8) {
       if isOnLeft {
@@ -257,11 +246,11 @@ private struct GoalTimelineRow: View {
     .accessibilityIdentifier("goalTimeline.\(goal.id)")
     .accessibilityElement(children: .ignore)
     .accessibilityLabel("\(goal.scoringTeamName), \(goal.points) "
-      + "\(goal.points == 1 ? "point" : "points"), "
-      + "\(formattedTime(goal.clockSecondsRemaining)) remaining, "
-      + "match score \(teamAName) \(goal.teamAScore), \(teamBName) \(goal.teamBScore)")
+                        + "\(goal.points == 1 ? "point" : "points"), "
+                        + "\(formattedTime(goal.clockSecondsRemaining)) remaining, "
+                        + "match score \(teamAName) \(goal.teamAScore), \(teamBName) \(goal.teamBScore)")
   }
-
+  
   private var isOnLeft: Bool {
     switch goal.scoringTeamSide {
     case .teamA: teamAOnLeft
@@ -269,7 +258,7 @@ private struct GoalTimelineRow: View {
     case .unknown: false
     }
   }
-
+  
   private var eventCard: some View {
     VStack(
       alignment: isOnLeft ? .trailing : .leading,
@@ -277,12 +266,12 @@ private struct GoalTimelineRow: View {
     ) {
       Text("+\(goal.points) \(goal.points == 1 ? "point" : "points")")
         .font(.headline)
-
+      
       Text("\(formattedTime(goal.clockSecondsRemaining)) remaining")
         .font(.caption)
         .foregroundStyle(.secondary)
         .monospacedDigit()
-
+      
       Text("\(teamAOnLeft ? goal.teamAScore : goal.teamBScore)–\(teamAOnLeft ? goal.teamBScore : goal.teamAScore)")
         .font(.caption.weight(.semibold))
         .monospacedDigit()
@@ -293,12 +282,12 @@ private struct GoalTimelineRow: View {
       maxWidth: .infinity,
       alignment: isOnLeft ? .trailing : .leading
     )
-    #if os(iOS)
+#if os(iOS)
     .contentShape(
       .contextMenuPreview,
       RoundedRectangle(cornerRadius: 10)
     )
-    #endif
+#endif
     .background(
       goal.scoringTeamBibColor.opacity(0.12),
       in: RoundedRectangle(cornerRadius: 12)
@@ -308,7 +297,7 @@ private struct GoalTimelineRow: View {
         .stroke(goal.scoringTeamBibColor.opacity(0.5))
     }
   }
-
+  
   private var marker: some View {
     Image(systemName: "volleyball.fill")
       .font(.caption.weight(.semibold))
@@ -321,7 +310,7 @@ private struct GoalTimelineRow: View {
       }
       .accessibilityHidden(true)
   }
-
+  
   private func formattedTime(_ seconds: Int) -> String {
     let minutes = seconds / 60
     let seconds = seconds % 60
@@ -331,14 +320,16 @@ private struct GoalTimelineRow: View {
 
 #Preview("Goal timeline") {
   let detail = CompletedGameDetail.previewCompleted
-  GoalTimelineView(
-    teamABibColor: detail.teamABibColor,
-    teamAName: detail.teamAName,
-    teamBBibColor: detail.teamBBibColor,
-    teamBName: detail.teamBName,
-    timeline: detail.goalTimeline
-  )
-  .padding()
+  ScrollView {
+    GoalTimelineView(
+      teamABibColor: detail.teamABibColor,
+      teamAName: detail.teamAName,
+      teamBBibColor: detail.teamBBibColor,
+      teamBName: detail.teamBName,
+      timeline: detail.goalTimeline
+    )
+    .padding()
+  }
 }
 
 #Preview("Empty goal timeline") {

@@ -98,19 +98,19 @@ extension SupershotTestSuite {
         CompletedGameDetail(
           endedAt: endedAt,
           goalTimeline: GoalTimeline(quarters: [
-            GoalTimelineQuarter(
+            GoalTimelinePeriod(
               goals: [],
               period: 4,
               teamAQuarterScore: 0,
               teamBQuarterScore: 0
             ),
-            GoalTimelineQuarter(
+            GoalTimelinePeriod(
               goals: [],
               period: 3,
               teamAQuarterScore: 0,
               teamBQuarterScore: 0
             ),
-            GoalTimelineQuarter(
+            GoalTimelinePeriod(
               goals: [
                 GoalTimelineItem(
                   clockSecondsRemaining: 870,
@@ -128,7 +128,7 @@ extension SupershotTestSuite {
               teamAQuarterScore: 0,
               teamBQuarterScore: 1
             ),
-            GoalTimelineQuarter(
+            GoalTimelinePeriod(
               goals: [
                 GoalTimelineItem(
                   clockSecondsRemaining: 700,

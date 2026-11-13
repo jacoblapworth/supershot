@@ -126,12 +126,12 @@ package nonisolated struct TeamListItem: Equatable, Identifiable, Sendable {
 }
 
 package nonisolated struct GoalTimeline: Equatable, Sendable {
-  package var quarters: [GoalTimelineQuarter] = []
+  package var quarters: [GoalTimelinePeriod] = []
 
   package static func empty(through period: Int) -> Self {
     let finalPeriod = max(period, 1)
     return Self(quarters: (1 ... finalPeriod).reversed().map {
-      GoalTimelineQuarter(
+      GoalTimelinePeriod(
         goals: [],
         period: $0,
         teamAQuarterScore: 0,
@@ -140,12 +140,12 @@ package nonisolated struct GoalTimeline: Equatable, Sendable {
     })
   }
 
-  package init(quarters: [GoalTimelineQuarter] = []) {
+  package init(quarters: [GoalTimelinePeriod] = []) {
     self.quarters = quarters
   }
 }
 
-package nonisolated struct GoalTimelineQuarter: Equatable, Identifiable, Sendable {
+package nonisolated struct GoalTimelinePeriod: Equatable, Identifiable, Sendable {
   package var id: Int {
     period
   }
@@ -871,7 +871,7 @@ private nonisolated func goalTimeline(snapshot: GameSnapshot) -> GoalTimeline {
 
   return GoalTimeline(quarters: (1 ... max(playedPeriod, 1)).reversed().map { period in
     let quarterScore = quarterScoresByPeriod[period, default: (0, 0)]
-    return GoalTimelineQuarter(
+    return GoalTimelinePeriod(
       goals: Array(goalsByPeriod[period, default: []].reversed()),
       period: period,
       teamAQuarterScore: quarterScore.teamA,
