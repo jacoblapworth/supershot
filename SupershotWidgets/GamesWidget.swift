@@ -64,37 +64,20 @@ struct GamesWidget: Widget {
 
 struct GamesWidgetView: View {
   @Environment(\.widgetFamily) private var family
-  @ScaledMetric(relativeTo: .caption) private var minimumRowHeight: CGFloat = 72
+  @ScaledMetric(relativeTo: .caption) private var minimumRowHeight: CGFloat = 64
   var entry: GamesEntry
 
   var body: some View {
     if let game = entry.games.first {
       if family == .systemSmall {
-        GameCardView(game: game, compact: true, featured: true)
+        GameRow(widgetGame: game, layout: .stacked)
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .padding(8)
           .dynamicTypeSize(...DynamicTypeSize.large)
           .widgetURL(GamesWidgetStore.gameURL(game.id))
       } else {
-        GeometryReader { geometry in
-          let columns = family == .systemExtraLarge ? 2 : 1
-          let minimumHeight = minimumRowHeight
-          let rows = min(
-            family == .systemMedium ? 2 : 4,
-            max(1, Int((geometry.size.height - 16 + 6) / (minimumHeight + 6)))
-          )
-          let capacity = min(rows * columns, family == .systemMedium ? 2 : columns * 4)
-          LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: columns), spacing: 6) {
-            ForEach(entry.games.prefix(capacity)) { game in
-              Link(destination: GamesWidgetStore.gameURL(game.id)) {
-                GameCardView(game: game, compact: true)
-                  .frame(height: max(minimumHeight, (geometry.size.height - 16 - CGFloat(rows - 1) * 6) / CGFloat(rows)))
-                  .background(Color.clear)
-                  .clipShape(.rect(cornerRadius: 14))
-              }
-              .buttonStyle(.plain)
-            }
-          }
-          .padding(8)
-        }
+        gameGrid
+          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
       }
     } else {
       Link(destination: GamesWidgetStore.newGameURL) {
@@ -110,6 +93,47 @@ struct GamesWidgetView: View {
       }
       .buttonStyle(.plain)
       .widgetURL(GamesWidgetStore.newGameURL)
+    }
+  }
+
+  private var gameGrid: some View {
+    GeometryReader { geometry in
+      let columns = family == .systemExtraLarge ? 2 : 1
+      let maximumRows = family == .systemMedium ? 2 : 4
+      let availableHeight = max(0, geometry.size.height - 16)
+      let dividerHeight: CGFloat = 6
+      let fittingRows = min(maximumRows, max(1, Int((availableHeight + dividerHeight) / (minimumRowHeight + dividerHeight))))
+      let games = Array(entry.games.prefix(fittingRows * columns))
+      let rowCount = (games.count + columns - 1) / columns
+      let rowHeight = (availableHeight - CGFloat(fittingRows - 1) * dividerHeight) / CGFloat(fittingRows)
+
+      VStack(spacing: 0) {
+        ForEach(0 ..< rowCount, id: \.self) { row in
+          if row > 0 {
+            Divider()
+              .frame(height: dividerHeight)
+              .accessibilityHidden(true)
+          }
+          HStack(spacing: 6) {
+            ForEach(0 ..< columns, id: \.self) { column in
+              let index = row * columns + column
+              if index < games.count {
+                let game = games[index]
+                Link(destination: GamesWidgetStore.gameURL(game.id)) {
+                  GameRow(widgetGame: game, layout: .compact)
+                    .frame(maxWidth: .infinity, minHeight: rowHeight, maxHeight: rowHeight)
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.plain)
+              } else {
+                Color.clear.frame(maxWidth: .infinity)
+              }
+            }
+          }
+          .frame(height: rowHeight)
+        }
+      }
+      .padding(8)
     }
   }
 }
