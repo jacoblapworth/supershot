@@ -313,3 +313,87 @@ public struct GameRow: View {
     return date.formatted(date: .abbreviated, time: .omitted)
   }
 }
+
+#if DEBUG
+  private enum GameRowPreviewData {
+    static let kickoff = Date(timeIntervalSinceReferenceDate: 816_105_600)
+
+    static let scheduled = WidgetGame(
+      id: UUID(),
+      createdAt: kickoff,
+      scheduledAt: kickoff,
+      teamAName: "North London Ravens",
+      teamAColorHex: "#007AFF",
+      teamBName: "Westminster Swifts",
+      teamBColorHex: "#FF3B30"
+    )
+
+    static var live: WidgetGame {
+      var game = scheduled
+      game.startedAt = kickoff
+      game.period = 3
+      game.teamAScore = 103
+      game.teamBScore = 98
+      return game
+    }
+
+    static var final: WidgetGame {
+      var game = live
+      game.endedAt = kickoff.addingTimeInterval(3600)
+      game.teamAScore = 118
+      game.teamBScore = 105
+      return game
+    }
+
+    static var draft: WidgetGame {
+      var game = scheduled
+      game.scheduledAt = nil
+      return game
+    }
+  }
+
+  #Preview("GameRow · App gradient", traits: .sizeThatFitsLayout) {
+    GameRow(
+      teamA: .init(name: "Hackney Foxes", colorHex: "#34C759", logoData: nil, score: 16),
+      teamB: .init(name: "Camden Owls", colorHex: "#FF9500", logoData: nil, score: 14),
+      status: .inProgress(quarter: 2),
+      background: .gradient,
+      layout: .standard,
+      clock: { _ in .init(quarter: 2, isBreak: false, remainingSeconds: 156) }
+    )
+    .frame(width: 370)
+    .padding()
+    .background(.background)
+  }
+
+  #Preview("GameRow · Compact widget", traits: .sizeThatFitsLayout) {
+    VStack(spacing: 0) {
+      GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.live, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.final, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.draft, layout: .compact)
+    }
+    .padding(8)
+    .frame(width: 320)
+    .background(.background, in: .rect(cornerRadius: 24))
+  }
+
+  #Preview("GameRow · Small widget", traits: .sizeThatFitsLayout) {
+    HStack {
+      GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .stacked)
+        .padding(8)
+        .frame(width: 158, height: 158)
+        .background(.background, in: .rect(cornerRadius: 24))
+        .environment(\.colorScheme, .light)
+
+      GameRow(widgetGame: GameRowPreviewData.final, layout: .stacked)
+        .padding(8)
+        .frame(width: 158, height: 158)
+        .background(.background, in: .rect(cornerRadius: 24))
+        .environment(\.colorScheme, .dark)
+    }
+  }
+#endif
