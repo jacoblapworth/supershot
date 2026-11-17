@@ -12,7 +12,14 @@ public struct AvatarView: View {
   public var borderOpacity: Double
   public var logoData: Data?
 
-  @State private var logo: CGImage?
+  @State private var decodedLogo: CGImage?
+  private var decodeSynchronously = false
+
+  func synchronousLogoDecoding(_ enabled: Bool) -> Self {
+    var view = self
+    view.decodeSynchronously = enabled
+    return view
+  }
 
   @Environment(\.backgroundStyle) private var backgroundStyle
   @Environment(\.controlSize) private var controlSize
@@ -43,6 +50,8 @@ public struct AvatarView: View {
     let initials = AvatarView.makeInitials(from: label)
     let bg = backgroundStyle ?? AnyShapeStyle(AvatarView.color(for: label))
 
+    let logo = decodeSynchronously ? Self.decodeLogo(logoData, maximumSize: 128) : decodedLogo
+
     Group {
       if let logo {
         Image(decorative: logo, scale: 1)
@@ -67,22 +76,27 @@ public struct AvatarView: View {
       }
     }
     .task(id: logoData) {
+      guard !decodeSynchronously else { return }
       guard logoData != nil else {
-        logo = nil
+        decodedLogo = nil
         return
       }
       let decoded = await Self.decodeLogo(logoData)
       guard !Task.isCancelled else { return }
-      logo = decoded
+      decodedLogo = decoded
     }
   }
 
   @concurrent private static func decodeLogo(_ data: Data?) async -> CGImage? {
+    decodeLogo(data, maximumSize: 512)
+  }
+
+  private nonisolated static func decodeLogo(_ data: Data?, maximumSize: Int) -> CGImage? {
     guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
     return CGImageSourceCreateThumbnailAtIndex(source, 0, [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceCreateThumbnailWithTransform: true,
-      kCGImageSourceThumbnailMaxPixelSize: 512,
+      kCGImageSourceThumbnailMaxPixelSize: maximumSize,
     ] as CFDictionary)
   }
 }

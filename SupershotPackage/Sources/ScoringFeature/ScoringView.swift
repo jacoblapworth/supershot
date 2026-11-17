@@ -112,6 +112,7 @@ package struct ScoringView: View {
       .padding(.horizontal)
       .padding(.bottom)
     }
+    .scrollEdgeEffectStyle(.soft, for: .all)
     .coordinateSpace(name: "gameAnalysisViewport")
     .onGeometryChange(for: CGFloat.self) {
       $0.size.height
@@ -144,11 +145,6 @@ package struct ScoringView: View {
     }
     .preferredColorScheme(.dark)
     .toolbar {
-      ToolbarItem(placement: .keyboard) {
-        GlassEffectContainer {
-          Text("test")
-        }
-      }
       ToolbarItem(placement: .principal) {
         if isScoreboardAboveViewport {
           ScoreboardHeaderView(left: scoreboard.left, right: scoreboard.right)

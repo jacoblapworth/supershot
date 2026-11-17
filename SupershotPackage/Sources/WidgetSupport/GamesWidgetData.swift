@@ -15,6 +15,8 @@ public nonisolated struct WidgetGame: Codable, Equatable, Identifiable, Sendable
   public var teamBName: String
   public var teamBColorHex: String
   public var teamBScore: Int
+  public var teamALogoData: Data?
+  public var teamBLogoData: Data?
 
   public var isPlanned: Bool {
     startedAt == nil && endedAt == nil
@@ -37,7 +39,9 @@ public nonisolated struct WidgetGame: Codable, Equatable, Identifiable, Sendable
     teamAScore: Int = 0,
     teamBName: String,
     teamBColorHex: String,
-    teamBScore: Int = 0
+    teamBScore: Int = 0,
+    teamALogoData: Data? = nil,
+    teamBLogoData: Data? = nil
   ) {
     self.id = id
     self.createdAt = createdAt
@@ -52,6 +56,8 @@ public nonisolated struct WidgetGame: Codable, Equatable, Identifiable, Sendable
     self.teamBName = teamBName
     self.teamBColorHex = teamBColorHex
     self.teamBScore = teamBScore
+    self.teamALogoData = teamALogoData
+    self.teamBLogoData = teamBLogoData
   }
 }
 

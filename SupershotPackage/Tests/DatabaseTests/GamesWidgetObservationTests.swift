@@ -1,11 +1,14 @@
+import CoreGraphics
 @testable import Database
 import Dependencies
 import Foundation
 import GameCore
 import GRDB
+import ImageIO
 import SQLiteData
 import Testing
 import TestSupport
+import UniformTypeIdentifiers
 import WidgetSupport
 
 extension SupershotTestSuite {
@@ -55,6 +58,21 @@ extension SupershotTestSuite {
       #expect(updated.teamAName == "Updated")
       #expect(updated.teamAScore == 2)
       #expect(!updated.isPlanned)
+      let logo = try transparentLogo()
+      try await database.write { db in
+        try Team.find(UUID(1)).update { $0.logoData = #bind(logo) }.execute(db)
+      }
+      _ = await iterator.next()
+      let gameWithLogo = try #require(GamesWidgetStore.read(from: url).first)
+      let thumbnailData = try #require(gameWithLogo.teamALogoData)
+      let source = try #require(CGImageSourceCreateWithData(thumbnailData as CFData, nil))
+      let thumbnail = try #require(CGImageSourceCreateImageAtIndex(source, 0, nil))
+      #expect(thumbnail.width == 128)
+      #expect(thumbnail.height == 64)
+      #expect(thumbnail.alphaInfo == .first || thumbnail.alphaInfo == .last
+        || thumbnail.alphaInfo == .premultipliedFirst || thumbnail.alphaInfo == .premultipliedLast)
+      #expect(gameWithLogo.teamBLogoData == nil)
+
       try await database.write { db in
         try Game.find(gameID).update { $0.endedAt = #bind(Date()) }.execute(db)
       }
@@ -63,6 +81,26 @@ extension SupershotTestSuite {
       try await database.write { db in try Game.find(gameID).delete().execute(db) }
       _ = await iterator.next()
       #expect(try GamesWidgetStore.read(from: url).isEmpty)
+    }
+
+    private func transparentLogo() throws -> Data {
+      let rgba = CGColorSpaceCreateDeviceRGB()
+      let context = try #require(CGContext(
+        data: nil,
+        width: 256,
+        height: 128,
+        bitsPerComponent: 8,
+        bytesPerRow: 0,
+        space: rgba,
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+      ))
+      context.clear(CGRect(x: 0, y: 0, width: 256, height: 128))
+      let image = try #require(context.makeImage())
+      let data = NSMutableData()
+      let destination = try #require(CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil))
+      CGImageDestinationAddImage(destination, image, nil)
+      try #require(CGImageDestinationFinalize(destination))
+      return data as Data
     }
   }
 }

@@ -49,7 +49,6 @@ package struct GameDetailView: View {
         )
       }
     }
-    .navigationTitle("Game")
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         Menu {

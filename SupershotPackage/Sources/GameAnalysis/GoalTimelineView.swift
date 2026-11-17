@@ -19,14 +19,6 @@ package struct GoalTimelineView: View {
 
   package var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      GoalTimelineLegend(
-        teamABibColor: teamABibColor,
-        teamAName: teamAName,
-        teamBBibColor: teamBBibColor,
-        teamBName: teamBName,
-        teamAOnLeft: teamAOnLeft
-      )
-
       LazyVStack(spacing: 20) {
         ForEach(timeline.quarters) { quarter in
           GoalTimelineQuarterView(
@@ -120,7 +112,7 @@ private struct GoalTimelineLegend: View {
 }
 
 private struct GoalTimelineQuarterView: View {
-  var quarter: GoalTimelineQuarter
+  var quarter: GoalTimelinePeriod
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
@@ -172,7 +164,7 @@ private struct GoalTimelineQuarterView: View {
 }
 
 private struct GoalTimelineQuarterHeader: View {
-  var quarter: GoalTimelineQuarter
+  var quarter: GoalTimelinePeriod
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
@@ -191,9 +183,6 @@ private struct GoalTimelineQuarterHeader: View {
       VStack(spacing: 2) {
         Text("Quarter \(quarter.period)")
           .font(.headline)
-        Text("Quarter score")
-          .font(.caption)
-          .foregroundStyle(.secondary)
       }
 
       Spacer(minLength: 0)
@@ -331,14 +320,16 @@ private struct GoalTimelineRow: View {
 
 #Preview("Goal timeline") {
   let detail = CompletedGameDetail.previewCompleted
-  GoalTimelineView(
-    teamABibColor: detail.teamABibColor,
-    teamAName: detail.teamAName,
-    teamBBibColor: detail.teamBBibColor,
-    teamBName: detail.teamBName,
-    timeline: detail.goalTimeline
-  )
-  .padding()
+  ScrollView {
+    GoalTimelineView(
+      teamABibColor: detail.teamABibColor,
+      teamAName: detail.teamAName,
+      teamBBibColor: detail.teamBBibColor,
+      teamBName: detail.teamBName,
+      timeline: detail.goalTimeline
+    )
+    .padding()
+  }
 }
 
 #Preview("Empty goal timeline") {

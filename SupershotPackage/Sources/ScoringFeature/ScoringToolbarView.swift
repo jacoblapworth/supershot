@@ -137,7 +137,11 @@ package struct ScoringToolbarActions {
   @ViewBuilder
   package func button(_ action: ScoringControlAction) -> some View {
     if let control = control(for: action) {
-      ScoringToolbarButton(control: control, isPrimary: primaryControl?.action == action, onAction: onAction)
+      ScoringToolbarButton(
+        control: control,
+        isPrimary: primaryControl?.action == action,
+        onAction: onAction
+      )
     }
   }
 
@@ -244,7 +248,8 @@ private struct ScoringActionButton<Label: View>: View {
   var label: Label
 
   var body: some View {
-    Button { onAction(control.action) } label: {
+    Button { withAnimation { onAction(control.action) }
+    } label: {
       ZStack {
         label.opacity(control.availability == .pending ? 0 : 1)
         if control.availability == .pending {

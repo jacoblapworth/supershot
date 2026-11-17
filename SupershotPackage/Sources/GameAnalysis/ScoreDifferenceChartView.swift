@@ -49,14 +49,10 @@ private struct ScoreDifferenceChart: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      VStack(spacing: 4) {
-        Text("Score difference")
-          .font(.subheadline.weight(.semibold))
-        Text(breakdown.title)
-          .font(.caption)
-      }
-      .foregroundStyle(.secondary)
-      .frame(maxWidth: .infinity)
+      Text("Score difference")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
 
       if series.moments.isEmpty {
         ContentUnavailableView(
@@ -121,8 +117,6 @@ private struct ScoreDifferenceChart: View {
         }
         .chartXScale(domain: 0 ... series.duration)
         .chartYScale(domain: -series.extent ... series.extent)
-        .chartXAxisLabel("Playing time")
-        .chartYAxisLabel("Points")
         .chartXAxis {
           AxisMarks(values: .automatic(desiredCount: 5)) { value in
             AxisGridLine()
@@ -146,7 +140,6 @@ private struct ScoreDifferenceChart: View {
           }
         }
         .frame(height: 220)
-//        .chartXSelection(value: <#T##Binding<P?>#>)
         .chartOverlay { proxy in
           GeometryReader { geometry in
             ChartSelectionOverlay { location in
@@ -161,30 +154,19 @@ private struct ScoreDifferenceChart: View {
 
         if let selectedMoment {
           ScoreDifferenceInspection(moment: selectedMoment, teamAName: teamAName, teamBName: teamBName)
-        } else {
-          Text("Drag horizontally across the chart to inspect the score.")
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
       }
 
       VStack(alignment: .leading, spacing: 6) {
         Label {
-          Text("Positive: \(positiveTeamName) leads")
+          Text("\(positiveTeamName) leads")
         } icon: {
           Image(systemName: "plus.circle.fill").foregroundStyle(positiveTeamColor)
         }
         Label {
-          Text("Negative: \(negativeTeamName) leads")
+          Text("\(negativeTeamName) leads")
         } icon: {
           Image(systemName: "minus.circle.fill").foregroundStyle(negativeTeamColor)
-        }
-        if breakdown == .wholeGame {
-          Text("0 means scores level. Dashed lines mark quarter boundaries.")
-            .foregroundStyle(.secondary)
-        } else {
-          Text("0 means scores level in this quarter.")
-            .foregroundStyle(.secondary)
         }
       }
       .font(.caption)
@@ -291,7 +273,7 @@ private func scoreDifferencePreview(scores: [(Int, Int)]) -> GameAnalysis {
     )
   }
   analysis.goalTimeline = GoalTimeline(quarters: [
-    GoalTimelineQuarter(
+    GoalTimelinePeriod(
       goals: moments.reversed(),
       period: period.number,
       teamAQuarterScore: scores.last?.0 ?? 0,

@@ -1,8 +1,10 @@
 import Dependencies
 import Foundation
 import GRDB
+import ImageIO
 import OSLog
 import SQLiteData
+import UniformTypeIdentifiers
 import WidgetKit
 import WidgetSupport
 
@@ -21,8 +23,27 @@ package extension GameListItem {
       teamAScore: teamAScore,
       teamBName: teamBName,
       teamBColorHex: teamBBibColorHex,
-      teamBScore: teamBScore
+      teamBScore: teamBScore,
+      teamALogoData: Self.widgetLogoThumbnail(teamALogoData),
+      teamBLogoData: Self.widgetLogoThumbnail(teamBLogoData)
     )
+  }
+
+  private nonisolated static func widgetLogoThumbnail(_ data: Data?) -> Data? {
+    guard let data,
+          let source = CGImageSourceCreateWithData(data as CFData, nil),
+          let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 128,
+          ] as CFDictionary)
+    else { return nil }
+
+    let output = NSMutableData()
+    guard let destination = CGImageDestinationCreateWithData(output, UTType.png.identifier as CFString, 1, nil)
+    else { return nil }
+    CGImageDestinationAddImage(destination, thumbnail, nil)
+    return CGImageDestinationFinalize(destination) ? output as Data : nil
   }
 }
 

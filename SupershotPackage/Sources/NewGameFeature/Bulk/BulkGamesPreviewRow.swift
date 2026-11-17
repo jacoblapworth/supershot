@@ -6,6 +6,7 @@ import Foundation
 import GameAnalysis
 import GameCore
 import SwiftUI
+import UI
 
 package struct BulkGamesPreviewRow: View {
   let store: StoreOf<BulkGamesFeature>

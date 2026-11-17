@@ -41,9 +41,9 @@ package enum GameStatistic: String, CaseIterable, Identifiable {
     case .turnovers:
       return "\(Int(value))"
     case .biggestLead:
-      return "\(Int(value)) \(value == 1 ? "point" : "points")"
+      return "\(Int(value))"
     case .longestScoringRun:
-      return "\(Int(value)) \(value == 1 ? "goal" : "goals")"
+      return "\(Int(value))"
     }
   }
 

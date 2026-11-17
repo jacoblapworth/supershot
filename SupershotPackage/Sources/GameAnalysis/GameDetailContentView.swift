@@ -17,26 +17,28 @@ package struct GameDetailContentView: View {
   package var proPromotionTapped: () -> Void
 
   package var body: some View {
-    let overview = GameOverviewView(detail: detail) { isAboveViewport in
-      isScoreboardAboveViewport = isAboveViewport
-    }
-
     ScrollView {
-      LazyVStack(alignment: .leading, spacing: 20, pinnedViews: [.sectionHeaders]) {
-        overview
-          .padding(.top)
+      LazyVStack(alignment: .leading, spacing: 20) {
+        GameOverviewView(detail: detail) { isAboveViewport in
+          isScoreboardAboveViewport = isAboveViewport
+        }
         if let location = detail.location {
           GameLocationSection(location: location)
         }
         Section {
-          GameAnalysisContentView(analysis: detail.analysis, selection: selectedAnalysis)
-            .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+          GameAnalysisContentView(
+            analysis: detail.analysis,
+            selection: selectedAnalysis
+          )
+          .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
           if showsProPromotion {
             ProPromotionCard(exploreProTapped: proPromotionTapped)
           }
         } header: {
           GameAnalysisControl(selection: $selectedAnalysis)
         }
+
+        GameMetadataView(detail: detail)
       }
       #if os(macOS)
       .frame(maxWidth: 960)
@@ -58,12 +60,23 @@ package struct GameDetailContentView: View {
       )
       .ignoresSafeArea()
     }
+    .scrollEdgeEffectStyle(.soft, for: .all)
     .preferredColorScheme(.dark)
     .toolbar {
       ToolbarItem(placement: .principal) {
         if isScoreboardAboveViewport {
-          let scoreboard = overview.scoreboard
-          ScoreboardHeaderView(left: scoreboard.left, right: scoreboard.right)
+          ScoreboardHeaderView(
+            left: .init(
+              name: detail.teamAName,
+              color: detail.teamABibColor,
+              score: detail.teamAScore
+            ),
+            right: .init(
+              name: detail.teamBName,
+              color: detail.teamBBibColor,
+              score: detail.teamBScore
+            )
+          )
         }
       }
     }
@@ -76,39 +89,14 @@ package struct GameDetailContentView: View {
   }
 }
 
-private struct GameLocationSection: View {
-  var location: GameLocation
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      Label("Location", systemImage: "location.fill")
-        .font(.headline)
-
-      GameLocationMap(location: location)
-
-      Label {
-        if let pointOfInterestName = location.pointOfInterestName {
-          Text(pointOfInterestName)
-        } else {
-          Text("Game location")
-        }
-      } icon: {
-        Image(systemName: "mappin.and.ellipse")
-      }
-      .font(.subheadline.weight(.semibold))
-    }
-    .padding()
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-  }
-}
-
 #Preview("Game detail content") {
-  GameDetailContentView(
-    detail: .previewCompleted,
-    showsProPromotion: true,
-    proPromotionTapped: {}
-  )
+  NavigationView {
+    GameDetailContentView(
+      detail: .previewCompleted,
+      showsProPromotion: true,
+      proPromotionTapped: {}
+    )
+  }
 }
 
 #Preview("Game without goals") {

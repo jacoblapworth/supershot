@@ -118,7 +118,7 @@ package struct GoalProgressChartView: View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Goal progression")
         .frame(maxWidth: .infinity, alignment: .center)
-        .font(.subheadline.weight(.semibold))
+        .font(.subheadline)
         .foregroundStyle(.secondary)
 
       if progress.moments.isEmpty {

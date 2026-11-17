@@ -65,6 +65,26 @@ struct GamesWidgetTests {
     #expect(GamesWidgetSelection.games([completed], at: transition).isEmpty)
   }
 
+  @Test func loadsLegacySnapshotWithoutTeamLogos() throws {
+    let json = """
+    [{
+      "id": "00000000-0000-0000-0000-000000000001",
+      "createdAt": -977307200,
+      "period": 1,
+      "teamAName": "Thunder",
+      "teamAColorHex": "#007AFF",
+      "teamAScore": 123,
+      "teamBName": "Lightning",
+      "teamBColorHex": "#FF3B30",
+      "teamBScore": 98
+    }]
+    """
+    let games = try JSONDecoder().decode([WidgetGame].self, from: Data(json.utf8))
+    #expect(games == [game(1)])
+    #expect(games.first?.teamALogoData == nil)
+    #expect(games.first?.teamBLogoData == nil)
+  }
+
   @Test func snapshotRoundTripAndDeletion() throws {
     let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     defer { try? FileManager.default.removeItem(at: url) }

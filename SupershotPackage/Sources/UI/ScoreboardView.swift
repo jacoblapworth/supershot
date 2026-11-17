@@ -49,8 +49,9 @@ private struct TeamScore: View {
   var score: Int
   var alignment: HorizontalAlignment = .leading
   var hasCentrePass: Bool = false
-
+  @Namespace private var scoreboard
   @Environment(\.isEnabled) var isEnabled
+
   private var frameAlignment: Alignment {
     switch alignment {
     case .trailing: .trailing
@@ -63,6 +64,7 @@ private struct TeamScore: View {
       HStack {
         if hasCentrePass, alignment == .leading {
           CentrePassIndicator(direction: .leading)
+            .matchedGeometryEffect(id: "centrePass", in: scoreboard)
         }
         Text(name)
           .font(.title3)
@@ -70,6 +72,7 @@ private struct TeamScore: View {
           .truncationMode(.middle)
         if hasCentrePass, alignment == .trailing {
           CentrePassIndicator(direction: .trailing)
+            .matchedGeometryEffect(id: "centrePass", in: scoreboard)
         }
       }
       Text("\(score)")
@@ -91,6 +94,8 @@ private struct CentrePassIndicator: View {
     Image(systemName: direction == .trailing
       ? "arrow.left.circle.fill"
       : "arrow.right.circle.fill")
+      .transition(.symbolEffect)
+      .contentTransition(.symbolEffect)
       .accessibilityLabel("Current centre pass")
   }
 }

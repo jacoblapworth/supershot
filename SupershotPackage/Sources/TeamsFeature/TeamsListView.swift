@@ -157,7 +157,7 @@ private struct TeamRow: View {
     HStack(spacing: 14) {
       AvatarView(team.name, logoData: team.logoData)
         .backgroundStyle(team.color)
-        .controlSize(.mini)
+        .controlSize(.small)
         .accessibilityHidden(true)
 
       Text(team.name)
@@ -172,7 +172,7 @@ private struct TeamRow: View {
 
       Spacer(minLength: 12)
 
-      Text(team.gameCount == 1 ? "1 game" : "\(team.gameCount) games")
+      Text("\(team.gameCount)")
         .font(.subheadline)
         .foregroundStyle(.secondary)
 

@@ -33,13 +33,13 @@ package struct GameAnalysisControl: View {
         } label: {
           Text(tab.rawValue)
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(selection == tab ? .primary : .secondary)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .foregroundStyle(selection == tab ? Color(uiColor: .black) : .primary)
+            .frame(maxWidth: .infinity, minHeight: 32)
             .padding(.horizontal, 8)
             .background {
               if selection == tab {
-                RoundedRectangle(cornerRadius: 12)
-                  .fill(.quaternary)
+                Capsule()
+                  .fill(.white)
                   .matchedGeometryEffect(id: "selection", in: selectionAnimation)
               }
             }
@@ -50,18 +50,11 @@ package struct GameAnalysisControl: View {
         .accessibilityIdentifier("gameAnalysis.\(tab == .playByPlay ? "playByPlay" : "stats")")
       }
     }
-    .padding(4)
-    .background {
-      if !isPinned {
-        RoundedRectangle(cornerRadius: 16)
-          .fill(.regularMaterial)
-      }
-    }
     .padding(.vertical, 8)
     .background {
       if isPinned {
         Rectangle()
-          .fill(.bar)
+          .fill(.clear)
           .padding(.horizontal, -16)
       }
     }
@@ -71,7 +64,7 @@ package struct GameAnalysisControl: View {
       isPinned = $0
     }
     #if os(iOS)
-    .toolbarBackground(.bar, for: .navigationBar)
+//    .toolbarBackground(.bar, for: .navigationBar)
     .toolbarBackground(isPinned ? .visible : .automatic, for: .navigationBar)
     #endif
   }
