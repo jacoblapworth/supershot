@@ -138,7 +138,7 @@ package struct BulkGameEditor: View {
           TextField("Court", text: textBinding(row, \.court))
         }
         Section("Timing") {
-          Stepper("Quarter: \(row.setup.periodDuration.minutesText) minutes", value: Binding(
+          Stepper("\(row.setup.timing.periodTitle): \(row.setup.periodDuration.minutesText) minutes", value: Binding(
             get: { Int(row.setup.periodDuration.minutesText) ?? 10 },
             set: {
               var updated = row

@@ -108,6 +108,10 @@ package struct ScoringFeature {
     package var waitingSince: Date?
     private var validatedTimeline: GameTimeline
 
+    package var periodTitle: String {
+      GamePeriodFormat.title(for: periods.count)
+    }
+
     package var periods: [GamePeriod] {
       get { validatedTimeline.periods }
       set {
@@ -489,7 +493,7 @@ package struct ScoringFeature {
 
       case let .alarmScheduleResponse(failed):
         if failed, !state.hasShownAlarmSchedulingFailureAlert {
-          state.alert = .alarmSchedulingFailed
+          state.alert = .alarmSchedulingFailed(periodTitle: state.periodTitle)
           state.hasShownAlarmSchedulingFailureAlert = true
         }
         return .none
@@ -735,7 +739,7 @@ package struct ScoringFeature {
         state.operation = nil
         applyTimer(update.snapshot.game, to: &state)
         if update.alarmSchedulingFailed, !state.hasShownAlarmSchedulingFailureAlert {
-          state.alert = .alarmSchedulingFailed
+          state.alert = .alarmSchedulingFailed(periodTitle: state.periodTitle)
           state.hasShownAlarmSchedulingFailureAlert = true
         }
         return state.isTimerRunning ? timerEffect() : .cancel(id: CancelID.timer)
@@ -947,9 +951,9 @@ package extension AlertState where Action == ScoringFeature.Alert {
     } message: { TextState("Please try again.") }
   }
 
-  static var alarmSchedulingFailed: Self {
+  static func alarmSchedulingFailed(periodTitle: String) -> Self {
     Self {
-      TextState("Quarter alerts unavailable")
+      TextState("\(periodTitle) alerts unavailable")
     } actions: {
       ButtonState(role: .cancel, action: .dismissButtonTapped) {
         TextState("OK")

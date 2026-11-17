@@ -17,6 +17,7 @@ package struct AlarmPermissionCard: View {
   package let proAccess: SubscriptionEntitlement
   package var hidesWhenAuthorized = false
   package var showsHeading = true
+  private let periodName: String
 
   package var body: some View {
     Group {
@@ -35,7 +36,7 @@ package struct AlarmPermissionCard: View {
           } else {
             HStack {
               if showsHeading {
-                Label("Never miss the quarter", systemImage: "alarm.fill")
+                Label("Never miss the \(periodName)", systemImage: "alarm.fill")
                   .font(.headline)
               }
               if !timerAlertsEnabled {
@@ -45,11 +46,11 @@ package struct AlarmPermissionCard: View {
               }
             }
             #if os(macOS)
-              Text("Get a notification when each quarter or break ends. Delivery follows your Mac’s notification and Focus settings.")
+              Text("Get a notification when each \(periodName) or break ends. Delivery follows your Mac’s notification and Focus settings.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             #else
-              Text("Get an alarm when each quarter or break ends, even when your iPhone is locked.")
+              Text("Get an alarm when each \(periodName) or break ends, even when your iPhone is locked.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             #endif
@@ -116,11 +117,13 @@ package struct AlarmPermissionCard: View {
     store: StoreOf<AlarmPermissionFeature>,
     proAccess: SubscriptionEntitlement,
     hidesWhenAuthorized: Bool = false,
-    showsHeading: Bool = true
+    showsHeading: Bool = true,
+    periodName: String
   ) {
     self.store = store
     self.proAccess = proAccess
     self.hidesWhenAuthorized = hidesWhenAuthorized
     self.showsHeading = showsHeading
+    self.periodName = periodName
   }
 }

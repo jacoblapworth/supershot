@@ -1,6 +1,19 @@
 import Foundation
 
 /// Stable identity and display number of a playing period in a derived phase.
+public nonisolated enum GamePeriodFormat {
+  public static let defaultCount = 4
+  public static let editableCounts = 1 ... 12
+
+  public static func title(for count: Int) -> String {
+    count == defaultCount ? "Quarter" : "Period"
+  }
+
+  public static func abbreviation(for count: Int) -> String {
+    count == defaultCount ? "Q" : "P"
+  }
+}
+
 public nonisolated struct GamePeriodReference: Equatable, Hashable, Codable, Sendable {
   public let id: UUID
   public let number: Int

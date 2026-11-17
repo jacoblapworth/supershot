@@ -89,6 +89,7 @@ package struct GameAnalysisContentView: View {
         teamBBibColor: analysis.teamBBibColor,
         teamBName: analysis.teamBName,
         timeline: analysis.goalTimeline,
+        periodCount: analysis.periods.count,
         teamAOnLeft: teamAOnLeft,
         deleteGoal: deleteGoal
       )

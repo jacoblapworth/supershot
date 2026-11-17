@@ -21,51 +21,63 @@ package struct SetupTimingView: View {
   package var body: some View {
     List {
       Section {
-        SetupDurationRow(title: "Quarters", duration: store.timing.periodDuration) {
+        Picker("Periods", selection: Binding(
+          get: { store.timing.periodCount },
+          set: { store.send(.periodCountChanged($0)) }
+        )) {
+          ForEach(GamePeriodFormat.editableCounts, id: \.self) { count in
+            Text(count == 4 ? "4 (quarters)" : "\(count)").tag(count)
+          }
+        }
+        SetupDurationRow(
+          title: "\(store.timing.periodTitle) length",
+          duration: store.timing.periodDuration
+        ) {
           store.send(.editDurationButtonTapped(.quarter))
         }
       } footer: {
         Text(store.timing.summary)
       }
 
-      Section {
-        if store.timing.customizesBreaks {
-          SetupDurationRow(title: "After quarter 1", duration: store.timing.firstBreakDuration) {
-            store.send(.editDurationButtonTapped(.firstBreak))
-          }
-          SetupDurationRow(title: "Half time", duration: store.timing.halfTimeDuration) {
-            store.send(.editDurationButtonTapped(.halfTime))
-          }
-          SetupDurationRow(title: "After quarter 3", duration: store.timing.secondBreakDuration) {
-            store.send(.editDurationButtonTapped(.secondBreak))
-          }
+      if store.timing.breakCount > 0 {
+        Section {
+          if store.timing.customizesBreaks {
+            ForEach(store.timing.individualBreakDurations.indices, id: \.self) { index in
+              SetupDurationRow(
+                title: LocalizedStringKey(store.timing.breakTitle(at: index)),
+                duration: store.timing.individualBreakDurations[index]
+              ) {
+                store.send(.editDurationButtonTapped(.individualBreak(index)))
+              }
+            }
 
-          Button("Use first break for all") {
-            store.send(.useFirstBreakForAllButtonTapped)
-          }
-          .buttonStyle(.borderless)
-        } else {
-          SetupDurationRow(title: "Breaks", duration: store.timing.firstBreakDuration) {
-            store.send(.editDurationButtonTapped(.allBreaks))
-          }
+            Button("Use first break for all") {
+              store.send(.useFirstBreakForAllButtonTapped)
+            }
+            .buttonStyle(.borderless)
+          } else {
+            SetupDurationRow(title: "Break length", duration: store.timing.sharedBreakDuration) {
+              store.send(.editDurationButtonTapped(.allBreaks))
+            }
 
-          Button("Customize each break") {
-            store.send(.customizeBreaksButtonTapped)
+            Button("Customize each break") {
+              store.send(.customizeBreaksButtonTapped)
+            }
+            .buttonStyle(.borderless)
           }
-          .buttonStyle(.borderless)
+          Toggle("Auto start breaks", isOn: $store.timing.breakStartPolicy.isAutomatic)
+        } header: {
+          Text("Breaks")
+        } footer: {
+          Text(store.timing.breakStartPolicy == .automatic
+            ? "Breaks start when a \(store.timing.periodTitle.lowercased()) ends."
+            : "Breaks wait for you to tap Start break.")
         }
-        Toggle("Auto start breaks", isOn: $store.timing.breakStartPolicy.isAutomatic)
-      } header: {
-        Text("Breaks")
-      } footer: {
-        Text(store.timing.breakStartPolicy == .automatic
-          ? "Breaks start when a quarter ends."
-          : "Breaks wait for you to tap Start break.")
       }
 
       if !store.timing.isValid {
         Section {
-          Label("Enter valid quarter and break durations.", systemImage: "exclamationmark.triangle")
+          Label("Enter valid period and break durations.", systemImage: "exclamationmark.triangle")
             .foregroundStyle(.red)
         }
       }

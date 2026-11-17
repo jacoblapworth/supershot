@@ -646,7 +646,7 @@ extension SupershotTestSuite {
       } assert: {
         $0.operation = nil
         $0.timerEndsAt = Date(timeIntervalSince1970: 1900)
-        $0.alert = .alarmSchedulingFailed
+        $0.alert = .alarmSchedulingFailed(periodTitle: $0.periodTitle)
         $0.hasShownAlarmSchedulingFailureAlert = true
       }
       await store.send(.alert(.presented(.dismissButtonTapped))) {

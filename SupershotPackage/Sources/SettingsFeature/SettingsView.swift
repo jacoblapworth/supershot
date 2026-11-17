@@ -196,7 +196,16 @@ private struct GameDefaultsSettingsSection: View {
 
   var body: some View {
     Section {
-      durationRow("Quarter length", seconds: store.defaultPeriodDurationSeconds, field: .quarter)
+      Picker("Periods", selection: $store.defaultPeriodCount.sending(\.defaultPeriodCountChanged)) {
+        ForEach(GamePeriodFormat.editableCounts, id: \.self) { count in
+          Text(count == 4 ? "4 (quarters)" : "\(count)").tag(count)
+        }
+      }
+      durationRow(
+        "\(GamePeriodFormat.title(for: store.defaultPeriodCount)) length",
+        seconds: store.defaultPeriodDurationSeconds,
+        field: .quarter
+      )
       durationRow("Break length", seconds: store.defaultBreakDurationSeconds, field: .breakTime)
       Toggle(
         "Auto start breaks",
@@ -205,7 +214,7 @@ private struct GameDefaultsSettingsSection: View {
     } header: {
       Text("New game defaults")
     } footer: {
-      Text("These settings are used for new games and can be changed during setup. When Auto start breaks is on, breaks start when a quarter ends. When it is off, breaks wait for you to tap Start break.")
+      Text("These settings are used for new games and can be changed during setup. When Auto start breaks is on, breaks start when a playing period ends. When it is off, breaks wait for you to tap Start break.")
     }
   }
 
@@ -262,7 +271,7 @@ private struct AlarmSettingsSection: View {
     } header: {
       Text("Alarms")
     } footer: {
-      Text("One sound for quarter and break alarms. Alarm use requires Supershot Pro.")
+      Text("One sound for period and break alarms. Alarm use requires Supershot Pro.")
     }
   }
 }

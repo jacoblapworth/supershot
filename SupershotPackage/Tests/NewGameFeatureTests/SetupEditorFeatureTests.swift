@@ -174,8 +174,8 @@ extension SupershotTestSuite {
       #expect(store.state.timing.summary.contains("Half time 10:00"))
       await store.send(.useFirstBreakForAllButtonTapped) {
         $0.timing.customizesBreaks = false
-        $0.timing.halfTimeDuration = timing.firstBreakDuration
-        $0.timing.secondBreakDuration = timing.firstBreakDuration
+        $0.timing.sharedBreakDuration = timing.individualBreakDurations[0]
+        $0.timing.individualBreakDurations = []
       }
       #expect(store.state.timing.summary == "4 × 8:00 · 2:00 breaks")
     }

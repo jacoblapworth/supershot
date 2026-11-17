@@ -97,22 +97,10 @@ package struct NewGameFeature {
     package var hasEnteredScoring = false
     package var alarms = AlarmPermissionFeature.State()
     package var timing = SetupTiming()
-    package var customizesBreaks: Bool {
-      get { timing.customizesBreaks }
-      set { timing.customizesBreaks = newValue }
-    }
 
     package var errorMessage: String?
-    package var firstBreakDuration: DurationDraft {
-      get { timing.firstBreakDuration }
-      set { timing.firstBreakDuration = newValue }
-    }
 
     package var firstCentrePass: TeamSide = .teamA
-    package var halfTimeDuration: DurationDraft {
-      get { timing.halfTimeDuration }
-      set { timing.halfTimeDuration = newValue }
-    }
 
     package var isSaving = false
     package var leftTeam = TeamSelection(bibColor: ColorPalette.blue)
@@ -130,34 +118,32 @@ package struct NewGameFeature {
     }
 
     package var rightTeam = TeamSelection(bibColor: ColorPalette.red)
-    package var secondBreakDuration: DurationDraft {
-      get { timing.secondBreakDuration }
-      set { timing.secondBreakDuration = newValue }
-    }
 
     package init() {
       @Dependency(\.uuid) var uuid
       @Dependency(\.date.now) var now
       gameID = uuid()
       createdAt = now
-      periodIDs = (0 ..< 4).map { _ in uuid() }
+      @Shared(.defaultPeriodCount) var defaultPeriodCount
+      var timing = SetupTiming()
+      timing.resize(to: defaultPeriodCount)
+      periodIDs = (0 ..< timing.periodCount).map { _ in uuid() }
       @Shared(.defaultBreakStartPolicy) var defaultBreakStartPolicy
       timing.breakStartPolicy = defaultBreakStartPolicy
       @Shared(.defaultBreakDurationSeconds) var defaultBreakDurationSeconds
       @Shared(.defaultPeriodDurationSeconds) var defaultPeriodDurationSeconds
 
-      let defaultBreak = DurationDraft(totalSeconds: defaultBreakDurationSeconds)
-      firstBreakDuration = defaultBreak
-      halfTimeDuration = defaultBreak
-      periodDuration = DurationDraft(totalSeconds: defaultPeriodDurationSeconds)
-      secondBreakDuration = defaultBreak
+      timing.sharedBreakDuration = DurationDraft(totalSeconds: defaultBreakDurationSeconds)
+      timing.periodDuration = DurationDraft(totalSeconds: defaultPeriodDurationSeconds)
+      self.timing = timing
     }
 
     package init(snapshot: GameSnapshot) {
       self.init()
       gameID = snapshot.game.id
       createdAt = snapshot.game.createdAt
-      periodIDs = snapshot.periods.map(\.id)
+      let periods = snapshot.periods.sorted { $0.position < $1.position }
+      periodIDs = periods.map(\.id)
       requiresExistingGame = true
       isEditingExistingGame = true
       preservesLocationSelection = true
@@ -170,14 +156,10 @@ package struct NewGameFeature {
       rightTeam.bibColor = snapshot.game.teamBBibColor
       firstCentrePass = snapshot.game.centrePassTeamID == snapshot.teamB.id ? .teamB : .teamA
       timing.breakStartPolicy = snapshot.game.breakStartPolicy
-      if let first = snapshot.periods.first {
+      if let first = periods.first {
         periodDuration = .init(totalSeconds: first.durationSeconds)
       }
-      let breaks = snapshot.periods.dropLast().map { $0.breakAfterDurationSeconds ?? 0 }
-      firstBreakDuration = .init(totalSeconds: breaks.first ?? 0)
-      halfTimeDuration = .init(totalSeconds: breaks.dropFirst().first ?? 0)
-      secondBreakDuration = .init(totalSeconds: breaks.dropFirst(2).first ?? 0)
-      customizesBreaks = Set(breaks).count > 1
+      timing.restoreBreaks(from: periods)
       if let location = snapshot.game.location {
         self.location = .loaded
         selectedLocation = location
@@ -206,11 +188,11 @@ package struct NewGameFeature {
       teamBBibColorHex: String,
       teamsToCreate: [Team]
     ) -> GameSetupDraft? {
-      guard !describeGame.isBusy, teamA.id != teamB.id, timing.isValid, periodIDs.count == 4
+      guard !describeGame.isBusy, teamA.id != teamB.id, timing.isValid, periodIDs.count == timing.periodCount
       else { return nil }
       let court = court.trimmingCharacters(in: .whitespacesAndNewlines)
       let division = division.trimmingCharacters(in: .whitespacesAndNewlines)
-      let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration]
+      let breaks = timing.breakDurations
       return GameSetupDraft(
         game: Game(
           id: gameID,
@@ -242,20 +224,13 @@ package struct NewGameFeature {
       )
     }
 
-    package var breakDurationsAreValid: Bool {
-      firstBreakDuration.totalSeconds != nil
-        && halfTimeDuration.totalSeconds != nil
-        && secondBreakDuration.totalSeconds != nil
-    }
-
     package var canPrepareScoring: Bool {
       leftTeam.team != nil
         && rightTeam.team != nil
         && hasDifferentSelectedTeams
         && !describeGame.isBusy
         && !isSavingTeamConfiguration
-        && (periodDuration.totalSeconds ?? 0) > 0
-        && breakDurationsAreValid
+        && timing.isValid
         && !isSaving
     }
 
@@ -422,10 +397,6 @@ package struct NewGameFeature {
 
       case .binding:
         state.errorMessage = nil
-        if !state.customizesBreaks {
-          state.halfTimeDuration = state.firstBreakDuration
-          state.secondBreakDuration = state.firstBreakDuration
-        }
         return .none
 
       case .alarms(.delegate(.proPromotionTapped)):
@@ -559,6 +530,9 @@ package struct NewGameFeature {
         return .none
 
       case let .destination(.presented(.timingEditor(.delegate(.committed(timing))))):
+        @Dependency(\.uuid) var uuid
+        state.periodIDs = Array(state.periodIDs.prefix(timing.periodCount))
+        state.periodIDs += (state.periodIDs.count ..< timing.periodCount).map { _ in uuid() }
         state.timing = timing
         state.destination = nil
         state.errorMessage = nil
@@ -607,8 +581,8 @@ package struct NewGameFeature {
           state.errorMessage = state.teamNameErrorMessage ?? "Choose two different teams."
           return .none
         }
-        guard (state.periodDuration.totalSeconds ?? 0) > 0, state.breakDurationsAreValid else {
-          state.errorMessage = "Enter valid quarter and break durations."
+        guard state.timing.isValid else {
+          state.errorMessage = "Enter valid period and break durations."
           return .none
         }
 

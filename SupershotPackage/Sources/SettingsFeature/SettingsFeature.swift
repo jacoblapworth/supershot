@@ -19,6 +19,7 @@ package struct SettingsFeature {
     package var editedDefault: DurationDefault?
     @Shared(.alarmSound) package var alarmSound
     @Shared(.defaultBreakStartPolicy) package var defaultBreakStartPolicy
+    @Shared(.defaultPeriodCount) package var defaultPeriodCount
     @Shared(.defaultPeriodDurationSeconds) package var defaultPeriodDurationSeconds
     @Shared(.defaultBreakDurationSeconds) package var defaultBreakDurationSeconds
     package var isCustomerCenterPresented = false
@@ -53,6 +54,7 @@ package struct SettingsFeature {
   package enum Action {
     case alarmSoundSelected(AlarmSound)
     case alarmSoundsDismissed
+    case defaultPeriodCountChanged(Int)
     case breakStartPolicyChanged(BreakStartPolicy)
     case editDefaultButtonTapped(DurationDefault)
     case timeInput(PresentationAction<TimeInputFeature.Action>)
@@ -96,6 +98,11 @@ package struct SettingsFeature {
         alarmSoundPreview.stop()
         return .none
 
+      case let .defaultPeriodCountChanged(count):
+        guard GamePeriodFormat.editableCounts.contains(count) else { return .none }
+        state.$defaultPeriodCount.withLock { $0 = count }
+        return .none
+
       case let .breakStartPolicyChanged(policy):
         state.$defaultBreakStartPolicy.withLock { $0 = policy }
         return .none
@@ -107,7 +114,7 @@ package struct SettingsFeature {
         #endif
         state.editedDefault = field
         state.timeInput = .init(
-          title: field == .quarter ? "Quarter length" : "Break length",
+          title: field == .quarter ? "\(GamePeriodFormat.title(for: state.defaultPeriodCount)) length" : "Break length",
           totalSeconds: field == .quarter
             ? state.defaultPeriodDurationSeconds
             : state.defaultBreakDurationSeconds,

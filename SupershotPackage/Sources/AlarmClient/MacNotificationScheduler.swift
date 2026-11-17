@@ -90,7 +90,7 @@
           for alarm in alarms where alarm.date > self.now() {
             guard self.cancellations[id, default: 0] == cancellation else { break }
             let title = switch alarm.phase {
-            case let .period(period, _): "Quarter \(period.number) ended"
+            case let .period(period, _): "\(GamePeriodFormat.title(for: snapshot.periods.count)) \(period.number) ended"
             case .breakTime: "Break ended"
             }
             try await self.delivery.add(GameNotificationRequest(

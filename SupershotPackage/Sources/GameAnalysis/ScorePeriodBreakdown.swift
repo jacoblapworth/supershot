@@ -15,7 +15,20 @@ package struct ScorePeriodBreakdown: View {
   var teamBBibColor: Color
   var teamBName: String
 
+  private var periodTitle: String {
+    GamePeriodFormat.title(for: periods.count).lowercased()
+  }
+
   package var body: some View {
+    ViewThatFits(in: .horizontal) {
+      grid.fixedSize(horizontal: true, vertical: false)
+      ScrollView(.horizontal) { grid }
+    }
+    .accessibilityElement(children: .contain)
+    .accessibilityLabel("Points by \(periodTitle)")
+  }
+
+  private var grid: some View {
     Grid(horizontalSpacing: 12, verticalSpacing: 6) {
       GridRow {
         Color.clear
@@ -34,7 +47,6 @@ package struct ScorePeriodBreakdown: View {
       Divider()
       scoreRow(name: teamBName, color: teamBBibColor) { $0.teamBQuarterScore }
     }
-    .accessibilityLabel("Points by quarter")
   }
 
   private var sortedQuarters: [GoalTimelinePeriod] {
@@ -64,7 +76,7 @@ package struct ScorePeriodBreakdown: View {
       ForEach(sortedQuarters) { quarter in
         Text("\(score(quarter))")
           .font(.system(.caption, design: .rounded, weight: .semibold))
-          .accessibilityLabel("\(name), quarter \(quarter.period), \(score(quarter))")
+          .accessibilityLabel("\(name), \(periodTitle) \(quarter.period), \(score(quarter))")
       }
 
       Text("\(total)")

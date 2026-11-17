@@ -25,6 +25,7 @@ package struct ScoringControl: Equatable {
 
 package struct TimerViewState: Equatable {
   package var title: String
+  package var periodTitle: String
   package var remainingSeconds: Int
   package var elapsedSeconds: Int
   package var durationSeconds: Int
@@ -122,8 +123,9 @@ package extension ScoringFeature.State {
     }
     return TimerViewState(
       title: waitingSince != nil
-        ? "Waiting for Quarter \(period)"
-        : currentPhase.isBreak ? "Quarter \(period) break" : "Quarter \(period)",
+        ? "Waiting for \(periodTitle) \(period)"
+        : currentPhase.isBreak ? "\(periodTitle) \(period) break" : "\(periodTitle) \(period)",
+      periodTitle: periodTitle,
       remainingSeconds: timeRemainingSeconds,
       elapsedSeconds: timerProjection.elapsedSeconds,
       durationSeconds: currentDurationSeconds,
@@ -167,7 +169,7 @@ package extension ScoringFeature.State {
     } else if currentPhase.isPlayingPeriod, phaseStatus == .ready || phaseStatus == .paused {
       let title = startedAt == nil || (period == 1 && phaseStatus == .ready)
         ? "Start game"
-        : phaseStatus == .paused ? "Resume" : "Start Quarter \(period)"
+        : phaseStatus == .paused ? "Resume" : "Start \(periodTitle) \(period)"
       content = .primary(.init(
         title: title,
         systemImage: "play.fill",
@@ -192,7 +194,7 @@ package extension ScoringFeature.State {
     }
     if currentPhase.isPlayingPeriod {
       additional.append(.init(
-        title: "End Quarter",
+        title: "End \(periodTitle)",
         systemImage: "forward.end.fill",
         action: .endQuarter,
         availability: canMoveToNextQuarter ? .enabled : .disabled

@@ -31,10 +31,10 @@ package extension NewGameFeature.State {
 
   static var previewCustomTiming: Self {
     var state = Self()
-    state.customizesBreaks = true
-    state.firstBreakDuration = .init(totalSeconds: 120)
-    state.halfTimeDuration = .init(totalSeconds: 600)
-    state.secondBreakDuration = .init(totalSeconds: 180)
+    state.timing.customizesBreaks = true
+    state.timing.individualBreakDurations = [120, 600, 180].map {
+      .init(totalSeconds: $0)
+    }
     return state
   }
 

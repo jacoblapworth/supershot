@@ -60,7 +60,8 @@ package struct NewGameView: View {
             AlarmPermissionCard(
               store: store.scope(state: \.alarms, action: \.alarms),
               proAccess: proAccess,
-              showsHeading: false
+              showsHeading: false,
+              periodName: store.timing.periodTitle.lowercased()
             )
           }
         }

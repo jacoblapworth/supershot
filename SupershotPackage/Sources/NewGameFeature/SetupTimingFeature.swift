@@ -16,43 +16,78 @@ import TeamEditingFeature
 import UI
 
 package nonisolated struct SetupTiming: Equatable, Sendable {
+  package typealias Duration = NewGameFeature.DurationDraft
+
   package var breakStartPolicy = BreakStartPolicy.automatic
   package var customizesBreaks = false
-  package var firstBreakDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
-  package var halfTimeDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
-  package var periodDuration = NewGameFeature.DurationDraft(totalSeconds: 480)
-  package var secondBreakDuration = NewGameFeature.DurationDraft(totalSeconds: 60)
+  package private(set) var periodCount = GamePeriodFormat.defaultCount
+  package var periodDuration = Duration(totalSeconds: 480)
+  package var sharedBreakDuration = Duration(totalSeconds: 60)
+  package var individualBreakDurations: [Duration] = []
+
+  package var breakCount: Int {
+    max(0, periodCount - 1)
+  }
+
+  package var breakDurations: [Duration] {
+    customizesBreaks
+      ? individualBreakDurations
+      : Array(repeating: sharedBreakDuration, count: breakCount)
+  }
 
   package var isValid: Bool {
-    (periodDuration.totalSeconds ?? 0) > 0
-      && firstBreakDuration.totalSeconds != nil
-      && halfTimeDuration.totalSeconds != nil
-      && secondBreakDuration.totalSeconds != nil
+    GamePeriodFormat.editableCounts.contains(periodCount)
+      && (periodDuration.totalSeconds ?? 0) > 0
+      && breakDurations.count == breakCount
+      && breakDurations.allSatisfy { $0.totalSeconds != nil }
+  }
+
+  package var periodTitle: String {
+    GamePeriodFormat.title(for: periodCount)
+  }
+
+  package func breakTitle(at index: Int) -> String {
+    if periodCount == 4, index == 1 {
+      return "Half time"
+    }
+    return "After \(periodTitle.lowercased()) \(index + 1)"
   }
 
   package var summary: String {
-    let breaks = [firstBreakDuration, halfTimeDuration, secondBreakDuration].map(\.formatted)
+    let playingTime = "\(periodCount) × \(periodDuration.formatted)"
+    let breaks = breakDurations.map(\.formatted)
+    guard let first = breaks.first else { return playingTime }
     if Set(breaks).count == 1 {
-      return "4 × \(periodDuration.formatted) · \(breaks[0]) breaks"
+      return "\(playingTime) · \(first) \(breakCount == 1 ? "break" : "breaks")"
     }
-    return
-      "4 × \(periodDuration.formatted) · Q1 break \(breaks[0]) · Half time \(breaks[1]) · Q3 break \(breaks[2])"
+    let details = breaks.enumerated().map { index, duration in
+      "\(breakTitle(at: index)) \(duration)"
+    }
+    return "\(playingTime) · \(details.joined(separator: " · "))"
   }
 
-  package init(
-    breakStartPolicy: BreakStartPolicy = BreakStartPolicy.automatic,
-    customizesBreaks: Bool = false,
-    firstBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60),
-    halfTimeDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60),
-    periodDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 480),
-    secondBreakDuration: NewGameFeature.DurationDraft = NewGameFeature.DurationDraft(totalSeconds: 60)
-  ) {
-    self.breakStartPolicy = breakStartPolicy
-    self.customizesBreaks = customizesBreaks
-    self.firstBreakDuration = firstBreakDuration
-    self.halfTimeDuration = halfTimeDuration
-    self.periodDuration = periodDuration
-    self.secondBreakDuration = secondBreakDuration
+  package init() {}
+
+  package mutating func resize(to count: Int) {
+    guard GamePeriodFormat.editableCounts.contains(count) else { return }
+    if customizesBreaks {
+      individualBreakDurations = Array(individualBreakDurations.prefix(count - 1))
+      individualBreakDurations += Array(
+        repeating: sharedBreakDuration,
+        count: count - 1 - individualBreakDurations.count
+      )
+    }
+    periodCount = count
+  }
+
+  package mutating func restoreBreaks(from periods: [GamePeriod]) {
+    periodCount = periods.count
+    let breaks = periods.dropLast().map { $0.breakAfterDurationSeconds ?? 0 }
+    if let first = breaks.first {
+      sharedBreakDuration = Duration(totalSeconds: first)
+    }
+    customizesBreaks = Set(breaks).count > 1
+    individualBreakDurations = customizesBreaks ? breaks.map(Duration.init(totalSeconds:)) : []
   }
 }
 
@@ -76,7 +111,7 @@ package struct SetupTimingFeature {
   }
 
   package enum DurationField: Equatable {
-    case quarter, allBreaks, firstBreak, halfTime, secondBreak
+    case quarter, allBreaks, individualBreak(Int)
   }
 
   package enum Action: BindableAction {
@@ -84,6 +119,7 @@ package struct SetupTimingFeature {
     case timeInput(PresentationAction<TimeInputFeature.Action>)
     case binding(BindingAction<State>)
     case cancelButtonTapped
+    case periodCountChanged(Int)
     case customizeBreaksButtonTapped
     case delegate(Delegate)
     case doneButtonTapped
@@ -101,26 +137,21 @@ package struct SetupTimingFeature {
     Reduce { state, action in
       switch action {
       case let .editDurationButtonTapped(field):
-        state.editedDuration = field
         let duration: NewGameFeature.DurationDraft
         let title: String
         switch field {
         case .quarter:
           duration = state.timing.periodDuration
-          title = "Quarter length"
+          title = "\(state.timing.periodTitle) length"
         case .allBreaks:
-          duration = state.timing.firstBreakDuration
+          duration = state.timing.sharedBreakDuration
           title = "Break length"
-        case .firstBreak:
-          duration = state.timing.firstBreakDuration
-          title = "After quarter 1"
-        case .halfTime:
-          duration = state.timing.halfTimeDuration
-          title = "Half time"
-        case .secondBreak:
-          duration = state.timing.secondBreakDuration
-          title = "After quarter 3"
+        case let .individualBreak(index):
+          guard state.timing.individualBreakDurations.indices.contains(index) else { return .none }
+          duration = state.timing.individualBreakDurations[index]
+          title = state.timing.breakTitle(at: index)
         }
+        state.editedDuration = field
         state.timeInput = .init(
           title: title,
           totalSeconds: duration.totalSeconds ?? 0,
@@ -130,13 +161,11 @@ package struct SetupTimingFeature {
         let duration = NewGameFeature.DurationDraft(totalSeconds: seconds)
         switch state.editedDuration {
         case .quarter: state.timing.periodDuration = duration
-        case .allBreaks:
-          state.timing.firstBreakDuration = duration
-          state.timing.halfTimeDuration = duration
-          state.timing.secondBreakDuration = duration
-        case .firstBreak: state.timing.firstBreakDuration = duration
-        case .halfTime: state.timing.halfTimeDuration = duration
-        case .secondBreak: state.timing.secondBreakDuration = duration
+        case .allBreaks: state.timing.sharedBreakDuration = duration
+        case let .individualBreak(index):
+          if state.timing.individualBreakDurations.indices.contains(index) {
+            state.timing.individualBreakDurations[index] = duration
+          }
         case nil: break
         }
         state.timeInput = nil
@@ -147,13 +176,13 @@ package struct SetupTimingFeature {
       case .timeInput:
         break
       case .binding:
-        if !state.timing.customizesBreaks {
-          state.timing.halfTimeDuration = state.timing.firstBreakDuration
-          state.timing.secondBreakDuration = state.timing.firstBreakDuration
-        }
+        break
+      case let .periodCountChanged(count):
+        state.timing.resize(to: count)
       case .cancelButtonTapped:
         return .send(.delegate(.cancelled))
       case .customizeBreaksButtonTapped:
+        state.timing.individualBreakDurations = state.timing.breakDurations
         state.timing.customizesBreaks = true
       case .delegate:
         break
@@ -161,8 +190,10 @@ package struct SetupTimingFeature {
         guard state.timing.isValid else { return .none }
         return .send(.delegate(.committed(state.timing)))
       case .useFirstBreakForAllButtonTapped:
-        state.timing.halfTimeDuration = state.timing.firstBreakDuration
-        state.timing.secondBreakDuration = state.timing.firstBreakDuration
+        if let first = state.timing.individualBreakDurations.first {
+          state.timing.sharedBreakDuration = first
+        }
+        state.timing.individualBreakDurations = []
         state.timing.customizesBreaks = false
       }
       return .none
@@ -185,11 +216,13 @@ package struct SetupTimingSummaryView: View {
           .buttonStyle(.borderless)
           .accessibilityLabel("Edit timing")
       }
-      HStack {
-        Text("Auto start breaks")
-        Image(systemName: timing.breakStartPolicy == .automatic ? "checkmark.circle.fill" : "xmark.circle.fill")
+      if timing.breakCount > 0 {
+        HStack {
+          Text("Auto start breaks")
+          Image(systemName: timing.breakStartPolicy == .automatic ? "checkmark.circle.fill" : "xmark.circle.fill")
+        }
+        .font(.subheadline).foregroundStyle(.secondary)
       }
-      .font(.subheadline).foregroundStyle(.secondary)
     }
     .setupCardStyle()
   }

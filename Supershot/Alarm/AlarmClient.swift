@@ -28,7 +28,7 @@ nonisolated extension AlarmClient {
 
             for alarm in alarms {
               let presentation = AlarmPresentation(alert: AlarmPresentation.Alert(
-                title: alarm.title,
+                title: alarm.title(periodCount: snapshot.periods.count),
                 secondaryButton: AlarmButton(
                   text: "Continue",
                   textColor: .white,
@@ -156,9 +156,9 @@ nonisolated extension AlarmClient {
   }
 
   nonisolated extension ScheduledGameAlarm {
-    var title: LocalizedStringResource {
+    func title(periodCount: Int) -> LocalizedStringResource {
       switch phase {
-      case let .period(period, _): "Quarter \(period.number) ended."
+      case let .period(period, _): "\(GamePeriodFormat.title(for: periodCount)) \(period.number) ended."
       case .breakTime: "Break ended."
       }
     }
@@ -222,7 +222,8 @@ nonisolated extension AlarmClient {
         timerEndsAt: snapshot.game.timerEndsAt,
         waitingSince: snapshot.game.waitingSince,
         isAwaitingCentrePassConfirmation: snapshot.game.isAwaitingCentrePassConfirmation,
-        lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber
+        lateScoringPeriodNumber: snapshot.game.lateScoringPeriodNumber,
+        periodCount: snapshot.periods.count
       )
     }
   }

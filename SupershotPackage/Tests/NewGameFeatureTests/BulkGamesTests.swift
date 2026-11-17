@@ -60,6 +60,20 @@ extension SupershotTestSuite {
       }
     }
 
+    @Test func bulkDraftsUseSavedPeriodCount() async throws {
+      @Dependency(\.defaultAppStorage) var defaults
+      @Dependency(\.defaultDatabase) var database
+      defaults.set(2, forKey: "defaultPeriodCount")
+      let store = try store()
+      await store.send(.parseButtonTapped).finish()
+      #expect(store.rows.count == 2)
+      #expect(store.rows.allSatisfy { $0.setup.timing.periodCount == 2 })
+      await store.send(.saveButtonTapped).finish()
+      try await database.read { db in
+        try expectNoDifference(GamePeriod.fetchCount(db), 4)
+      }
+    }
+
     @Test func timeOnlyRowsUseTodayAndDeletedRowsAreNotSaved() async throws {
       @Dependency(\.defaultDatabase) var database
       let store = try store(source: "18:30 A vs B\n19:10 A vs C")

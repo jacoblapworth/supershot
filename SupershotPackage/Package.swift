@@ -136,7 +136,7 @@ let package = Package(
     ),
     .target(
       name: "AppSettings",
-      dependencies: ["GameCore", .product(name: "Sharing", package: "swift-sharing")],
+      dependencies: ["GameCore", "SharedModels", .product(name: "Sharing", package: "swift-sharing")],
       swiftSettings: appSwiftSettings
     ),
     .target(

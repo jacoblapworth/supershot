@@ -3,6 +3,7 @@ import Charts
 import Database
 import GameCore
 import PreviewSupport
+import SharedModels
 import SwiftUI
 import UI
 
@@ -14,6 +15,7 @@ package struct ScoreDifferenceChartView: View {
     ScoreDifferenceChart(
       series: ScoreDifferenceSeries(analysis: detail, breakdown: breakdown),
       breakdown: breakdown,
+      periodCount: detail.periods.count,
       teamAName: detail.teamAName,
       teamAColor: detail.teamABibColor,
       teamBName: detail.teamBName,
@@ -25,6 +27,7 @@ package struct ScoreDifferenceChartView: View {
 private struct ScoreDifferenceChart: View {
   let series: ScoreDifferenceSeries
   let breakdown: GameAnalysisBreakdown
+  let periodCount: Int
   let teamAName: String
   let teamAColor: Color
   let teamBName: String
@@ -56,7 +59,7 @@ private struct ScoreDifferenceChart: View {
 
       if series.moments.isEmpty {
         ContentUnavailableView(
-          "No goals recorded in \(breakdown.title)",
+          "No goals recorded in \(breakdown.title(periodCount: periodCount))",
           systemImage: "chart.xyaxis.line",
           description: Text("Score difference will appear here once goals are recorded.")
         )
@@ -87,7 +90,7 @@ private struct ScoreDifferenceChart: View {
             .lineStyle(StrokeStyle(lineWidth: 1.5))
 
           ForEach(series.periodEndOffsets, id: \.self) { offset in
-            RuleMark(x: .value("Quarter boundary", offset))
+            RuleMark(x: .value("\(GamePeriodFormat.title(for: periodCount)) boundary", offset))
               .foregroundStyle(Color.secondary.opacity(0.5))
               .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
           }
@@ -148,12 +151,17 @@ private struct ScoreDifferenceChart: View {
           }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(breakdown.title) score difference chart")
+        .accessibilityLabel("\(breakdown.title(periodCount: periodCount)) score difference chart")
         .accessibilityValue(Text("\(teamAName) \(series.moments.last?.teamAScore ?? 0), \(teamBName) \(series.moments.last?.teamBScore ?? 0). \(scoreDifferenceLeadDescription(series.moments.last?.difference ?? 0, teamAName: teamAName, teamBName: teamBName))"))
         .accessibilityIdentifier("gameAnalysis.scoreDifference")
 
         if let selectedMoment {
-          ScoreDifferenceInspection(moment: selectedMoment, teamAName: teamAName, teamBName: teamBName)
+          ScoreDifferenceInspection(
+            moment: selectedMoment,
+            periodCount: periodCount,
+            teamAName: teamAName,
+            teamBName: teamBName
+          )
         }
       }
 
@@ -194,12 +202,13 @@ private struct ScoreDifferenceChart: View {
 
 private struct ScoreDifferenceInspection: View {
   let moment: ScoreDifferenceSeries.Point
+  let periodCount: Int
   let teamAName: String
   let teamBName: String
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text("Q\(moment.period) · \(elapsedTime(moment.periodElapsedSeconds))")
+      Text("\(GamePeriodFormat.abbreviation(for: periodCount))\(moment.period) · \(elapsedTime(moment.periodElapsedSeconds))")
         .foregroundStyle(.secondary)
       Text("\(teamAName) \(moment.teamAScore) – \(moment.teamBScore) \(teamBName)")
         .monospacedDigit()

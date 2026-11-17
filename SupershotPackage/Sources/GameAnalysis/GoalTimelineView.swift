@@ -14,6 +14,7 @@ package struct GoalTimelineView: View {
   package var teamBBibColor: Color
   package var teamBName: String
   package var timeline: GoalTimeline
+  package var periodCount: Int
   package var teamAOnLeft = true
   package var deleteGoal: ((Goal.ID) -> Void)?
 
@@ -23,6 +24,7 @@ package struct GoalTimelineView: View {
         ForEach(timeline.quarters) { quarter in
           GoalTimelineQuarterView(
             quarter: quarter,
+            periodTitle: GamePeriodFormat.title(for: periodCount),
             teamABibColor: teamABibColor,
             teamAName: teamAName,
             teamBBibColor: teamBBibColor,
@@ -42,6 +44,7 @@ package struct GoalTimelineView: View {
     teamBBibColor: Color,
     teamBName: String,
     timeline: GoalTimeline,
+    periodCount: Int = GamePeriodFormat.defaultCount,
     teamAOnLeft: Bool = true,
     deleteGoal: ((Goal.ID) -> Void)? = nil
   ) {
@@ -50,6 +53,7 @@ package struct GoalTimelineView: View {
     self.teamBBibColor = teamBBibColor
     self.teamBName = teamBName
     self.timeline = timeline
+    self.periodCount = periodCount
     self.teamAOnLeft = teamAOnLeft
     self.deleteGoal = deleteGoal
   }
@@ -113,6 +117,7 @@ private struct GoalTimelineLegend: View {
 
 private struct GoalTimelineQuarterView: View {
   var quarter: GoalTimelinePeriod
+  var periodTitle: String
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
@@ -125,6 +130,7 @@ private struct GoalTimelineQuarterView: View {
     VStack(spacing: 12) {
       GoalTimelineQuarterHeader(
         quarter: quarter,
+        periodTitle: periodTitle,
         teamABibColor: teamABibColor,
         teamAName: teamAName,
         teamBBibColor: teamBBibColor,
@@ -133,12 +139,12 @@ private struct GoalTimelineQuarterView: View {
       )
 
       if quarter.goals.isEmpty {
-        Text("No goals this quarter")
+        Text("No goals this \(periodTitle.lowercased())")
           .font(.subheadline)
           .foregroundStyle(.secondary)
           .frame(maxWidth: .infinity)
           .padding(.vertical, 12)
-          .accessibilityLabel("Quarter \(quarter.period), no goals recorded")
+          .accessibilityLabel("\(periodTitle) \(quarter.period), no goals recorded")
       } else {
         LazyVStack(spacing: 12) {
           ForEach(quarter.goals) { goal in
@@ -165,6 +171,7 @@ private struct GoalTimelineQuarterView: View {
 
 private struct GoalTimelineQuarterHeader: View {
   var quarter: GoalTimelinePeriod
+  var periodTitle: String
   var teamABibColor: Color
   var teamAName: String
   var teamBBibColor: Color
@@ -181,7 +188,7 @@ private struct GoalTimelineQuarterHeader: View {
       Spacer(minLength: 0)
 
       VStack(spacing: 2) {
-        Text("Quarter \(quarter.period)")
+        Text("\(periodTitle) \(quarter.period)")
           .font(.headline)
       }
 
@@ -195,7 +202,7 @@ private struct GoalTimelineQuarterHeader: View {
     .padding(12)
     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel("Quarter \(quarter.period) score, \(teamAName) \(quarter.teamAQuarterScore), "
+    .accessibilityLabel("\(periodTitle) \(quarter.period) score, \(teamAName) \(quarter.teamAQuarterScore), "
       + "\(teamBName) \(quarter.teamBQuarterScore)")
   }
 
