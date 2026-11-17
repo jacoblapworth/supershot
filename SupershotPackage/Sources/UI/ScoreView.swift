@@ -1,31 +1,23 @@
-//
-//  ScoreView.swift
-//  SupershotPackage
-//
-//  Created by J on 17/11/2026.
-//
-
 import SwiftUI
 
 struct ScoreView: View {
-  
   enum Size {
     case small, standard, large
-    
+
     var font: Font {
       switch self {
       case .small:
-          .title
+        .title
       case .standard, .large:
-          .largeTitle
+        .largeTitle
       }
     }
   }
-  
+
   var value: Int
   var size: Size = .standard
   var dimmed: Bool = false
-  
+
   var body: some View {
     Text(value, format: .number)
       .contentTransition(.numericText(value: Double(value)))
@@ -54,6 +46,5 @@ struct ScoreView: View {
       size: .large,
       dimmed: false
     )
-    
   }
 }

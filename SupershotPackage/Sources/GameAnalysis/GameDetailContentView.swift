@@ -15,7 +15,7 @@ package struct GameDetailContentView: View {
   package var detail: CompletedGameDetail
   package var showsProPromotion: Bool
   package var proPromotionTapped: () -> Void
-  
+
   package var body: some View {
     ScrollView {
       LazyVStack(alignment: .leading, spacing: 20) {
@@ -30,20 +30,20 @@ package struct GameDetailContentView: View {
             analysis: detail.analysis,
             selection: selectedAnalysis
           )
-            .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
+          .frame(minHeight: max(viewportHeight - 68, 0), alignment: .top)
           if showsProPromotion {
             ProPromotionCard(exploreProTapped: proPromotionTapped)
           }
         } header: {
           GameAnalysisControl(selection: $selectedAnalysis)
         }
-        
+
         GameMetadataView(detail: detail)
       }
-#if os(macOS)
+      #if os(macOS)
       .frame(maxWidth: 960)
       .frame(maxWidth: .infinity)
-#endif
+      #endif
       .padding(.horizontal)
       .padding(.bottom)
     }
@@ -76,21 +76,18 @@ package struct GameDetailContentView: View {
               color: detail.teamBBibColor,
               score: detail.teamBScore
             )
-            
           )
         }
       }
     }
   }
-  
+
   package init(detail: CompletedGameDetail, showsProPromotion: Bool, proPromotionTapped: @escaping () -> Void) {
     self.detail = detail
     self.showsProPromotion = showsProPromotion
     self.proPromotionTapped = proPromotionTapped
   }
 }
-
-
 
 #Preview("Game detail content") {
   NavigationView {

@@ -5,13 +5,13 @@ import WidgetSupport
 public struct GameRow: View {
   package enum Background { case gradient, clear }
   public enum Layout { case standard, compact, stacked }
-  
+
   package struct Team {
     var name: String
     var colorHex: String
     var logoData: Data?
     var score: Int
-    
+
     package init(name: String, colorHex: String, logoData: Data?, score: Int) {
       self.name = name
       self.colorHex = colorHex
@@ -19,25 +19,25 @@ public struct GameRow: View {
       self.score = score
     }
   }
-  
+
   package enum Status: Equatable {
     case planned(Date?)
     case inProgress(quarter: Int)
     case final
   }
-  
+
   package struct Clock {
     var quarter: Int
     var isBreak: Bool
     var remainingSeconds: Int
-    
+
     package init(quarter: Int, isBreak: Bool, remainingSeconds: Int) {
       self.quarter = quarter
       self.isBreak = isBreak
       self.remainingSeconds = remainingSeconds
     }
   }
-  
+
   private let teamA: Team
   private let teamB: Team
   private let status: Status
@@ -45,7 +45,7 @@ public struct GameRow: View {
   private let layout: Layout
   private let accessibilityDetails: String
   private let clock: ((Date) -> Clock?)?
-  
+
   package init(
     teamA: Team,
     teamB: Team,
@@ -63,7 +63,7 @@ public struct GameRow: View {
     self.accessibilityDetails = accessibilityDetails
     self.clock = clock
   }
-  
+
   public init(widgetGame game: WidgetGame, layout: Layout) {
     let status: Status = if game.isCompleted {
       .final
@@ -80,20 +80,20 @@ public struct GameRow: View {
       layout: layout
     )
   }
-  
+
   private var spacing: CGFloat {
     layout == .standard ? 8 : 4
   }
-  
+
   private var showsScores: Bool {
     if case .planned = status {
       return false
     }
     return true
   }
-  
+
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  
+
   public var body: some View {
     Group {
       switch layout {
@@ -120,7 +120,7 @@ public struct GameRow: View {
     .listRowInsets(.all, 0)
     .listRowBackground(Color.clear)
   }
-  
+
   private var horizontalRow: some View {
     VStack(spacing: spacing / 2) {
       HStack(alignment: .top, spacing: spacing * 2) {
@@ -131,7 +131,7 @@ public struct GameRow: View {
           .frame(maxWidth: .infinity, alignment: .trailing)
       }
       .accessibilityHidden(showsScores)
-      
+
       HStack(spacing: spacing * 2) {
         avatar(teamA)
         ViewThatFits(in: .horizontal) {
@@ -145,7 +145,7 @@ public struct GameRow: View {
       }
     }
   }
-  
+
   private var standardScoreFallback: some View {
     VStack(spacing: 8) {
       statusView
@@ -164,7 +164,7 @@ public struct GameRow: View {
       }
     }
   }
-  
+
   private var scoreBar: some View {
     HStack(spacing: layout == .standard ? 12 : 4) {
       if showsScores {
@@ -180,7 +180,7 @@ public struct GameRow: View {
     }
     .fixedSize(horizontal: dynamicTypeSize.isAccessibilitySize, vertical: false)
   }
-  
+
   private func avatar(_ team: Team) -> some View {
     AvatarView(
       team.name,
@@ -195,16 +195,16 @@ public struct GameRow: View {
     .foregroundStyle(.white)
     .accessibilityHidden(true)
   }
-  
+
   private func score(_ value: Int, opponent: Int, name: String) -> some View {
     ScoreView(
       value: value,
-      size: layout == .standard ? .standard: .small,
+      size: layout == .standard ? .standard : .small,
       dimmed: status == .final && value < opponent
     )
     .accessibilityLabel(Text("\(name), \(value)"))
   }
-  
+
   private var stackedRow: some View {
     VStack(spacing: 4) {
       stackedTeam(teamA, opponent: teamB)
@@ -214,7 +214,7 @@ public struct GameRow: View {
       stackedTeam(teamB, opponent: teamA)
     }
   }
-  
+
   private func stackedTeam(_ team: Team, opponent: Team) -> some View {
     HStack(spacing: 6) {
       avatar(team)
@@ -226,7 +226,7 @@ public struct GameRow: View {
       }
     }
   }
-  
+
   private func teamName(_ team: Team) -> some View {
     Text(team.name)
       .font(layout == .standard ? .subheadline : .caption)
@@ -234,7 +234,7 @@ public struct GameRow: View {
       .lineLimit(layout == .standard ? nil : 2)
       .fixedSize(horizontal: false, vertical: true)
   }
-  
+
   @ViewBuilder private var statusView: some View {
     switch status {
     case .final:
@@ -279,16 +279,16 @@ public struct GameRow: View {
       }
     }
   }
-  
+
   private var statusFont: Font {
     layout == .standard ? .body : .caption
   }
-  
+
   private func quarterLabel(_ quarter: Int) -> some View {
     Text("Q\(quarter)")
       .accessibilityLabel(Text("Quarter \(quarter)"))
   }
-  
+
   private func schedule(_ date: Date, day: String) -> some View {
     VStack(spacing: 0) {
       Text(date, format: .dateTime.hour().minute())
@@ -298,7 +298,7 @@ public struct GameRow: View {
     }
     .multilineTextAlignment(.center)
   }
-  
+
   private func dayText(_ date: Date, now: Date) -> String {
     let calendar = Calendar.autoupdatingCurrent
     if calendar.isDate(date, inSameDayAs: now) {
@@ -314,84 +314,84 @@ public struct GameRow: View {
 }
 
 #if DEBUG
-private enum GameRowPreviewData {
-  static let kickoff = Date(timeIntervalSinceReferenceDate: 816_105_600)
-  
-  static let scheduled = WidgetGame(
-    id: UUID(),
-    createdAt: kickoff,
-    scheduledAt: kickoff,
-    teamAName: "North London Ravens",
-    teamAColorHex: "#007AFF",
-    teamBName: "Westminster Swifts",
-    teamBColorHex: "#FF3B30"
-  )
-  
-  static var live: WidgetGame {
-    var game = scheduled
-    game.startedAt = kickoff
-    game.period = 3
-    game.teamAScore = 103
-    game.teamBScore = 98
-    return game
-  }
-  
-  static var final: WidgetGame {
-    var game = live
-    game.endedAt = kickoff.addingTimeInterval(3600)
-    game.teamAScore = 118
-    game.teamBScore = 105
-    return game
-  }
-  
-  static var draft: WidgetGame {
-    var game = scheduled
-    game.scheduledAt = nil
-    return game
-  }
-}
+  private enum GameRowPreviewData {
+    static let kickoff = Date(timeIntervalSinceReferenceDate: 816_105_600)
 
-#Preview("GameRow · App gradient", traits: .sizeThatFitsLayout) {
-  GameRow(
-    teamA: .init(name: "Hackney Foxes", colorHex: "#34C759", logoData: nil, score: 16),
-    teamB: .init(name: "Camden Owls", colorHex: "#FF9500", logoData: nil, score: 14),
-    status: .inProgress(quarter: 2),
-    background: .gradient,
-    layout: .standard,
-    clock: { _ in .init(quarter: 2, isBreak: false, remainingSeconds: 156) }
-  )
-  .frame(width: 370)
-  .padding()
-  .background(.background)
-}
+    static let scheduled = WidgetGame(
+      id: UUID(),
+      createdAt: kickoff,
+      scheduledAt: kickoff,
+      teamAName: "North London Ravens",
+      teamAColorHex: "#007AFF",
+      teamBName: "Westminster Swifts",
+      teamBColorHex: "#FF3B30"
+    )
 
-#Preview("GameRow · Compact widget", traits: .sizeThatFitsLayout) {
-  VStack(spacing: 0) {
-    GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .compact)
-    Divider()
-    GameRow(widgetGame: GameRowPreviewData.live, layout: .compact)
-    Divider()
-    GameRow(widgetGame: GameRowPreviewData.final, layout: .compact)
-    Divider()
-    GameRow(widgetGame: GameRowPreviewData.draft, layout: .compact)
-  }
-  .padding(8)
-  .background(.background, in: .rect(cornerRadius: 24))
-}
+    static var live: WidgetGame {
+      var game = scheduled
+      game.startedAt = kickoff
+      game.period = 3
+      game.teamAScore = 103
+      game.teamBScore = 98
+      return game
+    }
 
-#Preview("GameRow · Small widget", traits: .sizeThatFitsLayout) {
-  HStack {
-    GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .stacked)
-      .padding(8)
-      .frame(width: 158, height: 158)
-      .background(.background, in: .rect(cornerRadius: 24))
-      .environment(\.colorScheme, .light)
-    
-    GameRow(widgetGame: GameRowPreviewData.final, layout: .stacked)
-      .padding(8)
-      .frame(width: 158, height: 158)
-      .background(.background, in: .rect(cornerRadius: 24))
-      .environment(\.colorScheme, .dark)
+    static var final: WidgetGame {
+      var game = live
+      game.endedAt = kickoff.addingTimeInterval(3600)
+      game.teamAScore = 118
+      game.teamBScore = 105
+      return game
+    }
+
+    static var draft: WidgetGame {
+      var game = scheduled
+      game.scheduledAt = nil
+      return game
+    }
   }
-}
+
+  #Preview("GameRow · App gradient", traits: .sizeThatFitsLayout) {
+    GameRow(
+      teamA: .init(name: "Hackney Foxes", colorHex: "#34C759", logoData: nil, score: 16),
+      teamB: .init(name: "Camden Owls", colorHex: "#FF9500", logoData: nil, score: 14),
+      status: .inProgress(quarter: 2),
+      background: .gradient,
+      layout: .standard,
+      clock: { _ in .init(quarter: 2, isBreak: false, remainingSeconds: 156) }
+    )
+    .frame(width: 370)
+    .padding()
+    .background(.background)
+  }
+
+  #Preview("GameRow · Compact widget", traits: .sizeThatFitsLayout) {
+    VStack(spacing: 0) {
+      GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.live, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.final, layout: .compact)
+      Divider()
+      GameRow(widgetGame: GameRowPreviewData.draft, layout: .compact)
+    }
+    .padding(8)
+    .background(.background, in: .rect(cornerRadius: 24))
+  }
+
+  #Preview("GameRow · Small widget", traits: .sizeThatFitsLayout) {
+    HStack {
+      GameRow(widgetGame: GameRowPreviewData.scheduled, layout: .stacked)
+        .padding(8)
+        .frame(width: 158, height: 158)
+        .background(.background, in: .rect(cornerRadius: 24))
+        .environment(\.colorScheme, .light)
+
+      GameRow(widgetGame: GameRowPreviewData.final, layout: .stacked)
+        .padding(8)
+        .frame(width: 158, height: 158)
+        .background(.background, in: .rect(cornerRadius: 24))
+        .environment(\.colorScheme, .dark)
+    }
+  }
 #endif

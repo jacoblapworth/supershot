@@ -1,11 +1,3 @@
-//
-//  GameLocationSection.swift
-//  SupershotPackage
-//
-//  Created by J on 11/11/2026.
-//
-
-
 import AppUI
 import Database
 import GameCore
@@ -34,7 +26,7 @@ package struct GameLocationSection: View {
       .font(.subheadline)
       .padding()
     }
-    
+
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
   }

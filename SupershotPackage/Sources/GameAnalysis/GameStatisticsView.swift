@@ -30,7 +30,7 @@ package struct GameStatisticsView: View {
         }
         .pickerStyle(.segmented)
         .accessibilityIdentifier("gameAnalysis.breakdown")
-        
+
         VStack(spacing: 16) {
           ForEach(GameStatistic.allCases) { metric in
             StatisticComparisonRow(
@@ -44,11 +44,11 @@ package struct GameStatisticsView: View {
             )
             Divider()
           }
-          
+
           GoalProgressChartView(detail: detail, breakdown: breakdown)
-          
+
           Divider()
-          
+
           ScoreDifferenceChartView(detail: detail, breakdown: breakdown)
         }
         .padding()

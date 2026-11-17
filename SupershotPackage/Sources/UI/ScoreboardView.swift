@@ -7,7 +7,7 @@ package struct ScoreboardView: View {
     package var color: Color
     package var score: Int
     package var hasCentrePass: Bool
-    
+
     package init(name: String, color: Color, score: Int, hasCentrePass: Bool = false) {
       self.name = name
       self.color = color
@@ -15,15 +15,15 @@ package struct ScoreboardView: View {
       self.hasCentrePass = hasCentrePass
     }
   }
-  
+
   package var left: Team
   package var right: Team
-  
+
   package init(left: Team, right: Team) {
     self.left = left
     self.right = right
   }
-  
+
   package var body: some View {
     HStack(spacing: 12) {
       teamScore(left, alignment: .trailing)
@@ -31,7 +31,7 @@ package struct ScoreboardView: View {
     }
     .environment(\.layoutDirection, .leftToRight)
   }
-  
+
   private func teamScore(_ team: Team, alignment: HorizontalAlignment) -> some View {
     TeamScore(
       name: team.name,
@@ -51,14 +51,14 @@ private struct TeamScore: View {
   var hasCentrePass: Bool = false
   @Namespace private var scoreboard
   @Environment(\.isEnabled) var isEnabled
-  
+
   private var frameAlignment: Alignment {
     switch alignment {
     case .trailing: .trailing
     default: .leading
     }
   }
-  
+
   var body: some View {
     VStack(alignment: alignment, spacing: 0) {
       HStack {
@@ -73,7 +73,6 @@ private struct TeamScore: View {
         if hasCentrePass, alignment == .trailing {
           CentrePassIndicator(direction: .trailing)
             .matchedGeometryEffect(id: "centrePass", in: scoreboard)
-          
         }
       }
       Text("\(score)")
@@ -90,14 +89,14 @@ private struct TeamScore: View {
 
 private struct CentrePassIndicator: View {
   var direction: HorizontalEdge
-  
+
   var body: some View {
     Image(systemName: direction == .trailing
-          ? "arrow.left.circle.fill"
-          : "arrow.right.circle.fill")
-    .transition(.symbolEffect)
-    .contentTransition(.symbolEffect)
-    .accessibilityLabel("Current centre pass")
+      ? "arrow.left.circle.fill"
+      : "arrow.right.circle.fill")
+      .transition(.symbolEffect)
+      .contentTransition(.symbolEffect)
+      .accessibilityLabel("Current centre pass")
   }
 }
 

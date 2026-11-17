@@ -1,11 +1,3 @@
-//
-//  QuarterScoreBreakdown.swift
-//  SupershotPackage
-//
-//  Created by J on 11/11/2026.
-//
-
-
 import AppUI
 import Database
 import GameCore
@@ -22,33 +14,33 @@ package struct ScorePeriodBreakdown: View {
   var teamAName: String
   var teamBBibColor: Color
   var teamBName: String
-  
+
   package var body: some View {
-      Grid(horizontalSpacing: 12, verticalSpacing: 6) {
-        GridRow {
-          Color.clear
-            .frame(width: 0, height: 0)
-            .gridCellUnsizedAxes([.horizontal, .vertical])
-          ForEach(sortedQuarters) {
-            Text("\($0.period)")
-          }
-          Text("T")
-            .accessibilityLabel("Total points")
+    Grid(horizontalSpacing: 12, verticalSpacing: 6) {
+      GridRow {
+        Color.clear
+          .frame(width: 0, height: 0)
+          .gridCellUnsizedAxes([.horizontal, .vertical])
+        ForEach(sortedQuarters) {
+          Text("\($0.period)")
         }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-        
-        scoreRow(name: teamAName, color: teamABibColor) { $0.teamAQuarterScore }
-        Divider()
-        scoreRow(name: teamBName, color: teamBBibColor) { $0.teamBQuarterScore }
+        Text("T")
+          .accessibilityLabel("Total points")
       }
+      .font(.caption.weight(.semibold))
+      .foregroundStyle(.secondary)
+
+      scoreRow(name: teamAName, color: teamABibColor) { $0.teamAQuarterScore }
+      Divider()
+      scoreRow(name: teamBName, color: teamBBibColor) { $0.teamBQuarterScore }
+    }
     .accessibilityLabel("Points by quarter")
   }
-  
+
   private var sortedQuarters: [GoalTimelinePeriod] {
     periods.sorted(using: KeyPathComparator(\.period))
   }
-  
+
   private func scoreRow(
     name: String,
     color: Color,
@@ -68,7 +60,7 @@ package struct ScorePeriodBreakdown: View {
       .font(.caption.weight(.semibold))
       .foregroundStyle(.secondary)
       .gridColumnAlignment(.leading)
-      
+
       ForEach(sortedQuarters) { quarter in
         Text("\(score(quarter))")
           .font(.system(.caption, design: .rounded, weight: .semibold))
@@ -92,6 +84,5 @@ package struct ScorePeriodBreakdown: View {
       teamBBibColor: preview.teamBBibColor,
       teamBName: preview.teamBName
     )
-    
   }
 }

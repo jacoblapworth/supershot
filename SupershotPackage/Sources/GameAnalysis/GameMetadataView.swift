@@ -1,13 +1,6 @@
-//
-//  GameMetadataView.swift
-//  SupershotPackage
-//
-//  Created by J on 11/11/2026.
-//
-
-import SwiftUI
 import Database
 import PreviewSupport
+import SwiftUI
 import UI
 
 struct GameMetadataView: View {
@@ -21,13 +14,13 @@ struct GameMetadataView: View {
           Label("Court", systemImage: "sportscourt")
         }
       }
-      
+
       LabeledContent {
         Text(detail.startedAt.formatted(date: .abbreviated, time: .shortened))
       } label: {
         Label("Started", systemImage: "calendar")
       }
-      
+
       LabeledContent {
         Text(detail.timingSummary)
           .multilineTextAlignment(.trailing)

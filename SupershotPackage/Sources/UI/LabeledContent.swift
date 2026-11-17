@@ -1,10 +1,3 @@
-//
-//  LabeledContent.swift
-//  SupershotPackage
-//
-//  Created by J on 13/11/2026.
-//
-
 import SwiftUI
 
 public struct InlineLabeledContentStyle: LabeledContentStyle {
@@ -17,6 +10,8 @@ public struct InlineLabeledContentStyle: LabeledContentStyle {
   }
 }
 
-extension LabeledContentStyle where Self == InlineLabeledContentStyle {
-  public static var inline: InlineLabeledContentStyle { .init() }
+public extension LabeledContentStyle where Self == InlineLabeledContentStyle {
+  static var inline: InlineLabeledContentStyle {
+    .init()
+  }
 }
