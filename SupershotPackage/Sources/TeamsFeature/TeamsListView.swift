@@ -29,8 +29,6 @@ package struct TeamsListView: View {
       teamsList
     } destination: { pathStore in
       switch pathStore.case {
-      case let .plannedGame(summaryStore):
-        PlannedGameView(store: summaryStore, proAccess: proAccess)
       case let .gameDetail(gameDetailStore):
         GameDetailView(
           store: gameDetailStore,

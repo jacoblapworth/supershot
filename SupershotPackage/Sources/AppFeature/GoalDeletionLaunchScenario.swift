@@ -18,6 +18,7 @@
     case paused = "goal-deletion-paused"
     case breakTime = "goal-deletion-break"
     case completed = "goal-deletion-completed"
+    case plannedGame = "planned-game"
 
     private static var requested: Self? {
       guard let name = ProcessInfo.processInfo.environment["SUPERSHOT_LAUNCH_SCENARIO"] else { return nil }
@@ -53,10 +54,11 @@
     package static func initialState() -> AppFeature.State {
       var state = AppFeature.State()
       guard let scenario = requested else { return state }
-      @Dependency(\.defaultDatabase) var database
-      let snapshot = try! database.read { try GameSnapshot.fetch($0, gameID: UUID(166)) }
       state.destination = nil
       state.selectedTab = .games
+      guard scenario != .plannedGame else { return state }
+      @Dependency(\.defaultDatabase) var database
+      let snapshot = try! database.read { try GameSnapshot.fetch($0, gameID: UUID(166)) }
       if scenario == .completed {
         state.games.path.append(.gameDetail(.init(gameID: snapshot.game.id)))
       } else {
@@ -77,20 +79,22 @@
         try Game.insert {
           Game(
             id: gameID,
-            startedAt: now.addingTimeInterval(-1200),
+            startedAt: self == .plannedGame ? nil : now.addingTimeInterval(-1200),
             endedAt: self == .completed ? now : nil,
             teamAID: UUID(1),
             teamBID: UUID(2),
             centrePassTeamID: UUID(1),
             lateScoringPeriodNumber: self == .breakTime ? 1 : nil,
             currentPhaseIndex: self == .completed ? 6 : self == .breakTime ? 1 : 0,
-            elapsedSeconds: self == .completed ? 480 : self == .breakTime ? 15 : 120,
-            timerEndsAt: self == .running ? now.addingTimeInterval(360) : nil
+            elapsedSeconds: self == .completed ? 480 : self == .breakTime ? 15 : self == .plannedGame ? 0 : 120,
+            timerEndsAt: self == .running ? now.addingTimeInterval(360) : nil,
+            court: self == .plannedGame ? "3" : nil
           )
         }.execute(db)
         for period in periods {
           try GamePeriod.insert { period }.execute(db)
         }
+        guard self != .plannedGame else { return }
         for index in 0 ..< 4 {
           try Goal.insert {
             Goal(

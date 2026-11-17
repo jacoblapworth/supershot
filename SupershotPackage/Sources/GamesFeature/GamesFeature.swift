@@ -18,7 +18,6 @@ import UI
 
 @Reducer
 package enum GamesPath {
-  case plannedGame(PlannedGameFeature)
   case gameDetail(GameDetailFeature)
   case scoring(ScoringFeature)
 
@@ -28,7 +27,6 @@ package enum GamesPath {
   @ObservableState
   package enum State: @MainActor CaseReducerState {
     package typealias StateReducer = GamesPath
-    case plannedGame(PlannedGameFeature.State)
     case gameDetail(GameDetailFeature.State)
     case scoring(ScoringFeature.State)
   }
@@ -62,7 +60,6 @@ package struct GamesFeature {
         switch $0 {
         case let .scoring(scoring): scoring.gameID == gameID
         case let .gameDetail(detail): detail.gameID == gameID
-        case let .plannedGame(summary): summary.gameID == gameID
         }
       }
     }
@@ -212,18 +209,6 @@ package struct GamesFeature {
       case .newGame:
         return .none
 
-      case let .path(.element(id: id, action: .plannedGame(.delegate(.scoringPrepared(scoring))))):
-        state.path.pop(from: id)
-        state.path.append(.scoring(scoring))
-        return .none
-
-      case let .path(.element(id: id, action: .plannedGame(.delegate(.lifecycleChanged(gameID))))):
-        state.path.pop(from: id)
-        return .send(.gameDeepLinkOpened(gameID))
-
-      case .path(.element(id: _, action: .plannedGame(.delegate(.proPromotionTapped)))):
-        return .send(.delegate(.proPromotionTapped))
-
       case .path:
         return .none
 
@@ -243,12 +228,6 @@ package struct GamesFeature {
         }
         for (id, destination) in zip(state.path.ids, state.path) {
           switch destination {
-          case let .plannedGame(summary) where summary.gameID == request.gameID:
-            if snapshot.game.isPlanned {
-              state.path.pop(to: id)
-              return .send(.path(.element(id: id, action: .plannedGame(.refresh))))
-            }
-            state.path.pop(from: id)
           case let .scoring(scoring) where scoring.gameID == request.gameID:
             if snapshot.game.isInProgress {
               state.path.pop(to: id)
@@ -268,7 +247,7 @@ package struct GamesFeature {
         }
 
         if snapshot.game.isPlanned {
-          state.path.append(.plannedGame(PlannedGameFeature.State(snapshot: snapshot)))
+          state.newGame = NewGameFeature.State(snapshot: snapshot)
         } else if snapshot.game.isInProgress {
           state.path.append(.scoring(ScoringFeature.State(snapshot: snapshot)))
         } else {
@@ -286,7 +265,6 @@ package struct GamesFeature {
           let matches: Bool = switch destination {
           case let .scoring(scoring): scoring.gameID == request.gameID
           case let .gameDetail(detail): detail.gameID == request.gameID
-          case let .plannedGame(summary): summary.gameID == request.gameID
           }
           if matches {
             state.path.pop(from: id)
