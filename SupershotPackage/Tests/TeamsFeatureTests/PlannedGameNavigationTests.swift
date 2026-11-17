@@ -16,7 +16,7 @@ extension SupershotTestSuite {
   @MainActor
   struct PlannedGameNavigationTests {
     @Test(arguments: [false, true])
-    func teamRowAndDeepLinkOpenSummaryAndPreserveTeamDestination(deepLink: Bool) async throws {
+    func teamRowAndDeepLinkOpenEditorAndPreserveTeamDestination(deepLink: Bool) async throws {
       @Dependency(\.defaultDatabase) var database
       try clearDatabase(database)
       let a = Team(id: UUID(101), name: "Ravens")
@@ -43,24 +43,21 @@ extension SupershotTestSuite {
           false
         }
       }
-      #expect(store.state.newGame == nil)
-      guard case let .plannedGame(summary) = store.state.path.last else {
-        Issue.record("Expected a planned-game summary")
-        return
-      }
-      expectNoDifference(summary.snapshot, snapshot)
+      let editor = try #require(store.state.newGame)
+      #expect(store.state.path.count == 1)
+      #expect(editor.gameID == snapshot.game.id)
+      #expect(editor.scheduledAt == setup.scheduledAt)
       #expect(store.state.hasGameRoute(for: snapshot.game.id))
-      let summaryID = store.state.path.ids[1]
-      await store.send(.path(.element(id: summaryID, action: .plannedGame(.startGameButtonTapped))))
+      await store.send(.newGame(.presented(.prepareScoringButtonTapped)))
       await store.receive {
-        if case .path(.element(id: _, action: .plannedGame(.snapshotResponse(.score, .success)))) = $0 {
+        if case .newGame(.presented(.prepareScoringResponse(.success))) = $0 {
           true
         } else {
           false
         }
       }
       await store.receive {
-        if case .path(.element(id: _, action: .plannedGame(.delegate(.scoringPrepared)))) = $0 {
+        if case .newGame(.presented(.delegate(.scoringPrepared))) = $0 {
           true
         } else {
           false

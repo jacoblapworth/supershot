@@ -88,6 +88,7 @@ package struct NewGameFeature {
     package var division = ""
     package var parsedFields: Set<DescriptionField> = []
     package var requiresExistingGame = false
+    var isEditingExistingGame = false
     package var lastSavedDraft: GameSetupDraft?
     package var inFlightDraft: GameSetupDraft?
     package var pendingSaveIntent: SaveIntent?
@@ -158,6 +159,7 @@ package struct NewGameFeature {
       createdAt = snapshot.game.createdAt
       periodIDs = snapshot.periods.map(\.id)
       requiresExistingGame = true
+      isEditingExistingGame = true
       preservesLocationSelection = true
       scheduledAt = snapshot.game.scheduledAt
       court = snapshot.game.court ?? ""
