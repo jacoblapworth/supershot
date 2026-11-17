@@ -104,12 +104,10 @@ extension SupershotTestSuite {
       await store.send(.timeInput(.presented(.quickAddButtonTapped(1)))) {
         $0.timeInput?.minutes = "2"
       }
-      #expect(store.state.timing.firstBreakDuration.totalSeconds == 60)
+      #expect(store.state.timing.sharedBreakDuration.totalSeconds == 60)
       await store.send(.timeInput(.presented(.doneButtonTapped)))
       await store.receive(\.timeInput.presented.delegate.committed) {
-        $0.timing.firstBreakDuration = .init(totalSeconds: 120)
-        $0.timing.halfTimeDuration = .init(totalSeconds: 120)
-        $0.timing.secondBreakDuration = .init(totalSeconds: 120)
+        $0.timing.sharedBreakDuration = .init(totalSeconds: 120)
         $0.timeInput = nil
         $0.editedDuration = nil
       }

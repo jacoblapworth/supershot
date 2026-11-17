@@ -90,7 +90,8 @@ package struct ScoringView: View {
           AlarmPermissionCard(
             store: store.scope(state: \.alarms, action: \.alarms),
             proAccess: proAccess,
-            hidesWhenAuthorized: true
+            hidesWhenAuthorized: true,
+            periodName: store.periodTitle.lowercased()
           )
         #endif
         Section {
@@ -176,7 +177,7 @@ package struct ScoringView: View {
           }
           .disabled(!store.canOperate)
 
-          Button("End Quarter", systemImage: "forward.end.fill") {
+          Button("End \(store.periodTitle)", systemImage: "forward.end.fill") {
             store.send(.endQuarterButtonTapped)
           }
           .disabled(!store.canMoveToNextQuarter)

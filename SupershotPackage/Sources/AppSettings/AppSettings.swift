@@ -1,4 +1,5 @@
 import GameCore
+import SharedModels
 import Sharing
 
 public extension SharedKey where Self == AppStorageKey<Bool>.Default {
@@ -16,6 +17,10 @@ public extension SharedKey where Self == AppStorageKey<Bool>.Default {
 }
 
 public extension SharedKey where Self == AppStorageKey<Int>.Default {
+  static var defaultPeriodCount: Self {
+    Self[.appStorage("defaultPeriodCount"), default: GamePeriodFormat.defaultCount]
+  }
+
   static var defaultBreakDurationSeconds: Self {
     Self[.appStorage("defaultBreakDurationSeconds"), default: 60]
   }

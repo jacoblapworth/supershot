@@ -1,4 +1,5 @@
 import Database
+import SharedModels
 
 package nonisolated enum GameAnalysisBreakdown: Hashable, Identifiable, Sendable {
   case wholeGame
@@ -13,10 +14,10 @@ package nonisolated enum GameAnalysisBreakdown: Hashable, Identifiable, Sendable
     return period
   }
 
-  package var title: String {
+  package func title(periodCount: Int) -> String {
     switch self {
     case .wholeGame: "Game"
-    case let .period(period): "Q\(period)"
+    case let .period(period): "\(GamePeriodFormat.abbreviation(for: periodCount))\(period)"
     }
   }
 

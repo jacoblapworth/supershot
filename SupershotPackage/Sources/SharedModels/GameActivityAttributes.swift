@@ -15,6 +15,7 @@
       public var waitingSince: Date?
       public var isAwaitingCentrePassConfirmation = false
       public var lateScoringPeriodNumber: Int?
+      public var periodCount: Int?
 
       public init(
         centrePassTeamID: UUID,
@@ -26,7 +27,8 @@
         timerEndsAt: Date? = nil,
         waitingSince: Date? = nil,
         isAwaitingCentrePassConfirmation: Bool = false,
-        lateScoringPeriodNumber: Int? = nil
+        lateScoringPeriodNumber: Int? = nil,
+        periodCount: Int? = nil
       ) {
         self.centrePassTeamID = centrePassTeamID
         self.elapsedSeconds = elapsedSeconds
@@ -38,6 +40,7 @@
         self.waitingSince = waitingSince
         self.isAwaitingCentrePassConfirmation = isAwaitingCentrePassConfirmation
         self.lateScoringPeriodNumber = lateScoringPeriodNumber
+        self.periodCount = periodCount
       }
     }
 
@@ -92,6 +95,10 @@
 
     var canControlTimer: Bool {
       !isComplete && (isInBreak || !isAwaitingCentrePassConfirmation)
+    }
+
+    var periodTitle: String {
+      GamePeriodFormat.title(for: periodCount ?? GamePeriodFormat.defaultCount)
     }
 
     var period: Int {

@@ -1,3 +1,4 @@
+import AppUI
 import ComposableArchitecture
 import CustomDump
 @testable import Database
@@ -58,6 +59,54 @@ extension SupershotTestSuite {
       expectNoDifference(saved.game.court, "A")
       expectNoDifference(saved.periods.count, 4)
       #expect(!store.isSaving)
+    }
+
+    @Test(arguments: [1, 2, 12])
+    func savesAndReopensCustomPeriodCount(count: Int) async throws {
+      @Dependency(\.defaultDatabase) var database
+      let setup = try await readySetup()
+      let gameID = setup.gameID
+      let originalIDs = setup.periodIDs
+      let store = Store(initialState: setup) { NewGameFeature() }
+
+      store.send(.editTimingButtonTapped)
+      store.send(.destination(.presented(.timingEditor(.periodCountChanged(count)))))
+      await store.send(.destination(.presented(.timingEditor(.cancelButtonTapped)))).finish()
+      #expect(store.periodIDs == originalIDs)
+
+      store.send(.editTimingButtonTapped)
+      store.send(.destination(.presented(.timingEditor(.periodCountChanged(count)))))
+      if count > 1 {
+        store.send(.destination(.presented(.timingEditor(.customizeBreaksButtonTapped))))
+        store.send(.destination(.presented(.timingEditor(.editDurationButtonTapped(.individualBreak(0))))))
+        store.send(.destination(.presented(.timingEditor(.timeInput(.presented(.delegate(.committed(90))))))))
+      }
+      await store.send(.destination(.presented(.timingEditor(.doneButtonTapped)))).finish()
+      await store.send(.saveGameButtonTapped).finish()
+
+      let saved = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
+      #expect(saved.periods.count == count)
+      #expect(Array(saved.periods.map(\.id).prefix(originalIDs.count)) == Array(originalIDs.prefix(count)))
+      #expect(saved.periods.last?.breakAfterDurationSeconds == nil)
+      if count > 1 {
+        #expect(saved.periods.first?.breakAfterDurationSeconds == 90)
+      }
+      let restored = NewGameFeature.State(snapshot: saved)
+      #expect(restored.draft?.periods == saved.periods)
+      #expect(NewGameFeature.State().timing.periodCount == 4)
+
+      let editor = Store(initialState: restored) { NewGameFeature() }
+      let resizedCount = count == 12 ? 2 : count + 1
+      editor.send(.editTimingButtonTapped)
+      editor.send(.destination(.presented(.timingEditor(.periodCountChanged(resizedCount)))))
+      await editor.send(.destination(.presented(.timingEditor(.doneButtonTapped)))).finish()
+      await editor.send(.saveGameButtonTapped).finish()
+
+      let resized = try await database.read { try GameSnapshot.fetch($0, gameID: gameID) }
+      #expect(resized.periods.count == resizedCount)
+      let retainedCount = min(count, resizedCount)
+      #expect(resized.periods.prefix(retainedCount).map(\.id) == saved.periods.prefix(retainedCount).map(\.id))
+      #expect(resized.periods.last?.breakAfterDurationSeconds == nil)
     }
 
     @Test

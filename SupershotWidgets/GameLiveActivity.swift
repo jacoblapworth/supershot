@@ -273,14 +273,14 @@ private struct ActivityPhaseLabel: View {
       if compact {
         Text("Wait")
       } else {
-        Text("Waiting for Quarter \(state.isInBreak ? state.period + 1 : state.period)")
+        Text("Waiting for \(state.periodTitle) \(state.isInBreak ? state.period + 1 : state.period)")
       }
     } else if state.isInBreak {
       Text("Break")
     } else if compact {
       Text("Q\(state.period)")
     } else {
-      Text("Quarter \(state.period)")
+      Text("\(state.periodTitle) \(state.period)")
     }
   }
 }
@@ -295,7 +295,7 @@ private struct TimerText: View {
       Text(boundary, style: .timer)
         .monospacedDigit()
     } else if isStale || state.isComplete {
-      Text(state.isInBreak ? "Break ended" : "Quarter ended")
+      Text(state.isInBreak ? "Break ended" : "\(state.periodTitle) ended")
         .lineLimit(1)
     } else if let timerEndsAt = state.timerEndsAt {
       Text(

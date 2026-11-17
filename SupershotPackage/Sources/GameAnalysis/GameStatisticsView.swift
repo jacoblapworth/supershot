@@ -20,16 +20,23 @@ package struct GameStatisticsView: View {
     breakdown.statistics(in: detail)
   }
 
+  private var breakdownPicker: some View {
+    Picker("Breakdown", selection: $breakdown) {
+      ForEach(breakdownOptions) { option in
+        Text(option.title(periodCount: detail.periods.count)).tag(option)
+      }
+    }
+    .accessibilityIdentifier("gameAnalysis.breakdown")
+  }
+
   package var body: some View {
     GlassEffectContainer {
       VStack(alignment: .leading, spacing: 16) {
-        Picker("Breakdown", selection: $breakdown) {
-          ForEach(breakdownOptions) { option in
-            Text(option.title).tag(option)
-          }
+        if detail.periods.count > GamePeriodFormat.defaultCount {
+          breakdownPicker.pickerStyle(.menu)
+        } else {
+          breakdownPicker.pickerStyle(.segmented)
         }
-        .pickerStyle(.segmented)
-        .accessibilityIdentifier("gameAnalysis.breakdown")
 
         VStack(spacing: 16) {
           ForEach(GameStatistic.allCases) { metric in

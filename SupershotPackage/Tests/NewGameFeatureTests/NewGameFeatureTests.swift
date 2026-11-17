@@ -61,9 +61,8 @@ extension SupershotTestSuite {
       #expect(state.timing.breakStartPolicy == .automatic)
       #expect(state.firstCentrePass == .teamA)
       #expect(state.periodDuration.totalSeconds == 8 * 60)
-      #expect(state.firstBreakDuration.totalSeconds == 60)
-      #expect(state.halfTimeDuration.totalSeconds == 60)
-      #expect(state.secondBreakDuration.totalSeconds == 60)
+      #expect(state.periodIDs.count == 4)
+      #expect(state.timing.breakDurations.map(\.totalSeconds) == [60, 60, 60])
     }
 
     @Test
@@ -72,6 +71,7 @@ extension SupershotTestSuite {
       defaults.set("manual", forKey: "defaultBreakStartPolicy")
       defaults.set(12 * 60, forKey: "defaultPeriodDurationSeconds")
       defaults.set(2 * 60, forKey: "defaultBreakDurationSeconds")
+      defaults.set(2, forKey: "defaultPeriodCount")
 
       let state = NewGameFeature.State()
 
@@ -81,9 +81,8 @@ extension SupershotTestSuite {
       #expect(NewGameFeature.State().timing.breakStartPolicy == .automatic)
 
       expectNoDifference(state.periodDuration.totalSeconds, 12 * 60)
-      expectNoDifference(state.firstBreakDuration.totalSeconds, 2 * 60)
-      expectNoDifference(state.halfTimeDuration.totalSeconds, 2 * 60)
-      expectNoDifference(state.secondBreakDuration.totalSeconds, 2 * 60)
+      #expect(state.periodIDs.count == 2)
+      #expect(state.timing.breakDurations.map(\.totalSeconds) == [120])
     }
 
     @Test
@@ -277,9 +276,7 @@ extension SupershotTestSuite {
       var state = NewGameFeature.State()
       state.timing.breakStartPolicy = policy
       state.firstCentrePass = .teamB
-      state.firstBreakDuration = .init(totalSeconds: breakSeconds)
-      state.halfTimeDuration = .init(totalSeconds: breakSeconds)
-      state.secondBreakDuration = .init(totalSeconds: breakSeconds)
+      state.timing.sharedBreakDuration = .init(totalSeconds: breakSeconds)
       state.location = .loaded
       state.currentLocation = GameLocation(latitude: 51.55, longitude: -0.28)
       state.selectedLocation = GameLocation(

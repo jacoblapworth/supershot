@@ -123,7 +123,7 @@ package struct GoalProgressChartView: View {
 
       if progress.moments.isEmpty {
         ContentUnavailableView(
-          "No goals recorded in \(breakdown.title)",
+          "No goals recorded in \(breakdown.title(periodCount: detail.periods.count))",
           systemImage: "chart.xyaxis.line",
           description: Text("Goal progression will appear here once goals are recorded.")
         )
@@ -205,7 +205,7 @@ package struct GoalProgressChartView: View {
           }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(breakdown.title) goal progression chart. \(detail.teamAName) has "
+        .accessibilityLabel("\(breakdown.title(periodCount: detail.periods.count)) goal progression chart. \(detail.teamAName) has "
           + "\(progress.finalTeamAScore) points. "
           + "\(detail.teamBName) has \(progress.finalTeamBScore) points.")
       }
@@ -327,7 +327,7 @@ private struct GoalProgressTooltip: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text("Q\(moment.period) · \(formattedElapsedTime(moment.periodElapsedSeconds))")
+      Text("\(GamePeriodFormat.abbreviation(for: detail.periods.count))\(moment.period) · \(formattedElapsedTime(moment.periodElapsedSeconds))")
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
       Text("\(detail.teamAName) \(moment.teamAScore) - \(moment.teamBScore) \(detail.teamBName)")

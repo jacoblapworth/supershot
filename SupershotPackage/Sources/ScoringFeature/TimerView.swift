@@ -50,7 +50,7 @@ package struct TimerView: View {
         )
         .animation(.linear, value: state.elapsedSeconds)
         .controlSize(.large)
-        .accessibilityLabel("Quarter time elapsed")
+        .accessibilityLabel("\(state.periodTitle) time elapsed")
       }
     }
     .foregroundStyle(.white)
