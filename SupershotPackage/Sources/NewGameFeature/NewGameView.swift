@@ -68,25 +68,6 @@ package struct NewGameView: View {
         Section("Location") {
           SetupLocationView(store: store)
         }
-
-        Section {
-          SetupStartBar(
-            canPrepareScoring: store.canPrepareScoring,
-            configurationSummary: store.configurationSummary,
-            errorMessage: store.teamNameErrorMessage ?? store.errorMessage,
-            isSaving: store.isSaving,
-            prepareScoringTapped: {
-              store.send(store.scheduledAt == nil ? .prepareScoringButtonTapped : .saveGameButtonTapped)
-            },
-            isScheduled: store.scheduledAt != nil,
-            prepareScoringNowTapped: { store.send(.prepareScoringButtonTapped) },
-            retryTapped: { store.send(.retrySaveButtonTapped) },
-            canRetry: store.failedSaveIntent != nil
-          )
-        }
-        .listRowBackground(Color.clear)
-        .listRowInsets(.all, 0)
-        .listRowSeparator(.hidden)
       }
       .environment(\.usesNativeSetupRows, true)
     }
