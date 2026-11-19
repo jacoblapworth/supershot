@@ -76,7 +76,7 @@ package struct TeamPickerView: View {
     .searchable(text: $store.searchText, prompt: "Search teams")
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
-        Button("Cancel", role: .cancel) {
+        Button(role: .cancel) {
           store.send(.cancelButtonTapped)
         }
       }

@@ -189,7 +189,7 @@ public struct GameRow: View {
       logoData: team.logoData
     )
     .synchronousLogoDecoding(backgroundStyle == .clear)
-    .controlSize(layout == .standard ? .regular : layout == .compact ? .mini : .small)
+    .controlSize(layout == .standard ? .regular : layout == .compact ? .small : .small)
     .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     .backgroundStyle(Color(hex: team.colorHex))
     .foregroundStyle(.white)

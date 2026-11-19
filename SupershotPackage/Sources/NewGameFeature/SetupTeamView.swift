@@ -20,24 +20,22 @@ package struct SetupTeamView: View {
   package var body: some View {
     NavigationStack {
       List {
-        HStack(spacing: 16) {
-          AvatarView(store.previewTeam.name, logoData: store.previewTeam.logoData)
-            .backgroundStyle(store.previewTeam.color)
-            .controlSize(.large)
-            .accessibilityHidden(true)
-          Text(store.previewTeam.name).font(.title2.bold())
-          Spacer()
-          Button {
-            store.send(.changeTeamButtonTapped)
-          } label: {
-            Label("Change team", systemImage: "arrow.trianglehead.2.counterclockwise.rotate.90")
+        Button {
+          store.send(.changeTeamButtonTapped)
+        } label: {
+          HStack(spacing: 16) {
+            AvatarView(store.previewTeam.name, logoData: store.previewTeam.logoData)
+              .backgroundStyle(store.previewTeam.color)
+              .controlSize(.large)
+              .accessibilityHidden(true)
+            Text(store.previewTeam.name).font(.title2.bold())
+            Spacer()
+            Label("Change team", systemImage: "chevron.up.chevron.down")
               .font(.title2)
+              .labelStyle(.iconOnly)
+              .foregroundStyle(.secondary)
           }
-          .buttonBorderShape(.circle)
-          .buttonStyle(.bordered)
-          .disabled(store.isSaving)
-          .controlSize(.large)
-          .labelStyle(.iconOnly)
+          .tint(.primary)
         }
         Section {
           PaletteColorPicker(color: Binding(
@@ -53,7 +51,6 @@ package struct SetupTeamView: View {
           Button("Retry") { store.send(.retryButtonTapped) }
         }
       }
-      .navigationTitle("Team")
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           Button(role: .confirm) { store.send(.doneButtonTapped) }
@@ -68,14 +65,14 @@ package struct SetupTeamView: View {
         .presentationBackground(.thinMaterial)
       }
     }
-    #if os(macOS)
+#if os(macOS)
     .frame(minWidth: 440, idealWidth: 480, minHeight: 320, idealHeight: 420)
-    #endif
+#endif
     .interactiveDismissDisabled(store.isSaving)
     .presentationDetents([.medium, .large])
     .presentationBackground(.thinMaterial)
   }
-
+  
   package init(store: StoreOf<SetupTeamFeature>) {
     self.store = store
   }
